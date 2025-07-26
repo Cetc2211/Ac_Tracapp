@@ -68,9 +68,17 @@ export default function ProgressionsPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    const savedData = localStorage.getItem('progressionData');
-    if (savedData) {
-      setFormData(JSON.parse(savedData));
+    try {
+      const savedData = localStorage.getItem('progressionData');
+      if (savedData) {
+        const parsedData = JSON.parse(savedData);
+        // Ensure all keys from initialFormData are present
+        const completeData = { ...initialFormData, ...parsedData };
+        setFormData(completeData);
+      }
+    } catch (error) {
+        console.error("Failed to parse progression data from localStorage", error);
+        setFormData(initialFormData);
     }
   }, []);
 
@@ -417,6 +425,3 @@ export default function ProgressionsPage() {
       </Card>
     </div>
   );
-}
-
-    
