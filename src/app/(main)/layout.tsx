@@ -6,6 +6,7 @@ import {
   Settings,
   Users,
   Presentation,
+  Contact,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -32,6 +33,7 @@ const navItems = [
   { href: '/students', icon: Users, label: 'Estudiantes' },
   { href: '/groups', icon: BookCopy, label: 'Grupos' },
   { href: '/progressions', icon: Presentation, label: 'Progresiones' },
+  { href: '/tutors', icon: Contact, label: 'Tutores' },
 ];
 
 export default function MainLayout({
