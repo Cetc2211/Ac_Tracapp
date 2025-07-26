@@ -16,7 +16,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, MoreHorizontal, Upload } from 'lucide-react';
 import { students as initialStudents, Student } from '@/lib/placeholder-data';
@@ -56,7 +55,7 @@ export default function StudentsPage() {
   const handleAddStudent = () => {
     if (newStudent.name) {
       const studentToAdd: Student = {
-        id: newStudent.id || `S${Math.floor(Math.random() * 1000)}`,
+        id: newStudent.id || `S${Math.floor(Math.random() * 10000)}`,
         name: newStudent.name,
         email: newStudent.email,
         phone: newStudent.phone,
@@ -108,7 +107,7 @@ export default function StudentsPage() {
             return;
         }
 
-        const newStudents: Student[] = lines.slice(1).map((line, index) => {
+        const newStudentsFromFile: Student[] = lines.slice(1).map((line, index) => {
           const data = line.split(',');
           const studentData: any = {};
           headers.forEach((header, i) => {
@@ -126,15 +125,14 @@ export default function StudentsPage() {
             riskLevel: 'low',
           };
         });
-        setStudents(prev => [...prev, ...newStudents]);
+        setStudents(prev => [...prev, ...newStudentsFromFile]);
         toast({
             title: 'Carga Exitosa',
-            description: `${newStudents.length} estudiantes han sido agregados.`,
+            description: `${newStudentsFromFile.length} estudiantes han sido agregados.`,
         });
       };
       reader.readAsText(file);
     }
-     // Reset file input
     if(fileInputRef.current) {
         fileInputRef.current.value = '';
     }
@@ -143,6 +141,14 @@ export default function StudentsPage() {
   const triggerFileUpload = () => {
     fileInputRef.current?.click();
   };
+
+  const handleDeleteStudent = (studentId: string) => {
+    setStudents(students.filter(s => s.id !== studentId));
+    toast({
+        title: "Estudiante eliminado",
+        description: "El estudiante ha sido eliminado de la lista.",
+    });
+  }
 
 
   return (
@@ -320,9 +326,9 @@ export default function StudentsPage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                      <DropdownMenuItem>Editar</DropdownMenuItem>
-                      <DropdownMenuItem>Ver Perfil Completo</DropdownMenuItem>
-                      <DropdownMenuItem className="text-destructive">
+                      <DropdownMenuItem disabled>Editar</DropdownMenuItem>
+                      <DropdownMenuItem disabled>Ver Perfil Completo</DropdownMenuItem>
+                      <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteStudent(student.id)}>
                         Eliminar
                       </DropdownMenuItem>
                     </DropdownMenuContent>
