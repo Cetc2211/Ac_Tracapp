@@ -21,7 +21,7 @@ import { groups as initialGroups, students as initialStudents, Student } from '@
 import { notFound, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, MoreHorizontal, UserPlus, Trash2, PlusCircle, Trash } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, UserPlus, Trash2, PlusCircle, Trash, FilePen } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -149,6 +149,7 @@ export default function GroupDetailsPage({
     const newGroups = groups.filter(g => g.id !== group.id);
     saveGroups(newGroups);
     localStorage.removeItem(`criteria_${params.groupId}`);
+    localStorage.removeItem(`grades_${params.groupId}`);
     toast({
         title: 'Grupo Eliminado',
         description: `El grupo "${group.subject}" ha sido eliminado.`,
@@ -267,7 +268,7 @@ export default function GroupDetailsPage({
                             <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
                             <AlertDialogDescription>
                                 Esta acción no se puede deshacer. Esto eliminará permanentemente el grupo,
-                                sus criterios de evaluación y desvinculará a los estudiantes.
+                                sus criterios de evaluación, calificaciones y desvinculará a los estudiantes.
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -474,13 +475,28 @@ export default function GroupDetailsPage({
                             <p className="text-sm text-center text-muted-foreground pt-4">No has agregado criterios de evaluación.</p>
                         )}
                     </div>
-                     {totalWeight > 0 && (
+                     {totalWeight > 0 && totalWeight <= 100 && (
                         <div className="text-right text-sm font-bold">
                             Total: {totalWeight}%
                         </div>
                     )}
+                    {totalWeight > 100 && (
+                        <div className="text-right text-sm font-bold text-destructive">
+                            Total: {totalWeight}% (Sobrepasa el 100%)
+                        </div>
+                    )}
                 </div>
             </CardContent>
+             {evaluationCriteria.length > 0 && (
+                <CardContent className="pt-4 border-t">
+                     <Button asChild className="w-full">
+                        <Link href={`/groups/${group.id}/grades`}>
+                            <FilePen className="mr-2 h-4 w-4" />
+                            Registrar Calificaciones
+                        </Link>
+                    </Button>
+                </CardContent>
+             )}
         </Card>
       </div>
 
