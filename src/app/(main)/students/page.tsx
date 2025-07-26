@@ -37,6 +37,7 @@ import {
   DialogTrigger,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -47,7 +48,14 @@ export default function StudentsPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Partial<Student> | null>(null);
-  const [multiStudentData, setMultiStudentData] = useState('');
+  
+  // State for bulk add
+  const [bulkNames, setBulkNames] = useState('');
+  const [bulkEmails, setBulkEmails] = useState('');
+  const [bulkPhones, setBulkPhones] = useState('');
+  const [bulkTutorNames, setBulkTutorNames] = useState('');
+  const [bulkTutorPhones, setBulkTutorPhones] = useState('');
+
 
   const { toast } = useToast();
 
@@ -80,7 +88,12 @@ export default function StudentsPage() {
 
   const handleOpenDialog = (student: Partial<Student> | null) => {
     setEditingStudent(student ? { ...student } : {});
-    setMultiStudentData('');
+    // Reset bulk form
+    setBulkNames('');
+    setBulkEmails('');
+    setBulkPhones('');
+    setBulkTutorNames('');
+    setBulkTutorPhones('');
     setIsDialogOpen(true);
   };
   
@@ -88,15 +101,6 @@ export default function StudentsPage() {
     setEditingStudent(null);
     setIsDialogOpen(false);
   }
-
-  const handleSave = () => {
-    if (editingStudent && editingStudent.id) { // Editing a single student
-      handleSaveSingleStudent();
-    } else { // Adding one or more new students
-      handleSaveNewStudents();
-    }
-  };
-
 
   const handleSaveSingleStudent = () => {
     if (!editingStudent?.name?.trim()) {
@@ -118,37 +122,53 @@ export default function StudentsPage() {
             title: 'Éxito',
             description: 'Estudiante actualizado correctamente.',
         });
+    } else {
+        // Add single new student
+         const newStudent: Student = {
+          id: `S${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+          name: editingStudent.name || '',
+          email: editingStudent.email || '',
+          phone: editingStudent.phone || '',
+          tutorName: editingStudent.tutorName || '',
+          tutorPhone: editingStudent.tutorPhone || '',
+          photo: 'https://placehold.co/100x100.png',
+          riskLevel: 'low' as 'low' | 'medium' | 'high',
+        };
+        saveStudents([...students, newStudent]);
+        toast({
+            title: 'Éxito',
+            description: 'Estudiante agregado correctamente.',
+        });
     }
     handleCloseDialog();
   };
   
-  const handleSaveNewStudents = () => {
-    const lines = multiStudentData.trim().split('\n');
-    const newStudents: Student[] = lines
-      .map(line => {
-        const [name, email, phone, tutorName, tutorPhone] = line.split('\t').map(s => s.trim());
-        if (!name) return null;
-        return {
-          id: `S${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-          name,
-          email: email || '',
-          phone: phone || '',
-          tutorName: tutorName || '',
-          tutorPhone: tutorPhone || '',
-          photo: 'https://placehold.co/100x100.png',
-          riskLevel: 'low' as 'low' | 'medium' | 'high',
-        };
-      })
-      .filter((student): student is Student => student !== null);
+  const handleSaveBulkStudents = () => {
+    const names = bulkNames.trim().split('\n');
+    const emails = bulkEmails.trim().split('\n');
+    const phones = bulkPhones.trim().split('\n');
+    const tutorNames = bulkTutorNames.trim().split('\n');
+    const tutorPhones = bulkTutorPhones.trim().split('\n');
 
-    if (newStudents.length === 0) {
+    if (names.length === 0 || names[0] === '') {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Por favor, ingresa los datos de al menos un estudiante.',
+        description: 'Por favor, ingresa al menos un nombre de estudiante.',
       });
       return;
     }
+
+    const newStudents: Student[] = names.map((name, index) => ({
+      id: `S${Date.now()}-${Math.random().toString(36).substr(2, 5)}-${index}`,
+      name: name.trim(),
+      email: emails[index]?.trim() || '',
+      phone: phones[index]?.trim() || '',
+      tutorName: tutorNames[index]?.trim() || '',
+      tutorPhone: tutorPhones[index]?.trim() || '',
+      photo: 'https://placehold.co/100x100.png',
+      riskLevel: 'low' as 'low' | 'medium' | 'high',
+    }));
 
     saveStudents([...students, ...newStudents]);
     toast({
@@ -158,6 +178,7 @@ export default function StudentsPage() {
     
     handleCloseDialog();
   }
+
 
   const handleDeleteStudent = (studentId: string) => {
     saveStudents(students.filter(s => s.id !== studentId));
@@ -194,114 +215,131 @@ export default function StudentsPage() {
         <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
             <DialogContent className="sm:max-w-xl">
                 <DialogHeader>
-                  <DialogTitle>{isEditing ? 'Editar Estudiante' : 'Agregar Nuevos Estudiantes'}</DialogTitle>
-                  <DialogDescription>
-                    {isEditing 
-                      ? 'Actualiza la información del estudiante.' 
-                      : 'Puedes agregar un estudiante o pegar una lista desde una hoja de cálculo.'}
-                  </DialogDescription>
+                  <DialogTitle>{isEditing ? 'Editar Estudiante' : 'Agregar Estudiantes'}</DialogTitle>
                 </DialogHeader>
-                {isEditing ? (
-                  <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="id" className="text-right">
-                        ID Estudiante
-                      </Label>
-                      <Input
-                        id="id"
-                        className="col-span-3"
-                        value={editingStudent?.id || ''}
-                        onChange={handleInputChange}
-                        disabled={true}
-                      />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="name" className="text-right">
-                        Nombre*
-                      </Label>
-                      <Input
-                        id="name"
-                        placeholder="Ana Torres"
-                        className="col-span-3"
-                        value={editingStudent?.name || ''}
-                        onChange={handleInputChange}
-                        required
-                      />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="email" className="text-right">
-                        Email
-                      </Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="ana.t@example.com"
-                        className="col-span-3"
-                        value={editingStudent?.email || ''}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="phone" className="text-right">
-                        Teléfono
-                      </Label>
-                      <Input
-                        id="phone"
-                        type="tel"
-                        placeholder="555-123-4567"
-                        className="col-span-3"
-                        value={editingStudent?.phone || ''}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="tutorName" className="text-right">
-                        Tutor
-                      </Label>
-                      <Input
-                        id="tutorName"
-                        placeholder="Juan Torres"
-                        className="col-span-3"
-                        value={editingStudent?.tutorName || ''}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="tutorPhone" className="text-right">
-                        Tel. Tutor
-                      </Label>
-                      <Input
-                        id="tutorPhone"
-                        type="tel"
-                        placeholder="555-765-4321"
-                        className="col-span-3"
-                        value={editingStudent?.tutorPhone || ''}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="grid gap-4 py-4">
-                      <Label htmlFor="multiStudentData" className="text-left">
-                        Pega los datos desde una hoja de cálculo (Excel, Google Sheets)
-                      </Label>
-                      <p className="text-sm text-muted-foreground">
-                        Asegúrate de que las columnas estén en este orden: <strong>Nombre, Email, Teléfono, Tutor, Teléfono del Tutor</strong>.
-                      </p>
-                      <Textarea
-                        id="multiStudentData"
-                        placeholder="Laura Jimenez	laura.j@example.com	555-3344	Ricardo Jimenez	555-3355\nCarlos Sanchez	carlos.s@example.com	555-6677	Maria Sanchez	555-6688"
-                        className="col-span-3"
-                        rows={8}
-                        value={multiStudentData}
-                        onChange={(e) => setMultiStudentData(e.target.value)}
-                      />
-                  </div>
-                )}
-                <DialogFooter>
-                  <Button variant="outline" onClick={handleCloseDialog}>Cancelar</Button>
-                  <Button onClick={handleSave}>Guardar</Button>
-                </DialogFooter>
+                 <Tabs defaultValue="single" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="single" disabled={isEditing}>{isEditing ? 'Editar' : 'Uno por Uno'}</TabsTrigger>
+                        <TabsTrigger value="bulk" disabled={isEditing}>Agregar Varios</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="single">
+                         <div className="grid gap-4 py-4">
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="id" className="text-right">
+                                ID Estudiante
+                                </Label>
+                                <Input
+                                id="id"
+                                className="col-span-3"
+                                value={editingStudent?.id || 'Automático'}
+                                onChange={handleInputChange}
+                                disabled={true}
+                                />
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="name" className="text-right">
+                                Nombre*
+                                </Label>
+                                <Input
+                                id="name"
+                                placeholder="Ana Torres"
+                                className="col-span-3"
+                                value={editingStudent?.name || ''}
+                                onChange={handleInputChange}
+                                required
+                                />
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="email" className="text-right">
+                                Email
+                                </Label>
+                                <Input
+                                id="email"
+                                type="email"
+                                placeholder="ana.t@example.com"
+                                className="col-span-3"
+                                value={editingStudent?.email || ''}
+                                onChange={handleInputChange}
+                                />
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="phone" className="text-right">
+                                Teléfono
+                                </Label>
+                                <Input
+                                id="phone"
+                                type="tel"
+                                placeholder="555-123-4567"
+                                className="col-span-3"
+                                value={editingStudent?.phone || ''}
+                                onChange={handleInputChange}
+                                />
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="tutorName" className="text-right">
+                                Tutor
+                                </Label>
+                                <Input
+                                id="tutorName"
+                                placeholder="Juan Torres"
+                                className="col-span-3"
+                                value={editingStudent?.tutorName || ''}
+                                onChange={handleInputChange}
+                                />
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="tutorPhone" className="text-right">
+                                Tel. Tutor
+                                </Label>
+                                <Input
+                                id="tutorPhone"
+                                type="tel"
+                                placeholder="555-765-4321"
+                                className="col-span-3"
+                                value={editingStudent?.tutorPhone || ''}
+                                onChange={handleInputChange}
+                                />
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={handleCloseDialog}>Cancelar</Button>
+                            <Button onClick={handleSaveSingleStudent}>Guardar</Button>
+                        </DialogFooter>
+                    </TabsContent>
+                    <TabsContent value="bulk">
+                         <div className="grid gap-4 py-4">
+                            <p className="text-sm text-muted-foreground">
+                                Pega una columna de datos en cada campo. Asegúrate de que cada línea corresponda al mismo estudiante.
+                            </p>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="bulkNames">Nombres*</Label>
+                                    <Textarea id="bulkNames" placeholder="Laura Jimenez&#10;Carlos Sanchez" rows={5} value={bulkNames} onChange={(e) => setBulkNames(e.target.value)} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="bulkEmails">Emails</Label>
+                                    <Textarea id="bulkEmails" placeholder="laura.j@example.com&#10;carlos.s@example.com" rows={5} value={bulkEmails} onChange={(e) => setBulkEmails(e.target.value)} />
+                                </div>
+                                 <div className="space-y-2">
+                                    <Label htmlFor="bulkPhones">Teléfonos</Label>
+                                    <Textarea id="bulkPhones" placeholder="555-3344&#10;555-6677" rows={5} value={bulkPhones} onChange={(e) => setBulkPhones(e.target.value)} />
+                                </div>
+                                 <div className="space-y-2">
+                                    <Label htmlFor="bulkTutorNames">Nombres de Tutores</Label>
+                                    <Textarea id="bulkTutorNames" placeholder="Ricardo Jimenez&#10;Maria Sanchez" rows={5} value={bulkTutorNames} onChange={(e) => setBulkTutorNames(e.target.value)} />
+                                </div>
+                                 <div className="space-y-2 col-span-2">
+                                    <Label htmlFor="bulkTutorPhones">Teléfonos de Tutores</Label>
+                                    <Textarea id="bulkTutorPhones" placeholder="555-3355&#10;555-6688" rows={5} value={bulkTutorPhones} onChange={(e) => setBulkTutorPhones(e.target.value)} />
+                                </div>
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={handleCloseDialog}>Cancelar</Button>
+                            <Button onClick={handleSaveBulkStudents}>Agregar Estudiantes</Button>
+                        </DialogFooter>
+                    </TabsContent>
+                </Tabs>
             </DialogContent>
         </Dialog>
 
