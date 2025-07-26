@@ -1,3 +1,5 @@
+'use client';
+
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -7,11 +9,14 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { groups } from '@/lib/placeholder-data';
+import { groups as initialGroups } from '@/lib/placeholder-data';
 import { Users, ClipboardList } from 'lucide-react';
 import { AttendanceRandomizer } from '@/components/attendance-randomizer';
+import Link from 'next/link';
+import { useState } from 'react';
 
 export default function GroupsPage() {
+  const [groups] = useState(initialGroups);
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
@@ -40,8 +45,10 @@ export default function GroupsPage() {
               </div>
             </CardContent>
             <CardFooter className="flex justify-between">
-              <Button variant="outline">
-                <ClipboardList className="mr-2 h-4 w-4" /> Ver Detalles
+              <Button asChild variant="outline">
+                <Link href={`/groups/${group.id}`}>
+                  <ClipboardList className="mr-2 h-4 w-4" /> Ver Detalles
+                </Link>
               </Button>
               <AttendanceRandomizer students={group.students} />
             </CardFooter>
