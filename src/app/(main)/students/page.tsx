@@ -1,3 +1,5 @@
+'use client';
+
 import Image from 'next/image';
 import {
   Card,
@@ -17,7 +19,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, MoreHorizontal } from 'lucide-react';
-import { students } from '@/lib/placeholder-data';
+import { students as initialStudents, Student } from '@/lib/placeholder-data';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,8 +38,30 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { useState } from 'react';
 
 export default function StudentsPage() {
+  const [students, setStudents] = useState<Student[]>(initialStudents);
+  const [newStudentName, setNewStudentName] = useState('');
+  const [newStudentId, setNewStudentId] = useState('');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const handleAddStudent = () => {
+    if (newStudentName && newStudentId) {
+      const newStudent: Student = {
+        id: newStudentId,
+        name: newStudentName,
+        photo: 'https://placehold.co/100x100.png', // Placeholder photo
+        riskLevel: 'low',
+      };
+      setStudents([...students, newStudent]);
+      setNewStudentName('');
+      setNewStudentId('');
+      setIsDialogOpen(false);
+    }
+  };
+
+
   return (
     <Card>
       <CardHeader>
@@ -48,7 +72,7 @@ export default function StudentsPage() {
               Gestiona los perfiles de los estudiantes de tu institución.
             </CardDescription>
           </div>
-          <Dialog>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-1">
                 <PlusCircle className="h-3.5 w-3.5" />
@@ -69,13 +93,25 @@ export default function StudentsPage() {
                   <Label htmlFor="name" className="text-right">
                     Nombre
                   </Label>
-                  <Input id="name" placeholder="Ana Torres" className="col-span-3" />
+                  <Input 
+                    id="name" 
+                    placeholder="Ana Torres" 
+                    className="col-span-3"
+                    value={newStudentName}
+                    onChange={(e) => setNewStudentName(e.target.value)}
+                  />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="studentId" className="text-right">
                     ID Estudiante
                   </Label>
-                  <Input id="studentId" placeholder="S007" className="col-span-3" />
+                  <Input 
+                    id="studentId" 
+                    placeholder="S007" 
+                    className="col-span-3" 
+                    value={newStudentId}
+                    onChange={(e) => setNewStudentId(e.target.value)}
+                  />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="photo" className="text-right">
@@ -85,7 +121,7 @@ export default function StudentsPage() {
                 </div>
               </div>
               <DialogFooter>
-                <Button type="submit">Guardar Estudiante</Button>
+                <Button onClick={handleAddStudent}>Guardar Estudiante</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
