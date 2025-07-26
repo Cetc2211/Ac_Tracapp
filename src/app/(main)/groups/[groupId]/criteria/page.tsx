@@ -124,6 +124,8 @@ export default function GroupCriteriaPage() {
     )
   }
 
+  const isAddButtonDisabled = !newCriterionName.trim() || !newCriterionWeight.trim() || !newCriterionActivities.trim();
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-4">
@@ -179,7 +181,7 @@ export default function GroupCriteriaPage() {
                     onChange={(e) => setNewCriterionActivities(e.target.value)}
                 />
              </div>
-            <Button size="icon" onClick={handleAddCriterion} disabled={!newCriterionName || !newCriterionWeight || !newCriterionActivities}>
+            <Button size="icon" onClick={handleAddCriterion} disabled={isAddButtonDisabled}>
                 <PlusCircle className="h-4 w-4"/>
                 <span className="sr-only">Agregar</span>
             </Button>
