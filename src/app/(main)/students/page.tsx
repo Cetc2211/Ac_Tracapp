@@ -142,26 +142,18 @@ export default function StudentsPage() {
       const reader = new FileReader();
       reader.onload = (e) => {
         const text = e.target?.result as string;
-        const lines = text.split('\n').filter(line => line.trim() !== '');
+        const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
         
         if (lines.length < 2) {
             toast({ variant: 'destructive', title: 'Error', description: 'El archivo CSV está vacío o solo contiene la cabecera.'});
             return;
         }
 
-        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+        const requiredSpanishHeaders = ['nombre', 'email', 'telefono', 'tutor', 'telefono_tutor'];
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/\r/g, ''));
         
-        const headerMapping: Record<string, string> = {
-          nombre: 'name',
-          email: 'email',
-          telefono: 'phone',
-          tutor: 'tutorName',
-          telefono_tutor: 'tutorPhone'
-        };
-
-        const requiredSpanishHeaders = Object.keys(headerMapping);
         const allHeadersPresent = requiredSpanishHeaders.every(requiredHeader => headers.includes(requiredHeader));
-
+        
         if (!allHeadersPresent) {
             toast({
                 variant: 'destructive',
@@ -170,6 +162,15 @@ export default function StudentsPage() {
             });
             return;
         }
+
+        const headerMapping: Record<string, string> = {
+          nombre: 'name',
+          email: 'email',
+          telefono: 'phone',
+          tutor: 'tutorName',
+          telefono_tutor: 'tutorPhone'
+        };
+
 
         const newStudentsFromFile: Student[] = lines.slice(1).map((line, index) => {
           const data = line.split(',');
