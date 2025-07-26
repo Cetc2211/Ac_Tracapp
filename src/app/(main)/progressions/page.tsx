@@ -93,7 +93,7 @@ export default function ProgressionsPage() {
                   </TableCell>
                   <TableCell className="border-r">
                     <Label>Docente(s)</Label>
-                    <Input defaultValue="Cecilio Topete Cruz" />
+                    <Input defaultValue="" />
                   </TableCell>
                   <TableCell>
                     <Label>Semana(s): 1.25 semanas</Label>
@@ -103,17 +103,17 @@ export default function ProgressionsPage() {
                 <TableRow>
                   <TableCell className="border-r">
                     <Label>Área del Conocimiento:</Label>
-                    <Input defaultValue="Humanidades 1" />
+                    <Input defaultValue="" />
                   </TableCell>
                   <TableCell className="border-r" rowSpan={2}>
                     <div className="grid grid-cols-2 gap-4 h-full">
                       <div>
                         <Label>Semestre</Label>
-                        <Input defaultValue="I" />
+                        <Input defaultValue="" />
                       </div>
                       <div>
                         <Label>Grupos</Label>
-                        <Input defaultValue="IA, B y C" />
+                        <Input defaultValue="" />
                       </div>
                     </div>
                   </TableCell>
@@ -121,11 +121,11 @@ export default function ProgressionsPage() {
                     <div className="grid grid-cols-2 gap-4 h-full">
                       <div>
                         <Label>Horas de mediación docente</Label>
-                        <Input defaultValue="4" />
+                        <Input defaultValue="" />
                       </div>
                       <div>
                         <Label>Horas de estudio independiente</Label>
-                        <Input defaultValue="1" />
+                        <Input defaultValue="" />
                       </div>
                     </div>
                   </TableCell>
@@ -133,7 +133,7 @@ export default function ProgressionsPage() {
                 <TableRow>
                   <TableCell className="border-r">
                     <Label>Abordaje General:</Label>
-                    <Input defaultValue="Qué se necesita saber para transformar la sociedad." />
+                    <Input defaultValue="" />
                     <Label>Abordaje Específico:</Label>
                     <Input defaultValue="" />
                   </TableCell>
@@ -146,12 +146,13 @@ export default function ProgressionsPage() {
             </div>
             <div className="p-2 border mb-4">
               <p>
-                <span className="font-bold">Progresión:</span> Valora la configuración de su propia experiencia al cuestionar y decidir los roles que puede cumplir en relación con acontecimientos, discursos, instituciones, imágenes, objetos y prácticas, para ejercitar su capacidad práctica y de juicio en los diferentes ámbitos de su vida.
+                <span className="font-bold">Progresión:</span>
+                <Textarea className="mt-1" rows={3} defaultValue=""></Textarea>
               </p>
               <div className="flex items-center space-x-4 my-2">
                 <span className="font-bold">Categoría(s):</span>
                 <div className="flex items-center space-x-2">
-                  <Checkbox id="vivir" defaultChecked />
+                  <Checkbox id="vivir" />
                   <Label htmlFor="vivir">Vivir aquí y ahora</Label>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -164,14 +165,16 @@ export default function ProgressionsPage() {
                 </div>
               </div>
               <p>
-                <span className="font-bold">Subcategoría(s):</span> Vida alienada: Hace referencia a no poner en cuestión la finitud y experiencia propia.
-                Conflictos de lo colectivo: Hace mención a los sentidos que pueden adquirir las relaciones que conforman lo colectivo (Sometimiento, soberanía, obediencia, rebeldía, sublevación, insurrección, ciudadanía)
+                <span className="font-bold">Subcategoría(s):</span>
+                <Textarea className="mt-1" rows={2} defaultValue=""></Textarea>
               </p>
               <p>
-                <span className="font-bold">Meta(s) de Aprendizaje:</span> Utiliza los significados (culturales, políticos, históricos, tecnológicos, entre otros) de las prácticas, discursos, instituciones y acontecimientos que constituyen su vida y los vincula a sus capacidades de construir la colectividad con base en los aportes de las humanidades. Asume roles relacionados con los acontecimientos, discursos, instituciones, imágenes, objetos y prácticas que conforman sus vivencias de forma humanista.
+                <span className="font-bold">Meta(s) de Aprendizaje:</span>
+                <Textarea className="mt-1" rows={3} defaultValue=""></Textarea>
               </p>
               <p>
-                <span className="font-bold">Aprendizaje de Trayectoria:</span> Cuestiona y argumenta los significados (culturales, políticos, históricos, tecnológicos, naturales, entre otros) de las prácticas, discursos, instituciones y acontecimientos que constituyen su vida para fortalecer su afectividad y sus capacidades de construir su experiencia individual y colectiva.
+                <span className="font-bold">Aprendizaje de Trayectoria:</span>
+                <Textarea className="mt-1" rows={3} defaultValue=""></Textarea>
               </p>
             </div>
 
@@ -186,9 +189,9 @@ export default function ProgressionsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                <TableRow><TableCell className='border-r'>UAC 1</TableCell><TableCell></TableCell></TableRow>
-                <TableRow><TableCell className='border-r'>UAC 2</TableCell><TableCell></TableCell></TableRow>
-                <TableRow><TableCell className='border-r'>UAC 3</TableCell><TableCell></TableCell></TableRow>
+                <TableRow><TableCell className='border-r'><Textarea defaultValue="UAC 1" className='min-h-0 p-1 h-8'/></TableCell><TableCell><Textarea defaultValue="" className='min-h-0 p-1 h-8'/></TableCell></TableRow>
+                <TableRow><TableCell className='border-r'><Textarea defaultValue="UAC 2" className='min-h-0 p-1 h-8'/></TableCell><TableCell><Textarea defaultValue="" className='min-h-0 p-1 h-8'/></TableCell></TableRow>
+                <TableRow><TableCell className='border-r'><Textarea defaultValue="UAC 3" className='min-h-0 p-1 h-8'/></TableCell><TableCell><Textarea defaultValue="" className='min-h-0 p-1 h-8'/></TableCell></TableRow>
               </TableBody>
               <TableHeader>
                  <TableRow>
@@ -197,10 +200,10 @@ export default function ProgressionsPage() {
                  </TableRow>
               </TableHeader>
               <TableBody>
-                <TableRow><TableCell className='border-r'>Nombre del PAEC:</TableCell><TableCell></TableCell></TableRow>
-                <TableRow><TableCell className='border-r'>UAC 1</TableCell><TableCell></TableCell></TableRow>
-                <TableRow><TableCell className='border-r'>UAC 2</TableCell><TableCell></TableCell></TableRow>
-                <TableRow><TableCell className='border-r'>UAC 3</TableCell><TableCell></TableCell></TableRow>
+                <TableRow><TableCell className='border-r'><Textarea defaultValue="Nombre del PAEC:" className='min-h-0 p-1 h-8'/></TableCell><TableCell><Textarea defaultValue="" className='min-h-0 p-1 h-8'/></TableCell></TableRow>
+                <TableRow><TableCell className='border-r'><Textarea defaultValue="UAC 1" className='min-h-0 p-1 h-8'/></TableCell><TableCell><Textarea defaultValue="" className='min-h-0 p-1 h-8'/></TableCell></TableRow>
+                <TableRow><TableCell className='border-r'><Textarea defaultValue="UAC 2" className='min-h-0 p-1 h-8'/></TableCell><TableCell><Textarea defaultValue="" className='min-h-0 p-1 h-8'/></TableCell></TableRow>
+                <TableRow><TableCell className='border-r'><Textarea defaultValue="UAC 3" className='min-h-0 p-1 h-8'/></TableCell><TableCell><Textarea defaultValue="" className='min-h-0 p-1 h-8'/></TableCell></TableRow>
               </TableBody>
             </Table>
 
@@ -224,35 +227,29 @@ export default function ProgressionsPage() {
                 <TableRow>
                   <TableCell className="border-r">
                     <span className='font-bold'>Apertura:</span>
-                    <p>1.- Visualiza un video acerca de los roles de género, que el docente proporcionará.</p>
-                    <p>2.- Responde un cuestionario diagnóstico a partir de la visualización del video.</p>
+                    <Textarea className='mt-1' rows={3}></Textarea>
                   </TableCell>
-                  <TableCell className="border-r text-center">Total: 30 min.</TableCell>
-                  <TableCell className="border-r text-center">Cuestionario resuelto</TableCell>
-                  <TableCell className="text-center">Diagnóstica: <br/> Instrumento: Cuestionario <br/> Ponderación: 5%</TableCell>
+                  <TableCell className="border-r"><Textarea className='h-full'></Textarea></TableCell>
+                  <TableCell className="border-r"><Textarea className='h-full'></Textarea></TableCell>
+                  <TableCell><Textarea className='h-full'></Textarea></TableCell>
                 </TableRow>
                 <TableRow>
                    <TableCell className="border-r">
                     <span className='font-bold'>Desarrollo:</span>
-                    <p>1.- Clasifica a través de una lluvia de ideas, las actividades asignadas socialmente a las mujeres y socialmente asignadas a los hombres.</p>
-                    <p>2.- Reflexiona acerca de las funciones sociales que derivan en estereotipos negativos y los que no.</p>
-                    <p>3.- Investiga los conceptos de: Rol, Estereotipo, Género, Estereotipo de género y Violencia.</p>
-                    <p>4.- Identifica las problemáticas sociales que han causado los estereotipos de género. (Violencias barriales, exclusiones de género, sometimiento político).</p>
-                    <p>5.- Describe los riesgos a los que se exponen los diferentes roles sociales en tu comunidad.</p>
+                    <Textarea className='mt-1' rows={5}></Textarea>
                   </TableCell>
-                  <TableCell className="border-r text-center">Total: 2 horas 30 min.</TableCell>
-                  <TableCell className="border-r text-center">Lluvia de ideas, Reflexión por escrito</TableCell>
-                  <TableCell className="text-center">Formativa: <br/> Instrumento: Rúbrica <br/> Ponderación: 60%</TableCell>
+                  <TableCell className="border-r"><Textarea className='h-full'></Textarea></TableCell>
+                  <TableCell className="border-r"><Textarea className='h-full'></Textarea></TableCell>
+                  <TableCell><Textarea className='h-full'></Textarea></TableCell>
                 </TableRow>
                  <TableRow>
                    <TableCell className="border-r">
                     <span className='font-bold'>Cierre:</span>
-                    <p>1.- Forma equipos, para proponer alternativas de solución a los problemas antes mencionados.</p>
-                    <p>2.- Expone al grupo sus propuestas de solución.</p>
+                    <Textarea className='mt-1' rows={3}></Textarea>
                   </TableCell>
-                  <TableCell className="border-r text-center">Total: 2 horas</TableCell>
-                  <TableCell className="border-r text-center">Formación de equipos, Exposición</TableCell>
-                  <TableCell className="text-center">Sumativa: <br/> Instrumento: Rúbrica <br/> Ponderación: 40%</TableCell>
+                  <TableCell className="border-r"><Textarea className='h-full'></Textarea></TableCell>
+                  <TableCell className="border-r"><Textarea className='h-full'></Textarea></TableCell>
+                  <TableCell><Textarea className='h-full'></Textarea></TableCell>
                 </TableRow>
               </TableBody>
             </Table>
@@ -263,9 +260,9 @@ export default function ProgressionsPage() {
             <Table className="mb-4 border">
                <TableBody>
                 <TableRow>
-                  <TableCell className="border-r w-1/3"><span className="font-bold">Recursos y Materiales Didácticos:</span><p>Pizarrón, Plumones</p></TableCell>
-                  <TableCell className="border-r w-1/3"><span className="font-bold">Equipo:</span><p>Proyector y equipo de computo</p></TableCell>
-                  <TableCell className="w-1/3"><span className="font-bold">Fuentes de Información:</span><p>Video (pendiente el link)</p></TableCell>
+                  <TableCell className="border-r w-1/3"><span className="font-bold">Recursos y Materiales Didácticos:</span><Textarea className="mt-1" rows={2}></Textarea></TableCell>
+                  <TableCell className="border-r w-1/3"><span className="font-bold">Equipo:</span><Textarea className="mt-1" rows={2}></Textarea></TableCell>
+                  <TableCell className="w-1/3"><span className="font-bold">Fuentes de Información:</span><Textarea className="mt-1" rows={2}></Textarea></TableCell>
                 </TableRow>
                </TableBody>
             </Table>
