@@ -1,0 +1,27 @@
+export type Student = {
+  id: string;
+  name: string;
+  photo: string;
+  riskLevel?: 'low' | 'medium' | 'high';
+};
+
+export type Group = {
+  id: string;
+  subject: string;
+  students: Student[];
+};
+
+export const students: Student[] = [
+  { id: 'S001', name: 'Ana Torres', photo: 'https://placehold.co/100x100.png', riskLevel: 'high' },
+  { id: 'S002', name: 'Luis García', photo: 'https://placehold.co/100x100.png', riskLevel: 'low' },
+  { id: 'S003', name: 'Carla Rojas', photo: 'https://placehold.co/100x100.png', riskLevel: 'medium' },
+  { id: 'S004', name: 'Diego Fernández', photo: 'https://placehold.co/100x100.png', riskLevel: 'low' },
+  { id: 'S005', name: 'Mariana López', photo: 'https://placehold.co/100x100.png', riskLevel: 'low' },
+  { id: 'S006', name: 'Jorge Pérez', photo: 'https://placehold.co/100x100.png', riskLevel: 'high' },
+];
+
+export const groups: Group[] = [
+  { id: 'G01', subject: 'Matemáticas Avanzadas', students: students.slice(0, 4) },
+  { id: 'G02', subject: 'Historia del Arte', students: students.slice(2, 6) },
+  { id: 'G03', subject: 'Programación I', students: students.slice(1, 5) },
+];
