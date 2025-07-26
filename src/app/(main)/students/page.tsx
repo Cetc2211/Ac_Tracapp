@@ -47,7 +47,7 @@ export default function StudentsPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Partial<Student> | null>(null);
-  const [multiStudentNames, setMultiStudentNames] = useState('');
+  const [multiStudentData, setMultiStudentData] = useState('');
 
   const { toast } = useToast();
 
@@ -80,7 +80,7 @@ export default function StudentsPage() {
 
   const handleOpenDialog = (student: Partial<Student> | null) => {
     setEditingStudent(student ? { ...student } : {});
-    setMultiStudentNames('');
+    setMultiStudentData('');
     setIsDialogOpen(true);
   };
   
@@ -123,26 +123,29 @@ export default function StudentsPage() {
   };
   
   const handleSaveNewStudents = () => {
-    const namesToProcess = editingStudent?.name ? [editingStudent.name] : multiStudentNames.split('\n');
-    const newStudents = namesToProcess
-      .map(name => name.trim())
-      .filter(name => name) // Filter out empty lines
-      .map(name => ({
-        id: `S${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-        name: name,
-        email: '',
-        phone: '',
-        tutorName: '',
-        tutorPhone: '',
-        photo: 'https://placehold.co/100x100.png',
-        riskLevel: 'low' as 'low' | 'medium' | 'high',
-      }));
+    const lines = multiStudentData.trim().split('\n');
+    const newStudents: Student[] = lines
+      .map(line => {
+        const [name, email, phone, tutorName, tutorPhone] = line.split('\t').map(s => s.trim());
+        if (!name) return null;
+        return {
+          id: `S${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+          name,
+          email: email || '',
+          phone: phone || '',
+          tutorName: tutorName || '',
+          tutorPhone: tutorPhone || '',
+          photo: 'https://placehold.co/100x100.png',
+          riskLevel: 'low' as 'low' | 'medium' | 'high',
+        };
+      })
+      .filter((student): student is Student => student !== null);
 
     if (newStudents.length === 0) {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Por favor, ingresa al menos un nombre de estudiante.',
+        description: 'Por favor, ingresa los datos de al menos un estudiante.',
       });
       return;
     }
@@ -189,13 +192,13 @@ export default function StudentsPage() {
       </CardHeader>
       <CardContent>
         <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
-            <DialogContent>
+            <DialogContent className="sm:max-w-xl">
                 <DialogHeader>
                   <DialogTitle>{isEditing ? 'Editar Estudiante' : 'Agregar Nuevos Estudiantes'}</DialogTitle>
                   <DialogDescription>
                     {isEditing 
                       ? 'Actualiza la información del estudiante.' 
-                      : 'Puedes agregar un estudiante o pegar una lista de nombres (uno por línea).'}
+                      : 'Puedes agregar un estudiante o pegar una lista desde una hoja de cálculo.'}
                   </DialogDescription>
                 </DialogHeader>
                 {isEditing ? (
@@ -279,39 +282,19 @@ export default function StudentsPage() {
                   </div>
                 ) : (
                   <div className="grid gap-4 py-4">
-                      <Label htmlFor="name" className="text-left">
-                        Nombre de un estudiante
+                      <Label htmlFor="multiStudentData" className="text-left">
+                        Pega los datos desde una hoja de cálculo (Excel, Google Sheets)
                       </Label>
-                      <Input
-                        id="name"
-                        placeholder="Ana Torres"
-                        value={editingStudent?.name || ''}
-                        onChange={(e) => setEditingStudent({ name: e.target.value })}
-                        disabled={!!multiStudentNames}
-                      />
-                      <div className="relative">
-                          <div className="absolute inset-0 flex items-center">
-                              <span className="w-full border-t" />
-                          </div>
-                          <div className="relative flex justify-center text-xs uppercase">
-                              <span className="bg-background px-2 text-muted-foreground">O</span>
-                          </div>
-                      </div>
-                      <Label htmlFor="multiStudentNames" className="text-left">
-                        Pega una lista de nombres (uno por línea)
-                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        Asegúrate de que las columnas estén en este orden: <strong>Nombre, Email, Teléfono, Tutor, Teléfono del Tutor</strong>.
+                      </p>
                       <Textarea
-                        id="multiStudentNames"
-                        placeholder="Laura Jimenez\nCarlos Sanchez\nSofia Castillo"
+                        id="multiStudentData"
+                        placeholder="Laura Jimenez	laura.j@example.com	555-3344	Ricardo Jimenez	555-3355\nCarlos Sanchez	carlos.s@example.com	555-6677	Maria Sanchez	555-6688"
                         className="col-span-3"
-                        rows={5}
-                        value={multiStudentNames}
-                        onChange={(e) => {
-                          setMultiStudentNames(e.target.value);
-                          if (e.target.value) {
-                            setEditingStudent({ name: '' });
-                          }
-                        }}
+                        rows={8}
+                        value={multiStudentData}
+                        onChange={(e) => setMultiStudentData(e.target.value)}
                       />
                   </div>
                 )}
@@ -388,5 +371,3 @@ export default function StudentsPage() {
     </Card>
   );
 }
-
-    
