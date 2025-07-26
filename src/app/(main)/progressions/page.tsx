@@ -44,6 +44,9 @@ export default function ProgressionsPage() {
     subcategorias: '',
     metasAprendizaje: '',
     aprendizajeTrayectoria: '',
+    conceptosCentrales: '',
+    conceptosTransversales: '',
+    recursosSociocognitivos: '',
     actividadApertura: '',
     tecnicaApertura: '',
     evidenciaApertura: '',
@@ -74,7 +77,7 @@ export default function ProgressionsPage() {
   }
 
   const handleGetSuggestions = async () => {
-    const { progresion, metasAprendizaje, aprendizajeTrayectoria } = formData;
+    const { progresion, metasAprendizaje, aprendizajeTrayectoria, conceptosCentrales, conceptosTransversales, recursosSociocognitivos } = formData;
     if (!progresion || !metasAprendizaje) {
       toast({
         variant: 'destructive',
@@ -91,6 +94,9 @@ export default function ProgressionsPage() {
         progression: progresion,
         learningGoals: metasAprendizaje,
         trajectory: aprendizajeTrayectoria,
+        centralConcepts: conceptosCentrales,
+        crossConcepts: conceptosTransversales,
+        sociocognitiveResources: recursosSociocognitivos,
       });
 
       setFormData(prev => ({
@@ -271,6 +277,18 @@ export default function ProgressionsPage() {
               <div>
                 <Label htmlFor="aprendizajeTrayectoria" className="font-bold">Aprendizaje de Trayectoria:</Label>
                 <Textarea id="aprendizajeTrayectoria" className="mt-1" rows={3} value={formData.aprendizajeTrayectoria} onChange={handleInputChange}></Textarea>
+              </div>
+               <div>
+                <Label htmlFor="recursosSociocognitivos" className="font-bold">Recursos Sociocognitivos (Opcional):</Label>
+                <Textarea id="recursosSociocognitivos" className="mt-1" rows={3} value={formData.recursosSociocognitivos} onChange={handleInputChange} placeholder="Pega aquí los recursos sociocognitivos del plan de estudios..."></Textarea>
+              </div>
+               <div>
+                <Label htmlFor="conceptosCentrales" className="font-bold">Conceptos Centrales (Opcional):</Label>
+                <Textarea id="conceptosCentrales" className="mt-1" rows={3} value={formData.conceptosCentrales} onChange={handleInputChange} placeholder="Pega aquí los conceptos centrales del plan de estudios..."></Textarea>
+              </div>
+              <div>
+                <Label htmlFor="conceptosTransversales" className="font-bold">Conceptos Transversales (Opcional):</Label>
+                <Textarea id="conceptosTransversales" className="mt-1" rows={3} value={formData.conceptosTransversales} onChange={handleInputChange} placeholder="Pega aquí los conceptos transversales del plan de estudios..."></Textarea>
               </div>
             </div>
 

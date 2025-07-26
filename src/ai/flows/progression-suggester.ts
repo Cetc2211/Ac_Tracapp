@@ -15,6 +15,9 @@ const ProgressionSuggesterInputSchema = z.object({
   progression: z.string().describe('The main content or topic of the progression.'),
   learningGoals: z.string().describe('The learning goals for this progression.'),
   trajectory: z.string().optional().describe('The learning trajectory or path.'),
+  sociocognitiveResources: z.string().optional().describe('Key sociocognitive resources from the curriculum.'),
+  centralConcepts: z.string().optional().describe('Central concepts from the curriculum.'),
+  crossConcepts: z.string().optional().describe('Cross-curricular concepts from the curriculum.'),
 });
 export type ProgressionSuggesterInput = z.infer<typeof ProgressionSuggesterInputSchema>;
 
@@ -41,6 +44,8 @@ const prompt = ai.definePrompt({
     The activities should be divided into three moments: opening, development, and closing.
     The tone should be creative, inspiring, and aligned with modern teaching methodologies.
 
+    Use the following curriculum information as the basis for your suggestions:
+
     Progression Content:
     {{{progression}}}
 
@@ -50,6 +55,21 @@ const prompt = ai.definePrompt({
     {{#if trajectory}}
     Learning Trajectory:
     {{{trajectory}}}
+    {{/if}}
+
+    {{#if sociocognitiveResources}}
+    Sociocognitive Resources:
+    {{{sociocognitiveResources}}}
+    {{/if}}
+
+    {{#if centralConcepts}}
+    Central Concepts:
+    {{{centralConcepts}}}
+    {{/if}}
+
+    {{#if crossConcepts}}
+    Cross-curricular Concepts:
+    {{{crossConcepts}}}
     {{/if}}
 
     Provide one distinct activity for each of the three moments.
