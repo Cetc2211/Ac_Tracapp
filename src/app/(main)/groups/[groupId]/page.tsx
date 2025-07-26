@@ -21,7 +21,7 @@ import { groups as initialGroups, students as initialStudents, Student } from '@
 import { notFound, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, MoreHorizontal, UserPlus, Trash2, PlusCircle, Trash, FilePen, CalendarCheck } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, UserPlus, Trash2, CalendarCheck, FilePen, Edit } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,7 +52,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import { useState, useEffect, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -73,9 +72,6 @@ export default function GroupDetailsPage({
   const router = useRouter();
 
   const [evaluationCriteria, setEvaluationCriteria] = useState<EvaluationCriteria[]>([]);
-  const [newCriterionName, setNewCriterionName] = useState('');
-  const [newCriterionWeight, setNewCriterionWeight] = useState('');
-  
   
   useEffect(() => {
     try {
@@ -111,12 +107,6 @@ export default function GroupDetailsPage({
       setGroups(newGroups);
       localStorage.setItem('groups', JSON.stringify(newGroups));
   };
-  
-  const saveCriteria = (newCriteria: EvaluationCriteria[]) => {
-    setEvaluationCriteria(newCriteria);
-    localStorage.setItem(`criteria_${params.groupId}`, JSON.stringify(newCriteria));
-  };
-
 
   const group = groups.find((g) => g.id === params.groupId);
 
@@ -125,7 +115,6 @@ export default function GroupDetailsPage({
   
   const studentsInGroup = group ? group.students.map(s => s.id) : [];
   const availableStudents = students.filter(s => !studentsInGroup.includes(s.id));
-
 
   if (!group) {
     return notFound();
@@ -185,46 +174,7 @@ export default function GroupDetailsPage({
         checked ? [...prev, studentId] : prev.filter(id => id !== studentId)
       );
   };
-  
-  const handleAddCriterion = () => {
-    const weight = parseFloat(newCriterionWeight);
-    if (!newCriterionName.trim() || isNaN(weight) || weight <= 0 || weight > 100) {
-        toast({
-            variant: 'destructive',
-            title: 'Datos inválidos',
-            description: 'El nombre no puede estar vacío y el peso debe ser un número entre 1 y 100.',
-        });
-        return;
-    }
-
-    const totalWeight = evaluationCriteria.reduce((sum, c) => sum + c.weight, 0) + weight;
-    if (totalWeight > 100) {
-        toast({
-            variant: 'destructive',
-            title: 'Límite de peso excedido',
-            description: `El peso total (${totalWeight}%) no puede superar el 100%.`,
-        });
-        return;
-    }
-
-    const newCriterion: EvaluationCriteria = {
-        id: `C${Date.now()}`,
-        name: newCriterionName.trim(),
-        weight: weight,
-    };
-
-    saveCriteria([...evaluationCriteria, newCriterion]);
-    setNewCriterionName('');
-    setNewCriterionWeight('');
-    toast({ title: 'Criterio Agregado', description: `Se agregó "${newCriterion.name}" a la lista.`});
-  };
-  
-  const handleRemoveCriterion = (criterionId: string) => {
-    const newCriteria = evaluationCriteria.filter(c => c.id !== criterionId);
-    saveCriteria(newCriteria);
-    toast({ title: 'Criterio Eliminado', description: 'El criterio de evaluación ha sido eliminado.' });
-  };
-  
+    
   const totalWeight = useMemo(() => {
     return evaluationCriteria.reduce((sum, c) => sum + c.weight, 0);
   }, [evaluationCriteria]);
@@ -248,12 +198,6 @@ export default function GroupDetailsPage({
             </div>
          </div>
          <div className="flex items-center gap-2">
-            <Button asChild variant="outline">
-                <Link href={`/groups/${group.id}/attendance`}>
-                    <CalendarCheck className="mr-2 h-4 w-4" />
-                    Tomar Asistencia
-                </Link>
-            </Button>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="icon">
@@ -276,7 +220,7 @@ export default function GroupDetailsPage({
                                 <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
                                 <AlertDialogDescription>
                                     Esta acción no se puede deshacer. Esto eliminará permanentemente el grupo,
-                                    sus criterios de evaluación, calificaciones, registros de asistencia y desvinculará a los estudiantes.
+                                    sus criterios de evaluación, calificaciones y registros de asistencia.
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -442,74 +386,56 @@ export default function GroupDetailsPage({
 
         <Card>
             <CardHeader>
-                <CardTitle>Criterios de Evaluación</CardTitle>
+                <CardTitle>Acciones del Grupo</CardTitle>
                 <CardDescription>
-                    Define los rubros y su peso para la calificación final. Total actual: {totalWeight}%.
+                    Gestiona la asistencia, criterios de evaluación y calificaciones.
                 </CardDescription>
             </CardHeader>
+            <CardContent className="grid gap-4">
+                <Button asChild variant="outline">
+                    <Link href={`/groups/${group.id}/attendance`}>
+                        <CalendarCheck className="mr-2 h-4 w-4" />
+                        Tomar Asistencia
+                    </Link>
+                </Button>
+                 <Button asChild variant="outline">
+                    <Link href={`/groups/${group.id}/criteria`}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Gestionar Criterios
+                    </Link>
+                </Button>
+                 <Button asChild>
+                    <Link href={`/groups/${group.id}/grades`}>
+                        <FilePen className="mr-2 h-4 w-4" />
+                        Registrar Calificaciones
+                    </Link>
+                </Button>
+            </CardContent>
+            <CardHeader className="pt-0">
+                <CardTitle className="text-lg">Resumen de Criterios</CardTitle>
+                <CardDescription>Peso total: {totalWeight}%</CardDescription>
+            </CardHeader>
             <CardContent>
-                <div className="space-y-4">
-                    <div className="flex gap-2">
-                        <Input 
-                            placeholder="Nombre del criterio (Ej. Tareas)" 
-                            value={newCriterionName}
-                            onChange={(e) => setNewCriterionName(e.target.value)}
-                        />
-                        <Input 
-                            type="number" 
-                            placeholder="Peso %" 
-                            className="max-w-[100px]"
-                            value={newCriterionWeight}
-                            onChange={(e) => setNewCriterionWeight(e.target.value)}
-                        />
-                        <Button size="icon" onClick={handleAddCriterion} disabled={!newCriterionName || !newCriterionWeight}>
-                            <PlusCircle className="h-4 w-4"/>
-                            <span className="sr-only">Agregar</span>
-                        </Button>
-                    </div>
-                    <div className="space-y-2">
-                        {evaluationCriteria.map(criterion => (
-                            <div key={criterion.id} className="flex items-center justify-between p-2 bg-muted rounded-md">
-                                <span>{criterion.name}</span>
-                                <div className="flex items-center gap-2">
-                                    <Badge variant="secondary">{criterion.weight}%</Badge>
-                                    <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleRemoveCriterion(criterion.id)}>
-                                        <Trash className="h-4 w-4 text-destructive"/>
-                                        <span className="sr-only">Eliminar</span>
-                                    </Button>
-                                </div>
-                            </div>
-                        ))}
-                        {evaluationCriteria.length === 0 && (
-                            <p className="text-sm text-center text-muted-foreground pt-4">No has agregado criterios de evaluación.</p>
-                        )}
-                    </div>
-                     {totalWeight > 0 && totalWeight <= 100 && (
-                        <div className="text-right text-sm font-bold">
-                            Total: {totalWeight}%
+                 <div className="space-y-2">
+                    {evaluationCriteria.map(criterion => (
+                        <div key={criterion.id} className="flex items-center justify-between p-2 bg-muted rounded-md">
+                            <span>{criterion.name}</span>
+                            <Badge variant="secondary">{criterion.weight}%</Badge>
                         </div>
+                    ))}
+                    {evaluationCriteria.length === 0 && (
+                        <p className="text-sm text-center text-muted-foreground py-4">No has definido criterios.</p>
                     )}
-                    {totalWeight > 100 && (
-                        <div className="text-right text-sm font-bold text-destructive">
+                     {totalWeight > 100 && (
+                        <div className="text-center text-sm font-bold text-destructive pt-2">
                             Total: {totalWeight}% (Sobrepasa el 100%)
                         </div>
                     )}
                 </div>
             </CardContent>
-             {evaluationCriteria.length > 0 && (
-                <CardContent className="pt-4 border-t">
-                     <Button asChild className="w-full">
-                        <Link href={`/groups/${group.id}/grades`}>
-                            <FilePen className="mr-2 h-4 w-4" />
-                            Registrar Calificaciones
-                        </Link>
-                    </Button>
-                </CardContent>
-             )}
         </Card>
       </div>
 
     </div>
   );
 }
-
