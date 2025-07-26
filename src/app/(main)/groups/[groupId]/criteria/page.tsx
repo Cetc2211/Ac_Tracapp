@@ -61,11 +61,11 @@ export default function GroupCriteriaPage() {
     const weight = parseFloat(newCriterionWeight);
     const activities = parseInt(newCriterionActivities, 10);
 
-    if (!newCriterionName.trim() || isNaN(weight) || weight <= 0 || weight > 100 || isNaN(activities) || activities <=0 ) {
+    if (!newCriterionName.trim() || isNaN(weight) || weight <= 0 || weight > 100 || isNaN(activities) || activities <= 0 || !Number.isInteger(activities)) {
         toast({
             variant: 'destructive',
             title: 'Datos inválidos',
-            description: 'Nombre no puede estar vacío, el peso debe ser entre 1-100 y las actividades deben ser un número positivo.',
+            description: 'El nombre no puede estar vacío, el peso debe ser un número entre 1 y 100, y las actividades deben ser un número entero positivo.',
         });
         return;
     }
