@@ -42,18 +42,24 @@ import { useState, useRef, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function StudentsPage() {
-  const [students, setStudents] = useState<Student[]>(initialStudents);
-  const [newStudent, setNewStudent] = useState<Partial<Student>>({});
+  const [students, setStudents] = useState<Student[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<Partial<Student> | null>(null);
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const storedStudents = localStorage.getItem('students');
-    if (storedStudents) {
-      setStudents(JSON.parse(storedStudents));
-    } else {
-        localStorage.setItem('students', JSON.stringify(initialStudents));
+    try {
+        const storedStudents = localStorage.getItem('students');
+        if (storedStudents) {
+          setStudents(JSON.parse(storedStudents));
+        } else {
+            setStudents(initialStudents);
+            localStorage.setItem('students', JSON.stringify(initialStudents));
+        }
+    } catch (error) {
+        console.error("Failed to parse students from localStorage", error);
+        setStudents(initialStudents);
     }
   }, []);
 
@@ -64,35 +70,61 @@ export default function StudentsPage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
-    setNewStudent((prev) => ({ ...prev, [id]: value }));
+    if (editingStudent) {
+        setEditingStudent((prev) => ({ ...prev, [id]: value }));
+    }
   };
 
-  const handleAddStudent = () => {
-    if (newStudent.name) {
-      const studentToAdd: Student = {
-        id: newStudent.id || `S${Math.floor(Math.random() * 10000)}`,
-        name: newStudent.name,
-        email: newStudent.email,
-        phone: newStudent.phone,
-        tutorName: newStudent.tutorName,
-        tutorPhone: newStudent.tutorPhone,
-        photo: 'https://placehold.co/100x100.png',
-        riskLevel: 'low',
-      };
-      saveStudents([...students, studentToAdd]);
-      setNewStudent({});
-      setIsDialogOpen(false);
-      toast({
-        title: 'Éxito',
-        description: 'Estudiante agregado correctamente.',
-      });
-    } else {
+  const handleOpenDialog = (student: Partial<Student> | null) => {
+    setEditingStudent(student ? { ...student } : {});
+    setIsDialogOpen(true);
+  };
+  
+  const handleCloseDialog = () => {
+    setEditingStudent(null);
+    setIsDialogOpen(false);
+  }
+
+  const handleSaveStudent = () => {
+    if (!editingStudent?.name?.trim()) {
       toast({
         variant: 'destructive',
         title: 'Error',
         description: 'El nombre del estudiante es obligatorio.',
       });
+      return;
     }
+
+    if (editingStudent.id) {
+        // Edit existing student
+        const updatedStudents = students.map(s => 
+            s.id === editingStudent.id ? { ...s, ...editingStudent } as Student : s
+        );
+        saveStudents(updatedStudents);
+        toast({
+            title: 'Éxito',
+            description: 'Estudiante actualizado correctamente.',
+        });
+    } else {
+        // Add new student
+        const studentToAdd: Student = {
+            id: `S${Math.floor(Math.random() * 10000)}`,
+            name: editingStudent.name,
+            email: editingStudent.email,
+            phone: editingStudent.phone,
+            tutorName: editingStudent.tutorName,
+            tutorPhone: editingStudent.tutorPhone,
+            photo: editingStudent.photo || 'https://placehold.co/100x100.png',
+            riskLevel: 'low',
+        };
+        saveStudents([...students, studentToAdd]);
+        toast({
+            title: 'Éxito',
+            description: 'Estudiante agregado correctamente.',
+        });
+    }
+
+    handleCloseDialog();
   };
   
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -190,20 +222,22 @@ export default function StudentsPage() {
                     Importar CSV
                 </span>
             </Button>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm" className="gap-1">
-                  <PlusCircle className="h-3.5 w-3.5" />
-                  <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                    Nuevo Estudiante
-                  </span>
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
+            <Button size="sm" className="gap-1" onClick={() => handleOpenDialog(null)}>
+              <PlusCircle className="h-3.5 w-3.5" />
+              <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                Nuevo Estudiante
+              </span>
+            </Button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
+            <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Agregar Nuevo Estudiante</DialogTitle>
+                  <DialogTitle>{editingStudent?.id ? 'Editar Estudiante' : 'Agregar Nuevo Estudiante'}</DialogTitle>
                   <DialogDescription>
-                    Complete el formulario para registrar un nuevo estudiante.
+                    {editingStudent?.id ? 'Actualiza la información del estudiante.' : 'Complete el formulario para registrar un nuevo estudiante.'}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
@@ -215,8 +249,9 @@ export default function StudentsPage() {
                       id="id"
                       placeholder="S007 (Opcional)"
                       className="col-span-3"
-                      value={newStudent.id || ''}
+                      value={editingStudent?.id || ''}
                       onChange={handleInputChange}
+                      disabled={!!editingStudent?.id}
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
@@ -227,7 +262,7 @@ export default function StudentsPage() {
                       id="name"
                       placeholder="Ana Torres"
                       className="col-span-3"
-                      value={newStudent.name || ''}
+                      value={editingStudent?.name || ''}
                       onChange={handleInputChange}
                       required
                     />
@@ -241,7 +276,7 @@ export default function StudentsPage() {
                       type="email"
                       placeholder="ana.t@example.com"
                       className="col-span-3"
-                      value={newStudent.email || ''}
+                      value={editingStudent?.email || ''}
                       onChange={handleInputChange}
                     />
                   </div>
@@ -254,7 +289,7 @@ export default function StudentsPage() {
                       type="tel"
                       placeholder="555-123-4567"
                       className="col-span-3"
-                      value={newStudent.phone || ''}
+                      value={editingStudent?.phone || ''}
                       onChange={handleInputChange}
                     />
                   </div>
@@ -266,7 +301,7 @@ export default function StudentsPage() {
                       id="tutorName"
                       placeholder="Juan Torres"
                       className="col-span-3"
-                      value={newStudent.tutorName || ''}
+                      value={editingStudent?.tutorName || ''}
                       onChange={handleInputChange}
                     />
                   </div>
@@ -279,26 +314,24 @@ export default function StudentsPage() {
                       type="tel"
                       placeholder="555-765-4321"
                       className="col-span-3"
-                      value={newStudent.tutorPhone || ''}
+                      value={editingStudent?.tutorPhone || ''}
                       onChange={handleInputChange}
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="photo" className="text-right">
+                    <Label htmlFor="photo-upload" className="text-right">
                       Foto
                     </Label>
-                    <Input id="photo" type="file" className="col-span-3" />
+                    <Input id="photo-upload" type="file" className="col-span-3" disabled/>
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button onClick={handleAddStudent}>Guardar Estudiante</Button>
+                  <Button variant="outline" onClick={handleCloseDialog}>Cancelar</Button>
+                  <Button onClick={handleSaveStudent}>Guardar Cambios</Button>
                 </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
+            </DialogContent>
+        </Dialog>
+
         <Table>
           <TableHeader>
             <TableRow>
@@ -341,8 +374,9 @@ export default function StudentsPage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                      <DropdownMenuItem disabled>Editar</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleOpenDialog(student)}>Editar</DropdownMenuItem>
                       <DropdownMenuItem disabled>Ver Perfil Completo</DropdownMenuItem>
+                      <DropdownMenuSeparator />
                       <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteStudent(student.id)}>
                         Eliminar
                       </DropdownMenuItem>
@@ -351,11 +385,16 @@ export default function StudentsPage() {
                 </TableCell>
               </TableRow>
             ))}
+             {students.length === 0 && (
+                <TableRow>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground p-8">
+                        No hay estudiantes registrados.
+                    </TableCell>
+                </TableRow>
+              )}
           </TableBody>
         </Table>
       </CardContent>
     </Card>
   );
 }
-
-    
