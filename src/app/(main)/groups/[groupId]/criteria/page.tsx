@@ -210,8 +210,8 @@ export default function GroupCriteriaPage() {
           </div>
         </CardContent>
 
-        {(totalWeight > 0 || totalWeight > 100) && (
-            <CardHeader className="border-t">
+        {(totalWeight > 0 || evaluationCriteria.length > 0) && (
+            <CardHeader className="border-t pt-4 mt-4">
                 <div className="flex justify-end">
                     {totalWeight > 0 && (
                         <div className={`text-right font-bold ${totalWeight > 100 ? 'text-destructive' : ''}`}>
