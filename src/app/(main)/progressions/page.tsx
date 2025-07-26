@@ -23,46 +23,63 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Wand2 } from 'lucide-react';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { generateProgressionSuggestions } from '@/ai/flows/progression-suggester';
 import { useToast } from '@/hooks/use-toast';
 
+const initialFormData = {
+  uac: '',
+  docentes: '',
+  semanas: '',
+  areaConocimiento: '',
+  semestre: '',
+  grupos: '',
+  horasDocente: '',
+  horasIndependiente: '',
+  abordajeGeneral: '',
+  abordajeEspecifico: '',
+  progresion: '',
+  categorias: [] as string[],
+  subcategorias: '',
+  metasAprendizaje: '',
+  aprendizajeTrayectoria: '',
+  conceptosCentrales: '',
+  conceptosTransversales: '',
+  recursosSociocognitivos: '',
+  actividadApertura: '',
+  tecnicaApertura: '',
+  evidenciaApertura: '',
+  evaluacionApertura: '',
+  actividadDesarrollo: '',
+  tecnicaDesarrollo: '',
+  evidenciaDesarrollo: '',
+  evaluacionDesarrollo: '',
+  actividadCierre: '',
+  tecnicaCierre: '',
+  evidenciaCierre: '',
+  evaluacionCierre: '',
+};
+
 export default function ProgressionsPage() {
-  const [formData, setFormData] = useState({
-    uac: '',
-    docentes: '',
-    semanas: '',
-    areaConocimiento: '',
-    semestre: '',
-    grupos: '',
-    horasDocente: '',
-    horasIndependiente: '',
-    abordajeGeneral: '',
-    abordajeEspecifico: '',
-    progresion: '',
-    categorias: [] as string[],
-    subcategorias: '',
-    metasAprendizaje: '',
-    aprendizajeTrayectoria: '',
-    conceptosCentrales: '',
-    conceptosTransversales: '',
-    recursosSociocognitivos: '',
-    actividadApertura: '',
-    tecnicaApertura: '',
-    evidenciaApertura: '',
-    evaluacionApertura: '',
-    actividadDesarrollo: '',
-    tecnicaDesarrollo: '',
-    evidenciaDesarrollo: '',
-    evaluacionDesarrollo: '',
-    actividadCierre: '',
-    tecnicaCierre: '',
-    evidenciaCierre: '',
-    evaluacionCierre: '',
-  });
+  const [formData, setFormData] = useState(initialFormData);
 
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const savedData = localStorage.getItem('progressionData');
+    if (savedData) {
+      setFormData(JSON.parse(savedData));
+    }
+  }, []);
+
+  const handleSave = () => {
+    localStorage.setItem('progressionData', JSON.stringify(formData));
+    toast({
+      title: 'Progreso Guardado',
+      description: 'La información de la progresión ha sido guardada en tu navegador.',
+    });
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
@@ -135,7 +152,7 @@ export default function ProgressionsPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">Guardar Cambios</Button>
+          <Button variant="outline" onClick={handleSave}>Guardar Cambios</Button>
           <Button onClick={handleGetSuggestions} disabled={isLoading}>
             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
             Obtener Sugerencias (IA)
@@ -149,13 +166,12 @@ export default function ProgressionsPage() {
             <div className="flex justify-between items-center mb-4">
               <div className="flex flex-col items-center">
                 <Image
-                  src="https://placehold.co/100x50.png"
+                  src="https://placehold.co/200x100.png"
                   width={100}
                   height={50}
-                  alt="EDUCACIÓN"
-                  data-ai-hint="education logo"
+                  alt="Logo SEP"
+                  data-ai-hint="government education logo"
                 />
-                <span className="text-xs font-bold">EDUCACIÓN</span>
               </div>
               <div className="text-center">
                 <p className="text-sm">
@@ -168,14 +184,13 @@ export default function ProgressionsPage() {
                 <p className="text-xs">Ciclo Agosto 2024-Enero 2025</p>
               </div>
               <div className="flex flex-col items-center">
-                <Image
-                  src="https://placehold.co/100x50.png"
+                 <Image
+                  src="https://placehold.co/200x100.png"
                   width={100}
                   height={50}
-                  alt="SEMS"
-                  data-ai-hint="SEMS logo"
+                  alt="Logo DGETAyCM"
+                  data-ai-hint="school system logo"
                 />
-                <span className="text-xs font-bold">SEMS</span>
               </div>
             </div>
             <p className="mb-4">
@@ -254,15 +269,15 @@ export default function ProgressionsPage() {
               <div className="flex items-center space-x-4 my-2">
                 <span className="font-bold">Categoría(s):</span>
                 <div className="flex items-center space-x-2">
-                  <Checkbox id="vivir" onCheckedChange={(checked) => handleCheckboxChange('vivir', checked)} />
+                  <Checkbox id="vivir" onCheckedChange={(checked) => handleCheckboxChange('vivir', checked)} checked={formData.categorias.includes('vivir')} />
                   <Label htmlFor="vivir">Vivir aquí y ahora</Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Checkbox id="juntos" onCheckedChange={(checked) => handleCheckboxChange('juntos', checked)} />
+                  <Checkbox id="juntos" onCheckedChange={(checked) => handleCheckboxChange('juntos', checked)} checked={formData.categorias.includes('juntos')} />
                   <Label htmlFor="juntos">Estar juntos</Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Checkbox id="experiencias" onCheckedChange={(checked) => handleCheckboxChange('experiencias', checked)} />
+                  <Checkbox id="experiencias" onCheckedChange={(checked) => handleCheckboxChange('experiencias', checked)} checked={formData.categorias.includes('experiencias')} />
                   <Label htmlFor="experiencias">Experiencias</Label>
                 </div>
               </div>
@@ -416,3 +431,5 @@ export default function ProgressionsPage() {
     </div>
   );
 }
+
+    
