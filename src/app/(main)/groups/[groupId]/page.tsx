@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { groups as initialGroups, students as allStudents, Student } from '@/lib/placeholder-data';
+import { groups as initialGroups, students as initialStudents, Student } from '@/lib/placeholder-data';
 import { notFound, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -61,18 +61,31 @@ export default function GroupDetailsPage({
   params: { groupId: string };
 }) {
   const [groups, setGroups] = useState(initialGroups);
-  const [students, setStudents] = useState(allStudents);
+  const [students, setStudents] = useState(initialStudents);
   const { toast } = useToast();
   const router = useRouter();
   
   useEffect(() => {
-    const storedGroups = localStorage.getItem('groups');
-    if (storedGroups) {
-      setGroups(JSON.parse(storedGroups));
-    }
-    const storedStudents = localStorage.getItem('students');
-    if(storedStudents) {
-      setStudents(JSON.parse(storedStudents));
+    try {
+      const storedGroups = localStorage.getItem('groups');
+      if (storedGroups) {
+        setGroups(JSON.parse(storedGroups));
+      } else {
+        setGroups(initialGroups);
+        localStorage.setItem('groups', JSON.stringify(initialGroups));
+      }
+
+      const storedStudents = localStorage.getItem('students');
+      if(storedStudents) {
+        setStudents(JSON.parse(storedStudents));
+      } else {
+        setStudents(initialStudents);
+        localStorage.setItem('students', JSON.stringify(initialStudents));
+      }
+    } catch (error) {
+        console.error("Failed to parse data from localStorage", error);
+        setGroups(initialGroups);
+        setStudents(initialStudents);
     }
   }, []);
 
@@ -87,8 +100,8 @@ export default function GroupDetailsPage({
   const [isAddStudentDialogOpen, setIsAddStudentDialogOpen] = useState(false);
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   
-  const studentsInGroup = group ? group.students : [];
-  const availableStudents = students.filter(s => !studentsInGroup.some(gs => gs.id === s.id));
+  const studentsInGroup = group ? group.students.map(s => s.id) : [];
+  const availableStudents = students.filter(s => !studentsInGroup.includes(s.id));
 
 
   if (!group) {
