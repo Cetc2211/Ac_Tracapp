@@ -1,3 +1,4 @@
+
 'use client';
 
 import Image from 'next/image';
@@ -19,10 +20,17 @@ import {
 import { Button } from '@/components/ui/button';
 import { Phone } from 'lucide-react';
 import { students as initialStudents, Student } from '@/lib/placeholder-data';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function TutorsPage() {
-  const [students] = useState<Student[]>(initialStudents);
+  const [students, setStudents] = useState<Student[]>(initialStudents);
+  
+  useEffect(() => {
+    const storedStudents = localStorage.getItem('students');
+    if (storedStudents) {
+      setStudents(JSON.parse(storedStudents));
+    }
+  }, []);
 
   return (
     <Card>
@@ -65,9 +73,11 @@ export default function TutorsPage() {
                 <TableCell>{student.tutorName}</TableCell>
                 <TableCell>{student.tutorPhone}</TableCell>
                 <TableCell className="text-right">
-                  <Button variant="outline" size="sm">
-                    <Phone className="mr-2 h-4 w-4" />
-                    Llamar
+                  <Button variant="outline" size="sm" asChild>
+                    <a href={`tel:${student.tutorPhone}`}>
+                      <Phone className="mr-2 h-4 w-4" />
+                      Llamar
+                    </a>
                   </Button>
                 </TableCell>
               </TableRow>
@@ -78,3 +88,5 @@ export default function TutorsPage() {
     </Card>
   );
 }
+
+    

@@ -1,3 +1,4 @@
+
 'use client';
 
 import Image from 'next/image';
@@ -37,7 +38,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function StudentsPage() {
@@ -46,6 +47,20 @@ export default function StudentsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const storedStudents = localStorage.getItem('students');
+    if (storedStudents) {
+      setStudents(JSON.parse(storedStudents));
+    } else {
+        localStorage.setItem('students', JSON.stringify(initialStudents));
+    }
+  }, []);
+
+  const saveStudents = (newStudents: Student[]) => {
+      setStudents(newStudents);
+      localStorage.setItem('students', JSON.stringify(newStudents));
+  }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
@@ -64,7 +79,7 @@ export default function StudentsPage() {
         photo: 'https://placehold.co/100x100.png',
         riskLevel: 'low',
       };
-      setStudents([...students, studentToAdd]);
+      saveStudents([...students, studentToAdd]);
       setNewStudent({});
       setIsDialogOpen(false);
       toast({
@@ -125,7 +140,7 @@ export default function StudentsPage() {
             riskLevel: 'low',
           };
         });
-        setStudents(prev => [...prev, ...newStudentsFromFile]);
+        saveStudents([...students, ...newStudentsFromFile]);
         toast({
             title: 'Carga Exitosa',
             description: `${newStudentsFromFile.length} estudiantes han sido agregados.`,
@@ -143,7 +158,7 @@ export default function StudentsPage() {
   };
 
   const handleDeleteStudent = (studentId: string) => {
-    setStudents(students.filter(s => s.id !== studentId));
+    saveStudents(students.filter(s => s.id !== studentId));
     toast({
         title: "Estudiante eliminado",
         description: "El estudiante ha sido eliminado de la lista.",
@@ -342,3 +357,5 @@ export default function StudentsPage() {
     </Card>
   );
 }
+
+    

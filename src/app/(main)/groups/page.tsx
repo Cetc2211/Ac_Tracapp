@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -13,10 +14,20 @@ import { groups as initialGroups } from '@/lib/placeholder-data';
 import { Users, ClipboardList } from 'lucide-react';
 import { AttendanceRandomizer } from '@/components/attendance-randomizer';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function GroupsPage() {
-  const [groups] = useState(initialGroups);
+  const [groups, setGroups] = useState(initialGroups);
+
+  useEffect(() => {
+    const storedGroups = localStorage.getItem('groups');
+    if (storedGroups) {
+      setGroups(JSON.parse(storedGroups));
+    } else {
+       localStorage.setItem('groups', JSON.stringify(initialGroups));
+    }
+  }, []);
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
@@ -58,3 +69,5 @@ export default function GroupsPage() {
     </div>
   );
 }
+
+    

@@ -1,3 +1,6 @@
+
+'use client';
+
 import {
   Card,
   CardContent,
@@ -17,10 +20,28 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowUpRight, BookCopy, Users, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { students, groups } from '@/lib/placeholder-data';
+import { students as initialStudents, groups as initialGroups } from '@/lib/placeholder-data';
 import Image from 'next/image';
+import { useState, useEffect } from 'react';
 
 export default function DashboardPage() {
+  // NOTE: In a real application, this data would be fetched from a persistent store
+  // and likely managed with a global state manager. For this prototype, we'll
+  // simulate fetching from localStorage to maintain state across page navigations.
+  const [students, setStudents] = useState(initialStudents);
+  const [groups, setGroups] = useState(initialGroups);
+
+  useEffect(() => {
+    const storedStudents = localStorage.getItem('students');
+    const storedGroups = localStorage.getItem('groups');
+    if (storedStudents) {
+      setStudents(JSON.parse(storedStudents));
+    }
+    if (storedGroups) {
+      setGroups(JSON.parse(storedGroups));
+    }
+  }, []);
+  
   const atRiskStudents = students.filter(
     (s) => s.riskLevel === 'high' || s.riskLevel === 'medium'
   );
@@ -166,9 +187,14 @@ export default function DashboardPage() {
                 </div>
               </div>
             ))}
+             {atRiskStudents.length === 0 && (
+                <p className="text-sm text-center text-muted-foreground">No hay estudiantes con alertas.</p>
+            )}
           </CardContent>
         </Card>
       </div>
     </div>
   );
 }
+
+    

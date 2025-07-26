@@ -1,3 +1,4 @@
+
 'use client';
 import {
   Card,
@@ -39,7 +40,7 @@ import {
 } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function GroupDetailsPage({
@@ -48,27 +49,47 @@ export default function GroupDetailsPage({
   params: { groupId: string };
 }) {
   const [groups, setGroups] = useState(initialGroups);
-  const group = groups.find((g) => g.id === params.groupId);
+  const [students, setStudents] = useState(allStudents);
   const { toast } = useToast();
+  
+  useEffect(() => {
+    const storedGroups = localStorage.getItem('groups');
+    if (storedGroups) {
+      setGroups(JSON.parse(storedGroups));
+    }
+    const storedStudents = localStorage.getItem('students');
+    if(storedStudents) {
+      setStudents(JSON.parse(storedStudents));
+    }
+  }, []);
+
+  const saveGroups = (newGroups: typeof initialGroups) => {
+      setGroups(newGroups);
+      localStorage.setItem('groups', JSON.stringify(newGroups));
+  };
+
+
+  const group = groups.find((g) => g.id === params.groupId);
 
   const [isAddStudentDialogOpen, setIsAddStudentDialogOpen] = useState(false);
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   
   const studentsInGroup = group ? group.students : [];
-  const availableStudents = allStudents.filter(s => !studentsInGroup.some(gs => gs.id === s.id));
+  const availableStudents = students.filter(s => !studentsInGroup.some(gs => gs.id === s.id));
 
 
   if (!group) {
-    notFound();
+    return notFound();
   }
   
   const handleRemoveStudent = (studentId: string) => {
-    setGroups(groups.map(g => {
+    const newGroups = groups.map(g => {
         if (g.id === group.id) {
             return { ...g, students: g.students.filter(s => s.id !== studentId) };
         }
         return g;
-    }));
+    });
+    saveGroups(newGroups);
     toast({
         title: "Estudiante eliminado",
         description: "El estudiante ha sido quitado del grupo.",
@@ -76,8 +97,8 @@ export default function GroupDetailsPage({
   };
   
   const handleAddStudents = () => {
-    const studentsToAdd = allStudents.filter(s => selectedStudents.includes(s.id));
-    setGroups(groups.map(g => {
+    const studentsToAdd = students.filter(s => selectedStudents.includes(s.id));
+    const newGroups = groups.map(g => {
         if (g.id === group.id) {
             const newStudents = [...g.students, ...studentsToAdd].filter((student, index, self) =>
                 index === self.findIndex((s) => (
@@ -87,7 +108,8 @@ export default function GroupDetailsPage({
             return { ...g, students: newStudents };
         }
         return g;
-    }));
+    });
+    saveGroups(newGroups);
     setSelectedStudents([]);
     setIsAddStudentDialogOpen(false);
     toast({
@@ -262,3 +284,5 @@ export default function GroupDetailsPage({
     </div>
   );
 }
+
+    
