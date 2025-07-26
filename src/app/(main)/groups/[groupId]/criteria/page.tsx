@@ -28,6 +28,7 @@ export default function GroupCriteriaPage({
 }: {
   params: { groupId: string };
 }) {
+  const { groupId } = params;
   const [group, setGroup] = useState<(typeof initialGroups)[0] | null>(null);
   const [evaluationCriteria, setEvaluationCriteria] = useState<EvaluationCriteria[]>([]);
   const [newCriterionName, setNewCriterionName] = useState('');
@@ -38,10 +39,10 @@ export default function GroupCriteriaPage({
     try {
       const storedGroups = localStorage.getItem('groups');
       const allGroups = storedGroups ? JSON.parse(storedGroups) : initialGroups;
-      const currentGroup = allGroups.find((g: any) => g.id === params.groupId);
+      const currentGroup = allGroups.find((g: any) => g.id === groupId);
       setGroup(currentGroup || null);
       
-      const storedCriteria = localStorage.getItem(`criteria_${params.groupId}`);
+      const storedCriteria = localStorage.getItem(`criteria_${groupId}`);
       if (storedCriteria) {
         setEvaluationCriteria(JSON.parse(storedCriteria));
       }
@@ -49,11 +50,11 @@ export default function GroupCriteriaPage({
       console.error("Failed to parse data from localStorage", error);
       setGroup(null);
     }
-  }, [params.groupId]);
+  }, [groupId]);
 
   const saveCriteria = (newCriteria: EvaluationCriteria[]) => {
     setEvaluationCriteria(newCriteria);
-    localStorage.setItem(`criteria_${params.groupId}`, JSON.stringify(newCriteria));
+    localStorage.setItem(`criteria_${groupId}`, JSON.stringify(newCriteria));
   };
   
   const handleAddCriterion = () => {
@@ -93,7 +94,7 @@ export default function GroupCriteriaPage({
     const newCriteria = evaluationCriteria.filter(c => c.id !== criterionId);
     saveCriteria(newCriteria);
     // Also remove any grades associated with this criterion
-    const gradesKey = `grades_${params.groupId}`;
+    const gradesKey = `grades_${groupId}`;
     const storedGrades = localStorage.getItem(gradesKey);
     if (storedGrades) {
         const grades = JSON.parse(storedGrades);
@@ -123,7 +124,7 @@ export default function GroupCriteriaPage({
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-4">
         <Button asChild variant="outline" size="icon">
-          <Link href={`/groups/${params.groupId}`}>
+          <Link href={`/groups/${groupId}`}>
             <ArrowLeft />
             <span className="sr-only">Volver al Grupo</span>
           </Link>
@@ -205,4 +206,3 @@ export default function GroupCriteriaPage({
     </div>
   );
 }
-

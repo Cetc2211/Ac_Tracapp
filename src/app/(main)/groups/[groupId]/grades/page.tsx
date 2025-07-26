@@ -42,6 +42,7 @@ export default function GroupGradesPage({
 }: {
   params: { groupId: string };
 }) {
+  const { groupId } = params;
   const [group, setGroup] = useState<(typeof initialGroups)[0] | null>(null);
   const [evaluationCriteria, setEvaluationCriteria] = useState<EvaluationCriteria[]>([]);
   const [grades, setGrades] = useState<Grades>({});
@@ -51,15 +52,15 @@ export default function GroupGradesPage({
     try {
       const storedGroups = localStorage.getItem('groups');
       const allGroups = storedGroups ? JSON.parse(storedGroups) : initialGroups;
-      const currentGroup = allGroups.find((g: any) => g.id === params.groupId);
+      const currentGroup = allGroups.find((g: any) => g.id === groupId);
       setGroup(currentGroup || null);
 
-      const storedCriteria = localStorage.getItem(`criteria_${params.groupId}`);
+      const storedCriteria = localStorage.getItem(`criteria_${groupId}`);
       if (storedCriteria) {
         setEvaluationCriteria(JSON.parse(storedCriteria));
       }
 
-      const storedGrades = localStorage.getItem(`grades_${params.groupId}`);
+      const storedGrades = localStorage.getItem(`grades_${groupId}`);
       if (storedGrades) {
         setGrades(JSON.parse(storedGrades));
       }
@@ -67,10 +68,10 @@ export default function GroupGradesPage({
       console.error("Failed to parse data from localStorage", error);
       setGroup(null);
     }
-  }, [params.groupId]);
+  }, [groupId]);
 
   const saveGrades = () => {
-    localStorage.setItem(`grades_${params.groupId}`, JSON.stringify(grades));
+    localStorage.setItem(`grades_${groupId}`, JSON.stringify(grades));
     toast({
       title: 'Calificaciones Guardadas',
       description: 'Las calificaciones han sido guardadas exitosamente.',
@@ -128,7 +129,7 @@ export default function GroupGradesPage({
        <div className="flex items-center justify-between">
          <div className="flex items-center gap-4">
             <Button asChild variant="outline" size="icon">
-            <Link href={`/groups/${params.groupId}`}>
+            <Link href={`/groups/${groupId}`}>
                 <ArrowLeft />
                 <span className="sr-only">Volver al Grupo</span>
             </Link>
@@ -204,7 +205,7 @@ export default function GroupGradesPage({
                {evaluationCriteria.length === 0 && studentsInGroup.length > 0 && (
                  <TableRow>
                     <TableCell colSpan={2} className="text-center h-24">
-                        No has definido criterios de evaluación. <Link href={`/groups/${params.groupId}`} className="text-primary underline">Defínelos aquí.</Link>
+                        No has definido criterios de evaluación. <Link href={`/groups/${groupId}`} className="text-primary underline">Defínelos aquí.</Link>
                     </TableCell>
                 </TableRow>
               )}

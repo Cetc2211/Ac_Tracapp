@@ -48,6 +48,7 @@ export default function GroupAttendancePage({
 }: {
   params: { groupId: string };
 }) {
+  const { groupId } = params;
   const [group, setGroup] = useState<(typeof initialGroups)[0] | null>(null);
   const [date, setDate] = useState<Date>(new Date());
   const [attendance, setAttendance] = useState<DailyAttendance>({});
@@ -59,10 +60,10 @@ export default function GroupAttendancePage({
     try {
       const storedGroups = localStorage.getItem('groups');
       const allGroups = storedGroups ? JSON.parse(storedGroups) : initialGroups;
-      const currentGroup = allGroups.find((g: any) => g.id === params.groupId);
+      const currentGroup = allGroups.find((g: any) => g.id === groupId);
       setGroup(currentGroup || null);
 
-      const storedAttendance = localStorage.getItem(`attendance_${params.groupId}`);
+      const storedAttendance = localStorage.getItem(`attendance_${groupId}`);
       if (storedAttendance) {
         setAttendance(JSON.parse(storedAttendance));
       }
@@ -70,10 +71,10 @@ export default function GroupAttendancePage({
       console.error('Failed to parse data from localStorage', error);
       setGroup(null);
     }
-  }, [params.groupId]);
+  }, [groupId]);
 
   const saveAttendance = () => {
-    localStorage.setItem(`attendance_${params.groupId}`, JSON.stringify(attendance));
+    localStorage.setItem(`attendance_${groupId}`, JSON.stringify(attendance));
     toast({
       title: 'Asistencia Guardada',
       description: `La asistencia para el ${format(date, 'PPP', { locale: es })} ha sido guardada.`,
@@ -104,7 +105,7 @@ export default function GroupAttendancePage({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button asChild variant="outline" size="icon">
-            <Link href={`/groups/${params.groupId}`}>
+            <Link href={`/groups/${groupId}`}>
               <ArrowLeft />
               <span className="sr-only">Volver al Grupo</span>
             </Link>
@@ -205,4 +206,3 @@ export default function GroupAttendancePage({
     </div>
   );
 }
-

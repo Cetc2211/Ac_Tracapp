@@ -66,6 +66,7 @@ export default function GroupDetailsPage({
 }: {
   params: { groupId: string };
 }) {
+  const { groupId } = params;
   const [groups, setGroups] = useState(initialGroups);
   const [students, setStudents] = useState(initialStudents);
   const { toast } = useToast();
@@ -91,7 +92,7 @@ export default function GroupDetailsPage({
         localStorage.setItem('students', JSON.stringify(initialStudents));
       }
       
-      const storedCriteria = localStorage.getItem(`criteria_${params.groupId}`);
+      const storedCriteria = localStorage.getItem(`criteria_${groupId}`);
         if (storedCriteria) {
             setEvaluationCriteria(JSON.parse(storedCriteria));
         }
@@ -101,14 +102,14 @@ export default function GroupDetailsPage({
         setGroups(initialGroups);
         setStudents(initialStudents);
     }
-  }, [params.groupId]);
+  }, [groupId]);
 
   const saveGroups = (newGroups: typeof initialGroups) => {
       setGroups(newGroups);
       localStorage.setItem('groups', JSON.stringify(newGroups));
   };
 
-  const group = groups.find((g) => g.id === params.groupId);
+  const group = groups.find((g) => g.id === groupId);
 
   const [isAddStudentDialogOpen, setIsAddStudentDialogOpen] = useState(false);
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
@@ -137,9 +138,9 @@ export default function GroupDetailsPage({
   const handleDeleteGroup = () => {
     const newGroups = groups.filter(g => g.id !== group.id);
     saveGroups(newGroups);
-    localStorage.removeItem(`criteria_${params.groupId}`);
-    localStorage.removeItem(`grades_${params.groupId}`);
-    localStorage.removeItem(`attendance_${params.groupId}`);
+    localStorage.removeItem(`criteria_${groupId}`);
+    localStorage.removeItem(`grades_${groupId}`);
+    localStorage.removeItem(`attendance_${groupId}`);
     toast({
         title: 'Grupo Eliminado',
         description: `El grupo "${group.subject}" ha sido eliminado.`,
