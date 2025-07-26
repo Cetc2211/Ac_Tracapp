@@ -11,18 +11,26 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
-import { ArrowLeft, PlusCircle, Trash } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Trash, Edit } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useState, useEffect, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { groups as initialGroups } from '@/lib/placeholder-data';
 import { useParams } from 'next/navigation';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog';
 
 type EvaluationCriteria = {
   id: string;
   name: string;
   weight: number;
-  expectedActivities: number;
+  expectedValue: number;
 };
 
 export default function GroupCriteriaPage() {
@@ -32,7 +40,11 @@ export default function GroupCriteriaPage() {
   const [evaluationCriteria, setEvaluationCriteria] = useState<EvaluationCriteria[]>([]);
   const [newCriterionName, setNewCriterionName] = useState('');
   const [newCriterionWeight, setNewCriterionWeight] = useState('');
-  const [newCriterionActivities, setNewCriterionActivities] = useState('');
+  const [newCriterionValue, setNewCriterionValue] = useState('');
+  
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingCriterion, setEditingCriterion] = useState<EvaluationCriteria | null>(null);
+
   const { toast } = useToast();
 
   useEffect(() => {
@@ -59,13 +71,13 @@ export default function GroupCriteriaPage() {
   
   const handleAddCriterion = () => {
     const weight = parseFloat(newCriterionWeight);
-    const activities = parseInt(newCriterionActivities, 10);
+    const expectedValue = parseInt(newCriterionValue, 10);
 
-    if (!newCriterionName.trim() || isNaN(weight) || weight <= 0 || weight > 100 || isNaN(activities) || activities <= 0 || !Number.isInteger(activities)) {
+    if (!newCriterionName.trim() || isNaN(weight) || weight <= 0 || weight > 100 || isNaN(expectedValue) || expectedValue < 0 ) {
         toast({
             variant: 'destructive',
             title: 'Datos inválidos',
-            description: 'El nombre no puede estar vacío, el peso debe ser un número entre 1 y 100, y las actividades deben ser un número entero positivo.',
+            description: 'El nombre no puede estar vacío, el peso debe ser un número entre 1 y 100, y el valor esperado debe ser un número positivo.',
         });
         return;
     }
@@ -84,13 +96,13 @@ export default function GroupCriteriaPage() {
         id: `C${Date.now()}`,
         name: newCriterionName.trim(),
         weight: weight,
-        expectedActivities: activities,
+        expectedValue: expectedValue,
     };
 
     saveCriteria([...evaluationCriteria, newCriterion]);
     setNewCriterionName('');
     setNewCriterionWeight('');
-    setNewCriterionActivities('');
+    setNewCriterionValue('');
     toast({ title: 'Criterio Agregado', description: `Se agregó "${newCriterion.name}" a la lista.`});
   };
   
@@ -112,6 +124,49 @@ export default function GroupCriteriaPage() {
     toast({ title: 'Criterio Eliminado', description: 'El criterio de evaluación ha sido eliminado.' });
   };
   
+  const handleOpenEditDialog = (criterion: EvaluationCriteria) => {
+    setEditingCriterion({ ...criterion });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateCriterion = () => {
+    if (!editingCriterion) return;
+
+    const weight = editingCriterion.weight;
+    const expectedValue = editingCriterion.expectedValue;
+
+     if (!editingCriterion.name.trim() || isNaN(weight) || weight <= 0 || weight > 100 || isNaN(expectedValue) || expectedValue < 0 ) {
+        toast({
+            variant: 'destructive',
+            title: 'Datos inválidos',
+            description: 'El nombre no puede estar vacío, el peso debe ser un número entre 1 y 100, y el valor esperado debe ser un número positivo.',
+        });
+        return;
+    }
+
+    const otherCriteriaWeight = evaluationCriteria
+      .filter(c => c.id !== editingCriterion.id)
+      .reduce((sum, c) => sum + c.weight, 0);
+
+    const totalWeight = otherCriteriaWeight + weight;
+    if (totalWeight > 100) {
+        toast({
+            variant: 'destructive',
+            title: 'Límite de peso excedido',
+            description: `El peso total (${totalWeight}%) no puede superar el 100%.`,
+        });
+        return;
+    }
+    
+    const updatedCriteria = evaluationCriteria.map(c => c.id === editingCriterion.id ? editingCriterion : c);
+    saveCriteria(updatedCriteria);
+
+    setIsEditDialogOpen(false);
+    setEditingCriterion(null);
+    toast({ title: 'Criterio Actualizado', description: 'Los cambios han sido guardados.' });
+  };
+
+
   const totalWeight = useMemo(() => {
     return evaluationCriteria.reduce((sum, c) => sum + c.weight, 0);
   }, [evaluationCriteria]);
@@ -124,7 +179,7 @@ export default function GroupCriteriaPage() {
     )
   }
 
-  const isAddButtonDisabled = !newCriterionName.trim() || !newCriterionWeight.trim() || !newCriterionActivities.trim();
+  const isAddButtonDisabled = !newCriterionName.trim() || !newCriterionWeight.trim() || !newCriterionValue.trim();
 
   return (
     <div className="flex flex-col gap-6">
@@ -147,7 +202,7 @@ export default function GroupCriteriaPage() {
         <CardHeader>
           <CardTitle>Definir Criterios</CardTitle>
           <CardDescription>
-            Define los rubros, su peso para la calificación final y el número de actividades esperadas para cada uno. El peso total no debe exceder el 100%.
+            Define los rubros, su peso para la calificación final y el valor esperado para cada uno. El peso total no debe exceder el 100%.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -172,13 +227,13 @@ export default function GroupCriteriaPage() {
                 />
              </div>
              <div className="w-[180px]">
-                <Label htmlFor="criterion-activities" className="sr-only">No. Actividades</Label>
+                <Label htmlFor="criterion-value" className="sr-only">Valor Esperado</Label>
                 <Input 
-                    id="criterion-activities"
+                    id="criterion-value"
                     type="number" 
-                    placeholder="No. Actividades" 
-                    value={newCriterionActivities}
-                    onChange={(e) => setNewCriterionActivities(e.target.value)}
+                    placeholder="Valor Esperado" 
+                    value={newCriterionValue}
+                    onChange={(e) => setNewCriterionValue(e.target.value)}
                 />
              </div>
             <Button size="icon" onClick={handleAddCriterion} disabled={isAddButtonDisabled}>
@@ -193,10 +248,14 @@ export default function GroupCriteriaPage() {
                 <div key={criterion.id} className="flex items-center justify-between p-3 bg-muted rounded-md">
                     <div>
                         <span className="font-medium">{criterion.name}</span>
-                        <p className="text-xs text-muted-foreground">{criterion.expectedActivities} actividades esperadas</p>
+                        <p className="text-xs text-muted-foreground">{criterion.expectedValue} es el valor esperado</p>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
                         <Badge variant="secondary">{criterion.weight}%</Badge>
+                         <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleOpenEditDialog(criterion)}>
+                            <Edit className="h-4 w-4"/>
+                            <span className="sr-only">Editar</span>
+                        </Button>
                         <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleRemoveCriterion(criterion.id)}>
                             <Trash className="h-4 w-4 text-destructive"/>
                             <span className="sr-only">Eliminar</span>
@@ -222,6 +281,61 @@ export default function GroupCriteriaPage() {
             </CardHeader>
         )}
       </Card>
+
+      {editingCriterion && (
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Criterio de Evaluación</DialogTitle>
+              <DialogDescription>
+                Ajusta los detalles de tu criterio de evaluación.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-name" className="text-right">
+                  Nombre
+                </Label>
+                <Input
+                  id="edit-name"
+                  value={editingCriterion.name}
+                  onChange={(e) => setEditingCriterion({ ...editingCriterion, name: e.target.value })}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-weight" className="text-right">
+                  Peso %
+                </Label>
+                <Input
+                  id="edit-weight"
+                  type="number"
+                  value={editingCriterion.weight}
+                   onChange={(e) => setEditingCriterion({ ...editingCriterion, weight: parseFloat(e.target.value) || 0 })}
+                  className="col-span-3"
+                />
+              </div>
+               <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-value" className="text-right">
+                  Valor Esperado
+                </Label>
+                <Input
+                  id="edit-value"
+                  type="number"
+                  value={editingCriterion.expectedValue}
+                  onChange={(e) => setEditingCriterion({ ...editingCriterion, expectedValue: parseInt(e.target.value, 10) || 0 })}
+                  className="col-span-3"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancelar</Button>
+                <Button onClick={handleUpdateCriterion}>Guardar Cambios</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
     </div>
   );
 }

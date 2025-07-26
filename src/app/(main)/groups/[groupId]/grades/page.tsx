@@ -30,7 +30,7 @@ type EvaluationCriteria = {
   id: string;
   name: string;
   weight: number;
-  expectedActivities: number;
+  expectedValue: number;
 };
 
 type GradeDetail = {
@@ -97,7 +97,7 @@ export default function GroupGradesPage() {
         toast({
             variant: "destructive",
             title: "Valor inválido",
-            description: "El número de actividades debe ser positivo."
+            description: "El número de entregados debe ser positivo."
         })
         return;
     }
@@ -124,7 +124,7 @@ export default function GroupGradesPage() {
       const gradeDetail = grades[studentId]?.[criterion.id];
       const delivered = gradeDetail?.delivered ?? 0;
       const average = gradeDetail?.average ?? 0;
-      const expected = criterion.expectedActivities;
+      const expected = criterion.expectedValue;
 
       if(expected > 0) {
         const criterionScore = (delivered / expected) * average;
@@ -175,7 +175,7 @@ export default function GroupGradesPage() {
                   <TableHead key={c.id} className="text-center min-w-[250px]">
                     <div className='font-bold'>{c.name}</div>
                     <div className="font-normal text-muted-foreground">
-                      ({c.weight}%, {c.expectedActivities} esp.)
+                      ({c.weight}%, {c.expectedValue} esp.)
                     </div>
                   </TableHead>
                 ))}
@@ -201,14 +201,14 @@ export default function GroupGradesPage() {
                     <TableCell key={criterion.id} className="text-center">
                       <div className="flex gap-2 items-center justify-center">
                         <div className='flex-1'>
-                            <Label htmlFor={`delivered-${student.id}-${criterion.id}`} className='text-xs'>Entregadas</Label>
+                            <Label htmlFor={`delivered-${student.id}-${criterion.id}`} className='text-xs'>Entregado/Logrado</Label>
                             <Input 
                                 id={`delivered-${student.id}-${criterion.id}`}
                                 type="number"
                                 className="h-8 text-center"
                                 placeholder="Ent."
                                 min={0}
-                                max={criterion.expectedActivities}
+                                max={criterion.expectedValue}
                                 value={grades[student.id]?.[criterion.id]?.delivered ?? ''}
                                 onChange={e => handleGradeChange(student.id, criterion.id, 'delivered', e.target.value)}
                             />
