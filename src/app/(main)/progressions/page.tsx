@@ -36,8 +36,6 @@ const initialFormData = {
   grupos: '',
   horasDocente: '',
   horasIndependiente: '',
-  abordajeGeneral: '',
-  abordajeEspecifico: '',
   progresion: '',
   categorias: [] as string[],
   subcategorias: '',
@@ -222,7 +220,7 @@ export default function ProgressionsPage() {
                     <Label htmlFor="areaConocimiento">Área del Conocimiento:</Label>
                     <Input id="areaConocimiento" value={formData.areaConocimiento} onChange={handleInputChange} />
                   </TableCell>
-                  <TableCell className="border-r" rowSpan={2}>
+                  <TableCell className="border-r">
                     <div className="grid grid-cols-2 gap-4 h-full">
                       <div>
                         <Label htmlFor="semestre">Semestre</Label>
@@ -234,7 +232,7 @@ export default function ProgressionsPage() {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell rowSpan={2}>
+                  <TableCell>
                     <div className="grid grid-cols-2 gap-4 h-full">
                       <div>
                         <Label htmlFor="horasDocente">Horas de mediación docente</Label>
@@ -245,14 +243,6 @@ export default function ProgressionsPage() {
                         <Input id="horasIndependiente" value={formData.horasIndependiente} onChange={handleInputChange} />
                       </div>
                     </div>
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="border-r">
-                    <Label htmlFor="abordajeGeneral">Abordaje General:</Label>
-                    <Input id="abordajeGeneral" value={formData.abordajeGeneral} onChange={handleInputChange} />
-                    <Label htmlFor="abordajeEspecifico">Abordaje Específico:</Label>
-                    <Input id="abordajeEspecifico" value={formData.abordajeEspecifico} onChange={handleInputChange} />
                   </TableCell>
                 </TableRow>
               </TableBody>
@@ -430,6 +420,5 @@ export default function ProgressionsPage() {
       </Card>
     </div>
   );
-}
 
     
