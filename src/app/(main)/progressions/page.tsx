@@ -1,3 +1,6 @@
+
+'use client';
+
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -18,10 +21,103 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
-import { Wand2 } from 'lucide-react';
+import { Loader2, Wand2 } from 'lucide-react';
 import Image from 'next/image';
+import { useState } from 'react';
+import { generateProgressionSuggestions } from '@/ai/flows/progression-suggester';
+import { useToast } from '@/hooks/use-toast';
 
 export default function ProgressionsPage() {
+  const [formData, setFormData] = useState({
+    uac: '',
+    docentes: '',
+    semanas: '',
+    areaConocimiento: '',
+    semestre: '',
+    grupos: '',
+    horasDocente: '',
+    horasIndependiente: '',
+    abordajeGeneral: '',
+    abordajeEspecifico: '',
+    progresion: '',
+    categorias: [] as string[],
+    subcategorias: '',
+    metasAprendizaje: '',
+    aprendizajeTrayectoria: '',
+    actividadApertura: '',
+    tecnicaApertura: '',
+    evidenciaApertura: '',
+    evaluacionApertura: '',
+    actividadDesarrollo: '',
+    tecnicaDesarrollo: '',
+    evidenciaDesarrollo: '',
+    evaluacionDesarrollo: '',
+    actividadCierre: '',
+    tecnicaCierre: '',
+    evidenciaCierre: '',
+    evaluacionCierre: '',
+  });
+
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { id, value } = e.target;
+    setFormData((prev) => ({ ...prev, [id]: value }));
+  };
+
+  const handleCheckboxChange = (id: string, checked: boolean | 'indeterminate') => {
+    setFormData(prev => {
+        const newCategories = checked ? [...prev.categorias, id] : prev.categorias.filter(cat => cat !== id);
+        return {...prev, categorias: newCategories};
+    });
+  }
+
+  const handleGetSuggestions = async () => {
+    const { progresion, metasAprendizaje, aprendizajeTrayectoria } = formData;
+    if (!progresion || !metasAprendizaje) {
+      toast({
+        variant: 'destructive',
+        title: 'Faltan datos',
+        description: 'Por favor, completa los campos "Progresión" y "Meta(s) de Aprendizaje" para obtener sugerencias.',
+      });
+      return;
+    }
+    
+    setIsLoading(true);
+
+    try {
+      const result = await generateProgressionSuggestions({
+        progression: progresion,
+        learningGoals: metasAprendizaje,
+        trajectory: aprendizajeTrayectoria,
+      });
+
+      setFormData(prev => ({
+        ...prev,
+        actividadApertura: result.opening,
+        actividadDesarrollo: result.development,
+        actividadCierre: result.closing,
+      }));
+
+      toast({
+        title: 'Sugerencias generadas',
+        description: 'Se han llenado las actividades de apertura, desarrollo y cierre.',
+      });
+
+    } catch (error) {
+      console.error("Error generating suggestions:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Error de IA',
+        description: 'No se pudieron generar las sugerencias. Inténtalo de nuevo.',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
@@ -34,8 +130,8 @@ export default function ProgressionsPage() {
         </div>
         <div className="flex gap-2">
           <Button variant="outline">Guardar Cambios</Button>
-          <Button>
-            <Wand2 className="mr-2 h-4 w-4" />
+          <Button onClick={handleGetSuggestions} disabled={isLoading}>
+            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
             Obtener Sugerencias (IA)
           </Button>
         </div>
@@ -88,54 +184,54 @@ export default function ProgressionsPage() {
               <TableBody>
                 <TableRow>
                   <TableCell className="border-r">
-                    <Label>UAC</Label>
-                    <Input defaultValue="" />
+                    <Label htmlFor="uac">UAC</Label>
+                    <Input id="uac" value={formData.uac} onChange={handleInputChange} />
                   </TableCell>
                   <TableCell className="border-r">
-                    <Label>Docente(s)</Label>
-                    <Input defaultValue="" />
+                    <Label htmlFor="docentes">Docente(s)</Label>
+                    <Input id="docentes" value={formData.docentes} onChange={handleInputChange} />
                   </TableCell>
                   <TableCell>
-                    <Label>Semana(s): 1.25 semanas</Label>
-                    <Input defaultValue="" />
+                    <Label htmlFor="semanas">Semana(s): 1.25 semanas</Label>
+                    <Input id="semanas" value={formData.semanas} onChange={handleInputChange} />
                   </TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell className="border-r">
-                    <Label>Área del Conocimiento:</Label>
-                    <Input defaultValue="" />
+                    <Label htmlFor="areaConocimiento">Área del Conocimiento:</Label>
+                    <Input id="areaConocimiento" value={formData.areaConocimiento} onChange={handleInputChange} />
                   </TableCell>
                   <TableCell className="border-r" rowSpan={2}>
                     <div className="grid grid-cols-2 gap-4 h-full">
                       <div>
-                        <Label>Semestre</Label>
-                        <Input defaultValue="" />
+                        <Label htmlFor="semestre">Semestre</Label>
+                        <Input id="semestre" value={formData.semestre} onChange={handleInputChange} />
                       </div>
                       <div>
-                        <Label>Grupos</Label>
-                        <Input defaultValue="" />
+                        <Label htmlFor="grupos">Grupos</Label>
+                        <Input id="grupos" value={formData.grupos} onChange={handleInputChange} />
                       </div>
                     </div>
                   </TableCell>
                   <TableCell rowSpan={2}>
                     <div className="grid grid-cols-2 gap-4 h-full">
                       <div>
-                        <Label>Horas de mediación docente</Label>
-                        <Input defaultValue="" />
+                        <Label htmlFor="horasDocente">Horas de mediación docente</Label>
+                        <Input id="horasDocente" value={formData.horasDocente} onChange={handleInputChange} />
                       </div>
                       <div>
-                        <Label>Horas de estudio independiente</Label>
-                        <Input defaultValue="" />
+                        <Label htmlFor="horasIndependiente">Horas de estudio independiente</Label>
+                        <Input id="horasIndependiente" value={formData.horasIndependiente} onChange={handleInputChange} />
                       </div>
                     </div>
                   </TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell className="border-r">
-                    <Label>Abordaje General:</Label>
-                    <Input defaultValue="" />
-                    <Label>Abordaje Específico:</Label>
-                    <Input defaultValue="" />
+                    <Label htmlFor="abordajeGeneral">Abordaje General:</Label>
+                    <Input id="abordajeGeneral" value={formData.abordajeGeneral} onChange={handleInputChange} />
+                    <Label htmlFor="abordajeEspecifico">Abordaje Específico:</Label>
+                    <Input id="abordajeEspecifico" value={formData.abordajeEspecifico} onChange={handleInputChange} />
                   </TableCell>
                 </TableRow>
               </TableBody>
@@ -144,38 +240,38 @@ export default function ProgressionsPage() {
             <div className="bg-gray-200 text-center font-bold p-1">
               B) INTENCIONES FORMATIVAS
             </div>
-            <div className="p-2 border mb-4">
-              <p>
-                <span className="font-bold">Progresión:</span>
-                <Textarea className="mt-1" rows={3} defaultValue=""></Textarea>
-              </p>
+            <div className="p-2 border mb-4 space-y-2">
+              <div>
+                <Label htmlFor="progresion" className="font-bold">Progresión:</Label>
+                <Textarea id="progresion" className="mt-1" rows={3} value={formData.progresion} onChange={handleInputChange}></Textarea>
+              </div>
               <div className="flex items-center space-x-4 my-2">
                 <span className="font-bold">Categoría(s):</span>
                 <div className="flex items-center space-x-2">
-                  <Checkbox id="vivir" />
+                  <Checkbox id="vivir" onCheckedChange={(checked) => handleCheckboxChange('vivir', checked)} />
                   <Label htmlFor="vivir">Vivir aquí y ahora</Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Checkbox id="juntos" />
+                  <Checkbox id="juntos" onCheckedChange={(checked) => handleCheckboxChange('juntos', checked)} />
                   <Label htmlFor="juntos">Estar juntos</Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Checkbox id="experiencias" />
+                  <Checkbox id="experiencias" onCheckedChange={(checked) => handleCheckboxChange('experiencias', checked)} />
                   <Label htmlFor="experiencias">Experiencias</Label>
                 </div>
               </div>
-              <p>
-                <span className="font-bold">Subcategoría(s):</span>
-                <Textarea className="mt-1" rows={2} defaultValue=""></Textarea>
-              </p>
-              <p>
-                <span className="font-bold">Meta(s) de Aprendizaje:</span>
-                <Textarea className="mt-1" rows={3} defaultValue=""></Textarea>
-              </p>
-              <p>
-                <span className="font-bold">Aprendizaje de Trayectoria:</span>
-                <Textarea className="mt-1" rows={3} defaultValue=""></Textarea>
-              </p>
+               <div>
+                <Label htmlFor="subcategorias" className="font-bold">Subcategoría(s):</Label>
+                <Textarea id="subcategorias" className="mt-1" rows={2} value={formData.subcategorias} onChange={handleInputChange}></Textarea>
+              </div>
+              <div>
+                <Label htmlFor="metasAprendizaje" className="font-bold">Meta(s) de Aprendizaje:</Label>
+                <Textarea id="metasAprendizaje" className="mt-1" rows={3} value={formData.metasAprendizaje} onChange={handleInputChange}></Textarea>
+              </div>
+              <div>
+                <Label htmlFor="aprendizajeTrayectoria" className="font-bold">Aprendizaje de Trayectoria:</Label>
+                <Textarea id="aprendizajeTrayectoria" className="mt-1" rows={3} value={formData.aprendizajeTrayectoria} onChange={handleInputChange}></Textarea>
+              </div>
             </div>
 
             <div className="bg-gray-200 text-center font-bold p-1">
@@ -226,30 +322,30 @@ export default function ProgressionsPage() {
               <TableBody>
                 <TableRow>
                   <TableCell className="border-r">
-                    <span className='font-bold'>Apertura:</span>
-                    <Textarea className='mt-1' rows={3}></Textarea>
+                    <Label htmlFor="actividadApertura" className='font-bold'>Apertura:</Label>
+                    <Textarea id="actividadApertura" className='mt-1' rows={3} value={formData.actividadApertura} onChange={handleInputChange}></Textarea>
                   </TableCell>
-                  <TableCell className="border-r"><Textarea className='h-full'></Textarea></TableCell>
-                  <TableCell className="border-r"><Textarea className='h-full'></Textarea></TableCell>
-                  <TableCell><Textarea className='h-full'></Textarea></TableCell>
+                  <TableCell className="border-r"><Textarea id="tecnicaApertura" className='h-full' value={formData.tecnicaApertura} onChange={handleInputChange}></Textarea></TableCell>
+                  <TableCell className="border-r"><Textarea id="evidenciaApertura" className='h-full' value={formData.evidenciaApertura} onChange={handleInputChange}></Textarea></TableCell>
+                  <TableCell><Textarea id="evaluacionApertura" className='h-full' value={formData.evaluacionApertura} onChange={handleInputChange}></Textarea></TableCell>
                 </TableRow>
                 <TableRow>
                    <TableCell className="border-r">
-                    <span className='font-bold'>Desarrollo:</span>
-                    <Textarea className='mt-1' rows={5}></Textarea>
+                    <Label htmlFor="actividadDesarrollo" className='font-bold'>Desarrollo:</Label>
+                    <Textarea id="actividadDesarrollo" className='mt-1' rows={5} value={formData.actividadDesarrollo} onChange={handleInputChange}></Textarea>
                   </TableCell>
-                  <TableCell className="border-r"><Textarea className='h-full'></Textarea></TableCell>
-                  <TableCell className="border-r"><Textarea className='h-full'></Textarea></TableCell>
-                  <TableCell><Textarea className='h-full'></Textarea></TableCell>
+                  <TableCell className="border-r"><Textarea id="tecnicaDesarrollo" className='h-full' value={formData.tecnicaDesarrollo} onChange={handleInputChange}></Textarea></TableCell>
+                  <TableCell className="border-r"><Textarea id="evidenciaDesarrollo" className='h-full' value={formData.evidenciaDesarrollo} onChange={handleInputChange}></Textarea></TableCell>
+                  <TableCell><Textarea id="evaluacionDesarrollo" className='h-full' value={formData.evaluacionDesarrollo} onChange={handleInputChange}></Textarea></TableCell>
                 </TableRow>
                  <TableRow>
                    <TableCell className="border-r">
-                    <span className='font-bold'>Cierre:</span>
-                    <Textarea className='mt-1' rows={3}></Textarea>
+                    <Label htmlFor="actividadCierre" className='font-bold'>Cierre:</Label>
+                    <Textarea id="actividadCierre" className='mt-1' rows={3} value={formData.actividadCierre} onChange={handleInputChange}></Textarea>
                   </TableCell>
-                  <TableCell className="border-r"><Textarea className='h-full'></Textarea></TableCell>
-                  <TableCell className="border-r"><Textarea className='h-full'></Textarea></TableCell>
-                  <TableCell><Textarea className='h-full'></Textarea></TableCell>
+                  <TableCell className="border-r"><Textarea id="tecnicaCierre" className='h-full' value={formData.tecnicaCierre} onChange={handleInputChange}></Textarea></TableCell>
+                  <TableCell className="border-r"><Textarea id="evidenciaCierre" className='h-full' value={formData.evidenciaCierre} onChange={handleInputChange}></Textarea></TableCell>
+                  <TableCell><Textarea id="evaluacionCierre" className='h-full' value={formData.evaluacionCierre} onChange={handleInputChange}></Textarea></TableCell>
                 </TableRow>
               </TableBody>
             </Table>
