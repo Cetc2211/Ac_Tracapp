@@ -143,7 +143,7 @@ export default function StudentsPage() {
       reader.onload = (e) => {
         const text = e.target?.result as string;
         const lines = text.split('\n').filter(line => line.trim() !== '');
-        const headers = lines[0].split(',').map(h => h.trim());
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
         
         const headerMapping: Record<string, string> = {
           nombre: 'name',
@@ -154,9 +154,10 @@ export default function StudentsPage() {
         };
 
         const requiredSpanishHeaders = Object.keys(headerMapping);
-        const mappedHeaders = headers.map(h => headerMapping[h.toLowerCase()]).filter(Boolean);
+        
+        const allHeadersPresent = requiredSpanishHeaders.every(header => headers.includes(header));
 
-        if (mappedHeaders.length !== requiredSpanishHeaders.length) {
+        if (!allHeadersPresent) {
             toast({
                 variant: 'destructive',
                 title: 'Error de Cabeceras',
