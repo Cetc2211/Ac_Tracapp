@@ -18,16 +18,17 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { groups as initialGroups, students as allStudents, Student } from '@/lib/placeholder-data';
-import { notFound } from 'next/navigation';
+import { notFound, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, MoreHorizontal, UserPlus } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, UserPlus, Trash2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import {
   Dialog,
@@ -38,6 +39,17 @@ import {
   DialogFooter,
   DialogDescription,
 } from '@/components/ui/dialog';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { useState, useEffect } from 'react';
@@ -51,6 +63,7 @@ export default function GroupDetailsPage({
   const [groups, setGroups] = useState(initialGroups);
   const [students, setStudents] = useState(allStudents);
   const { toast } = useToast();
+  const router = useRouter();
   
   useEffect(() => {
     const storedGroups = localStorage.getItem('groups');
@@ -95,6 +108,16 @@ export default function GroupDetailsPage({
         description: "El estudiante ha sido quitado del grupo.",
     });
   };
+
+  const handleDeleteGroup = () => {
+    const newGroups = groups.filter(g => g.id !== group.id);
+    saveGroups(newGroups);
+    toast({
+        title: 'Grupo Eliminado',
+        description: `El grupo "${group.subject}" ha sido eliminado.`,
+    });
+    router.push('/groups');
+  };
   
   const handleAddStudents = () => {
     const studentsToAdd = students.filter(s => selectedStudents.includes(s.id));
@@ -127,19 +150,56 @@ export default function GroupDetailsPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center gap-4">
-        <Button asChild variant="outline" size="icon">
-          <Link href="/groups">
-            <ArrowLeft />
-            <span className="sr-only">Volver a grupos</span>
-          </Link>
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold">{group.subject}</h1>
-          <p className="text-muted-foreground">
-            Detalles del grupo y lista de estudiantes.
-          </p>
-        </div>
+      <div className="flex items-center justify-between">
+         <div className="flex items-center gap-4">
+            <Button asChild variant="outline" size="icon">
+            <Link href="/groups">
+                <ArrowLeft />
+                <span className="sr-only">Volver a grupos</span>
+            </Link>
+            </Button>
+            <div>
+            <h1 className="text-3xl font-bold">{group.subject}</h1>
+            <p className="text-muted-foreground">
+                Detalles del grupo y lista de estudiantes.
+            </p>
+            </div>
+         </div>
+         <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon">
+                    <MoreHorizontal className="h-4 w-4" />
+                    <span className="sr-only">Más opciones</span>
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Opciones del Grupo</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Eliminar Grupo
+                        </DropdownMenuItem>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Esta acción no se puede deshacer. Esto eliminará permanentemente el grupo
+                                y desvinculará a los estudiantes.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDeleteGroup} className="bg-destructive hover:bg-destructive/90">
+                                Sí, eliminar grupo
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <Card>
@@ -277,6 +337,13 @@ export default function GroupDetailsPage({
                   </TableCell>
                 </TableRow>
               ))}
+               {group.students.length === 0 && (
+                <TableRow>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground p-8">
+                        No hay estudiantes en este grupo.
+                    </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>
@@ -284,5 +351,3 @@ export default function GroupDetailsPage({
     </div>
   );
 }
-
-    

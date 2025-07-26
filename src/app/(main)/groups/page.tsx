@@ -23,7 +23,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { groups as initialGroups, students as initialStudents, Student } from '@/lib/placeholder-data';
-import { Users, ClipboardList, PlusCircle } from 'lucide-react';
+import { Users, ClipboardList, PlusCircle, BookCopy, Settings } from 'lucide-react';
 import { AttendanceRandomizer } from '@/components/attendance-randomizer';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
@@ -170,22 +170,33 @@ export default function GroupsPage() {
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {groups.map((group) => (
-          <Card key={group.id}>
+          <Card key={group.id} className="flex flex-col">
             <CardHeader>
-              <CardTitle>{group.subject}</CardTitle>
-              <CardDescription className="flex items-center gap-2 pt-2">
-                <Users className="h-4 w-4" />
-                <span>{group.students.length} estudiantes</span>
-              </CardDescription>
+                <div className="flex justify-between items-start">
+                    <div>
+                        <CardTitle className="text-xl">{group.subject}</CardTitle>
+                        <CardDescription className="flex items-center gap-2 pt-2">
+                            <Users className="h-4 w-4" />
+                            <span>{group.students.length} estudiantes</span>
+                        </CardDescription>
+                    </div>
+                    <Button asChild variant="ghost" size="icon">
+                        <Link href={`/groups/${group.id}`}>
+                            <Settings className="h-5 w-5" />
+                             <span className="sr-only">Configurar</span>
+                        </Link>
+                    </Button>
+                </div>
             </CardHeader>
-            <CardContent>
-              <div className="text-sm text-muted-foreground">
-                <p>Promedio del grupo: 8.5</p>
-                <p>Actividades pendientes: 3</p>
+            <CardContent className="flex-grow">
+              <div className="text-sm text-muted-foreground space-y-2">
+                <div className='flex items-center gap-2'><span className='font-semibold'>Promedio Gral:</span> <span className='text-green-600 font-bold'>8.5</span></div>
+                <div className='flex items-center gap-2'><span className='font-semibold'>Riesgo Alto:</span> <span className='text-destructive font-bold'>{group.students.filter(s => s.riskLevel === 'high').length}</span></div>
+                <div className='flex items-center gap-2'><span className='font-semibold'>Actividades:</span> <span>3 pendientes</span></div>
               </div>
             </CardContent>
-            <CardFooter className="flex justify-between">
-              <Button asChild variant="outline">
+            <CardFooter className="flex justify-between gap-2">
+              <Button asChild variant="outline" className="w-full">
                 <Link href={`/groups/${group.id}`}>
                   <ClipboardList className="mr-2 h-4 w-4" /> Ver Detalles
                 </Link>
@@ -209,3 +220,4 @@ export default function GroupsPage() {
     </div>
   );
 }
+
