@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { groups, students as allStudents } from '@/lib/placeholder-data';
+import { groups as initialGroups, students as allStudents, Student } from '@/lib/placeholder-data';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -28,17 +28,80 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 export default function GroupDetailsPage({
   params,
 }: {
   params: { groupId: string };
 }) {
+  const [groups, setGroups] = useState(initialGroups);
   const group = groups.find((g) => g.id === params.groupId);
+  const { toast } = useToast();
+
+  const [isAddStudentDialogOpen, setIsAddStudentDialogOpen] = useState(false);
+  const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
+  
+  const studentsInGroup = group ? group.students : [];
+  const availableStudents = allStudents.filter(s => !studentsInGroup.some(gs => gs.id === s.id));
+
 
   if (!group) {
     notFound();
   }
+  
+  const handleRemoveStudent = (studentId: string) => {
+    setGroups(groups.map(g => {
+        if (g.id === group.id) {
+            return { ...g, students: g.students.filter(s => s.id !== studentId) };
+        }
+        return g;
+    }));
+    toast({
+        title: "Estudiante eliminado",
+        description: "El estudiante ha sido quitado del grupo.",
+    });
+  };
+  
+  const handleAddStudents = () => {
+    const studentsToAdd = allStudents.filter(s => selectedStudents.includes(s.id));
+    setGroups(groups.map(g => {
+        if (g.id === group.id) {
+            const newStudents = [...g.students, ...studentsToAdd].filter((student, index, self) =>
+                index === self.findIndex((s) => (
+                    s.id === student.id
+                ))
+            );
+            return { ...g, students: newStudents };
+        }
+        return g;
+    }));
+    setSelectedStudents([]);
+    setIsAddStudentDialogOpen(false);
+    toast({
+        title: "Estudiantes agregados",
+        description: `${studentsToAdd.length} estudiante(s) han sido añadidos al grupo.`
+    });
+  };
+
+  const onStudentSelect = (studentId: string, checked: boolean | 'indeterminate') => {
+      setSelectedStudents(prev => 
+        checked ? [...prev, studentId] : prev.filter(id => id !== studentId)
+      );
+  };
+
 
   return (
     <div className="flex flex-col gap-6">
@@ -67,12 +130,56 @@ export default function GroupDetailsPage({
                 grupo.
               </CardDescription>
             </div>
-             <Button size="sm" className="gap-1">
-                <UserPlus className="h-3.5 w-3.5" />
-                <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+            <Dialog open={isAddStudentDialogOpen} onOpenChange={setIsAddStudentDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" className="gap-1">
+                  <UserPlus className="h-3.5 w-3.5" />
+                  <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
                     Agregar Estudiante
-                </span>
-            </Button>
+                  </span>
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Agregar Estudiantes al Grupo</DialogTitle>
+                  <DialogDescription>
+                    Selecciona los estudiantes que deseas añadir a "{group.subject}".
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4 max-h-[400px] overflow-y-auto">
+                    {availableStudents.map(student => (
+                         <div key={student.id} className="flex items-center space-x-2">
+                            <Checkbox 
+                                id={`student-${student.id}`} 
+                                onCheckedChange={(checked) => onStudentSelect(student.id, checked)}
+                                checked={selectedStudents.includes(student.id)}
+                            />
+                            <Label htmlFor={`student-${student.id}`} className="flex items-center gap-3">
+                                <Image
+                                    alt="Foto del estudiante"
+                                    className="aspect-square rounded-full object-cover"
+                                    height="40"
+                                    src={student.photo}
+                                    data-ai-hint="student photo"
+                                    width="40"
+                                />
+                                <div>
+                                    <p className="font-medium">{student.name}</p>
+                                    <p className="text-xs text-muted-foreground">{student.id}</p>
+                                </div>
+                            </Label>
+                        </div>
+                    ))}
+                    {availableStudents.length === 0 && (
+                        <p className="text-center text-muted-foreground">No hay más estudiantes para agregar.</p>
+                    )}
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsAddStudentDialogOpen(false)}>Cancelar</Button>
+                  <Button onClick={handleAddStudents} disabled={selectedStudents.length === 0}>Agregar Seleccionados</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         </CardHeader>
         <CardContent>
@@ -140,7 +247,7 @@ export default function GroupDetailsPage({
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                         <DropdownMenuItem>Ver Perfil Completo</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">
+                        <DropdownMenuItem onClick={() => handleRemoveStudent(student.id)} className="text-destructive">
                           Quitar del Grupo
                         </DropdownMenuItem>
                       </DropdownMenuContent>
