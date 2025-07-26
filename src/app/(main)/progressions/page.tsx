@@ -31,6 +31,7 @@ const initialFormData = {
   uac: '',
   docentes: '',
   semanas: '',
+  periodo: '',
   areaConocimiento: '',
   semestre: '',
   grupos: '',
@@ -40,7 +41,7 @@ const initialFormData = {
   categorias: [] as string[],
   subcategorias: '',
   metasAprendizaje: '',
-  aprendizajeTrayectoria: '',
+  productoEsperado: '',
   conceptosCentrales: '',
   conceptosTransversales: '',
   recursosSociocognitivos: '',
@@ -56,6 +57,8 @@ const initialFormData = {
   tecnicaCierre: '',
   evidenciaCierre: '',
   evaluacionCierre: '',
+  lugar: '',
+  fecha: '',
 };
 
 export default function ProgressionsPage() {
@@ -92,7 +95,7 @@ export default function ProgressionsPage() {
   }
 
   const handleGetSuggestions = async () => {
-    const { progresion, metasAprendizaje, aprendizajeTrayectoria, conceptosCentrales, conceptosTransversales, recursosSociocognitivos } = formData;
+    const { progresion, metasAprendizaje, productoEsperado, conceptosCentrales, conceptosTransversales, recursosSociocognitivos } = formData;
     if (!progresion || !metasAprendizaje) {
       toast({
         variant: 'destructive',
@@ -108,7 +111,7 @@ export default function ProgressionsPage() {
       const result = await generateProgressionSuggestions({
         progression: progresion,
         learningGoals: metasAprendizaje,
-        trajectory: aprendizajeTrayectoria,
+        trajectory: productoEsperado,
         centralConcepts: conceptosCentrales,
         crossConcepts: conceptosTransversales,
         sociocognitiveResources: recursosSociocognitivos,
@@ -172,14 +175,13 @@ export default function ProgressionsPage() {
                 />
               </div>
               <div className="text-center">
+                <p className="font-bold">
+                  SUBSECRETARÍA DE EDUCACIÓN MEDIA SUPERIOR
+                </p>
                 <p className="text-sm">
                   Dirección General de Educación Tecnológica Agropecuaria y
                   Ciencias del Mar
                 </p>
-                <p className="text-sm font-bold">
-                  Planeación por Progresión en el MCCEMS
-                </p>
-                <p className="text-xs">Ciclo Agosto 2024-Enero 2025</p>
               </div>
               <div className="flex flex-col items-center">
                  <Image
@@ -191,9 +193,8 @@ export default function ProgressionsPage() {
                 />
               </div>
             </div>
-            <p className="mb-4">
-              <span className="font-bold">Plantel:</span> Centro de Bachillerato
-              Tecnológico Agropecuario No. 130 "Eutimio Plantillas Avelar"
+            <p className="text-center font-bold mb-4">
+                INSTRUMENTACIÓN DIDÁCTICA PARA LA FORMACIÓN DEL SEMESTRE
             </p>
 
             <div className="bg-gray-200 text-center font-bold p-1">
@@ -202,47 +203,42 @@ export default function ProgressionsPage() {
             <Table className="mb-4 border">
               <TableBody>
                 <TableRow>
-                  <TableCell className="border-r">
-                    <Label htmlFor="uac">UAC</Label>
+                    <TableCell className="border-r font-bold" colSpan={2}>PLANTEL: Centro de Bachillerato Tecnológico Agropecuario No. 130 "Eutimio Plantillas Avelar"</TableCell>
+                    <TableCell className="border-r">
+                        <Label htmlFor="periodo">PERIODO DE APLICACIÓN</Label>
+                        <Input id="periodo" value={formData.periodo} onChange={handleInputChange} placeholder="AGOSTO 2024 - ENERO 2025" />
+                    </TableCell>
+                    <TableCell>
+                        <Label htmlFor="fecha">FECHA</Label>
+                        <Input id="fecha" value={formData.fecha} onChange={handleInputChange} placeholder="DD/MM/AAAA" />
+                    </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="border-r" colSpan={2}>
+                    <Label htmlFor="uac">UNIDAD DE APRENDIZAJE CURRICULAR (UAC)</Label>
                     <Input id="uac" value={formData.uac} onChange={handleInputChange} />
                   </TableCell>
                   <TableCell className="border-r">
-                    <Label htmlFor="docentes">Docente(s)</Label>
-                    <Input id="docentes" value={formData.docentes} onChange={handleInputChange} />
+                    <Label htmlFor="areaConocimiento">ÁREA DE CONOCIMIENTO</Label>
+                    <Input id="areaConocimiento" value={formData.areaConocimiento} onChange={handleInputChange} />
                   </TableCell>
-                  <TableCell>
-                    <Label htmlFor="semanas">Semana(s): 1.25 semanas</Label>
-                    <Input id="semanas" value={formData.semanas} onChange={handleInputChange} />
+                   <TableCell className="border-r">
+                    <Label htmlFor="semestre">SEMESTRE</Label>
+                    <Input id="semestre" value={formData.semestre} onChange={handleInputChange} />
                   </TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell className="border-r">
-                    <Label htmlFor="areaConocimiento">Área del Conocimiento:</Label>
-                    <Input id="areaConocimiento" value={formData.areaConocimiento} onChange={handleInputChange} />
+                  <TableCell className="border-r" colSpan={2}>
+                    <Label htmlFor="docentes">DOCENTE(S)</Label>
+                    <Input id="docentes" value={formData.docentes} onChange={handleInputChange} />
                   </TableCell>
                   <TableCell className="border-r">
-                    <div className="grid grid-cols-2 gap-4 h-full">
-                      <div>
-                        <Label htmlFor="semestre">Semestre</Label>
-                        <Input id="semestre" value={formData.semestre} onChange={handleInputChange} />
-                      </div>
-                      <div>
-                        <Label htmlFor="grupos">Grupos</Label>
-                        <Input id="grupos" value={formData.grupos} onChange={handleInputChange} />
-                      </div>
-                    </div>
+                    <Label htmlFor="grupos">GRUPOS</Label>
+                    <Input id="grupos" value={formData.grupos} onChange={handleInputChange} />
                   </TableCell>
                   <TableCell>
-                    <div className="grid grid-cols-2 gap-4 h-full">
-                      <div>
-                        <Label htmlFor="horasDocente">Horas de mediación docente</Label>
-                        <Input id="horasDocente" value={formData.horasDocente} onChange={handleInputChange} />
-                      </div>
-                      <div>
-                        <Label htmlFor="horasIndependiente">Horas de estudio independiente</Label>
-                        <Input id="horasIndependiente" value={formData.horasIndependiente} onChange={handleInputChange} />
-                      </div>
-                    </div>
+                    <Label htmlFor="horasDocente">HORAS ASIGNADAS A LA UAC</Label>
+                    <Input id="horasDocente" value={formData.horasDocente} onChange={handleInputChange} />
                   </TableCell>
                 </TableRow>
               </TableBody>
@@ -253,11 +249,11 @@ export default function ProgressionsPage() {
             </div>
             <div className="p-2 border mb-4 space-y-2">
               <div>
-                <Label htmlFor="progresion" className="font-bold">Progresión:</Label>
+                <Label htmlFor="progresion" className="font-bold">PROGRESIÓN:</Label>
                 <Textarea id="progresion" className="mt-1" rows={3} value={formData.progresion} onChange={handleInputChange}></Textarea>
               </div>
               <div className="flex items-center space-x-4 my-2">
-                <span className="font-bold">Categoría(s):</span>
+                <span className="font-bold">CATEGORÍA(S):</span>
                 <div className="flex items-center space-x-2">
                   <Checkbox id="vivir" onCheckedChange={(checked) => handleCheckboxChange('vivir', checked)} checked={formData.categorias.includes('vivir')} />
                   <Label htmlFor="vivir">Vivir aquí y ahora</Label>
@@ -272,27 +268,27 @@ export default function ProgressionsPage() {
                 </div>
               </div>
                <div>
-                <Label htmlFor="subcategorias" className="font-bold">Subcategoría(s):</Label>
+                <Label htmlFor="subcategorias" className="font-bold">SUBCATEGORÍA(S):</Label>
                 <Textarea id="subcategorias" className="mt-1" rows={2} value={formData.subcategorias} onChange={handleInputChange}></Textarea>
               </div>
               <div>
-                <Label htmlFor="metasAprendizaje" className="font-bold">Meta(s) de Aprendizaje:</Label>
+                <Label htmlFor="metasAprendizaje" className="font-bold">META(S) DE APRENDIZAJE:</Label>
                 <Textarea id="metasAprendizaje" className="mt-1" rows={3} value={formData.metasAprendizaje} onChange={handleInputChange}></Textarea>
               </div>
               <div>
-                <Label htmlFor="aprendizajeTrayectoria" className="font-bold">Aprendizaje de Trayectoria:</Label>
-                <Textarea id="aprendizajeTrayectoria" className="mt-1" rows={3} value={formData.aprendizajeTrayectoria} onChange={handleInputChange}></Textarea>
+                <Label htmlFor="productoEsperado" className="font-bold">PRODUCTO ESPERADO DE LA PROGRESIÓN:</Label>
+                <Textarea id="productoEsperado" className="mt-1" rows={3} value={formData.productoEsperado} onChange={handleInputChange}></Textarea>
               </div>
                <div>
-                <Label htmlFor="recursosSociocognitivos" className="font-bold">Recursos Sociocognitivos (Opcional):</Label>
+                <Label htmlFor="recursosSociocognitivos" className="font-bold">RECURSOS SOCIOCOGNITIVOS (Opcional):</Label>
                 <Textarea id="recursosSociocognitivos" className="mt-1" rows={3} value={formData.recursosSociocognitivos} onChange={handleInputChange} placeholder="Pega aquí los recursos sociocognitivos del plan de estudios..."></Textarea>
               </div>
                <div>
-                <Label htmlFor="conceptosCentrales" className="font-bold">Conceptos Centrales (Opcional):</Label>
+                <Label htmlFor="conceptosCentrales" className="font-bold">CONCEPTOS CENTRALES (Opcional):</Label>
                 <Textarea id="conceptosCentrales" className="mt-1" rows={3} value={formData.conceptosCentrales} onChange={handleInputChange} placeholder="Pega aquí los conceptos centrales del plan de estudios..."></Textarea>
               </div>
               <div>
-                <Label htmlFor="conceptosTransversales" className="font-bold">Conceptos Transversales (Opcional):</Label>
+                <Label htmlFor="conceptosTransversales" className="font-bold">CONCEPTOS TRANSVERSALES (Opcional):</Label>
                 <Textarea id="conceptosTransversales" className="mt-1" rows={3} value={formData.conceptosTransversales} onChange={handleInputChange} placeholder="Pega aquí los conceptos transversales del plan de estudios..."></Textarea>
               </div>
             </div>
@@ -303,49 +299,53 @@ export default function ProgressionsPage() {
             <Table className="mb-4 border">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-center font-bold">MULTIDISCIPLINARIEDAD</TableHead>
-                  <TableHead className="text-center font-bold">Producto/Desempeño/Conocimiento</TableHead>
+                  <TableHead className="text-center font-bold" colSpan={2}>EJES DE LA TRANSVERSALIDAD</TableHead>
+                </TableRow>
+                 <TableRow>
+                  <TableHead className="text-center font-bold border-r">MULTIDISCIPLINARIEDAD</TableHead>
+                  <TableHead className="text-center font-bold">PRODUCTO/DESEMPEÑO/CONOCIMIENTO</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 <TableRow><TableCell className='border-r'><Textarea defaultValue="UAC 1" className='min-h-0 p-1 h-8'/></TableCell><TableCell><Textarea defaultValue="" className='min-h-0 p-1 h-8'/></TableCell></TableRow>
                 <TableRow><TableCell className='border-r'><Textarea defaultValue="UAC 2" className='min-h-0 p-1 h-8'/></TableCell><TableCell><Textarea defaultValue="" className='min-h-0 p-1 h-8'/></TableCell></TableRow>
-                <TableRow><TableCell className='border-r'><Textarea defaultValue="UAC 3" className='min-h-0 p-1 h-8'/></TableCell><TableCell><Textarea defaultValue="" className='min-h-0 p-1 h-8'/></TableCell></TableRow>
               </TableBody>
               <TableHeader>
                  <TableRow>
-                   <TableHead className="text-center font-bold">INTERDISCIPLINARIEDAD</TableHead>
-                   <TableHead className="text-center font-bold">S.</TableHead>
+                   <TableHead className="text-center font-bold border-r">INTERDISCIPLINARIEDAD</TableHead>
+                   <TableHead className="text-center font-bold">Semana</TableHead>
                  </TableRow>
               </TableHeader>
               <TableBody>
                 <TableRow><TableCell className='border-r'><Textarea defaultValue="Nombre del PAEC:" className='min-h-0 p-1 h-8'/></TableCell><TableCell><Textarea defaultValue="" className='min-h-0 p-1 h-8'/></TableCell></TableRow>
-                <TableRow><TableCell className='border-r'><Textarea defaultValue="UAC 1" className='min-h-0 p-1 h-8'/></TableCell><TableCell><Textarea defaultValue="" className='min-h-0 p-1 h-8'/></TableCell></TableRow>
-                <TableRow><TableCell className='border-r'><Textarea defaultValue="UAC 2" className='min-h-0 p-1 h-8'/></TableCell><TableCell><Textarea defaultValue="" className='min-h-0 p-1 h-8'/></TableCell></TableRow>
-                <TableRow><TableCell className='border-r'><Textarea defaultValue="UAC 3" className='min-h-0 p-1 h-8'/></TableCell><TableCell><Textarea defaultValue="" className='min-h-0 p-1 h-8'/></TableCell></TableRow>
+              </TableBody>
+               <TableHeader>
+                 <TableRow>
+                   <TableHead className="text-center font-bold border-r">SOCIAL</TableHead>
+                   <TableHead className="text-center font-bold">PRODUCTO/DESEMPEÑO/CONOCIMIENTO</TableHead>
+                 </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow><TableCell className='border-r'><Textarea defaultValue="Problema o necesidad:" className='min-h-0 p-1 h-8'/></TableCell><TableCell><Textarea defaultValue="" className='min-h-0 p-1 h-8'/></TableCell></TableRow>
               </TableBody>
             </Table>
-
-            <div className="bg-gray-200 text-center font-bold p-1">
-              D) METODOLOGÍA: Aprendizaje basado en problemas
-            </div>
             
             <div className="bg-gray-200 text-center font-bold p-1 mt-4">
-              E) ACTIVIDADES DE APRENDIZAJE
+              D) ACTIVIDADES DE APRENDIZAJE
             </div>
             <Table className="mb-4 border">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="font-bold">Momentos didácticos:</TableHead>
-                  <TableHead className="font-bold text-center">Técnicas Didácticas</TableHead>
-                  <TableHead className="font-bold text-center">Evidencia(s) de Aprendizaje (Producto/Desempeño/Conocimiento)</TableHead>
-                  <TableHead className="font-bold text-center">Estrategia de Evaluación:</TableHead>
+                  <TableHead className="font-bold w-[35%]">ACTIVIDADES DE ENSEÑANZA-APRENDIZAJE-EVALUACIÓN</TableHead>
+                  <TableHead className="font-bold text-center w-[25%]">INSTRUMENTOS DE EVALUACIÓN</TableHead>
+                  <TableHead className="font-bold text-center w-[25%]">EVIDENCIA(S) DE APRENDIZAJE (PRODUCTO/DESEMPEÑO/CONOCIMIENTO)</TableHead>
+                  <TableHead className="font-bold text-center w-[15%]">PONDERACIÓN</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 <TableRow>
                   <TableCell className="border-r">
-                    <Label htmlFor="actividadApertura" className='font-bold'>Apertura:</Label>
+                    <Label htmlFor="actividadApertura" className='font-bold'>APERTURA:</Label>
                     <Textarea id="actividadApertura" className='mt-1' rows={3} value={formData.actividadApertura} onChange={handleInputChange}></Textarea>
                   </TableCell>
                   <TableCell className="border-r"><Textarea id="tecnicaApertura" className='h-full' value={formData.tecnicaApertura} onChange={handleInputChange}></Textarea></TableCell>
@@ -354,7 +354,7 @@ export default function ProgressionsPage() {
                 </TableRow>
                 <TableRow>
                    <TableCell className="border-r">
-                    <Label htmlFor="actividadDesarrollo" className='font-bold'>Desarrollo:</Label>
+                    <Label htmlFor="actividadDesarrollo" className='font-bold'>DESARROLLO:</Label>
                     <Textarea id="actividadDesarrollo" className='mt-1' rows={5} value={formData.actividadDesarrollo} onChange={handleInputChange}></Textarea>
                   </TableCell>
                   <TableCell className="border-r"><Textarea id="tecnicaDesarrollo" className='h-full' value={formData.tecnicaDesarrollo} onChange={handleInputChange}></Textarea></TableCell>
@@ -363,7 +363,7 @@ export default function ProgressionsPage() {
                 </TableRow>
                  <TableRow>
                    <TableCell className="border-r">
-                    <Label htmlFor="actividadCierre" className='font-bold'>Cierre:</Label>
+                    <Label htmlFor="actividadCierre" className='font-bold'>CIERRE:</Label>
                     <Textarea id="actividadCierre" className='mt-1' rows={3} value={formData.actividadCierre} onChange={handleInputChange}></Textarea>
                   </TableCell>
                   <TableCell className="border-r"><Textarea id="tecnicaCierre" className='h-full' value={formData.tecnicaCierre} onChange={handleInputChange}></Textarea></TableCell>
@@ -374,7 +374,7 @@ export default function ProgressionsPage() {
             </Table>
 
             <div className="bg-gray-200 text-center font-bold p-1">
-              F) HERRAMIENTAS DIDÁCTICAS
+              E) RECURSOS DIDÁCTICOS
             </div>
             <Table className="mb-4 border">
                <TableBody>
@@ -387,38 +387,36 @@ export default function ProgressionsPage() {
             </Table>
 
             <div className="bg-gray-200 text-center font-bold p-1">
-              G) VALIDACIÓN
+              F) VALIDACIÓN
             </div>
              <Table className="mb-4 border">
                <TableBody>
                 <TableRow>
-                  <TableCell className="border-r w-1/3 text-center"><p className='font-bold'>Elaboró</p><br/><br/><hr/><p>Facilitador</p></TableCell>
-                  <TableCell className="border-r w-1/3 text-center"><p className='font-bold'>Revisó</p><br/><br/><hr/><p>Jefe del Depto. Académico y de Competencias</p></TableCell>
-                  <TableCell className="w-1/3 text-center"><p className='font-bold'>Avali</p><br/><br/><hr/><p>Presidente del Consejo Técnico Académico</p></TableCell>
+                  <TableCell className="border-r w-1/3 text-center"><p className='font-bold'>Elabora</p><br/><br/><hr className='border-black'/><p>Docente(s)</p></TableCell>
+                  <TableCell className="border-r w-1/3 text-center"><p className='font-bold'>Valida</p><br/><br/><hr className='border-black'/><p>Presidente de Academia</p></TableCell>
+                  <TableCell className="w-1/3 text-center"><p className='font-bold'>Autoriza</p><br/><br/><hr className='border-black'/><p>Subdirector Académico</p></TableCell>
+                </TableRow>
+                 <TableRow>
+                  <TableCell colSpan={3} className="text-center">
+                    <div className="flex gap-4 justify-center">
+                        <div>
+                            <Label htmlFor="lugar">LUGAR</Label>
+                            <Input id="lugar" value={formData.lugar} onChange={handleInputChange} />
+                        </div>
+                        <div>
+                            <Label htmlFor="fecha_validacion">FECHA DE VALIDACIÓN</Label>
+                            <Input id="fecha_validacion" value={formData.fecha} onChange={handleInputChange} />
+                        </div>
+                    </div>
+                  </TableCell>
                 </TableRow>
                </TableBody>
             </Table>
-            <div>
-              <p className="font-bold">Nomenclatura en la plantilla:</p>
-              <p>UAC: Unidad de aprendizaje curricular</p>
-              <p>PAEC: Proyecto Aula-Escuela-Comunidad</p>
-              <p>P: Progresión</p>
-              <p>S: Semana</p>
-              <p>A: Autoevaluación</p>
-              <p>C: Coevaluación</p>
-              <p>H: Heteroevaluación</p>
-              <p>R: Rúbrica</p>
-              <p>LC: Lista de Cotejo</p>
-              <p>GO: Guía de Observación</p>
-              <p>E: Escala Evaluativa, Escala Valorativa</p>
-              <p>PE: Prueba escrita</p>
-              <p>Otro: Diario de emociones, bitácora de aprendizaje, etc</p>
-            </div>
-
           </div>
         </CardContent>
       </Card>
     </div>
   );
+}
 
     
