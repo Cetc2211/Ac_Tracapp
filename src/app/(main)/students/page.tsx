@@ -109,7 +109,7 @@ export default function StudentsPage() {
     } else {
         // Add new student
         const studentToAdd: Student = {
-            id: `S${Math.floor(Math.random() * 10000)}`,
+            id: editingStudent.id || `S${Date.now()}`,
             name: editingStudent.name,
             email: editingStudent.email,
             phone: editingStudent.phone,
@@ -399,3 +399,5 @@ export default function StudentsPage() {
     </Card>
   );
 }
+
+    
