@@ -21,7 +21,7 @@ import { groups as initialGroups, students as initialStudents, Student } from '@
 import { notFound, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, MoreHorizontal, UserPlus, Trash2, PlusCircle, Trash, FilePen } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, UserPlus, Trash2, PlusCircle, Trash, FilePen, CalendarCheck } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -150,6 +150,7 @@ export default function GroupDetailsPage({
     saveGroups(newGroups);
     localStorage.removeItem(`criteria_${params.groupId}`);
     localStorage.removeItem(`grades_${params.groupId}`);
+    localStorage.removeItem(`attendance_${params.groupId}`);
     toast({
         title: 'Grupo Eliminado',
         description: `El grupo "${group.subject}" ha sido eliminado.`,
@@ -246,41 +247,49 @@ export default function GroupDetailsPage({
             </p>
             </div>
          </div>
-         <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon">
-                    <MoreHorizontal className="h-4 w-4" />
-                    <span className="sr-only">Más opciones</span>
-                </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Opciones del Grupo</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Eliminar Grupo
-                        </DropdownMenuItem>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                Esta acción no se puede deshacer. Esto eliminará permanentemente el grupo,
-                                sus criterios de evaluación, calificaciones y desvinculará a los estudiantes.
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleDeleteGroup} className="bg-destructive hover:bg-destructive/90">
-                                Sí, eliminar grupo
-                            </AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
-            </DropdownMenuContent>
-        </DropdownMenu>
+         <div className="flex items-center gap-2">
+            <Button asChild variant="outline">
+                <Link href={`/groups/${group.id}/attendance`}>
+                    <CalendarCheck className="mr-2 h-4 w-4" />
+                    Tomar Asistencia
+                </Link>
+            </Button>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="icon">
+                        <MoreHorizontal className="h-4 w-4" />
+                        <span className="sr-only">Más opciones</span>
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>Opciones del Grupo</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Eliminar Grupo
+                            </DropdownMenuItem>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    Esta acción no se puede deshacer. Esto eliminará permanentemente el grupo,
+                                    sus criterios de evaluación, calificaciones, registros de asistencia y desvinculará a los estudiantes.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleDeleteGroup} className="bg-destructive hover:bg-destructive/90">
+                                    Sí, eliminar grupo
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                </DropdownMenuContent>
+            </DropdownMenu>
+         </div>
       </div>
       
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -503,3 +512,4 @@ export default function GroupDetailsPage({
     </div>
   );
 }
+
