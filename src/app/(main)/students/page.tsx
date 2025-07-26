@@ -40,7 +40,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function StudentsPage() {
@@ -286,7 +286,8 @@ export default function StudentsPage() {
                         id="name"
                         placeholder="Ana Torres"
                         value={editingStudent?.name || ''}
-                        onChange={handleInputChange}
+                        onChange={(e) => setEditingStudent({ name: e.target.value })}
+                        disabled={!!multiStudentNames}
                       />
                       <div className="relative">
                           <div className="absolute inset-0 flex items-center">
@@ -297,7 +298,7 @@ export default function StudentsPage() {
                           </div>
                       </div>
                       <Label htmlFor="multiStudentNames" className="text-left">
-                        Pega una lista de nombres
+                        Pega una lista de nombres (uno por línea)
                       </Label>
                       <Textarea
                         id="multiStudentNames"
@@ -305,7 +306,12 @@ export default function StudentsPage() {
                         className="col-span-3"
                         rows={5}
                         value={multiStudentNames}
-                        onChange={(e) => setMultiStudentNames(e.target.value)}
+                        onChange={(e) => {
+                          setMultiStudentNames(e.target.value);
+                          if (e.target.value) {
+                            setEditingStudent({ name: '' });
+                          }
+                        }}
                       />
                   </div>
                 )}
