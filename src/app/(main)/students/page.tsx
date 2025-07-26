@@ -18,7 +18,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, MoreHorizontal, Upload } from 'lucide-react';
+import { PlusCircle, MoreHorizontal } from 'lucide-react';
 import { students as initialStudents, Student } from '@/lib/placeholder-data';
 import {
   DropdownMenu,
@@ -39,6 +39,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useState, useRef, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -46,8 +47,9 @@ export default function StudentsPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Partial<Student> | null>(null);
+  const [multiStudentNames, setMultiStudentNames] = useState('');
+
   const { toast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     try {
@@ -78,6 +80,7 @@ export default function StudentsPage() {
 
   const handleOpenDialog = (student: Partial<Student> | null) => {
     setEditingStudent(student ? { ...student } : {});
+    setMultiStudentNames('');
     setIsDialogOpen(true);
   };
   
@@ -86,7 +89,16 @@ export default function StudentsPage() {
     setIsDialogOpen(false);
   }
 
-  const handleSaveStudent = () => {
+  const handleSave = () => {
+    if (editingStudent && editingStudent.id) { // Editing a single student
+      handleSaveSingleStudent();
+    } else { // Adding one or more new students
+      handleSaveNewStudents();
+    }
+  };
+
+
+  const handleSaveSingleStudent = () => {
     if (!editingStudent?.name?.trim()) {
       toast({
         variant: 'destructive',
@@ -106,115 +118,43 @@ export default function StudentsPage() {
             title: 'Éxito',
             description: 'Estudiante actualizado correctamente.',
         });
-    } else {
-        // Add new student
-        const studentToAdd: Student = {
-            id: editingStudent.id || `S${Date.now()}`,
-            name: editingStudent.name,
-            email: editingStudent.email,
-            phone: editingStudent.phone,
-            tutorName: editingStudent.tutorName,
-            tutorPhone: editingStudent.tutorPhone,
-            photo: editingStudent.photo || 'https://placehold.co/100x100.png',
-            riskLevel: 'low',
-        };
-        saveStudents([...students, studentToAdd]);
-        toast({
-            title: 'Éxito',
-            description: 'Estudiante agregado correctamente.',
-        });
     }
-
     handleCloseDialog();
   };
   
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      if (file.type !== 'text/csv') {
-        toast({
-          variant: 'destructive',
-          title: 'Error de formato',
-          description: 'Por favor, sube un archivo en formato CSV.',
-        });
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const text = e.target?.result as string;
-        const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
-        
-        if (lines.length < 2) {
-            toast({ variant: 'destructive', title: 'Error', description: 'El archivo CSV está vacío o solo contiene la cabecera.'});
-            return;
-        }
+  const handleSaveNewStudents = () => {
+    const namesToProcess = editingStudent?.name ? [editingStudent.name] : multiStudentNames.split('\n');
+    const newStudents = namesToProcess
+      .map(name => name.trim())
+      .filter(name => name) // Filter out empty lines
+      .map(name => ({
+        id: `S${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+        name: name,
+        email: '',
+        phone: '',
+        tutorName: '',
+        tutorPhone: '',
+        photo: 'https://placehold.co/100x100.png',
+        riskLevel: 'low' as 'low' | 'medium' | 'high',
+      }));
 
-        const requiredSpanishHeaders = ['nombre', 'email', 'telefono', 'tutor', 'telefono_tutor'];
-        const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/\r/g, ''));
-        
-        const allHeadersPresent = requiredSpanishHeaders.every(requiredHeader => headers.includes(requiredHeader));
-        
-        if (!allHeadersPresent) {
-            toast({
-                variant: 'destructive',
-                title: 'Error de Cabeceras',
-                description: `El archivo CSV debe contener las siguientes cabeceras: ${requiredSpanishHeaders.join(', ')}`,
-            });
-            return;
-        }
-
-        const headerMapping: Record<string, string> = {
-          nombre: 'name',
-          email: 'email',
-          telefono: 'phone',
-          tutor: 'tutorName',
-          telefono_tutor: 'tutorPhone'
-        };
-
-
-        const newStudentsFromFile: Student[] = lines.slice(1).map((line, index) => {
-          const data = line.split(',');
-          const studentData: any = {};
-          headers.forEach((header, i) => {
-            const mappedHeader = headerMapping[header];
-            if (mappedHeader && data[i]) {
-                studentData[mappedHeader] = data[i].trim();
-            }
-          });
-
-          return {
-            id: `S-upload-${Date.now()}-${index}`,
-            name: studentData.name,
-            email: studentData.email,
-            phone: studentData.phone,
-            tutorName: studentData.tutorName,
-            tutorPhone: studentData.tutorPhone,
-            photo: 'https://placehold.co/100x100.png',
-            riskLevel: 'low',
-          };
-        }).filter(s => s.name); // Filter out any empty rows
-
-        if (newStudentsFromFile.length === 0) {
-            toast({ variant: 'destructive', title: 'Error', description: 'No se encontraron estudiantes válidos en el archivo.'});
-            return;
-        }
-
-        saveStudents([...students, ...newStudentsFromFile]);
-        toast({
-            title: 'Carga Exitosa',
-            description: `${newStudentsFromFile.length} estudiantes han sido agregados.`,
-        });
-      };
-      reader.readAsText(file);
+    if (newStudents.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Por favor, ingresa al menos un nombre de estudiante.',
+      });
+      return;
     }
-    if(fileInputRef.current) {
-        fileInputRef.current.value = '';
-    }
-  };
 
-  const triggerFileUpload = () => {
-    fileInputRef.current?.click();
-  };
+    saveStudents([...students, ...newStudents]);
+    toast({
+      title: 'Éxito',
+      description: `${newStudents.length} estudiante(s) agregados correctamente.`,
+    });
+    
+    handleCloseDialog();
+  }
 
   const handleDeleteStudent = (studentId: string) => {
     saveStudents(students.filter(s => s.id !== studentId));
@@ -223,6 +163,8 @@ export default function StudentsPage() {
         description: "El estudiante ha sido eliminado de la lista.",
     });
   }
+
+  const isEditing = editingStudent && editingStudent.id;
 
 
   return (
@@ -236,19 +178,6 @@ export default function StudentsPage() {
             </CardDescription>
           </div>
           <div className="flex gap-2">
-            <Input
-                type="file"
-                ref={fileInputRef}
-                className="hidden"
-                onChange={handleFileUpload}
-                accept=".csv"
-            />
-            <Button size="sm" variant="outline" className="gap-1" onClick={triggerFileUpload}>
-                <Upload className="h-3.5 w-3.5" />
-                <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                    Importar CSV
-                </span>
-            </Button>
             <Button size="sm" className="gap-1" onClick={() => handleOpenDialog(null)}>
               <PlusCircle className="h-3.5 w-3.5" />
               <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
@@ -262,99 +191,127 @@ export default function StudentsPage() {
         <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
             <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>{editingStudent?.id ? 'Editar Estudiante' : 'Agregar Nuevo Estudiante'}</DialogTitle>
+                  <DialogTitle>{isEditing ? 'Editar Estudiante' : 'Agregar Nuevos Estudiantes'}</DialogTitle>
                   <DialogDescription>
-                    {editingStudent?.id ? 'Actualiza la información del estudiante.' : 'Complete el formulario para registrar un nuevo estudiante.'}
+                    {isEditing 
+                      ? 'Actualiza la información del estudiante.' 
+                      : 'Puedes agregar un estudiante o pegar una lista de nombres (uno por línea).'}
                   </DialogDescription>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="id" className="text-right">
-                      ID Estudiante
-                    </Label>
-                    <Input
-                      id="id"
-                      placeholder="S007 (Opcional)"
-                      className="col-span-3"
-                      value={editingStudent?.id || ''}
-                      onChange={handleInputChange}
-                      disabled={!!editingStudent?.id}
-                    />
+                {isEditing ? (
+                  <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="id" className="text-right">
+                        ID Estudiante
+                      </Label>
+                      <Input
+                        id="id"
+                        className="col-span-3"
+                        value={editingStudent?.id || ''}
+                        onChange={handleInputChange}
+                        disabled={true}
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="name" className="text-right">
+                        Nombre*
+                      </Label>
+                      <Input
+                        id="name"
+                        placeholder="Ana Torres"
+                        className="col-span-3"
+                        value={editingStudent?.name || ''}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="email" className="text-right">
+                        Email
+                      </Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="ana.t@example.com"
+                        className="col-span-3"
+                        value={editingStudent?.email || ''}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="phone" className="text-right">
+                        Teléfono
+                      </Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        placeholder="555-123-4567"
+                        className="col-span-3"
+                        value={editingStudent?.phone || ''}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="tutorName" className="text-right">
+                        Tutor
+                      </Label>
+                      <Input
+                        id="tutorName"
+                        placeholder="Juan Torres"
+                        className="col-span-3"
+                        value={editingStudent?.tutorName || ''}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="tutorPhone" className="text-right">
+                        Tel. Tutor
+                      </Label>
+                      <Input
+                        id="tutorPhone"
+                        type="tel"
+                        placeholder="555-765-4321"
+                        className="col-span-3"
+                        value={editingStudent?.tutorPhone || ''}
+                        onChange={handleInputChange}
+                      />
+                    </div>
                   </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="name" className="text-right">
-                      Nombre*
-                    </Label>
-                    <Input
-                      id="name"
-                      placeholder="Ana Torres"
-                      className="col-span-3"
-                      value={editingStudent?.name || ''}
-                      onChange={handleInputChange}
-                      required
-                    />
+                ) : (
+                  <div className="grid gap-4 py-4">
+                      <Label htmlFor="name" className="text-left">
+                        Nombre de un estudiante
+                      </Label>
+                      <Input
+                        id="name"
+                        placeholder="Ana Torres"
+                        value={editingStudent?.name || ''}
+                        onChange={handleInputChange}
+                      />
+                      <div className="relative">
+                          <div className="absolute inset-0 flex items-center">
+                              <span className="w-full border-t" />
+                          </div>
+                          <div className="relative flex justify-center text-xs uppercase">
+                              <span className="bg-background px-2 text-muted-foreground">O</span>
+                          </div>
+                      </div>
+                      <Label htmlFor="multiStudentNames" className="text-left">
+                        Pega una lista de nombres
+                      </Label>
+                      <Textarea
+                        id="multiStudentNames"
+                        placeholder="Laura Jimenez\nCarlos Sanchez\nSofia Castillo"
+                        className="col-span-3"
+                        rows={5}
+                        value={multiStudentNames}
+                        onChange={(e) => setMultiStudentNames(e.target.value)}
+                      />
                   </div>
-                   <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="email" className="text-right">
-                      Email
-                    </Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="ana.t@example.com"
-                      className="col-span-3"
-                      value={editingStudent?.email || ''}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                   <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="phone" className="text-right">
-                      Teléfono
-                    </Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      placeholder="555-123-4567"
-                      className="col-span-3"
-                      value={editingStudent?.phone || ''}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="tutorName" className="text-right">
-                      Tutor
-                    </Label>
-                    <Input
-                      id="tutorName"
-                      placeholder="Juan Torres"
-                      className="col-span-3"
-                      value={editingStudent?.tutorName || ''}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="tutorPhone" className="text-right">
-                      Tel. Tutor
-                    </Label>
-                    <Input
-                      id="tutorPhone"
-                      type="tel"
-                      placeholder="555-765-4321"
-                      className="col-span-3"
-                      value={editingStudent?.tutorPhone || ''}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="photo-upload" className="text-right">
-                      Foto
-                    </Label>
-                    <Input id="photo-upload" type="file" className="col-span-3" disabled/>
-                  </div>
-                </div>
+                )}
                 <DialogFooter>
                   <Button variant="outline" onClick={handleCloseDialog}>Cancelar</Button>
-                  <Button onClick={handleSaveStudent}>Guardar Cambios</Button>
+                  <Button onClick={handleSave}>Guardar</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
