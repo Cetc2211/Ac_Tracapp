@@ -144,22 +144,36 @@ export default function StudentsPage() {
         const text = e.target?.result as string;
         const lines = text.split('\n').filter(line => line.trim() !== '');
         const headers = lines[0].split(',').map(h => h.trim());
-        const requiredHeaders = ['name', 'email', 'phone', 'tutorName', 'tutorPhone'];
         
-        if(!requiredHeaders.every(h => headers.includes(h))) {
+        const headerMapping: Record<string, string> = {
+          nombre: 'name',
+          email: 'email',
+          telefono: 'phone',
+          tutor: 'tutorName',
+          telefono_tutor: 'tutorPhone'
+        };
+
+        const requiredSpanishHeaders = Object.keys(headerMapping);
+        const mappedHeaders = headers.map(h => headerMapping[h.toLowerCase()]).filter(Boolean);
+
+        if (mappedHeaders.length !== requiredSpanishHeaders.length) {
             toast({
                 variant: 'destructive',
                 title: 'Error de Cabeceras',
-                description: `El archivo CSV debe contener las siguientes cabeceras: ${requiredHeaders.join(', ')}`,
+                description: `El archivo CSV debe contener las siguientes cabeceras: ${requiredSpanishHeaders.join(', ')}`,
             });
             return;
         }
+
 
         const newStudentsFromFile: Student[] = lines.slice(1).map((line, index) => {
           const data = line.split(',');
           const studentData: any = {};
           headers.forEach((header, i) => {
-            studentData[header] = data[i]?.trim();
+            const mappedHeader = headerMapping[header.trim().toLowerCase()];
+            if (mappedHeader) {
+                studentData[mappedHeader] = data[i]?.trim();
+            }
           });
 
           return {
