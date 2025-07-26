@@ -143,6 +143,12 @@ export default function StudentsPage() {
       reader.onload = (e) => {
         const text = e.target?.result as string;
         const lines = text.split('\n').filter(line => line.trim() !== '');
+        
+        if (lines.length < 2) {
+            toast({ variant: 'destructive', title: 'Error', description: 'El archivo CSV está vacío o solo contiene la cabecera.'});
+            return;
+        }
+
         const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
         
         const headerMapping: Record<string, string> = {
@@ -154,8 +160,7 @@ export default function StudentsPage() {
         };
 
         const requiredSpanishHeaders = Object.keys(headerMapping);
-        
-        const allHeadersPresent = requiredSpanishHeaders.every(header => headers.includes(header));
+        const allHeadersPresent = requiredSpanishHeaders.every(requiredHeader => headers.includes(requiredHeader));
 
         if (!allHeadersPresent) {
             toast({
@@ -166,14 +171,13 @@ export default function StudentsPage() {
             return;
         }
 
-
         const newStudentsFromFile: Student[] = lines.slice(1).map((line, index) => {
           const data = line.split(',');
           const studentData: any = {};
           headers.forEach((header, i) => {
-            const mappedHeader = headerMapping[header.trim().toLowerCase()];
-            if (mappedHeader) {
-                studentData[mappedHeader] = data[i]?.trim();
+            const mappedHeader = headerMapping[header];
+            if (mappedHeader && data[i]) {
+                studentData[mappedHeader] = data[i].trim();
             }
           });
 
@@ -187,7 +191,13 @@ export default function StudentsPage() {
             photo: 'https://placehold.co/100x100.png',
             riskLevel: 'low',
           };
-        });
+        }).filter(s => s.name); // Filter out any empty rows
+
+        if (newStudentsFromFile.length === 0) {
+            toast({ variant: 'destructive', title: 'Error', description: 'No se encontraron estudiantes válidos en el archivo.'});
+            return;
+        }
+
         saveStudents([...students, ...newStudentsFromFile]);
         toast({
             title: 'Carga Exitosa',
