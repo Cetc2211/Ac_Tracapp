@@ -9,16 +9,16 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
+import { z } from 'zod';
 
-export const ProgressionSuggesterInputSchema = z.object({
+const ProgressionSuggesterInputSchema = z.object({
   progression: z.string().describe('The main content or topic of the progression.'),
   learningGoals: z.string().describe('The learning goals for this progression.'),
   trajectory: z.string().optional().describe('The learning trajectory or path.'),
 });
 export type ProgressionSuggesterInput = z.infer<typeof ProgressionSuggesterInputSchema>;
 
-export const ProgressionSuggesterOutputSchema = z.object({
+const ProgressionSuggesterOutputSchema = z.object({
   opening: z.string().describe('A suggested opening activity to start the class.'),
   development: z.string().describe('A suggested development activity for the core of the class.'),
   closing: z.string().describe('A suggested closing activity to wrap up the class.'),
