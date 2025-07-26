@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { groups as initialGroups } from '@/lib/placeholder-data';
-import { notFound } from 'next/navigation';
+import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, Save } from 'lucide-react';
@@ -43,12 +43,9 @@ type DailyAttendance = {
     [date: string]: AttendanceRecord;
 }
 
-export default function GroupAttendancePage({
-  params,
-}: {
-  params: { groupId: string };
-}) {
-  const { groupId } = params;
+export default function GroupAttendancePage() {
+  const params = useParams();
+  const groupId = params.groupId as string;
   const [group, setGroup] = useState<(typeof initialGroups)[0] | null>(null);
   const [date, setDate] = useState<Date>(new Date());
   const [attendance, setAttendance] = useState<DailyAttendance>({});

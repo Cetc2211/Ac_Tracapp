@@ -18,7 +18,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { groups as initialGroups, students as initialStudents, Student } from '@/lib/placeholder-data';
-import { notFound, useRouter } from 'next/navigation';
+import { notFound, useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, MoreHorizontal, UserPlus, Trash2, CalendarCheck, FilePen, Edit } from 'lucide-react';
@@ -61,12 +61,9 @@ type EvaluationCriteria = {
   weight: number;
 };
 
-export default function GroupDetailsPage({
-  params,
-}: {
-  params: { groupId: string };
-}) {
-  const { groupId } = params;
+export default function GroupDetailsPage() {
+  const params = useParams();
+  const groupId = params.groupId as string;
   const [groups, setGroups] = useState(initialGroups);
   const [students, setStudents] = useState(initialStudents);
   const { toast } = useToast();

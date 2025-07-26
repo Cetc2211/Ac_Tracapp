@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { groups as initialGroups, Student } from '@/lib/placeholder-data';
-import { notFound } from 'next/navigation';
+import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, Save } from 'lucide-react';
@@ -37,12 +37,9 @@ type Grades = {
   };
 };
 
-export default function GroupGradesPage({
-  params,
-}: {
-  params: { groupId: string };
-}) {
-  const { groupId } = params;
+export default function GroupGradesPage() {
+  const params = useParams();
+  const groupId = params.groupId as string;
   const [group, setGroup] = useState<(typeof initialGroups)[0] | null>(null);
   const [evaluationCriteria, setEvaluationCriteria] = useState<EvaluationCriteria[]>([]);
   const [grades, setGrades] = useState<Grades>({});
@@ -205,7 +202,7 @@ export default function GroupGradesPage({
                {evaluationCriteria.length === 0 && studentsInGroup.length > 0 && (
                  <TableRow>
                     <TableCell colSpan={2} className="text-center h-24">
-                        No has definido criterios de evaluación. <Link href={`/groups/${groupId}`} className="text-primary underline">Defínelos aquí.</Link>
+                        No has definido criterios de evaluación. <Link href={`/groups/${groupId}/criteria`} className="text-primary underline">Defínelos aquí.</Link>
                     </TableCell>
                 </TableRow>
               )}

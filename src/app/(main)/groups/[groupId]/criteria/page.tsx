@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { useState, useEffect, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { groups as initialGroups } from '@/lib/placeholder-data';
+import { useParams } from 'next/navigation';
 
 type EvaluationCriteria = {
   id: string;
@@ -23,12 +24,9 @@ type EvaluationCriteria = {
   weight: number;
 };
 
-export default function GroupCriteriaPage({
-  params,
-}: {
-  params: { groupId: string };
-}) {
-  const { groupId } = params;
+export default function GroupCriteriaPage() {
+  const params = useParams();
+  const groupId = params.groupId as string;
   const [group, setGroup] = useState<(typeof initialGroups)[0] | null>(null);
   const [evaluationCriteria, setEvaluationCriteria] = useState<EvaluationCriteria[]>([]);
   const [newCriterionName, setNewCriterionName] = useState('');
