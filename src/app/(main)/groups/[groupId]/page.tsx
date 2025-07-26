@@ -59,6 +59,7 @@ type EvaluationCriteria = {
   id: string;
   name: string;
   weight: number;
+  expectedActivities: number;
 };
 
 export default function GroupDetailsPage() {
@@ -417,7 +418,10 @@ export default function GroupDetailsPage() {
                  <div className="space-y-2">
                     {evaluationCriteria.map(criterion => (
                         <div key={criterion.id} className="flex items-center justify-between p-2 bg-muted rounded-md">
-                            <span>{criterion.name}</span>
+                            <div>
+                                <span className="font-medium">{criterion.name}</span>
+                                <p className="text-xs text-muted-foreground">{criterion.expectedActivities} act. esperadas</p>
+                            </div>
                             <Badge variant="secondary">{criterion.weight}%</Badge>
                         </div>
                     ))}

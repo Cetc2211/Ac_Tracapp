@@ -22,6 +22,7 @@ type EvaluationCriteria = {
   id: string;
   name: string;
   weight: number;
+  expectedActivities: number;
 };
 
 export default function GroupCriteriaPage() {
@@ -31,6 +32,7 @@ export default function GroupCriteriaPage() {
   const [evaluationCriteria, setEvaluationCriteria] = useState<EvaluationCriteria[]>([]);
   const [newCriterionName, setNewCriterionName] = useState('');
   const [newCriterionWeight, setNewCriterionWeight] = useState('');
+  const [newCriterionActivities, setNewCriterionActivities] = useState('');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -57,11 +59,13 @@ export default function GroupCriteriaPage() {
   
   const handleAddCriterion = () => {
     const weight = parseFloat(newCriterionWeight);
-    if (!newCriterionName.trim() || isNaN(weight) || weight <= 0 || weight > 100) {
+    const activities = parseInt(newCriterionActivities, 10);
+
+    if (!newCriterionName.trim() || isNaN(weight) || weight <= 0 || weight > 100 || isNaN(activities) || activities <=0 ) {
         toast({
             variant: 'destructive',
             title: 'Datos inválidos',
-            description: 'El nombre no puede estar vacío y el peso debe ser un número entre 1 y 100.',
+            description: 'Nombre no puede estar vacío, el peso debe ser entre 1-100 y las actividades deben ser un número positivo.',
         });
         return;
     }
@@ -80,11 +84,13 @@ export default function GroupCriteriaPage() {
         id: `C${Date.now()}`,
         name: newCriterionName.trim(),
         weight: weight,
+        expectedActivities: activities,
     };
 
     saveCriteria([...evaluationCriteria, newCriterion]);
     setNewCriterionName('');
     setNewCriterionWeight('');
+    setNewCriterionActivities('');
     toast({ title: 'Criterio Agregado', description: `Se agregó "${newCriterion.name}" a la lista.`});
   };
   
@@ -139,7 +145,7 @@ export default function GroupCriteriaPage() {
         <CardHeader>
           <CardTitle>Definir Criterios</CardTitle>
           <CardDescription>
-            Define los rubros y su peso para la calificación final. El peso total no debe exceder el 100%.
+            Define los rubros, su peso para la calificación final y el número de actividades esperadas para cada uno. El peso total no debe exceder el 100%.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -163,7 +169,17 @@ export default function GroupCriteriaPage() {
                     onChange={(e) => setNewCriterionWeight(e.target.value)}
                 />
              </div>
-            <Button size="icon" onClick={handleAddCriterion} disabled={!newCriterionName || !newCriterionWeight}>
+             <div className="w-[180px]">
+                <Label htmlFor="criterion-activities" className="sr-only">No. Actividades</Label>
+                <Input 
+                    id="criterion-activities"
+                    type="number" 
+                    placeholder="No. Actividades" 
+                    value={newCriterionActivities}
+                    onChange={(e) => setNewCriterionActivities(e.target.value)}
+                />
+             </div>
+            <Button size="icon" onClick={handleAddCriterion} disabled={!newCriterionName || !newCriterionWeight || !newCriterionActivities}>
                 <PlusCircle className="h-4 w-4"/>
                 <span className="sr-only">Agregar</span>
             </Button>
@@ -173,7 +189,10 @@ export default function GroupCriteriaPage() {
           <div className="space-y-2">
             {evaluationCriteria.map(criterion => (
                 <div key={criterion.id} className="flex items-center justify-between p-3 bg-muted rounded-md">
-                    <span className="font-medium">{criterion.name}</span>
+                    <div>
+                        <span className="font-medium">{criterion.name}</span>
+                        <p className="text-xs text-muted-foreground">{criterion.expectedActivities} actividades esperadas</p>
+                    </div>
                     <div className="flex items-center gap-4">
                         <Badge variant="secondary">{criterion.weight}%</Badge>
                         <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleRemoveCriterion(criterion.id)}>

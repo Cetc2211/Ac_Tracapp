@@ -24,16 +24,23 @@ import { ArrowLeft, Save } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { Label } from '@/components/ui/label';
 
 type EvaluationCriteria = {
   id: string;
   name: string;
   weight: number;
+  expectedActivities: number;
+};
+
+type GradeDetail = {
+  delivered: number | null;
+  average: number | null;
 };
 
 type Grades = {
   [studentId: string]: {
-    [criterionId: string]: number | null;
+    [criterionId: string]: GradeDetail;
   };
 };
 
@@ -75,24 +82,35 @@ export default function GroupGradesPage() {
     });
   };
 
-  const handleGradeChange = (studentId: string, criterionId: string, value: string) => {
+  const handleGradeChange = (studentId: string, criterionId: string, field: 'delivered' | 'average', value: string) => {
     const numericValue = value === '' ? null : parseFloat(value);
     
-    // Allow empty or valid numbers between 0 and 10
-    if (value !== '' && (isNaN(numericValue!) || numericValue! < 0 || numericValue! > 10)) {
+    if (field === 'average' && value !== '' && (isNaN(numericValue!) || numericValue! < 0 || numericValue! > 10)) {
         toast({
             variant: "destructive",
             title: "Valor inválido",
-            description: "La calificación debe ser un número entre 0 y 10."
+            description: "El promedio debe ser un número entre 0 y 10."
         })
         return;
     }
+     if (field === 'delivered' && value !== '' && (isNaN(numericValue!) || numericValue! < 0 )) {
+        toast({
+            variant: "destructive",
+            title: "Valor inválido",
+            description: "El número de actividades debe ser positivo."
+        })
+        return;
+    }
+
 
     setGrades(prev => ({
       ...prev,
       [studentId]: {
         ...prev[studentId],
-        [criterionId]: numericValue,
+        [criterionId]: {
+          ...prev[studentId]?.[criterionId],
+          [field]: numericValue,
+        },
       },
     }));
   };
@@ -100,18 +118,21 @@ export default function GroupGradesPage() {
   const calculateFinalGrade = useCallback((studentId: string) => {
     if (evaluationCriteria.length === 0) return 0;
 
-    const totalWeight = evaluationCriteria.reduce((sum, c) => sum + c.weight, 0);
-    if (totalWeight === 0) return 0;
-
-    const finalGrade = evaluationCriteria.reduce((sum, criterion) => {
-      const grade = grades[studentId]?.[criterion.id] ?? 0;
-      return sum + (grade * (criterion.weight / 100));
-    }, 0);
+    let finalGrade = 0;
     
-    // Normalize if total weight is not 100, though UI should prevent > 100
-    const normalizedGrade = (finalGrade / totalWeight) * 100 * (totalWeight / 100)
-    return parseFloat(normalizedGrade.toFixed(2));
+    for (const criterion of evaluationCriteria) {
+      const gradeDetail = grades[studentId]?.[criterion.id];
+      const delivered = gradeDetail?.delivered ?? 0;
+      const average = gradeDetail?.average ?? 0;
+      const expected = criterion.expectedActivities;
 
+      if(expected > 0) {
+        const criterionScore = (delivered / expected) * average;
+        finalGrade += criterionScore * (criterion.weight / 100);
+      }
+    }
+
+    return parseFloat(finalGrade.toFixed(2));
   }, [grades, evaluationCriteria]);
 
   if (!group) {
@@ -149,10 +170,13 @@ export default function GroupGradesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[300px] sticky left-0 bg-card z-10">Estudiante</TableHead>
+                <TableHead className="w-[250px] sticky left-0 bg-card z-10">Estudiante</TableHead>
                 {evaluationCriteria.map(c => (
-                  <TableHead key={c.id} className="text-center">
-                    {c.name} <span className="text-muted-foreground font-normal">({c.weight}%)</span>
+                  <TableHead key={c.id} className="text-center min-w-[250px]">
+                    <div className='font-bold'>{c.name}</div>
+                    <div className="font-normal text-muted-foreground">
+                      ({c.weight}%, {c.expectedActivities} esp.)
+                    </div>
                   </TableHead>
                 ))}
                 <TableHead className="text-center font-bold sticky right-0 bg-card z-10">
@@ -175,16 +199,35 @@ export default function GroupGradesPage() {
                   </TableCell>
                   {evaluationCriteria.map(criterion => (
                     <TableCell key={criterion.id} className="text-center">
-                      <Input 
-                        type="number"
-                        className="max-w-[100px] mx-auto text-center"
-                        placeholder="-"
-                        min={0}
-                        max={10}
-                        step="0.1"
-                        value={grades[student.id]?.[criterion.id] ?? ''}
-                        onChange={e => handleGradeChange(student.id, criterion.id, e.target.value)}
-                      />
+                      <div className="flex gap-2 items-center justify-center">
+                        <div className='flex-1'>
+                            <Label htmlFor={`delivered-${student.id}-${criterion.id}`} className='text-xs'>Entregadas</Label>
+                            <Input 
+                                id={`delivered-${student.id}-${criterion.id}`}
+                                type="number"
+                                className="h-8 text-center"
+                                placeholder="Ent."
+                                min={0}
+                                max={criterion.expectedActivities}
+                                value={grades[student.id]?.[criterion.id]?.delivered ?? ''}
+                                onChange={e => handleGradeChange(student.id, criterion.id, 'delivered', e.target.value)}
+                            />
+                        </div>
+                        <div className='flex-1'>
+                             <Label htmlFor={`average-${student.id}-${criterion.id}`} className='text-xs'>Promedio</Label>
+                            <Input 
+                                id={`average-${student.id}-${criterion.id}`}
+                                type="number"
+                                className="h-8 text-center"
+                                placeholder="Prom."
+                                min={0}
+                                max={10}
+                                step="0.1"
+                                value={grades[student.id]?.[criterion.id]?.average ?? ''}
+                                onChange={e => handleGradeChange(student.id, criterion.id, 'average', e.target.value)}
+                            />
+                        </div>
+                      </div>
                     </TableCell>
                   ))}
                   <TableCell className="text-center font-bold text-lg sticky right-0 bg-card z-10">
