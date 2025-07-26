@@ -88,5 +88,4 @@ export default function TutorsPage() {
     </Card>
   );
 }
-
     
