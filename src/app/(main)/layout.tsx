@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { useState, useEffect } from 'react';
 
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -40,18 +41,36 @@ const navItems = [
   { href: '/tutors', icon: Contact, label: 'Tutores' },
 ];
 
+const defaultSettings = {
+    institutionName: "Academic Tracker",
+    logo: ""
+};
+
+
 export default function MainLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const [settings, setSettings] = useState(defaultSettings);
+
+  useEffect(() => {
+    try {
+        const savedSettings = localStorage.getItem('appSettings');
+        if (savedSettings) {
+            setSettings(JSON.parse(savedSettings));
+        }
+    } catch(e) {
+        console.error("Could not parse settings from localStorage", e);
+    }
+  }, []);
 
   return (
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader>
-          <AppLogo />
+          <AppLogo name={settings.institutionName} logoUrl={settings.logo} />
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
