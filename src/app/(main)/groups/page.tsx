@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
 import { groups as initialGroups, students as initialStudents, Student, Group } from '@/lib/placeholder-data';
 import { Users, ClipboardList, PlusCircle, BookCopy, Settings, AlertTriangle } from 'lucide-react';
 import { AttendanceRandomizer } from '@/components/attendance-randomizer';
@@ -66,10 +66,16 @@ type GroupStats = {
 
 export default function GroupsPage() {
   const [groups, setGroups] = useState<Group[]>([]);
-  const [students, setStudents] = useState<Student[]>(initialStudents);
+  const [allStudents, setAllStudents] = useState<Student[]>(initialStudents);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  
   const [newGroupName, setNewGroupName] = useState('');
-  const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
+  const [bulkNames, setBulkNames] = useState('');
+  const [bulkEmails, setBulkEmails] = useState('');
+  const [bulkPhones, setBulkPhones] = useState('');
+  const [bulkTutorNames, setBulkTutorNames] = useState('');
+  const [bulkTutorPhones, setBulkTutorPhones] = useState('');
+
   const { toast } = useToast();
   const [groupStats, setGroupStats] = useState<{[groupId: string]: GroupStats}>({});
 
@@ -121,7 +127,7 @@ export default function GroupsPage() {
 
         const storedStudents = localStorage.getItem('students');
         const loadedStudents = storedStudents ? JSON.parse(storedStudents) : initialStudents;
-        setStudents(loadedStudents);
+        setAllStudents(loadedStudents);
         
         const allStats: {[groupId: string]: GroupStats} = {};
 
@@ -153,14 +159,17 @@ export default function GroupsPage() {
     } catch(e) {
         console.error("Could not parse data from local storage", e);
         setGroups(initialGroups);
-        setStudents(initialStudents);
+        setAllStudents(initialStudents);
     }
   }, [calculateFinalGrade, getStudentRiskLevel]);
   
 
-  const saveGroups = (newGroups: typeof groups) => {
+  const saveState = (newGroups: Group[], newAllStudents: Student[]) => {
     setGroups(newGroups);
     localStorage.setItem('groups', JSON.stringify(newGroups));
+
+    setAllStudents(newAllStudents);
+    localStorage.setItem('students', JSON.stringify(newAllStudents));
   };
 
   const handleCreateGroup = () => {
@@ -173,20 +182,45 @@ export default function GroupsPage() {
         return;
     }
 
-    const studentsForNewGroup = students.filter(s => selectedStudents.includes(s.id));
+    const names = bulkNames.trim().split('\n').filter(name => name);
+    const emails = bulkEmails.trim().split('\n');
+    const phones = bulkPhones.trim().split('\n');
+    const tutorNames = bulkTutorNames.trim().split('\n');
+    const tutorPhones = bulkTutorPhones.trim().split('\n');
+    
+    const studentsForNewGroup: Student[] = names.map((name, index) => ({
+      id: `S${Date.now()}-${Math.random().toString(36).substr(2, 5)}-${index}`,
+      name: name.trim(),
+      email: emails[index]?.trim() || '',
+      phone: phones[index]?.trim() || '',
+      tutorName: tutorNames[index]?.trim() || '',
+      tutorPhone: tutorPhones[index]?.trim() || '',
+      photo: 'https://placehold.co/100x100.png',
+    }));
 
     const newGroup: Group = {
         id: `G${Date.now()}`,
         subject: newGroupName,
         students: studentsForNewGroup
     };
-
+    
     const updatedGroups = [...groups, newGroup];
-    saveGroups(updatedGroups);
+    const updatedAllStudents = [...allStudents];
+    studentsForNewGroup.forEach(newStudent => {
+        if (!updatedAllStudents.some(s => s.id === newStudent.id)) {
+            updatedAllStudents.push(newStudent);
+        }
+    });
+
+    saveState(updatedGroups, updatedAllStudents);
 
     // Reset form
     setNewGroupName('');
-    setSelectedStudents([]);
+    setBulkNames('');
+    setBulkEmails('');
+    setBulkPhones('');
+    setBulkTutorNames('');
+    setBulkTutorPhones('');
     setIsDialogOpen(false);
 
     toast({
@@ -194,13 +228,6 @@ export default function GroupsPage() {
         description: `El grupo "${newGroupName}" ha sido creado exitosamente.`
     });
   };
-
-  const onStudentSelect = (studentId: string, checked: boolean | 'indeterminate') => {
-      setSelectedStudents(prev => 
-        checked ? [...prev, studentId] : prev.filter(id => id !== studentId)
-      );
-  };
-
 
   return (
     <div className="flex flex-col gap-6">
@@ -220,14 +247,14 @@ export default function GroupsPage() {
                     </span>
                 </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="sm:max-w-4xl">
                 <DialogHeader>
                     <DialogTitle>Crear Nuevo Grupo</DialogTitle>
                     <DialogDescription>
-                        Ingresa los detalles para crear un nuevo grupo de asignatura.
+                        Ingresa los detalles para crear un nuevo grupo de asignatura y añade a sus estudiantes.
                     </DialogDescription>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
+                <div className="grid gap-6 py-4">
                     <div className="grid gap-2">
                         <Label htmlFor="group-name">Nombre de la Asignatura*</Label>
                         <Input 
@@ -238,31 +265,16 @@ export default function GroupsPage() {
                         />
                     </div>
                      <div className="grid gap-2">
-                        <Label>Seleccionar Estudiantes (Opcional)</Label>
-                        <div className="grid gap-4 py-2 max-h-[300px] overflow-y-auto border p-2 rounded-md">
-                            {students.map(student => (
-                                <div key={student.id} className="flex items-center space-x-2">
-                                    <Checkbox 
-                                        id={`select-student-${student.id}`} 
-                                        onCheckedChange={(checked) => onStudentSelect(student.id, checked)}
-                                        checked={selectedStudents.includes(student.id)}
-                                    />
-                                    <Label htmlFor={`select-student-${student.id}`} className="flex items-center gap-3 w-full cursor-pointer">
-                                        <Image
-                                            alt="Foto del estudiante"
-                                            className="aspect-square rounded-full object-cover"
-                                            height="40"
-                                            src={student.photo}
-                                            data-ai-hint="student photo"
-                                            width="40"
-                                        />
-                                        <div>
-                                            <p className="font-medium">{student.name}</p>
-                                            <p className="text-xs text-muted-foreground">{student.id}</p>
-                                        </div>
-                                    </Label>
-                                </div>
-                            ))}
+                        <Label>Añadir Estudiantes al Grupo (Opcional)</Label>
+                         <p className="text-sm text-muted-foreground">
+                            Pega una columna de datos en cada campo. Asegúrate de que cada línea corresponda al mismo estudiante. Los estudiantes nuevos se crearán y añadirán al grupo.
+                        </p>
+                        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                            <Textarea className="lg:col-span-1" placeholder="Nombres* (uno por línea)" rows={5} value={bulkNames} onChange={(e) => setBulkNames(e.target.value)} />
+                            <Textarea className="lg:col-span-1" placeholder="Emails (opcional)" rows={5} value={bulkEmails} onChange={(e) => setBulkEmails(e.target.value)} />
+                            <Textarea className="lg:col-span-1" placeholder="Teléfonos (opcional)" rows={5} value={bulkPhones} onChange={(e) => setBulkPhones(e.target.value)} />
+                            <Textarea className="lg:col-span-1" placeholder="Nombres Tutor (opcional)" rows={5} value={bulkTutorNames} onChange={(e) => setBulkTutorNames(e.target.value)} />
+                            <Textarea className="lg:col-span-1" placeholder="Teléfonos Tutor (opcional)" rows={5} value={bulkTutorPhones} onChange={(e) => setBulkTutorPhones(e.target.value)} />
                         </div>
                     </div>
                 </div>
@@ -329,4 +341,3 @@ export default function GroupsPage() {
     </div>
   );
 }
-

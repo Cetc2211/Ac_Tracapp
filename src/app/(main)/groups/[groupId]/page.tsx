@@ -50,10 +50,10 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { Textarea } from '@/components/ui/textarea';
 
 type EvaluationCriteria = {
   id: string;
@@ -87,7 +87,7 @@ export default function GroupDetailsPage() {
   const params = useParams();
   const groupId = params.groupId as string;
   const [groups, setGroups] = useState<typeof initialGroups>([]);
-  const [students, setStudents] = useState<typeof initialStudents>([]);
+  const [allStudents, setAllStudents] = useState<typeof initialStudents>([]);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -95,7 +95,13 @@ export default function GroupDetailsPage() {
   const [evaluationCriteria, setEvaluationCriteria] = useState<EvaluationCriteria[]>([]);
   const [studentRiskLevels, setStudentRiskLevels] = useState<{[studentId: string]: 'low' | 'medium' | 'high'}>({});
   const [isAddStudentDialogOpen, setIsAddStudentDialogOpen] = useState(false);
-  const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
+  
+  const [bulkNames, setBulkNames] = useState('');
+  const [bulkEmails, setBulkEmails] = useState('');
+  const [bulkPhones, setBulkPhones] = useState('');
+  const [bulkTutorNames, setBulkTutorNames] = useState('');
+  const [bulkTutorPhones, setBulkTutorPhones] = useState('');
+
   const [isLoading, setIsLoading] = useState(true);
   
   const calculateFinalGrade = useCallback((studentId: string, criteria: EvaluationCriteria[], grades: Grades) => {
@@ -135,9 +141,9 @@ export default function GroupDetailsPage() {
 
       const storedStudents = localStorage.getItem('students');
       if(storedStudents) {
-        setStudents(JSON.parse(storedStudents));
+        setAllStudents(JSON.parse(storedStudents));
       } else {
-        setStudents(initialStudents);
+        setAllStudents(initialStudents);
       }
       
       const storedCriteria = localStorage.getItem(`criteria_${groupId}`);
@@ -180,33 +186,32 @@ export default function GroupDetailsPage() {
     } catch (error) {
         console.error("Failed to parse data from localStorage", error);
         setGroups(initialGroups);
-        setStudents(initialStudents);
+        setAllStudents(initialStudents);
         setGroup(null);
     } finally {
         setIsLoading(false);
     }
   }, [groupId, calculateFinalGrade]);
 
-  const saveGroups = (newGroups: typeof initialGroups) => {
+  const saveState = (newGroups: typeof initialGroups, newAllStudents: typeof initialStudents) => {
       setGroups(newGroups);
       localStorage.setItem('groups', JSON.stringify(newGroups));
+      
+      setAllStudents(newAllStudents);
+      localStorage.setItem('students', JSON.stringify(newAllStudents));
   };
 
-  const availableStudents = useMemo(() => {
-    if (!group) return [];
-    const studentsInGroupIds = group.students.map(s => s.id);
-    return students.filter(s => !studentsInGroupIds.includes(s.id));
-  }, [group, students]);
-  
-
   const handleRemoveStudent = (studentId: string) => {
+    if (!group) return;
     const newGroups = groups.map(g => {
         if (g.id === group!.id) {
             return { ...g, students: g.students.filter(s => s.id !== studentId) };
         }
         return g;
     });
-    saveGroups(newGroups);
+    
+    // We don't remove the student from the global list, just the group
+    saveState(newGroups, allStudents);
     setGroup(newGroups.find(g => g.id === groupId) || null);
     toast({
         title: "Estudiante eliminado",
@@ -217,7 +222,7 @@ export default function GroupDetailsPage() {
   const handleDeleteGroup = () => {
     if (!group) return;
     const newGroups = groups.filter(g => g.id !== group.id);
-    saveGroups(newGroups);
+    saveState(newGroups, allStudents);
     localStorage.removeItem(`criteria_${groupId}`);
     localStorage.removeItem(`grades_${groupId}`);
     localStorage.removeItem(`attendance_${groupId}`);
@@ -230,32 +235,61 @@ export default function GroupDetailsPage() {
   
   const handleAddStudents = () => {
     if (!group) return;
-    const studentsToAdd = students.filter(s => selectedStudents.includes(s.id));
+
+    const names = bulkNames.trim().split('\n').filter(name => name);
+    const emails = bulkEmails.trim().split('\n');
+    const phones = bulkPhones.trim().split('\n');
+    const tutorNames = bulkTutorNames.trim().split('\n');
+    const tutorPhones = bulkTutorPhones.trim().split('\n');
+    
+    if (names.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Por favor, ingresa al menos un nombre de estudiante.',
+      });
+      return;
+    }
+
+    const newStudents: Student[] = names.map((name, index) => ({
+      id: `S${Date.now()}-${Math.random().toString(36).substr(2, 5)}-${index}`,
+      name: name.trim(),
+      email: emails[index]?.trim() || '',
+      phone: phones[index]?.trim() || '',
+      tutorName: tutorNames[index]?.trim() || '',
+      tutorPhone: tutorPhones[index]?.trim() || '',
+      photo: 'https://placehold.co/100x100.png',
+    }));
+
+    const updatedAllStudents = [...allStudents];
+    newStudents.forEach(newStudent => {
+        if (!updatedAllStudents.some(s => s.id === newStudent.id)) {
+            updatedAllStudents.push(newStudent);
+        }
+    });
+
     const newGroups = groups.map(g => {
         if (g.id === group.id) {
-            const newStudents = [...g.students, ...studentsToAdd].filter((student, index, self) =>
-                index === self.findIndex((s) => (
-                    s.id === student.id
-                ))
-            );
-            return { ...g, students: newStudents };
+            const groupStudentIds = new Set(g.students.map(s => s.id));
+            const studentsToAdd = newStudents.filter(s => !groupStudentIds.has(s.id));
+            return { ...g, students: [...g.students, ...studentsToAdd] };
         }
         return g;
     });
-    saveGroups(newGroups);
+
+    saveState(newGroups, updatedAllStudents);
     setGroup(newGroups.find(g => g.id === groupId) || null);
-    setSelectedStudents([]);
+    
+    setBulkNames('');
+    setBulkEmails('');
+    setBulkPhones('');
+    setBulkTutorNames('');
+    setBulkTutorPhones('');
     setIsAddStudentDialogOpen(false);
     toast({
         title: "Estudiantes agregados",
-        description: `${studentsToAdd.length} estudiante(s) han sido añadidos al grupo.`
+        description: `${newStudents.length} estudiante(s) han sido añadidos al grupo.`
     });
-  };
-
-  const onStudentSelect = (studentId: string, checked: boolean | 'indeterminate') => {
-      setSelectedStudents(prev => 
-        checked ? [...prev, studentId] : prev.filter(id => id !== studentId)
-      );
   };
     
   const totalWeight = useMemo(() => {
@@ -347,48 +381,47 @@ export default function GroupDetailsPage() {
                     <Button size="sm" className="gap-1">
                       <UserPlus className="h-3.5 w-3.5" />
                       <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                        Agregar Estudiante
+                        Agregar Estudiantes
                       </span>
                     </Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="sm:max-w-xl">
                     <DialogHeader>
-                      <DialogTitle>Agregar Estudiantes al Grupo</DialogTitle>
+                      <DialogTitle>Agregar Nuevos Estudiantes al Grupo</DialogTitle>
                       <DialogDescription>
-                        Selecciona los estudiantes que deseas añadir a "{group.subject}".
+                        Añade nuevos estudiantes a "{group.subject}". Pega columnas de datos para agregarlos en masa.
                       </DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4 max-h-[400px] overflow-y-auto">
-                        {availableStudents.map(student => (
-                             <div key={student.id} className="flex items-center space-x-2">
-                                <Checkbox 
-                                    id={`student-${student.id}`} 
-                                    onCheckedChange={(checked) => onStudentSelect(student.id, checked)}
-                                    checked={selectedStudents.includes(student.id)}
-                                />
-                                <Label htmlFor={`student-${student.id}`} className="flex items-center gap-3">
-                                    <Image
-                                        alt="Foto del estudiante"
-                                        className="aspect-square rounded-full object-cover"
-                                        height="40"
-                                        src={student.photo}
-                                        data-ai-hint="student photo"
-                                        width="40"
-                                    />
-                                    <div>
-                                        <p className="font-medium">{student.name}</p>
-                                        <p className="text-xs text-muted-foreground">{student.id}</p>
-                                    </div>
-                                </Label>
+                     <div className="grid gap-4 py-4 max-h-[400px] overflow-y-auto">
+                        <p className="text-sm text-muted-foreground">
+                            Pega una columna de datos en cada campo. Asegúrate de que cada línea corresponda al mismo estudiante.
+                        </p>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="bulkNames">Nombres*</Label>
+                                <Textarea id="bulkNames" placeholder="Laura Jimenez\nCarlos Sanchez" rows={5} value={bulkNames} onChange={(e) => setBulkNames(e.target.value)} />
                             </div>
-                        ))}
-                        {availableStudents.length === 0 && (
-                            <p className="text-center text-muted-foreground">No hay más estudiantes para agregar.</p>
-                        )}
+                            <div className="space-y-2">
+                                <Label htmlFor="bulkEmails">Emails</Label>
+                                <Textarea id="bulkEmails" placeholder="laura.j@example.com\ncarlos.s@example.com" rows={5} value={bulkEmails} onChange={(e) => setBulkEmails(e.target.value)} />
+                            </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="bulkPhones">Teléfonos</Label>
+                                <Textarea id="bulkPhones" placeholder="555-3344\n555-6677" rows={5} value={bulkPhones} onChange={(e) => setBulkPhones(e.target.value)} />
+                            </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="bulkTutorNames">Nombres de Tutores</Label>
+                                <Textarea id="bulkTutorNames" placeholder="Ricardo Jimenez\nMaria Sanchez" rows={5} value={bulkTutorNames} onChange={(e) => setBulkTutorNames(e.target.value)} />
+                            </div>
+                              <div className="space-y-2 col-span-2">
+                                <Label htmlFor="bulkTutorPhones">Teléfonos de Tutores</Label>
+                                <Textarea id="bulkTutorPhones" placeholder="555-3355\n555-6688" rows={5} value={bulkTutorPhones} onChange={(e) => setBulkTutorPhones(e.target.value)} />
+                            </div>
+                        </div>
                     </div>
                     <DialogFooter>
                       <Button variant="outline" onClick={() => setIsAddStudentDialogOpen(false)}>Cancelar</Button>
-                      <Button onClick={handleAddStudents} disabled={selectedStudents.length === 0}>Agregar Seleccionados</Button>
+                      <Button onClick={handleAddStudents} disabled={!bulkNames.trim()}>Agregar Estudiantes</Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>

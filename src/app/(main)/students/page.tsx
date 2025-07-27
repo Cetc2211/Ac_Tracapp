@@ -18,8 +18,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, MoreHorizontal, Trash2 } from 'lucide-react';
-import { students as initialStudents, Student } from '@/lib/placeholder-data';
+import { MoreHorizontal, Trash2 } from 'lucide-react';
+import { students as initialStudents, Student, Group } from '@/lib/placeholder-data';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,13 +28,6 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -47,25 +40,16 @@ import {
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { StudentObservationDialog } from '@/components/student-observation-dialog';
 
 export default function StudentsPage() {
-  const [students, setStudents] = useState<Student[]>([]);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [allStudents, setAllStudents] = useState<Student[]>([]);
   const [isObservationDialogOpen, setIsObservationDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
-  const [bulkNames, setBulkNames] = useState('');
-  const [bulkEmails, setBulkEmails] = useState('');
-  const [bulkPhones, setBulkPhones] = useState('');
-  const [bulkTutorNames, setBulkTutorNames] = useState('');
-  const [bulkTutorPhones, setBulkTutorPhones] = useState('');
   const { toast } = useToast();
   const router = useRouter();
 
@@ -73,81 +57,46 @@ export default function StudentsPage() {
     try {
         const storedStudents = localStorage.getItem('students');
         if (storedStudents) {
-          setStudents(JSON.parse(storedStudents));
+          setAllStudents(JSON.parse(storedStudents));
         } else {
-            setStudents(initialStudents);
-            localStorage.setItem('students', JSON.stringify(initialStudents));
+            const allGroupsJson = localStorage.getItem('groups');
+            const allGroups: Group[] = allGroupsJson ? JSON.parse(allGroupsJson) : initialGroups;
+            const studentsFromGroups = allGroups.flatMap(g => g.students);
+            const uniqueStudents = Array.from(new Map(studentsFromGroups.map(s => [s.id, s])).values());
+            setAllStudents(uniqueStudents);
+            localStorage.setItem('students', JSON.stringify(uniqueStudents));
         }
     } catch (error) {
         console.error("Failed to parse students from localStorage", error);
-        setStudents(initialStudents);
+        setAllStudents(initialStudents);
     }
   }, []);
 
   const saveStudents = (newStudents: Student[]) => {
-      setStudents(newStudents);
+      setAllStudents(newStudents);
       localStorage.setItem('students', JSON.stringify(newStudents));
-  }
-
-  const handleOpenAddDialog = () => {
-    setBulkNames('');
-    setBulkEmails('');
-    setBulkPhones('');
-    setBulkTutorNames('');
-    setBulkTutorPhones('');
-    setIsAddDialogOpen(true);
-  };
-  
-  const handleCloseAddDialog = () => {
-    setIsAddDialogOpen(false);
   }
 
   const handleOpenObservationDialog = (student: Student) => {
     setSelectedStudent(student);
     setIsObservationDialogOpen(true);
   };
-
-  const handleSaveBulkStudents = () => {
-    const names = bulkNames.trim().split('\n').filter(name => name);
-    const emails = bulkEmails.trim().split('\n');
-    const phones = bulkPhones.trim().split('\n');
-    const tutorNames = bulkTutorNames.trim().split('\n');
-    const tutorPhones = bulkTutorPhones.trim().split('\n');
-
-    if (names.length === 0) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Por favor, ingresa al menos un nombre de estudiante.',
-      });
-      return;
-    }
-
-    const newStudents: Student[] = names.map((name, index) => ({
-      id: `S${Date.now()}-${Math.random().toString(36).substr(2, 5)}-${index}`,
-      name: name.trim(),
-      email: emails[index]?.trim() || '',
-      phone: phones[index]?.trim() || '',
-      tutorName: tutorNames[index]?.trim() || '',
-      tutorPhone: tutorPhones[index]?.trim() || '',
-      photo: 'https://placehold.co/100x100.png',
-      riskLevel: 'low' as 'low' | 'medium' | 'high',
-    }));
-
-    saveStudents([...students, ...newStudents]);
-    toast({
-      title: 'Éxito',
-      description: `${newStudents.length} estudiante(s) agregados correctamente.`,
-    });
-    
-    handleCloseAddDialog();
-  }
-
+  
   const handleDeleteStudent = (studentId: string) => {
-    saveStudents(students.filter(s => s.id !== studentId));
+    saveStudents(allStudents.filter(s => s.id !== studentId));
+    // Also remove from all groups
+    const storedGroups = localStorage.getItem('groups');
+    if (storedGroups) {
+        const groups: Group[] = JSON.parse(storedGroups);
+        const updatedGroups = groups.map(g => ({
+            ...g,
+            students: g.students.filter(s => s.id !== studentId)
+        }));
+        localStorage.setItem('groups', JSON.stringify(updatedGroups));
+    }
     toast({
         title: "Estudiante eliminado",
-        description: "El estudiante ha sido eliminado de la lista.",
+        description: "El estudiante ha sido eliminado de la lista y de todos los grupos.",
     });
   }
   
@@ -159,14 +108,26 @@ export default function StudentsPage() {
   
   const handleSelectAll = (checked: boolean | 'indeterminate') => {
       if(checked) {
-          setSelectedStudents(students.map(s => s.id));
+          setSelectedStudents(allStudents.map(s => s.id));
       } else {
           setSelectedStudents([]);
       }
   };
 
   const handleDeleteSelectedStudents = () => {
-      saveStudents(students.filter(s => !selectedStudents.includes(s.id)));
+      saveStudents(allStudents.filter(s => !selectedStudents.includes(s.id)));
+      
+       // Also remove from all groups
+        const storedGroups = localStorage.getItem('groups');
+        if (storedGroups) {
+            const groups: Group[] = JSON.parse(storedGroups);
+            const updatedGroups = groups.map(g => ({
+                ...g,
+                students: g.students.filter(s => !selectedStudents.includes(s.id))
+            }));
+            localStorage.setItem('groups', JSON.stringify(updatedGroups));
+        }
+
       toast({
         title: "Estudiantes eliminados",
         description: `${selectedStudents.length} estudiante(s) han sido eliminados.`,
@@ -175,6 +136,10 @@ export default function StudentsPage() {
   };
 
   const numSelected = selectedStudents.length;
+  
+  const sortedStudents = useMemo(() => {
+    return [...allStudents].sort((a,b) => a.name.localeCompare(b.name));
+  }, [allStudents]);
 
   return (
     <Card>
@@ -183,7 +148,7 @@ export default function StudentsPage() {
           <div>
             <CardTitle>Estudiantes</CardTitle>
             <CardDescription>
-              Gestiona los perfiles de los estudiantes de tu institución.
+              Lista consolidada de todos los estudiantes en tus grupos. Para agregar estudiantes, ve a un grupo específico.
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
@@ -200,7 +165,7 @@ export default function StudentsPage() {
                             <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
                             <AlertDialogDescription>
                                 Esta acción no se puede deshacer. Esto eliminará permanentemente a los {numSelected} estudiantes seleccionados
-                                y todos sus datos asociados.
+                                y todos sus datos asociados de todos los grupos.
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -210,55 +175,10 @@ export default function StudentsPage() {
                     </AlertDialogContent>
                 </AlertDialog>
             )}
-            <Button size="sm" className="gap-1" onClick={handleOpenAddDialog}>
-              <PlusCircle className="h-3.5 w-3.5" />
-              <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                Agregar Estudiantes
-              </span>
-            </Button>
           </div>
         </div>
       </CardHeader>
       <CardContent>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogContent className="sm:max-w-xl">
-                <DialogHeader>
-                  <DialogTitle>Agregar Varios Estudiantes</DialogTitle>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                    <p className="text-sm text-muted-foreground">
-                        Pega una columna de datos en cada campo. Asegúrate de que cada línea corresponda al mismo estudiante.
-                    </p>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="bulkNames">Nombres*</Label>
-                            <Textarea id="bulkNames" placeholder="Laura Jimenez\nCarlos Sanchez" rows={5} value={bulkNames} onChange={(e) => setBulkNames(e.target.value)} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="bulkEmails">Emails</Label>
-                            <Textarea id="bulkEmails" placeholder="laura.j@example.com\ncarlos.s@example.com" rows={5} value={bulkEmails} onChange={(e) => setBulkEmails(e.target.value)} />
-                        </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="bulkPhones">Teléfonos</Label>
-                            <Textarea id="bulkPhones" placeholder="555-3344\n555-6677" rows={5} value={bulkPhones} onChange={(e) => setBulkPhones(e.target.value)} />
-                        </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="bulkTutorNames">Nombres de Tutores</Label>
-                            <Textarea id="bulkTutorNames" placeholder="Ricardo Jimenez\nMaria Sanchez" rows={5} value={bulkTutorNames} onChange={(e) => setBulkTutorNames(e.target.value)} />
-                        </div>
-                          <div className="space-y-2 col-span-2">
-                            <Label htmlFor="bulkTutorPhones">Teléfonos de Tutores</Label>
-                            <Textarea id="bulkTutorPhones" placeholder="555-3355\n555-6688" rows={5} value={bulkTutorPhones} onChange={(e) => setBulkTutorPhones(e.target.value)} />
-                        </div>
-                    </div>
-                </div>
-                <DialogFooter>
-                    <Button variant="outline" onClick={handleCloseAddDialog}>Cancelar</Button>
-                    <Button onClick={handleSaveBulkStudents}>Agregar Estudiantes</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-
          {selectedStudent && (
             <StudentObservationDialog
                 student={selectedStudent}
@@ -272,7 +192,7 @@ export default function StudentsPage() {
             <TableRow>
               <TableHead padding="checkbox">
                  <Checkbox
-                    checked={numSelected === students.length && students.length > 0 ? true : (numSelected > 0 ? 'indeterminate' : false)}
+                    checked={numSelected === allStudents.length && allStudents.length > 0 ? true : (numSelected > 0 ? 'indeterminate' : false)}
                     onCheckedChange={(checked) => handleSelectAll(checked)}
                     aria-label="Seleccionar todo"
                   />
@@ -290,7 +210,7 @@ export default function StudentsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {students.map((student) => (
+            {sortedStudents.map((student) => (
               <TableRow key={student.id} data-state={selectedStudents.includes(student.id) && "selected"}>
                  <TableCell padding="checkbox">
                    <Checkbox
@@ -337,10 +257,10 @@ export default function StudentsPage() {
                 </TableCell>
               </TableRow>
             ))}
-             {students.length === 0 && (
+             {allStudents.length === 0 && (
                 <TableRow>
                     <TableCell colSpan={7} className="text-center text-muted-foreground p-8">
-                        No hay estudiantes registrados.
+                        No hay estudiantes registrados. Agrégalos desde la página de un grupo.
                     </TableCell>
                 </TableRow>
               )}
@@ -350,4 +270,3 @@ export default function StudentsPage() {
     </Card>
   );
 }
-
