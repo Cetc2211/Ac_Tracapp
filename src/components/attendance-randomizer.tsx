@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -11,18 +12,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Button } from '@/components/ui/button';
+import { Button, ButtonProps } from '@/components/ui/button';
 import type { Student } from '@/lib/placeholder-data';
 import { attendanceRandomizer } from '@/ai/flows/attendance-randomizer';
 import type { AttendanceRandomizerOutput } from '@/ai/flows/attendance-randomizer';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Wand2 } from 'lucide-react';
 
-interface AttendanceRandomizerProps {
+interface AttendanceRandomizerProps extends ButtonProps {
   students: Student[];
 }
 
-export function AttendanceRandomizer({ students }: AttendanceRandomizerProps) {
+export function AttendanceRandomizer({ students, ...props }: AttendanceRandomizerProps) {
   const [result, setResult] = useState<AttendanceRandomizerOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -60,7 +61,7 @@ export function AttendanceRandomizer({ students }: AttendanceRandomizerProps) {
 
   return (
     <>
-      <Button onClick={handleRandomize} disabled={isLoading}>
+      <Button onClick={handleRandomize} disabled={isLoading} {...props}>
         {isLoading ? (
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
         ) : (

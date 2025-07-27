@@ -1,3 +1,4 @@
+
 import type {Config} from 'tailwindcss';
 
 export default {
@@ -20,6 +21,12 @@ export default {
         card: {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
+          'foreground-alt': 'hsl(var(--card-foreground-alt))',
+          '1': 'hsl(var(--card-1))',
+          '2': 'hsl(var(--card-2))',
+          '3': 'hsl(var(--card-3))',
+          '4': 'hsl(var(--card-4))',
+          '5': 'hsl(var(--card-5))',
         },
         popover: {
           DEFAULT: 'hsl(var(--popover))',

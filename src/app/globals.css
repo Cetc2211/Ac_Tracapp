@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -12,6 +13,12 @@ body {
     --foreground: 240 10% 3.9%;
     --card: 0 0% 100%;
     --card-foreground: 240 10% 3.9%;
+    --card-foreground-alt: 0 0% 100%;
+    --card-1: 262 82% 60%;
+    --card-2: 217 91% 60%;
+    --card-3: 162 72% 46%;
+    --card-4: 32 91% 54%;
+    --card-5: 342 91% 60%;
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
     --primary: 217.2 91.2% 59.8%;
@@ -48,6 +55,12 @@ body {
     --foreground: 0 0% 98%;
     --card: 240 10% 3.9%;
     --card-foreground: 0 0% 98%;
+    --card-foreground-alt: 0 0% 100%;
+    --card-1: 262 82% 60%;
+    --card-2: 217 91% 60%;
+    --card-3: 162 72% 46%;
+    --card-4: 32 91% 54%;
+    --card-5: 342 91% 60%;
     --popover: 240 10% 3.9%;
     --popover-foreground: 0 0% 98%;
     --primary: 217.2 91.2% 59.8%;

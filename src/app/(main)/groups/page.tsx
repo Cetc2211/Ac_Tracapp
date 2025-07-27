@@ -28,7 +28,7 @@ import { AttendanceRandomizer } from '@/components/attendance-randomizer';
 import Link from 'next/link';
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import Image from 'next/image';
+import { cn } from '@/lib/utils';
 
 type EvaluationCriteria = {
   id: string;
@@ -62,6 +62,14 @@ type GroupStats = {
   average: number;
   highRiskCount: number;
 }
+
+const cardColors = [
+    'bg-card-1',
+    'bg-card-2',
+    'bg-card-3',
+    'bg-card-4',
+    'bg-card-5',
+];
 
 
 export default function GroupsPage() {
@@ -287,21 +295,22 @@ export default function GroupsPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {groups.map((group) => {
+        {groups.map((group, index) => {
             const stats = groupStats[group.id] || { average: 0, highRiskCount: 0 };
+            const colorClass = cardColors[index % cardColors.length];
             
             return (
-              <Card key={group.id} className="flex flex-col">
+              <Card key={group.id} className={cn("flex flex-col text-card-foreground-alt", colorClass)}>
                 <CardHeader>
                     <div className="flex justify-between items-start">
                         <div>
                             <CardTitle className="text-xl">{group.subject}</CardTitle>
-                            <CardDescription className="flex items-center gap-2 pt-2">
+                            <CardDescription className="flex items-center gap-2 pt-2 text-card-foreground-alt/80">
                                 <Users className="h-4 w-4" />
                                 <span>{group.students.length} estudiantes</span>
                             </CardDescription>
                         </div>
-                        <Button asChild variant="ghost" size="icon">
+                        <Button asChild variant="ghost" size="icon" className="text-card-foreground-alt hover:bg-white/20 hover:text-card-foreground-alt">
                             <Link href={`/groups/${group.id}`}>
                                 <Settings className="h-5 w-5" />
                                  <span className="sr-only">Configurar</span>
@@ -310,18 +319,18 @@ export default function GroupsPage() {
                     </div>
                 </CardHeader>
                 <CardContent className="flex-grow">
-                  <div className="text-sm text-muted-foreground space-y-2">
-                    <div className='flex items-center gap-2'><span className='font-semibold'>Promedio Gral:</span> <span className={`font-bold ${stats.average < 7 ? 'text-destructive' : 'text-green-600'}`}>{stats.average.toFixed(1)}</span></div>
-                    <div className='flex items-center gap-2'><span className='font-semibold'>Riesgo Alto:</span> <span className='text-destructive font-bold flex items-center gap-1'>{stats.highRiskCount > 0 && <AlertTriangle className="h-4 w-4" />} {stats.highRiskCount}</span></div>
+                  <div className="text-sm space-y-2">
+                    <div className='flex items-center gap-2'><span className='font-semibold'>Promedio Gral:</span> <span className={`font-bold`}>{stats.average.toFixed(1)}</span></div>
+                    <div className='flex items-center gap-2'><span className='font-semibold'>Riesgo Alto:</span> <span className='font-bold flex items-center gap-1'>{stats.highRiskCount > 0 && <AlertTriangle className="h-4 w-4" />} {stats.highRiskCount}</span></div>
                   </div>
                 </CardContent>
                 <CardFooter className="flex justify-between gap-2">
-                  <Button asChild variant="outline" className="w-full">
+                  <Button asChild variant="outline" className="w-full bg-transparent border-card-foreground-alt/50 text-card-foreground-alt hover:bg-white/20 hover:text-card-foreground-alt">
                     <Link href={`/groups/${group.id}`}>
                       <ClipboardList className="mr-2 h-4 w-4" /> Ver Detalles
                     </Link>
                   </Button>
-                  <AttendanceRandomizer students={group.students} />
+                  <AttendanceRandomizer students={group.students} variant="outline" className="bg-transparent border-card-foreground-alt/50 text-card-foreground-alt hover:bg-white/20 hover:text-card-foreground-alt" />
                 </CardFooter>
               </Card>
             )
