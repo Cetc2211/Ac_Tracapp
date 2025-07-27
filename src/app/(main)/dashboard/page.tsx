@@ -20,30 +20,75 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowUpRight, BookCopy, Users, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { students as initialStudents, groups as initialGroups } from '@/lib/placeholder-data';
+import { students as initialStudents, groups as initialGroups, Student } from '@/lib/placeholder-data';
 import Image from 'next/image';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+
+type EvaluationCriteria = {
+  id: string;
+  name: string;
+  weight: number;
+  expectedValue: number;
+};
+
+type GradeDetail = {
+  delivered: number | null;
+  average: number | null;
+};
+
+type Grades = {
+  [studentId: string]: {
+    [criterionId: string]: GradeDetail;
+  };
+};
+
+type AttendanceStatus = 'present' | 'absent' | 'late';
+
+type AttendanceRecord = {
+  [studentId: string]: AttendanceStatus;
+};
+
+type DailyAttendance = {
+    [date: string]: AttendanceRecord;
+}
+
 
 export default function DashboardPage() {
-  const [students, setStudents] = useState(initialStudents);
+  const [students, setStudents] = useState<Student[]>(initialStudents);
   const [groups, setGroups] = useState(initialGroups);
+  const [allGrades, setAllGrades] = useState<{[groupId: string]: Grades}>({});
+  const [allAttendance, setAllAttendance] = useState<{[groupId: string]: DailyAttendance}>({});
+  const [allCriteria, setAllCriteria] = useState<{[groupId: string]: EvaluationCriteria[]}>({});
 
   useEffect(() => {
     try {
       const storedStudents = localStorage.getItem('students');
       const storedGroups = localStorage.getItem('groups');
       
-      if (storedStudents) {
-        setStudents(JSON.parse(storedStudents));
-      } else {
-        localStorage.setItem('students', JSON.stringify(initialStudents));
-      }
+      const loadedStudents = storedStudents ? JSON.parse(storedStudents) : initialStudents;
+      const loadedGroups = storedGroups ? JSON.parse(storedGroups) : initialGroups;
 
-      if (storedGroups) {
-        setGroups(JSON.parse(storedGroups));
-      } else {
-        localStorage.setItem('groups', JSON.stringify(initialGroups));
+      setStudents(loadedStudents);
+      setGroups(loadedGroups);
+
+      const grades: {[groupId: string]: Grades} = {};
+      const attendance: {[groupId: string]: DailyAttendance} = {};
+      const criteria: {[groupId: string]: EvaluationCriteria[]} = {};
+
+      for (const group of loadedGroups) {
+        const storedGrades = localStorage.getItem(`grades_${group.id}`);
+        if(storedGrades) grades[group.id] = JSON.parse(storedGrades);
+
+        const storedAttendance = localStorage.getItem(`attendance_${group.id}`);
+        if(storedAttendance) attendance[group.id] = JSON.parse(storedAttendance);
+
+        const storedCriteria = localStorage.getItem(`criteria_${group.id}`);
+        if(storedCriteria) criteria[group.id] = JSON.parse(storedCriteria);
       }
+      setAllGrades(grades);
+      setAllAttendance(attendance);
+      setAllCriteria(allCriteria);
+
     } catch (error) {
         console.error("Failed to parse data from localStorage", error);
         // Fallback to initial data if localStorage is corrupt
@@ -51,10 +96,95 @@ export default function DashboardPage() {
         setGroups(initialGroups);
     }
   }, []);
-  
-  const atRiskStudents = students.filter(
-    (s) => s.riskLevel === 'high' || s.riskLevel === 'medium'
-  );
+
+  const calculateFinalGrade = useCallback((studentId: string, groupId: string) => {
+    const evaluationCriteria = allCriteria[groupId] || [];
+    const studentGrades = allGrades[groupId]?.[studentId];
+
+    if (!studentGrades || evaluationCriteria.length === 0) return 0;
+
+    let finalGrade = 0;
+    
+    for (const criterion of evaluationCriteria) {
+      const gradeDetail = studentGrades[criterion.id];
+      const delivered = gradeDetail?.delivered ?? 0;
+      const average = gradeDetail?.average ?? 0;
+      const expected = criterion.expectedValue;
+
+      if(expected > 0) {
+        const criterionScore = (delivered / expected) * average;
+        finalGrade += criterionScore * (criterion.weight / 100);
+      }
+    }
+
+    return parseFloat(finalGrade.toFixed(2));
+  }, [allGrades, allCriteria]);
+
+  const getStudentRiskLevel = useCallback((student: Student): {level: 'low' | 'medium' | 'high', reason: string} => {
+    const studentGroups = groups.filter(g => g.students.some(s => s.id === student.id));
+    if (studentGroups.length === 0) return {level: 'low', reason: 'No está en grupos.'};
+    
+    let totalGrades = 0;
+    let gradeSum = 0;
+    let maxAbsencePercentage = 0;
+
+    for(const group of studentGroups) {
+      const finalGrade = calculateFinalGrade(student.id, group.id);
+      gradeSum += finalGrade;
+      totalGrades++;
+
+      const groupAttendance = allAttendance[group.id];
+      if (groupAttendance) {
+          const totalDays = Object.keys(groupAttendance).length;
+          if (totalDays > 0) {
+              let absences = 0;
+              for(const date in groupAttendance) {
+                  if(groupAttendance[date][student.id] === 'absent') {
+                      absences++;
+                  }
+              }
+              const absencePercentage = (absences / totalDays) * 100;
+              if(absencePercentage > maxAbsencePercentage) {
+                  maxAbsencePercentage = absencePercentage;
+              }
+          }
+      }
+    }
+
+    const averageGrade = totalGrades > 0 ? gradeSum / totalGrades : 10;
+
+    if (averageGrade < 7 || maxAbsencePercentage > 20) {
+        return {level: 'high', reason: `Promedio de ${averageGrade.toFixed(1)} o ${maxAbsencePercentage.toFixed(0)}% de ausencias.`};
+    }
+    if (averageGrade < 8 || maxAbsencePercentage > 10) {
+       return {level: 'medium', reason: `Promedio de ${averageGrade.toFixed(1)} o ${maxAbsencePercentage.toFixed(0)}% de ausencias.`};
+    }
+    
+    return {level: 'low', reason: `Promedio de ${averageGrade.toFixed(1)} y ${maxAbsencePercentage.toFixed(0)}% de ausencias.`};
+  }, [groups, allAttendance, calculateFinalGrade]);
+
+
+  const atRiskStudents = students.map(s => ({ ...s, calculatedRisk: getStudentRiskLevel(s) }))
+    .filter(s => s.calculatedRisk.level === 'high' || s.calculatedRisk.level === 'medium');
+
+  const overallAverageParticipation = useMemo(() => {
+    let totalStudents = 0;
+    let totalPresents = 0;
+    for(const groupId in allAttendance) {
+      const groupAttendance = allAttendance[groupId];
+      const studentsInGroup = groups.find(g => g.id === groupId)?.students.length || 0;
+      for(const date in groupAttendance){
+        totalStudents += studentsInGroup;
+        for(const studentId in groupAttendance[date]) {
+          if (groupAttendance[date][studentId] === 'present') {
+            totalPresents++;
+          }
+        }
+      }
+    }
+    return totalStudents > 0 ? Math.round((totalPresents / totalStudents) * 100) : 75;
+  }, [allAttendance, groups]);
+
 
   return (
     <div className="flex flex-col gap-6">
@@ -104,12 +234,12 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Participación Media
+              Asistencia Media
             </CardTitle>
             <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+75%</div>
+            <div className="text-2xl font-bold">{overallAverageParticipation}%</div>
             <p className="text-xs text-muted-foreground">
               Promedio en todas las clases
             </p>
@@ -142,17 +272,21 @@ export default function DashboardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {groups.slice(0, 5).map((group) => (
-                  <TableRow key={group.id}>
-                    <TableCell>
-                      <div className="font-medium">{group.subject}</div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {group.students.length}
-                    </TableCell>
-                    <TableCell className="text-right">8.5</TableCell>
-                  </TableRow>
-                ))}
+                {groups.slice(0, 5).map((group) => {
+                   const groupGrades = group.students.map(s => calculateFinalGrade(s.id, group.id));
+                   const groupAverage = groupGrades.length > 0 ? groupGrades.reduce((a, b) => a + b, 0) / groupGrades.length : 0;
+                  return (
+                    <TableRow key={group.id}>
+                      <TableCell>
+                        <div className="font-medium">{group.subject}</div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {group.students.length}
+                      </TableCell>
+                      <TableCell className="text-right">{groupAverage.toFixed(1)}</TableCell>
+                    </TableRow>
+                  )
+                })}
               </TableBody>
             </Table>
           </CardContent>
@@ -161,7 +295,7 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle>Estudiantes con Alertas</CardTitle>
             <CardDescription>
-              Estudiantes que requieren seguimiento por conducta o ausencias.
+              Estudiantes que requieren seguimiento por rendimiento o ausencias.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-6">
@@ -180,16 +314,16 @@ export default function DashboardPage() {
                   width={40}
                 />
                 <div className="grid gap-1">
-                  <p className="text-sm font-medium leading-none">
+                  <Link href={`/students/${student.id}`} className="text-sm font-medium leading-none hover:underline">
                     {student.name}
-                  </p>
-                  <p className="text-sm text-muted-foreground">ID: {student.id}</p>
+                  </Link>
+                  <p className="text-sm text-muted-foreground">{student.calculatedRisk.reason}</p>
                 </div>
                 <div className="ml-auto font-medium">
-                  {student.riskLevel === 'high' && (
+                  {student.calculatedRisk.level === 'high' && (
                     <Badge variant="destructive">Alto Riesgo</Badge>
                   )}
-                  {student.riskLevel === 'medium' && (
+                  {student.calculatedRisk.level === 'medium' && (
                     <Badge variant="secondary" className="bg-amber-400 text-black">
                       Medio Riesgo
                     </Badge>
@@ -206,5 +340,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
