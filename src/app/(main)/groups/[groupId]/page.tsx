@@ -86,16 +86,18 @@ type DailyAttendance = {
 export default function GroupDetailsPage() {
   const params = useParams();
   const groupId = params.groupId as string;
-  const [groups, setGroups] = useState(initialGroups);
-  const [students, setStudents] = useState(initialStudents);
+  const [groups, setGroups] = useState<typeof initialGroups>([]);
+  const [students, setStudents] = useState<typeof initialStudents>([]);
   const { toast } = useToast();
   const router = useRouter();
 
   const [group, setGroup] = useState<(typeof initialGroups)[0] | null>(null);
   const [evaluationCriteria, setEvaluationCriteria] = useState<EvaluationCriteria[]>([]);
   const [studentRiskLevels, setStudentRiskLevels] = useState<{[studentId: string]: 'low' | 'medium' | 'high'}>({});
-
-
+  const [isAddStudentDialogOpen, setIsAddStudentDialogOpen] = useState(false);
+  const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
+  
+  
   const calculateFinalGrade = useCallback((studentId: string, criteria: EvaluationCriteria[], grades: Grades) => {
     if (!grades || !criteria || criteria.length === 0) return 0;
     const studentGrades = grades[studentId];
@@ -144,7 +146,6 @@ export default function GroupDetailsPage() {
 
       const currentGroup = allGroups.find((g: any) => g.id === groupId);
        if (!currentGroup) {
-        // Handle case where group is not found
         setGroup(null);
         return;
       }
@@ -155,7 +156,6 @@ export default function GroupDetailsPage() {
         setStudents(JSON.parse(storedStudents));
       } else {
         setStudents(initialStudents);
-        localStorage.setItem('students', JSON.stringify(initialStudents));
       }
       
       const storedCriteria = localStorage.getItem(`criteria_${groupId}`);
@@ -188,24 +188,22 @@ export default function GroupDetailsPage() {
       localStorage.setItem('groups', JSON.stringify(newGroups));
   };
 
-  const [isAddStudentDialogOpen, setIsAddStudentDialogOpen] = useState(false);
-  const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
+  const availableStudents = useMemo(() => {
+    if (!group) return [];
+    const studentsInGroupIds = group.students.map(s => s.id);
+    return students.filter(s => !studentsInGroupIds.includes(s.id));
+  }, [group, students]);
   
-  if (!group) {
-    return notFound();
-  }
-  
-  const studentsInGroup = group.students.map(s => s.id);
-  const availableStudents = students.filter(s => !studentsInGroup.includes(s.id));
 
   const handleRemoveStudent = (studentId: string) => {
     const newGroups = groups.map(g => {
-        if (g.id === group.id) {
+        if (g.id === group!.id) {
             return { ...g, students: g.students.filter(s => s.id !== studentId) };
         }
         return g;
     });
     saveGroups(newGroups);
+    setGroup(newGroups.find(g => g.id === groupId) || null);
     toast({
         title: "Estudiante eliminado",
         description: "El estudiante ha sido quitado del grupo.",
@@ -213,19 +211,20 @@ export default function GroupDetailsPage() {
   };
 
   const handleDeleteGroup = () => {
-    const newGroups = groups.filter(g => g.id !== group.id);
+    const newGroups = groups.filter(g => g.id !== group!.id);
     saveGroups(newGroups);
     localStorage.removeItem(`criteria_${groupId}`);
     localStorage.removeItem(`grades_${groupId}`);
     localStorage.removeItem(`attendance_${groupId}`);
     toast({
         title: 'Grupo Eliminado',
-        description: `El grupo "${group.subject}" ha sido eliminado.`,
+        description: `El grupo "${group!.subject}" ha sido eliminado.`,
     });
     router.push('/groups');
   };
   
   const handleAddStudents = () => {
+    if (!group) return;
     const studentsToAdd = students.filter(s => selectedStudents.includes(s.id));
     const newGroups = groups.map(g => {
         if (g.id === group.id) {
@@ -239,6 +238,7 @@ export default function GroupDetailsPage() {
         return g;
     });
     saveGroups(newGroups);
+    setGroup(newGroups.find(g => g.id === groupId) || null);
     setSelectedStudents([]);
     setIsAddStudentDialogOpen(false);
     toast({
@@ -258,6 +258,10 @@ export default function GroupDetailsPage() {
   }, [evaluationCriteria]);
 
 
+  if (!group) {
+    return notFound();
+  }
+  
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
