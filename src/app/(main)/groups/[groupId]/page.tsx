@@ -21,7 +21,7 @@ import { groups as initialGroups, students as initialStudents, Student } from '@
 import { notFound, useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, MoreHorizontal, UserPlus, Trash2, CalendarCheck, FilePen, Edit } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, UserPlus, Trash2, CalendarCheck, FilePen, Edit, Loader2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -96,7 +96,7 @@ export default function GroupDetailsPage() {
   const [studentRiskLevels, setStudentRiskLevels] = useState<{[studentId: string]: 'low' | 'medium' | 'high'}>({});
   const [isAddStudentDialogOpen, setIsAddStudentDialogOpen] = useState(false);
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
-  
+  const [isLoading, setIsLoading] = useState(true);
   
   const calculateFinalGrade = useCallback((studentId: string, criteria: EvaluationCriteria[], grades: Grades) => {
     if (!grades || !criteria || criteria.length === 0) return 0;
@@ -117,28 +117,9 @@ export default function GroupDetailsPage() {
     }
     return parseFloat(finalGrade.toFixed(2));
   }, []);
-
-  const getStudentRiskLevel = useCallback((student: Student, criteria: EvaluationCriteria[], grades: Grades, attendance: DailyAttendance) => {
-    const finalGrade = calculateFinalGrade(student.id, criteria, grades);
-
-    const totalDays = Object.keys(attendance).length;
-    let absences = 0;
-    if(totalDays > 0) {
-        for(const date in attendance) {
-            if(attendance[date][student.id] === 'absent') {
-                absences++;
-            }
-        }
-    }
-    const absencePercentage = totalDays > 0 ? (absences / totalDays) * 100 : 0;
-    
-    if (finalGrade < 7 || absencePercentage > 20) return 'high';
-    if (finalGrade < 8 || absencePercentage > 10) return 'medium';
-    return 'low';
-  }, [calculateFinalGrade]);
-  
   
   useEffect(() => {
+    setIsLoading(true);
     try {
       const storedGroups = localStorage.getItem('groups');
       const allGroups = storedGroups ? JSON.parse(storedGroups) : initialGroups;
@@ -147,6 +128,7 @@ export default function GroupDetailsPage() {
       const currentGroup = allGroups.find((g: any) => g.id === groupId);
        if (!currentGroup) {
         setGroup(null);
+        setIsLoading(false);
         return;
       }
       setGroup(currentGroup);
@@ -169,6 +151,26 @@ export default function GroupDetailsPage() {
       const localAttendance: DailyAttendance = storedAttendance ? JSON.parse(storedAttendance) : {};
 
       const riskLevels : {[studentId: string]: 'low' | 'medium' | 'high'} = {};
+      
+      const getStudentRiskLevel = (student: Student, criteria: EvaluationCriteria[], grades: Grades, attendance: DailyAttendance) => {
+        const finalGrade = calculateFinalGrade(student.id, criteria, grades);
+
+        const totalDays = Object.keys(attendance).length;
+        let absences = 0;
+        if(totalDays > 0) {
+            for(const date in attendance) {
+                if(attendance[date][student.id] === 'absent') {
+                    absences++;
+                }
+            }
+        }
+        const absencePercentage = totalDays > 0 ? (absences / totalDays) * 100 : 0;
+        
+        if (finalGrade < 7 || absencePercentage > 20) return 'high';
+        if (finalGrade < 8 || absencePercentage > 10) return 'medium';
+        return 'low';
+      };
+
       currentGroup.students.forEach((s: Student) => {
           riskLevels[s.id] = getStudentRiskLevel(s, localCriteria, localGrades, localAttendance);
       });
@@ -180,8 +182,10 @@ export default function GroupDetailsPage() {
         setGroups(initialGroups);
         setStudents(initialStudents);
         setGroup(null);
+    } finally {
+        setIsLoading(false);
     }
-  }, [groupId, getStudentRiskLevel]);
+  }, [groupId, calculateFinalGrade]);
 
   const saveGroups = (newGroups: typeof initialGroups) => {
       setGroups(newGroups);
@@ -211,14 +215,15 @@ export default function GroupDetailsPage() {
   };
 
   const handleDeleteGroup = () => {
-    const newGroups = groups.filter(g => g.id !== group!.id);
+    if (!group) return;
+    const newGroups = groups.filter(g => g.id !== group.id);
     saveGroups(newGroups);
     localStorage.removeItem(`criteria_${groupId}`);
     localStorage.removeItem(`grades_${groupId}`);
     localStorage.removeItem(`attendance_${groupId}`);
     toast({
         title: 'Grupo Eliminado',
-        description: `El grupo "${group!.subject}" ha sido eliminado.`,
+        description: `El grupo "${group.subject}" ha sido eliminado.`,
     });
     router.push('/groups');
   };
@@ -258,8 +263,16 @@ export default function GroupDetailsPage() {
   }, [evaluationCriteria]);
 
 
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-full">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
   if (!group) {
-    return notFound();
+    notFound();
   }
   
   return (
