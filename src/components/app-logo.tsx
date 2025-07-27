@@ -15,8 +15,8 @@ export function AppLogo({ name = "Academic Tracker", logoUrl }: AppLogoProps) {
 
   return (
     <div className="flex flex-col p-4">
-      <div className="flex items-start gap-4">
-        <div className="shrink-0 pt-1">
+      <div className="flex items-end gap-4">
+        <div className="shrink-0">
           {logoUrl ? (
             <Image src={logoUrl} alt={`${name} Logo`} width={48} height={48} className="size-12 object-contain" />
           ) : (
