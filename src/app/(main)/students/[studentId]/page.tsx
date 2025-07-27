@@ -19,10 +19,10 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { students as initialStudents, Student, Group } from '@/lib/placeholder-data';
+import { students as initialStudents, Student, Group, StudentObservation } from '@/lib/placeholder-data';
 import { notFound, useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { ArrowLeft, Edit, Mail, Phone, User, Save, Contact, CalendarDays, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Edit, Mail, Phone, User, Save, Contact, CalendarDays, TrendingUp, BookText } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -34,6 +34,8 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 type EvaluationCriteria = {
   id: string;
@@ -75,48 +77,16 @@ export default function StudentProfilePage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Partial<Student> | null>(null);
   const [studentStats, setStudentStats] = useState<{level: 'low' | 'medium' | 'high', reason: string, averageGrade: number, attendance: {[groupId: string]: {p:number, a:number, l:number, total: number}}} | null>(null);
+  const [observations, setObservations] = useState<StudentObservation[]>([]);
   const { toast } = useToast();
   
-  useEffect(() => {
-    try {
-      const storedStudents = localStorage.getItem('students');
-      const studentsList: Student[] = storedStudents ? JSON.parse(storedStudents) : initialStudents;
-      setAllStudents(studentsList);
-      
-      const currentStudent = studentsList.find((s: Student) => s.id === studentId);
-      setStudent(currentStudent || null);
-      setEditingStudent(currentStudent || null);
-
-      const storedGroups = localStorage.getItem('groups');
-      const allGroups: Group[] = storedGroups ? JSON.parse(storedGroups) : [];
-      const studentGroups = allGroups.filter((g: Group) => 
-        g.students.some(s => s.id === studentId)
-      );
-      setGroups(studentGroups);
-
-    } catch (error) {
-      console.error("Failed to parse data from localStorage", error);
-      setStudent(null);
-    }
-  }, [studentId]);
-  
-  const calculateFinalGrade = useCallback((studentId: string, groupId: string) => {
-    const criteriaKey = `criteria_${groupId}`;
-    const gradesKey = `grades_${groupId}`;
-    
-    const storedCriteria = localStorage.getItem(criteriaKey);
-    const evaluationCriteria: EvaluationCriteria[] = storedCriteria ? JSON.parse(storedCriteria) : [];
-
-    const storedGrades = localStorage.getItem(gradesKey);
-    const grades: Grades = storedGrades ? JSON.parse(storedGrades) : {};
-
-    if (evaluationCriteria.length === 0) return 0;
-
-    let finalGrade = 0;
+  const calculateFinalGrade = useCallback((studentId: string, groupId: string, criteria: EvaluationCriteria[], grades: Grades) => {
+    if (!grades || !criteria || criteria.length === 0) return 0;
     const studentGrades = grades[studentId];
     if (!studentGrades) return 0;
     
-    for (const criterion of evaluationCriteria) {
+    let finalGrade = 0;
+    for (const criterion of criteria) {
       const gradeDetail = studentGrades[criterion.id];
       const delivered = gradeDetail?.delivered ?? 0;
       const average = gradeDetail?.average ?? 0;
@@ -130,8 +100,8 @@ export default function StudentProfilePage() {
     return parseFloat(finalGrade.toFixed(2));
   }, []);
 
-  const getStudentStats = useCallback(() => {
-    if (!student) return;
+  const getStudentStats = useCallback((currentStudent: Student | null) => {
+    if (!currentStudent) return;
 
     let allGroups : Group[] = [];
     try {
@@ -140,7 +110,7 @@ export default function StudentProfilePage() {
     } catch(e) {
       console.error(e);
     }
-    const studentGroups = allGroups.filter(g => g.students.some(s => s.id === student.id));
+    const studentGroups = allGroups.filter(g => g.students.some(s => s.id === currentStudent.id));
 
     if (studentGroups.length === 0) {
         setStudentStats({level: 'low', reason: 'No está en grupos.', averageGrade: 0, attendance: {}});
@@ -153,11 +123,21 @@ export default function StudentProfilePage() {
     const attendanceStats: {[groupId: string]: {p:number, a:number, l:number, total: number}} = {};
 
     for(const group of studentGroups) {
-      const finalGrade = calculateFinalGrade(student.id, group.id);
+      const criteriaKey = `criteria_${group.id}`;
+      const gradesKey = `grades_${group.id}`;
+      const attendanceKey = `attendance_${group.id}`;
+
+      const storedCriteria = localStorage.getItem(criteriaKey);
+      const evaluationCriteria: EvaluationCriteria[] = storedCriteria ? JSON.parse(storedCriteria) : [];
+
+      const storedGrades = localStorage.getItem(gradesKey);
+      const grades: Grades = storedGrades ? JSON.parse(storedGrades) : {};
+      
+      const finalGrade = calculateFinalGrade(currentStudent.id, group.id, evaluationCriteria, grades);
       gradeSum += finalGrade;
       totalGrades++;
 
-      const attendanceKey = `attendance_${group.id}`;
+      
       const storedAttendance = localStorage.getItem(attendanceKey);
       const groupAttendance: DailyAttendance = storedAttendance ? JSON.parse(storedAttendance) : {};
       
@@ -168,7 +148,7 @@ export default function StudentProfilePage() {
 
       if (totalDays > 0) {
           for(const date in groupAttendance) {
-              const status = groupAttendance[date][student.id];
+              const status = groupAttendance[date][currentStudent.id];
               if(status === 'present') presents++;
               else if(status === 'absent') absences++;
               else if(status === 'late') lates++;
@@ -194,11 +174,38 @@ export default function StudentProfilePage() {
     }
     
     setStudentStats({level, reason, averageGrade, attendance: attendanceStats });
-  }, [student, calculateFinalGrade]);
+  }, [calculateFinalGrade]);
 
   useEffect(() => {
-    getStudentStats();
-  }, [getStudentStats]);
+    try {
+      const storedStudents = localStorage.getItem('students');
+      const studentsList: Student[] = storedStudents ? JSON.parse(storedStudents) : initialStudents;
+      setAllStudents(studentsList);
+      
+      const currentStudent = studentsList.find((s: Student) => s.id === studentId);
+      setStudent(currentStudent || null);
+      setEditingStudent(currentStudent || null);
+
+      const storedGroups = localStorage.getItem('groups');
+      const allGroups: Group[] = storedGroups ? JSON.parse(storedGroups) : [];
+      const studentGroups = allGroups.filter((g: Group) => 
+        g.students.some(s => s.id === studentId)
+      );
+      setGroups(studentGroups);
+
+      const observationsKey = `observations_${studentId}`;
+      const storedObservations = localStorage.getItem(observationsKey);
+      const studentObservations: StudentObservation[] = storedObservations ? JSON.parse(storedObservations) : [];
+      setObservations(studentObservations.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+      
+      getStudentStats(currentStudent);
+
+    } catch (error) {
+      console.error("Failed to parse data from localStorage", error);
+      setStudent(null);
+    }
+  }, [studentId, getStudentStats]);
+
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
@@ -367,7 +374,14 @@ export default function StudentProfilePage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {groups.map(group => (
+                            {groups.map(group => {
+                                const storedCriteria = localStorage.getItem(`criteria_${group.id}`);
+                                const evaluationCriteria: EvaluationCriteria[] = storedCriteria ? JSON.parse(storedCriteria) : [];
+
+                                const storedGrades = localStorage.getItem(`grades_${group.id}`);
+                                const grades: Grades = storedGrades ? JSON.parse(storedGrades) : {};
+                                
+                                return (
                                 <TableRow key={group.id}>
                                     <TableCell>{group.subject}</TableCell>
                                     <TableCell className="text-center text-xs">
@@ -376,9 +390,10 @@ export default function StudentProfilePage() {
                                         : 'N/A'
                                         }
                                     </TableCell>
-                                    <TableCell className="text-right font-bold text-lg">{calculateFinalGrade(student.id, group.id)}</TableCell>
+                                    <TableCell className="text-right font-bold text-lg">{calculateFinalGrade(student.id, group.id, evaluationCriteria, grades)}</TableCell>
                                 </TableRow>
-                            ))}
+                                )
+                            })}
                             {groups.length === 0 && (
                                 <TableRow>
                                     <TableCell colSpan={3} className="text-center h-24">El estudiante no está en ningún grupo.</TableCell>
@@ -388,10 +403,31 @@ export default function StudentProfilePage() {
                     </Table>
                 </CardContent>
             </Card>
+             <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><BookText /> Bitácora de Observaciones</CardTitle>
+                    <CardDescription>Historial de observaciones de conducta y seguimiento.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {observations.length > 0 ? (
+                        <div className="space-y-4">
+                            {observations.map(obs => (
+                                <div key={obs.id} className="border-l-4 pl-4 py-2" style={{borderColor: obs.type === 'Mérito' ? 'hsl(var(--chart-2))' : 'hsl(var(--destructive))'}}>
+                                    <div className="flex justify-between items-center">
+                                        <p className="font-semibold">{obs.type}</p>
+                                        <p className="text-xs text-muted-foreground">{format(new Date(obs.date), "PPP", { locale: es })}</p>
+                                    </div>
+                                    <p className="text-sm mt-1">{obs.details}</p>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-sm text-center text-muted-foreground py-8">No hay observaciones registradas para este estudiante.</p>
+                    )}
+                </CardContent>
+            </Card>
         </div>
       </div>
     </div>
   );
 }
-
-    

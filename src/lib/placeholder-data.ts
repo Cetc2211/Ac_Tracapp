@@ -1,3 +1,4 @@
+
 export type Student = {
   id: string;
   name: string;
@@ -13,6 +14,14 @@ export type Group = {
   id: string;
   subject: string;
   students: Student[];
+};
+
+export type StudentObservation = {
+    id: string;
+    studentId: string;
+    date: string;
+    type: 'Problemas de conducta' | 'Episodios emocionales' | 'Cambio de conducta significativo' | 'Mérito' | 'Demérito' | 'Irresponsabilidad' | 'Otros';
+    details: string;
 };
 
 export const students: Student[] = [

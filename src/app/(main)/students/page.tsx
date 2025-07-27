@@ -33,7 +33,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -42,10 +41,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { StudentObservationDialog } from '@/components/student-observation-dialog';
 
 export default function StudentsPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isObservationDialogOpen, setIsObservationDialogOpen] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [bulkNames, setBulkNames] = useState('');
   const [bulkEmails, setBulkEmails] = useState('');
   const [bulkPhones, setBulkPhones] = useState('');
@@ -86,6 +88,11 @@ export default function StudentsPage() {
   const handleCloseAddDialog = () => {
     setIsAddDialogOpen(false);
   }
+
+  const handleOpenObservationDialog = (student: Student) => {
+    setSelectedStudent(student);
+    setIsObservationDialogOpen(true);
+  };
 
   const handleSaveBulkStudents = () => {
     const names = bulkNames.trim().split('\n').filter(name => name);
@@ -191,6 +198,14 @@ export default function StudentsPage() {
             </DialogContent>
         </Dialog>
 
+         {selectedStudent && (
+            <StudentObservationDialog
+                student={selectedStudent}
+                open={isObservationDialogOpen}
+                onOpenChange={setIsObservationDialogOpen}
+            />
+        )}
+
         <Table>
           <TableHeader>
             <TableRow>
@@ -219,7 +234,11 @@ export default function StudentsPage() {
                     width="64"
                   />
                 </TableCell>
-                <TableCell className="font-medium">{student.name}</TableCell>
+                <TableCell className="font-medium">
+                  <button onClick={() => handleOpenObservationDialog(student)} className="text-left hover:underline">
+                    {student.name}
+                  </button>
+                </TableCell>
                 <TableCell>{student.id}</TableCell>
                 <TableCell className="hidden md:table-cell">{student.email}</TableCell>
                 <TableCell className="hidden md:table-cell">{student.phone}</TableCell>
