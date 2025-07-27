@@ -211,7 +211,7 @@ export default function ProgressionsPage() {
             <Table className="mb-4 border">
               <TableBody>
                 <TableRow>
-                    <TableCell className="border-r font-bold" colSpan={2}>PLANTEL: Centro de Bachillerato Tecnológico Agropecuario No. 130 "Eutimio Plantillas Avelar"</TableCell>
+                    <TableCell className="border-r font-bold" colSpan={2}>PLANTEL: Centro de Bachillerato Tecnológico Agropecuario No. 130, "Eutimio Plantillas Avelar"</TableCell>
                     <TableCell className="border-r">
                         <Label htmlFor="periodo">PERIODO DE APLICACIÓN</Label>
                         <Input id="periodo" value={formData.periodo} onChange={handleInputChange} placeholder="AGOSTO 2024 - ENERO 2025" />
