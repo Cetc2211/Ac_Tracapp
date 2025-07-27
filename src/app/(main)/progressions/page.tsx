@@ -213,7 +213,7 @@ export default function ProgressionsPage() {
                 <TableRow>
                     <TableCell className="border-r font-bold" colSpan={2}>
                       <p>PLANTEL: Centro de Bachillerato Tecnológico Agropecuario No. 130</p>
-                      <p>"Eutimio Plantillas Avelar"</p>
+                      <p className="text-sm">"Eutimio Plantillas Avelar"</p>
                     </TableCell>
                     <TableCell className="border-r">
                         <Label htmlFor="periodo">PERIODO DE APLICACIÓN</Label>
