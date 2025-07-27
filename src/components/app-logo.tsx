@@ -1,6 +1,7 @@
 
 import { GraduationCap } from 'lucide-react';
 import Image from 'next/image';
+import { cn } from '@/lib/utils';
 
 interface AppLogoProps {
     name?: string;
@@ -10,12 +11,12 @@ interface AppLogoProps {
 export function AppLogo({ name = "Academic Tracker", logoUrl }: AppLogoProps) {
   return (
     <div className="p-4 overflow-hidden">
-      <div className="flex items-start gap-4">
-        <div className="shrink-0 self-start">
-          {logoUrl ? (
-              <Image src={logoUrl} alt={`${name} Logo`} width={56} height={56} className="size-14 object-contain" />
+      <div className="clearfix">
+        <div className={cn("float-left mr-4")}>
+           {logoUrl ? (
+              <Image src={logoUrl} alt={`${name} Logo`} width={56} height={56} className="size-14 object-contain shrink-0" />
           ) : (
-            <GraduationCap className="size-14 text-sidebar-foreground" />
+            <GraduationCap className="size-14 text-sidebar-foreground shrink-0" />
           )}
         </div>
         <h1 className="text-lg font-bold text-sidebar-foreground leading-tight pt-1">
