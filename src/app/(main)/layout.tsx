@@ -8,6 +8,8 @@ import {
   Users,
   Presentation,
   Contact,
+  BarChart3,
+  FileText,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -31,9 +33,10 @@ import { Separator } from '@/components/ui/separator';
 
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { href: '/students', icon: Users, label: 'Estudiantes' },
   { href: '/groups', icon: BookCopy, label: 'Grupos' },
   { href: '/progressions', icon: Presentation, label: 'Progresiones' },
+  { href: '/statistics', icon: BarChart3, label: 'Estadísticas' },
+  { href: '/reports', icon: FileText, label: 'Informes' },
   { href: '/tutors', icon: Contact, label: 'Tutores' },
 ];
 
