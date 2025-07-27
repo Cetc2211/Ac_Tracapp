@@ -13,26 +13,20 @@ export function AppLogo({ name = "Academic Tracker", logoUrl }: AppLogoProps) {
   const restOfName = words.slice(3).join(' ');
 
   return (
-    <div className="p-4">
-      <div className="flex items-center gap-4">
-        <div className="shrink-0">
-          {logoUrl ? (
-            <Image src={logoUrl} alt={`${name} Logo`} width={56} height={56} className="size-14 object-contain" />
-          ) : (
-            <GraduationCap className="size-14 text-sidebar-foreground" />
-          )}
-        </div>
-        {firstLine && (
-          <h1 className="text-lg font-bold text-sidebar-foreground leading-tight">
-            {firstLine}
-          </h1>
+    <div className="flex items-start gap-4 p-4">
+      <div className="shrink-0">
+        {logoUrl ? (
+          <Image src={logoUrl} alt={`${name} Logo`} width={56} height={56} className="size-14 object-contain" />
+        ) : (
+          <GraduationCap className="size-14 text-sidebar-foreground" />
         )}
       </div>
-      {restOfName && (
-        <h1 className="text-lg font-bold text-sidebar-foreground leading-tight mt-2">
-          {restOfName}
+      <div className="flex-grow">
+        <h1 className="text-lg font-bold text-sidebar-foreground leading-tight">
+          <span>{firstLine}</span>
+          {restOfName && <span className="block">{restOfName}</span>}
         </h1>
-      )}
+      </div>
     </div>
   );
 }
