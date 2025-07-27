@@ -22,38 +22,138 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { groups as initialGroups, students as initialStudents, Student } from '@/lib/placeholder-data';
-import { Users, ClipboardList, PlusCircle, BookCopy, Settings } from 'lucide-react';
+import { groups as initialGroups, students as initialStudents, Student, Group } from '@/lib/placeholder-data';
+import { Users, ClipboardList, PlusCircle, BookCopy, Settings, AlertTriangle } from 'lucide-react';
 import { AttendanceRandomizer } from '@/components/attendance-randomizer';
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 
+type EvaluationCriteria = {
+  id: string;
+  name: string;
+  weight: number;
+  expectedValue: number;
+};
+
+type GradeDetail = {
+  delivered: number | null;
+  average: number | null;
+};
+
+type Grades = {
+  [studentId: string]: {
+    [criterionId: string]: GradeDetail;
+  };
+};
+
+type AttendanceStatus = 'present' | 'absent' | 'late';
+
+type AttendanceRecord = {
+  [studentId: string]: AttendanceStatus;
+};
+
+type DailyAttendance = {
+    [date: string]: AttendanceRecord;
+}
+
 
 export default function GroupsPage() {
-  const [groups, setGroups] = useState(initialGroups);
-  const [students, setStudents] = useState(initialStudents);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [students, setStudents] = useState<Student[]>(initialStudents);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
-    const storedGroups = localStorage.getItem('groups');
-    if (storedGroups) {
-      setGroups(JSON.parse(storedGroups));
-    } else {
-       localStorage.setItem('groups', JSON.stringify(initialGroups));
-    }
+    try {
+        const storedGroups = localStorage.getItem('groups');
+        if (storedGroups) {
+          setGroups(JSON.parse(storedGroups));
+        } else {
+           setGroups(initialGroups);
+           localStorage.setItem('groups', JSON.stringify(initialGroups));
+        }
 
-    const storedStudents = localStorage.getItem('students');
-    if (storedStudents) {
-      setStudents(JSON.parse(storedStudents));
+        const storedStudents = localStorage.getItem('students');
+        if (storedStudents) {
+          setStudents(JSON.parse(storedStudents));
+        } else {
+          setStudents(initialStudents);
+          localStorage.setItem('students', JSON.stringify(initialStudents));
+        }
+    } catch(e) {
+        console.error("Could not parse groups or students from local storage", e);
+        setGroups(initialGroups);
+        setStudents(initialStudents);
     }
   }, []);
+  
+  const calculateFinalGrade = useCallback((studentId: string, groupId: string) => {
+    const criteriaKey = `criteria_${groupId}`;
+    const gradesKey = `grades_${groupId}`;
+    
+    let evaluationCriteria: EvaluationCriteria[] = [];
+    try {
+        const storedCriteria = localStorage.getItem(criteriaKey);
+        if(storedCriteria) evaluationCriteria = JSON.parse(storedCriteria);
+    } catch(e) { console.error(e); }
 
-  const saveGroups = (newGroups: typeof initialGroups) => {
+    let grades: Grades = {};
+    try {
+        const storedGrades = localStorage.getItem(gradesKey);
+        if(storedGrades) grades = JSON.parse(storedGrades);
+    } catch(e) { console.error(e); }
+
+    if (evaluationCriteria.length === 0) return 0;
+
+    let finalGrade = 0;
+    const studentGrades = grades[studentId];
+    if (!studentGrades) return 0;
+    
+    for (const criterion of evaluationCriteria) {
+      const gradeDetail = studentGrades[criterion.id];
+      const delivered = gradeDetail?.delivered ?? 0;
+      const average = gradeDetail?.average ?? 0;
+      const expected = criterion.expectedValue;
+
+      if(expected > 0) {
+        const criterionScore = (delivered / expected) * average;
+        finalGrade += criterionScore * (criterion.weight / 100);
+      }
+    }
+    return parseFloat(finalGrade.toFixed(2));
+  }, []);
+
+  const getStudentRiskLevel = useCallback((student: Student, group: Group) => {
+    const finalGrade = calculateFinalGrade(student.id, group.id);
+
+    const attendanceKey = `attendance_${group.id}`;
+    let groupAttendance: DailyAttendance = {};
+    try {
+        const storedAttendance = localStorage.getItem(attendanceKey);
+        if(storedAttendance) groupAttendance = JSON.parse(storedAttendance);
+    } catch(e) { console.error(e); }
+
+    const totalDays = Object.keys(groupAttendance).length;
+    let absences = 0;
+    if(totalDays > 0) {
+        for(const date in groupAttendance) {
+            if(groupAttendance[date][student.id] === 'absent') {
+                absences++;
+            }
+        }
+    }
+    const absencePercentage = totalDays > 0 ? (absences / totalDays) * 100 : 0;
+    
+    if (finalGrade < 7 || absencePercentage > 20) return 'high';
+    if (finalGrade < 8 || absencePercentage > 10) return 'medium';
+    return 'low';
+  }, [calculateFinalGrade]);
+
+  const saveGroups = (newGroups: typeof groups) => {
     setGroups(newGroups);
     localStorage.setItem('groups', JSON.stringify(newGroups));
   };
@@ -70,7 +170,7 @@ export default function GroupsPage() {
 
     const studentsForNewGroup = students.filter(s => selectedStudents.includes(s.id));
 
-    const newGroup = {
+    const newGroup: Group = {
         id: `G${Date.now()}`,
         subject: newGroupName,
         students: studentsForNewGroup
@@ -169,42 +269,47 @@ export default function GroupsPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {groups.map((group) => (
-          <Card key={group.id} className="flex flex-col">
-            <CardHeader>
-                <div className="flex justify-between items-start">
-                    <div>
-                        <CardTitle className="text-xl">{group.subject}</CardTitle>
-                        <CardDescription className="flex items-center gap-2 pt-2">
-                            <Users className="h-4 w-4" />
-                            <span>{group.students.length} estudiantes</span>
-                        </CardDescription>
+        {groups.map((group) => {
+            const groupGrades = group.students.map(s => calculateFinalGrade(s.id, group.id));
+            const groupAverage = groupGrades.length > 0 ? groupGrades.reduce((a, b) => a + b, 0) / groupGrades.length : 0;
+            const highRiskStudents = group.students.filter(s => getStudentRiskLevel(s, group) === 'high').length;
+            
+            return (
+              <Card key={group.id} className="flex flex-col">
+                <CardHeader>
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <CardTitle className="text-xl">{group.subject}</CardTitle>
+                            <CardDescription className="flex items-center gap-2 pt-2">
+                                <Users className="h-4 w-4" />
+                                <span>{group.students.length} estudiantes</span>
+                            </CardDescription>
+                        </div>
+                        <Button asChild variant="ghost" size="icon">
+                            <Link href={`/groups/${group.id}`}>
+                                <Settings className="h-5 w-5" />
+                                 <span className="sr-only">Configurar</span>
+                            </Link>
+                        </Button>
                     </div>
-                    <Button asChild variant="ghost" size="icon">
-                        <Link href={`/groups/${group.id}`}>
-                            <Settings className="h-5 w-5" />
-                             <span className="sr-only">Configurar</span>
-                        </Link>
-                    </Button>
-                </div>
-            </CardHeader>
-            <CardContent className="flex-grow">
-              <div className="text-sm text-muted-foreground space-y-2">
-                <div className='flex items-center gap-2'><span className='font-semibold'>Promedio Gral:</span> <span className='text-green-600 font-bold'>8.5</span></div>
-                <div className='flex items-center gap-2'><span className='font-semibold'>Riesgo Alto:</span> <span className='text-destructive font-bold'>{group.students.filter(s => s.riskLevel === 'high').length}</span></div>
-                <div className='flex items-center gap-2'><span className='font-semibold'>Actividades:</span> <span>3 pendientes</span></div>
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-between gap-2">
-              <Button asChild variant="outline" className="w-full">
-                <Link href={`/groups/${group.id}`}>
-                  <ClipboardList className="mr-2 h-4 w-4" /> Ver Detalles
-                </Link>
-              </Button>
-              <AttendanceRandomizer students={group.students} />
-            </CardFooter>
-          </Card>
-        ))}
+                </CardHeader>
+                <CardContent className="flex-grow">
+                  <div className="text-sm text-muted-foreground space-y-2">
+                    <div className='flex items-center gap-2'><span className='font-semibold'>Promedio Gral:</span> <span className={`font-bold ${groupAverage < 7 ? 'text-destructive' : 'text-green-600'}`}>{groupAverage.toFixed(1)}</span></div>
+                    <div className='flex items-center gap-2'><span className='font-semibold'>Riesgo Alto:</span> <span className='text-destructive font-bold flex items-center gap-1'>{highRiskStudents > 0 && <AlertTriangle className="h-4 w-4" />} {highRiskStudents}</span></div>
+                  </div>
+                </CardContent>
+                <CardFooter className="flex justify-between gap-2">
+                  <Button asChild variant="outline" className="w-full">
+                    <Link href={`/groups/${group.id}`}>
+                      <ClipboardList className="mr-2 h-4 w-4" /> Ver Detalles
+                    </Link>
+                  </Button>
+                  <AttendanceRandomizer students={group.students} />
+                </CardFooter>
+              </Card>
+            )
+        })}
          {groups.length === 0 && (
             <Card className="md:col-span-2 lg:col-span-3">
                 <CardContent className="flex flex-col items-center justify-center text-center p-12 gap-4">
@@ -221,3 +326,4 @@ export default function GroupsPage() {
   );
 }
 
+    
