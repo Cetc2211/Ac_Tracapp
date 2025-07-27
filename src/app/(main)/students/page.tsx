@@ -18,7 +18,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, MoreHorizontal } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Trash2 } from 'lucide-react';
 import { students as initialStudents, Student } from '@/lib/placeholder-data';
 import {
   DropdownMenu,
@@ -35,6 +35,18 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -48,6 +60,7 @@ export default function StudentsPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isObservationDialogOpen, setIsObservationDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [bulkNames, setBulkNames] = useState('');
   const [bulkEmails, setBulkEmails] = useState('');
   const [bulkPhones, setBulkPhones] = useState('');
@@ -137,6 +150,31 @@ export default function StudentsPage() {
         description: "El estudiante ha sido eliminado de la lista.",
     });
   }
+  
+  const handleSelectStudent = (studentId: string, checked: boolean | 'indeterminate') => {
+      setSelectedStudents(prev => 
+        checked ? [...prev, studentId] : prev.filter(id => id !== studentId)
+      );
+  };
+  
+  const handleSelectAll = (checked: boolean | 'indeterminate') => {
+      if(checked) {
+          setSelectedStudents(students.map(s => s.id));
+      } else {
+          setSelectedStudents([]);
+      }
+  };
+
+  const handleDeleteSelectedStudents = () => {
+      saveStudents(students.filter(s => !selectedStudents.includes(s.id)));
+      toast({
+        title: "Estudiantes eliminados",
+        description: `${selectedStudents.length} estudiante(s) han sido eliminados.`,
+      });
+      setSelectedStudents([]);
+  };
+
+  const numSelected = selectedStudents.length;
 
   return (
     <Card>
@@ -148,7 +186,30 @@ export default function StudentsPage() {
               Gestiona los perfiles de los estudiantes de tu institución.
             </CardDescription>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            {numSelected > 0 && (
+                 <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="sm" className="gap-1">
+                            <Trash2 className="h-3.5 w-3.5" />
+                            <span>Eliminar ({numSelected})</span>
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Esta acción no se puede deshacer. Esto eliminará permanentemente a los {numSelected} estudiantes seleccionados
+                                y todos sus datos asociados.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDeleteSelectedStudents}>Sí, eliminar</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            )}
             <Button size="sm" className="gap-1" onClick={handleOpenAddDialog}>
               <PlusCircle className="h-3.5 w-3.5" />
               <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
@@ -209,6 +270,13 @@ export default function StudentsPage() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead padding="checkbox">
+                 <Checkbox
+                    checked={numSelected === students.length && students.length > 0 ? true : (numSelected > 0 ? 'indeterminate' : false)}
+                    onCheckedChange={(checked) => handleSelectAll(checked)}
+                    aria-label="Seleccionar todo"
+                  />
+              </TableHead>
               <TableHead className="hidden w-[100px] sm:table-cell">
                 <span className="sr-only">Foto</span>
               </TableHead>
@@ -223,7 +291,14 @@ export default function StudentsPage() {
           </TableHeader>
           <TableBody>
             {students.map((student) => (
-              <TableRow key={student.id}>
+              <TableRow key={student.id} data-state={selectedStudents.includes(student.id) && "selected"}>
+                 <TableCell padding="checkbox">
+                   <Checkbox
+                        checked={selectedStudents.includes(student.id)}
+                        onCheckedChange={(checked) => handleSelectStudent(student.id, checked)}
+                        aria-label="Seleccionar fila"
+                    />
+                </TableCell>
                 <TableCell className="hidden sm:table-cell">
                   <Image
                     alt="Foto del estudiante"
@@ -264,7 +339,7 @@ export default function StudentsPage() {
             ))}
              {students.length === 0 && (
                 <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground p-8">
+                    <TableCell colSpan={7} className="text-center text-muted-foreground p-8">
                         No hay estudiantes registrados.
                     </TableCell>
                 </TableRow>
@@ -275,3 +350,4 @@ export default function StudentsPage() {
     </Card>
   );
 }
+
