@@ -9,15 +9,17 @@ interface AppLogoProps {
 
 export function AppLogo({ name = "Academic Tracker", logoUrl }: AppLogoProps) {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 p-4 text-center">
-      {logoUrl ? (
-          <Image src={logoUrl} alt={`${name} Logo`} width={64} height={64} className="size-16 object-contain" />
-      ) : (
-        <GraduationCap className="size-16 text-sidebar-foreground" />
-      )}
-      <h1 className="text-lg font-bold text-sidebar-foreground leading-tight">
-        {name}
-      </h1>
+    <div className="p-4 overflow-hidden">
+      <div className="flex items-center gap-4">
+        {logoUrl ? (
+            <Image src={logoUrl} alt={`${name} Logo`} width={56} height={56} className="size-14 object-contain float-left" />
+        ) : (
+          <GraduationCap className="size-14 text-sidebar-foreground float-left" />
+        )}
+        <h1 className="text-lg font-bold text-sidebar-foreground leading-tight">
+          {name}
+        </h1>
+      </div>
     </div>
   );
 }
