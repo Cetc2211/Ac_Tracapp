@@ -91,64 +91,18 @@ export default function GroupDetailsPage() {
   const { toast } = useToast();
   const router = useRouter();
 
+  const [group, setGroup] = useState<(typeof initialGroups)[0] | null>(null);
   const [evaluationCriteria, setEvaluationCriteria] = useState<EvaluationCriteria[]>([]);
-  
-  useEffect(() => {
-    try {
-      const storedGroups = localStorage.getItem('groups');
-      if (storedGroups) {
-        setGroups(JSON.parse(storedGroups));
-      } else {
-        setGroups(initialGroups);
-        localStorage.setItem('groups', JSON.stringify(initialGroups));
-      }
+  const [studentRiskLevels, setStudentRiskLevels] = useState<{[studentId: string]: 'low' | 'medium' | 'high'}>({});
 
-      const storedStudents = localStorage.getItem('students');
-      if(storedStudents) {
-        setStudents(JSON.parse(storedStudents));
-      } else {
-        setStudents(initialStudents);
-        localStorage.setItem('students', JSON.stringify(initialStudents));
-      }
-      
-      const storedCriteria = localStorage.getItem(`criteria_${groupId}`);
-        if (storedCriteria) {
-            setEvaluationCriteria(JSON.parse(storedCriteria));
-        }
 
-    } catch (error) {
-        console.error("Failed to parse data from localStorage", error);
-        setGroups(initialGroups);
-        setStudents(initialStudents);
-    }
-  }, [groupId]);
-
-  const saveGroups = (newGroups: typeof initialGroups) => {
-      setGroups(newGroups);
-      localStorage.setItem('groups', JSON.stringify(newGroups));
-  };
-
-  const group = groups.find((g) => g.id === groupId);
-
-  const [isAddStudentDialogOpen, setIsAddStudentDialogOpen] = useState(false);
-  const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
-  
-  const studentsInGroup = group ? group.students.map(s => s.id) : [];
-  const availableStudents = students.filter(s => !studentsInGroup.includes(s.id));
-
-  const calculateFinalGrade = useCallback((studentId: string) => {
-    const gradesKey = `grades_${groupId}`;
-    let grades: Grades = {};
-    const storedGrades = localStorage.getItem(gradesKey);
-    if(storedGrades) grades = JSON.parse(storedGrades);
-    
-    if (evaluationCriteria.length === 0) return 0;
-
-    let finalGrade = 0;
+  const calculateFinalGrade = useCallback((studentId: string, criteria: EvaluationCriteria[], grades: Grades) => {
+    if (!grades || !criteria || criteria.length === 0) return 0;
     const studentGrades = grades[studentId];
     if (!studentGrades) return 0;
     
-    for (const criterion of evaluationCriteria) {
+    let finalGrade = 0;
+    for (const criterion of criteria) {
       const gradeDetail = studentGrades[criterion.id];
       const delivered = gradeDetail?.delivered ?? 0;
       const average = gradeDetail?.average ?? 0;
@@ -160,21 +114,16 @@ export default function GroupDetailsPage() {
       }
     }
     return parseFloat(finalGrade.toFixed(2));
-  }, [groupId, evaluationCriteria]);
+  }, []);
 
-  const getStudentRiskLevel = useCallback((student: Student) => {
-    const finalGrade = calculateFinalGrade(student.id);
+  const getStudentRiskLevel = useCallback((student: Student, criteria: EvaluationCriteria[], grades: Grades, attendance: DailyAttendance) => {
+    const finalGrade = calculateFinalGrade(student.id, criteria, grades);
 
-    const attendanceKey = `attendance_${groupId}`;
-    let groupAttendance: DailyAttendance = {};
-    const storedAttendance = localStorage.getItem(attendanceKey);
-    if(storedAttendance) groupAttendance = JSON.parse(storedAttendance);
-
-    const totalDays = Object.keys(groupAttendance).length;
+    const totalDays = Object.keys(attendance).length;
     let absences = 0;
     if(totalDays > 0) {
-        for(const date in groupAttendance) {
-            if(groupAttendance[date][student.id] === 'absent') {
+        for(const date in attendance) {
+            if(attendance[date][student.id] === 'absent') {
                 absences++;
             }
         }
@@ -184,12 +133,71 @@ export default function GroupDetailsPage() {
     if (finalGrade < 7 || absencePercentage > 20) return 'high';
     if (finalGrade < 8 || absencePercentage > 10) return 'medium';
     return 'low';
-  }, [calculateFinalGrade, groupId]);
+  }, [calculateFinalGrade]);
+  
+  
+  useEffect(() => {
+    try {
+      const storedGroups = localStorage.getItem('groups');
+      const allGroups = storedGroups ? JSON.parse(storedGroups) : initialGroups;
+      setGroups(allGroups);
 
+      const currentGroup = allGroups.find((g: any) => g.id === groupId);
+       if (!currentGroup) {
+        // Handle case where group is not found
+        setGroup(null);
+        return;
+      }
+      setGroup(currentGroup);
+
+      const storedStudents = localStorage.getItem('students');
+      if(storedStudents) {
+        setStudents(JSON.parse(storedStudents));
+      } else {
+        setStudents(initialStudents);
+        localStorage.setItem('students', JSON.stringify(initialStudents));
+      }
+      
+      const storedCriteria = localStorage.getItem(`criteria_${groupId}`);
+      const localCriteria : EvaluationCriteria[] = storedCriteria ? JSON.parse(storedCriteria) : [];
+      setEvaluationCriteria(localCriteria);
+
+      const storedGrades = localStorage.getItem(`grades_${groupId}`);
+      const localGrades: Grades = storedGrades ? JSON.parse(storedGrades) : {};
+
+      const storedAttendance = localStorage.getItem(`attendance_${groupId}`);
+      const localAttendance: DailyAttendance = storedAttendance ? JSON.parse(storedAttendance) : {};
+
+      const riskLevels : {[studentId: string]: 'low' | 'medium' | 'high'} = {};
+      currentGroup.students.forEach((s: Student) => {
+          riskLevels[s.id] = getStudentRiskLevel(s, localCriteria, localGrades, localAttendance);
+      });
+      setStudentRiskLevels(riskLevels);
+
+
+    } catch (error) {
+        console.error("Failed to parse data from localStorage", error);
+        setGroups(initialGroups);
+        setStudents(initialStudents);
+        setGroup(null);
+    }
+  }, [groupId, getStudentRiskLevel]);
+
+  const saveGroups = (newGroups: typeof initialGroups) => {
+      setGroups(newGroups);
+      localStorage.setItem('groups', JSON.stringify(newGroups));
+  };
+
+  const [isAddStudentDialogOpen, setIsAddStudentDialogOpen] = useState(false);
+  const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
+  
   if (!group) {
     return notFound();
   }
   
+  const studentsInGroup = group.students.map(s => s.id);
+  const availableStudents = students.filter(s => !studentsInGroup.includes(s.id));
+
   const handleRemoveStudent = (studentId: string) => {
     const newGroups = groups.map(g => {
         if (g.id === group.id) {
@@ -387,7 +395,7 @@ export default function GroupDetailsPage() {
                 </TableHeader>
                 <TableBody>
                   {group.students.map((student) => {
-                    const riskLevel = getStudentRiskLevel(student);
+                    const riskLevel = studentRiskLevels[student.id] || 'low';
                     return (
                         <TableRow key={student.id}>
                         <TableCell className="hidden sm:table-cell">
@@ -520,4 +528,3 @@ export default function GroupDetailsPage() {
   );
 }
 
-    
