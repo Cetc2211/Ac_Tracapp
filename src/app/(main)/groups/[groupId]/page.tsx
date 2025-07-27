@@ -52,7 +52,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 type EvaluationCriteria = {
@@ -61,6 +61,27 @@ type EvaluationCriteria = {
   weight: number;
   expectedValue: number;
 };
+
+type GradeDetail = {
+  delivered: number | null;
+  average: number | null;
+};
+
+type Grades = {
+  [studentId: string]: {
+    [criterionId: string]: GradeDetail;
+  };
+};
+
+type AttendanceStatus = 'present' | 'absent' | 'late';
+
+type AttendanceRecord = {
+  [studentId: string]: AttendanceStatus;
+};
+
+type DailyAttendance = {
+    [date: string]: AttendanceRecord;
+}
 
 export default function GroupDetailsPage() {
   const params = useParams();
@@ -114,6 +135,56 @@ export default function GroupDetailsPage() {
   
   const studentsInGroup = group ? group.students.map(s => s.id) : [];
   const availableStudents = students.filter(s => !studentsInGroup.includes(s.id));
+
+  const calculateFinalGrade = useCallback((studentId: string) => {
+    const gradesKey = `grades_${groupId}`;
+    let grades: Grades = {};
+    const storedGrades = localStorage.getItem(gradesKey);
+    if(storedGrades) grades = JSON.parse(storedGrades);
+    
+    if (evaluationCriteria.length === 0) return 0;
+
+    let finalGrade = 0;
+    const studentGrades = grades[studentId];
+    if (!studentGrades) return 0;
+    
+    for (const criterion of evaluationCriteria) {
+      const gradeDetail = studentGrades[criterion.id];
+      const delivered = gradeDetail?.delivered ?? 0;
+      const average = gradeDetail?.average ?? 0;
+      const expected = criterion.expectedValue;
+
+      if(expected > 0) {
+        const criterionScore = (delivered / expected) * average;
+        finalGrade += criterionScore * (criterion.weight / 100);
+      }
+    }
+    return parseFloat(finalGrade.toFixed(2));
+  }, [groupId, evaluationCriteria]);
+
+  const getStudentRiskLevel = useCallback((student: Student) => {
+    const finalGrade = calculateFinalGrade(student.id);
+
+    const attendanceKey = `attendance_${groupId}`;
+    let groupAttendance: DailyAttendance = {};
+    const storedAttendance = localStorage.getItem(attendanceKey);
+    if(storedAttendance) groupAttendance = JSON.parse(storedAttendance);
+
+    const totalDays = Object.keys(groupAttendance).length;
+    let absences = 0;
+    if(totalDays > 0) {
+        for(const date in groupAttendance) {
+            if(groupAttendance[date][student.id] === 'absent') {
+                absences++;
+            }
+        }
+    }
+    const absencePercentage = totalDays > 0 ? (absences / totalDays) * 100 : 0;
+    
+    if (finalGrade < 7 || absencePercentage > 20) return 'high';
+    if (finalGrade < 8 || absencePercentage > 10) return 'medium';
+    return 'low';
+  }, [calculateFinalGrade, groupId]);
 
   if (!group) {
     return notFound();
@@ -315,62 +386,69 @@ export default function GroupDetailsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {group.students.map((student) => (
-                    <TableRow key={student.id}>
-                      <TableCell className="hidden sm:table-cell">
-                        <Image
-                          alt="Foto del estudiante"
-                          className="aspect-square rounded-md object-cover"
-                          height="64"
-                          src={student.photo}
-                          data-ai-hint="student photo"
-                          width="64"
-                        />
-                      </TableCell>
-                      <TableCell className="font-medium">{student.name}</TableCell>
-                      <TableCell>{student.id}</TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        {student.email}
-                      </TableCell>
-                      <TableCell>
-                        {student.riskLevel === 'high' && (
-                          <Badge variant="destructive">Alto</Badge>
-                        )}
-                        {student.riskLevel === 'medium' && (
-                          <Badge
-                            variant="secondary"
-                            className="bg-amber-400 text-black"
-                          >
-                            Medio
-                          </Badge>
-                        )}
-                        {student.riskLevel === 'low' && (
-                          <Badge variant="secondary">Bajo</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              aria-haspopup="true"
-                              size="icon"
-                              variant="ghost"
+                  {group.students.map((student) => {
+                    const riskLevel = getStudentRiskLevel(student);
+                    return (
+                        <TableRow key={student.id}>
+                        <TableCell className="hidden sm:table-cell">
+                            <Image
+                            alt="Foto del estudiante"
+                            className="aspect-square rounded-md object-cover"
+                            height="64"
+                            src={student.photo}
+                            data-ai-hint="student photo"
+                            width="64"
+                            />
+                        </TableCell>
+                        <TableCell className="font-medium">
+                            <Link href={`/students/${student.id}`} className="hover:underline">
+                                {student.name}
+                            </Link>
+                        </TableCell>
+                        <TableCell>{student.id}</TableCell>
+                        <TableCell className="hidden md:table-cell">
+                            {student.email}
+                        </TableCell>
+                        <TableCell>
+                            {riskLevel === 'high' && (
+                            <Badge variant="destructive">Alto</Badge>
+                            )}
+                            {riskLevel === 'medium' && (
+                            <Badge
+                                variant="secondary"
+                                className="bg-amber-400 text-black"
                             >
-                              <MoreHorizontal className="h-4 w-4" />
-                              <span className="sr-only">Toggle menu</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                            <DropdownMenuItem>Ver Perfil Completo</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleRemoveStudent(student.id)} className="text-destructive">
-                              Quitar del Grupo
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                                Medio
+                            </Badge>
+                            )}
+                            {riskLevel === 'low' && (
+                            <Badge variant="secondary">Bajo</Badge>
+                            )}
+                        </TableCell>
+                        <TableCell>
+                            <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button
+                                aria-haspopup="true"
+                                size="icon"
+                                variant="ghost"
+                                >
+                                <MoreHorizontal className="h-4 w-4" />
+                                <span className="sr-only">Toggle menu</span>
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                <DropdownMenuItem onClick={() => router.push(`/students/${student.id}`)}>Ver Perfil Completo</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleRemoveStudent(student.id)} className="text-destructive">
+                                Quitar del Grupo
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                            </DropdownMenu>
+                        </TableCell>
+                        </TableRow>
+                    )
+                  })}
                    {group.students.length === 0 && (
                     <TableRow>
                         <TableCell colSpan={6} className="text-center text-muted-foreground p-8">
@@ -441,3 +519,5 @@ export default function GroupDetailsPage() {
     </div>
   );
 }
+
+    

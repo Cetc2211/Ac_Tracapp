@@ -87,7 +87,7 @@ export default function DashboardPage() {
       }
       setAllGrades(grades);
       setAllAttendance(attendance);
-      setAllCriteria(allCriteria);
+      setAllCriteria(criteria);
 
     } catch (error) {
         console.error("Failed to parse data from localStorage", error);
@@ -161,28 +161,35 @@ export default function DashboardPage() {
     }
     
     return {level: 'low', reason: `Promedio de ${averageGrade.toFixed(1)} y ${maxAbsencePercentage.toFixed(0)}% de ausencias.`};
-  }, [groups, allAttendance, calculateFinalGrade]);
+  }, [groups, allAttendance, calculateFinalGrade, allCriteria]);
 
 
-  const atRiskStudents = students.map(s => ({ ...s, calculatedRisk: getStudentRiskLevel(s) }))
-    .filter(s => s.calculatedRisk.level === 'high' || s.calculatedRisk.level === 'medium');
+  const atRiskStudents = useMemo(() => students.map(s => ({ ...s, calculatedRisk: getStudentRiskLevel(s) }))
+    .filter(s => s.calculatedRisk.level === 'high' || s.calculatedRisk.level === 'medium')
+    .sort((a, b) => {
+        if (a.calculatedRisk.level === 'high' && b.calculatedRisk.level !== 'high') return -1;
+        if (a.calculatedRisk.level !== 'high' && b.calculatedRisk.level === 'high') return 1;
+        return 0;
+    }), [students, getStudentRiskLevel]);
 
   const overallAverageParticipation = useMemo(() => {
-    let totalStudents = 0;
+    let totalPossibleAttendance = 0;
     let totalPresents = 0;
     for(const groupId in allAttendance) {
       const groupAttendance = allAttendance[groupId];
-      const studentsInGroup = groups.find(g => g.id === groupId)?.students.length || 0;
+      const group = groups.find(g => g.id === groupId);
+      if(!group) continue;
+      
       for(const date in groupAttendance){
-        totalStudents += studentsInGroup;
+        totalPossibleAttendance += group.students.length;
         for(const studentId in groupAttendance[date]) {
-          if (groupAttendance[date][studentId] === 'present') {
+          if (group.students.some(s => s.id === studentId) && groupAttendance[date][studentId] === 'present') {
             totalPresents++;
           }
         }
       }
     }
-    return totalStudents > 0 ? Math.round((totalPresents / totalStudents) * 100) : 75;
+    return totalPossibleAttendance > 0 ? Math.round((totalPresents / totalPossibleAttendance) * 100) : 100;
   }, [allAttendance, groups]);
 
 
@@ -325,7 +332,7 @@ export default function DashboardPage() {
                   )}
                   {student.calculatedRisk.level === 'medium' && (
                     <Badge variant="secondary" className="bg-amber-400 text-black">
-                      Medio Riesgo
+                      Riesgo Medio
                     </Badge>
                   )}
                 </div>
@@ -340,3 +347,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    

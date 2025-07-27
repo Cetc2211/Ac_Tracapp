@@ -133,7 +133,15 @@ export default function StudentProfilePage() {
   const getStudentStats = useCallback(() => {
     if (!student) return;
 
-    const studentGroups = groups.filter(g => g.students.some(s => s.id === student.id));
+    let allGroups : Group[] = [];
+    try {
+      const storedGroups = localStorage.getItem('groups');
+      allGroups = storedGroups ? JSON.parse(storedGroups) : [];
+    } catch(e) {
+      console.error(e);
+    }
+    const studentGroups = allGroups.filter(g => g.students.some(s => s.id === student.id));
+
     if (studentGroups.length === 0) {
         setStudentStats({level: 'low', reason: 'No está en grupos.', averageGrade: 0, attendance: {}});
         return;
@@ -186,7 +194,7 @@ export default function StudentProfilePage() {
     }
     
     setStudentStats({level, reason, averageGrade, attendance: attendanceStats });
-  }, [student, groups, calculateFinalGrade]);
+  }, [student, calculateFinalGrade]);
 
   useEffect(() => {
     getStudentStats();
@@ -211,7 +219,10 @@ export default function StudentProfilePage() {
     
     const updatedStudents = allStudents.map(s => s.id === editingStudent.id ? {...s, ...editingStudent} as Student : s);
     
-    const updatedGroups = groups.map(g => ({
+    const storedGroups = localStorage.getItem('groups');
+    let allGroups: Group[] = storedGroups ? JSON.parse(storedGroups) : [];
+    
+    const updatedGroups = allGroups.map(g => ({
         ...g,
         students: g.students.map(s => s.id === editingStudent.id ? {...s, ...editingStudent} as Student : s)
     }));
@@ -382,3 +393,5 @@ export default function StudentProfilePage() {
     </div>
   );
 }
+
+    
