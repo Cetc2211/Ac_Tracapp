@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { students as initialStudents, Student, Group, StudentObservation } from '@/lib/placeholder-data';
+import { Student, Group, StudentObservation } from '@/lib/placeholder-data';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import { ArrowLeft, Mail, User, Contact, EyeOff, Printer, FileText } from 'lucide-react';
@@ -107,14 +107,11 @@ export default function StudentProfilePage() {
 
       if (currentStudent) {
         const storedGroups: Group[] = JSON.parse(localStorage.getItem('groups') || '[]');
-        const activeGroupId = localStorage.getItem('activeGroupId');
-        
-        const gradesByGroup: { group: string, grade: number }[] = [];
-        let totalGradeSum = 0;
-        let groupCount = 0;
-        
         const studentGroups = storedGroups.filter(g => g.students.some(s => s.id === studentId));
 
+        const gradesByGroup: { group: string, grade: number }[] = [];
+        let totalGradeSum = 0;
+        
         studentGroups.forEach(group => {
             const criteria: EvaluationCriteria[] = JSON.parse(localStorage.getItem(`criteria_${group.id}`) || '[]');
             const grades: Grades = JSON.parse(localStorage.getItem(`grades_${group.id}`) || '{}');
@@ -122,42 +119,41 @@ export default function StudentProfilePage() {
             const finalGrade = calculateFinalGrade(studentId, criteria, grades, participations);
             gradesByGroup.push({ group: group.subject, grade: finalGrade });
             totalGradeSum += finalGrade;
-            groupCount++;
         });
 
+        const activeGroupId = localStorage.getItem('activeGroupId');
         let attendanceStats = { p: 0, a: 0, l: 0, total: 0 };
+
         if (activeGroupId) {
           const groupAttendance: DailyAttendance = JSON.parse(localStorage.getItem(`attendance_${activeGroupId}`) || '{}');
+          const allDates = Object.keys(groupAttendance);
+          attendanceStats.total = allDates.length;
           
-          Object.values(groupAttendance).forEach(record => {
-            if (record.hasOwnProperty(studentId)) {
-                 if (record[studentId] === 'present') attendanceStats.p++;
-                 else if (record[studentId] === 'absent') attendanceStats.a++;
-                 else if (record[studentId] === 'late') attendanceStats.l++;
+          allDates.forEach(date => {
+            if (groupAttendance[date]?.[studentId]) {
+                 const status = groupAttendance[date][studentId];
+                 if (status === 'present') attendanceStats.p++;
+                 else if (status === 'absent') attendanceStats.a++;
+                 else if (status === 'late') attendanceStats.l++;
             }
           });
-          
-          const groupForAttendance = storedGroups.find(g => g.id === activeGroupId);
-          if (groupForAttendance) {
-             const allDates = Object.keys(JSON.parse(localStorage.getItem(`attendance_${activeGroupId}`) || '{}'));
-             attendanceStats.total = allDates.length;
-          }
         }
 
         const observations: StudentObservation[] = JSON.parse(localStorage.getItem(`observations_${studentId}`) || '[]');
         setObservations(observations.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
         
         setStudentStats({
-          averageGrade: groupCount > 0 ? totalGradeSum / groupCount : 0,
+          averageGrade: studentGroups.length > 0 ? totalGradeSum / studentGroups.length : 0,
           attendance: attendanceStats,
           gradesByGroup,
         });
       }
     } catch (error) {
       console.error("Failed to load student data from localStorage", error);
+      toast({ variant: 'destructive', title: 'Error al cargar datos', description: 'No se pudo cargar la información del estudiante.'})
       setStudent(null);
     }
-  }, [studentId, calculateFinalGrade]);
+  }, [studentId, calculateFinalGrade, toast]);
   
   if (!student) {
     return notFound();
@@ -304,3 +300,6 @@ export default function StudentProfilePage() {
       </div>
     </div>
   );
+}
+
+    
