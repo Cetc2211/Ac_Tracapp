@@ -318,5 +318,4 @@ export default function GroupReportPage() {
   );
 }
 
-
     
