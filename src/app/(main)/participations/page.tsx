@@ -33,21 +33,17 @@ type ParticipationRecord = {
   };
 };
 
-type AttendanceStatus = 'present' | 'absent' | 'late';
-
-type AttendanceRecord = {
-  [studentId: string]: AttendanceStatus;
+type GlobalAttendanceRecord = {
+  [date: string]: {
+    [studentId: string]: boolean;
+  };
 };
-
-type DailyAttendance = {
-    [date: string]: AttendanceRecord;
-}
 
 
 export default function ParticipationsPage() {
   const [studentsToDisplay, setStudentsToDisplay] = useState<Student[]>([]);
   const [participations, setParticipations] = useState<ParticipationRecord>({});
-  const [attendance, setAttendance] = useState<DailyAttendance>({});
+  const [attendance, setAttendance] = useState<GlobalAttendanceRecord>({});
   const [participationDates, setParticipationDates] = useState<string[]>([]);
   const [activeGroupName, setActiveGroupName] = useState<string | null>(null);
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
@@ -78,17 +74,16 @@ export default function ParticipationsPage() {
           const dates = Object.keys(parsedParticipations).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
           setParticipationDates(dates);
         }
-        
-        const storedAttendance = localStorage.getItem(`attendance_${storedActiveGroupId}`);
-        if (storedAttendance) {
-            setAttendance(JSON.parse(storedAttendance));
-        }
-
       } else {
         setParticipations({});
         setParticipationDates([]);
-        setAttendance({});
       }
+      
+      const storedAttendance = localStorage.getItem('globalAttendance');
+      if (storedAttendance) {
+          setAttendance(JSON.parse(storedAttendance));
+      }
+
     } catch (error) {
       console.error("Failed to parse data from localStorage", error);
     }
@@ -118,7 +113,7 @@ export default function ParticipationsPage() {
     if (!activeGroupId) return;
 
     if (hasParticipated) {
-      const studentHasAttendance = attendance[date]?.[studentId] === 'present';
+      const studentHasAttendance = attendance[date]?.[studentId] === true;
       if (!studentHasAttendance) {
         toast({
           variant: 'destructive',
