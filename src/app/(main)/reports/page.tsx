@@ -64,7 +64,7 @@ export default function ReportsPage() {
             </CardContent>
             <CardFooter>
               <Button asChild className="w-full">
-                <Link href="#">
+                <Link href={`/reports/${group.id}`}>
                   Generar Informe <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
