@@ -110,6 +110,7 @@ export default function StudentProfilePage() {
         return;
     };
     try {
+      setIsLoading(true);
       const storedStudents: Student[] = JSON.parse(localStorage.getItem('students') || '[]');
       const currentStudent = storedStudents.find(s => s.id === studentId);
       
@@ -136,7 +137,6 @@ export default function StudentProfilePage() {
         const allDates = Object.keys(globalAttendance);
         
         allDates.forEach(date => {
-            // Check if the student belongs to any group that might have had this attendance record. This is a simplification.
             if (globalAttendance[date]?.[studentId] !== undefined) {
                 attendanceStats.total++;
                 if (globalAttendance[date][studentId]) attendanceStats.p++;
@@ -248,48 +248,52 @@ export default function StudentProfilePage() {
                         width={192}
                     />
                  </div>
-                 <div className="md:col-span-2 space-y-4">
-                    <div className="flex items-start gap-3">
-                        <User className="h-6 w-6 text-primary mt-1"/>
-                        <div>
-                            <p className="text-sm text-muted-foreground">Nombre Completo:</p>
-                            <p className="font-semibold text-lg">{student.name}</p>
+                 <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+                    <div className="space-y-4">
+                        <div className="flex items-start gap-3">
+                            <User className="h-6 w-6 text-primary mt-1 flex-shrink-0"/>
+                            <div>
+                                <p className="text-sm text-muted-foreground">Nombre Completo:</p>
+                                <p className="font-semibold text-lg">{student.name}</p>
+                            </div>
+                        </div>
+                        <div className="flex items-start gap-3">
+                            <Contact className="h-6 w-6 text-primary mt-1 flex-shrink-0"/>
+                            <div>
+                                <p className="text-sm text-muted-foreground">ID de Estudiante:</p>
+                                <p className="font-semibold">{student.id}</p>
+                            </div>
+                        </div>
+                        <div className="flex items-start gap-3">
+                            <Mail className="h-6 w-6 text-primary mt-1 flex-shrink-0"/>
+                            <div>
+                                <p className="text-sm text-muted-foreground">Email:</p>
+                                <p className="font-semibold">{student.email || 'No registrado'}</p>
+                            </div>
                         </div>
                     </div>
-                     <div className="flex items-start gap-3">
-                        <Contact className="h-6 w-6 text-primary mt-1"/>
-                        <div>
-                            <p className="text-sm text-muted-foreground">ID de Estudiante:</p>
-                            <p className="font-semibold">{student.id}</p>
+                     <div className="space-y-4">
+                        <div className="flex items-start gap-3">
+                            <User className="h-6 w-6 text-primary mt-1 flex-shrink-0"/>
+                            <div>
+                                <p className="text-sm text-muted-foreground">Tutor:</p>
+                                <p className="font-semibold">{student.tutorName || 'No registrado'}</p>
+                            </div>
                         </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                        <Mail className="h-6 w-6 text-primary mt-1"/>
-                        <div>
-                            <p className="text-sm text-muted-foreground">Email:</p>
-                            <p className="font-semibold">{student.email || 'No registrado'}</p>
-                        </div>
-                    </div>
-                     <div className="flex items-start gap-3">
-                        <User className="h-6 w-6 text-primary mt-1"/>
-                        <div>
-                            <p className="text-sm text-muted-foreground">Tutor:</p>
-                            <p className="font-semibold">{student.tutorName || 'No registrado'}</p>
-                        </div>
-                    </div>
-                     <div className="flex items-start gap-3">
-                        <Phone className="h-6 w-6 text-primary mt-1"/>
-                        <div>
-                            <p className="text-sm text-muted-foreground">Teléfono Tutor:</p>
-                            <p className="font-semibold">{student.tutorPhone || 'No registrado'}</p>
+                        <div className="flex items-start gap-3">
+                            <Phone className="h-6 w-6 text-primary mt-1 flex-shrink-0"/>
+                            <div>
+                                <p className="text-sm text-muted-foreground">Teléfono Tutor:</p>
+                                <p className="font-semibold">{student.tutorPhone || 'No registrado'}</p>
+                            </div>
                         </div>
                     </div>
                  </div>
             </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-            <div className="lg:col-span-3">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div>
                 <Card>
                     <CardHeader>
                         <CardTitle>Resumen de Calificaciones</CardTitle>
@@ -326,7 +330,7 @@ export default function StudentProfilePage() {
                     </CardContent>
                 </Card>
             </div>
-             <div className="lg:col-span-2">
+             <div>
                 <Card>
                     <CardHeader>
                         <CardTitle>Historial de Asistencia</CardTitle>

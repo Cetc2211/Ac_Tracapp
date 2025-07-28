@@ -34,12 +34,12 @@ const StudentFeedbackInputSchema = z.object({
   attendance: AttendanceSchema.describe('The student\'s attendance record.'),
   observations: z.array(ObservationSchema).optional().describe('A list of observations made by the teacher.'),
 });
-type StudentFeedbackInput = z.infer<typeof StudentFeedbackInputSchema>;
+export type StudentFeedbackInput = z.infer<typeof StudentFeedbackInputSchema>;
 
 const StudentFeedbackOutputSchema = z.object({
   feedback: z.string().describe('A comprehensive feedback text for the student, written in Spanish.'),
 });
-type StudentFeedbackOutput = z.infer<typeof StudentFeedbackOutputSchema>;
+export type StudentFeedbackOutput = z.infer<typeof StudentFeedbackOutputSchema>;
 
 export async function generateStudentFeedback(input: StudentFeedbackInput): Promise<StudentFeedbackOutput> {
   return studentFeedbackFlow(input);
