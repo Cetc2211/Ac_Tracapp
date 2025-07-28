@@ -10,6 +10,7 @@ import {
   Contact,
   BarChart3,
   FileText,
+  CalendarCheck,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -37,6 +38,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/groups', icon: BookCopy, label: 'Grupos' },
+  { href: '/students', icon: Users, label: 'Estudiantes' },
+  { href: '/attendance', icon: CalendarCheck, label: 'Asistencia' },
   { href: '/progressions', icon: Presentation, label: 'Progresiones' },
   { href: '/statistics', icon: BarChart3, label: 'Estadísticas' },
   { href: '/reports', icon: FileText, label: 'Informes' },
