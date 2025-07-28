@@ -15,7 +15,7 @@ import {
   ChartLegend,
   ChartLegendContent
 } from "@/components/ui/chart"
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Pie, PieChart, Cell, Tooltip } from "recharts"
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Pie, PieChart, Cell, Tooltip, Legend } from "recharts"
 import { Badge } from '@/components/ui/badge';
 import { Student, Group, StudentObservation } from '@/lib/placeholder-data';
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -345,7 +345,7 @@ export default function StatisticsPage() {
                                         tickFormatter={(value) => `${value}%`}
                                     />
                                     <Tooltip content={<ChartTooltipContent />} />
-                                    <Legend />
+                                    <ChartLegend content={<ChartLegendContent />} />
                                     <Bar dataKey="averageGrade" name="Promedio Gral." fill="hsl(var(--chart-2))" radius={4} />
                                     <Bar dataKey="attendanceRate" name="Asistencia" fill="hsl(var(--chart-4))" radius={4} />
                                 </BarChart>
@@ -371,7 +371,7 @@ export default function StatisticsPage() {
                                     />
                                     <XAxis type="number" hide={true} />
                                     <Tooltip content={<ChartTooltipContent />} />
-                                    <Legend />
+                                    <ChartLegend content={<ChartLegendContent />} />
                                     <Bar dataKey="riskLevels.low" name="Bajo" stackId="a" fill={PIE_CHART_COLORS.low} radius={[4, 0, 0, 4]}/>
                                     <Bar dataKey="riskLevels.medium" name="Medio" stackId="a" fill={PIE_CHART_COLORS.medium} />
                                     <Bar dataKey="riskLevels.high" name="Alto" stackId="a" fill={PIE_CHART_COLORS.high} radius={[0, 4, 4, 0]} />
@@ -506,3 +506,4 @@ export default function StatisticsPage() {
     </div>
   );
 }
+
