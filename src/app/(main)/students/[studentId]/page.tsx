@@ -15,13 +15,15 @@ import { Student, Group, StudentObservation } from '@/lib/placeholder-data';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import { Mail, User, Contact, EyeOff, Printer, FileText, Loader2, Phone, Wand2 } from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { generateStudentFeedback } from '@/ai/flows/student-feedback';
+import { useReactToPrint } from 'react-to-print';
+import { StudentPrintReport } from '@/components/student-print-report';
 
 type EvaluationCriteria = {
   id: string;
@@ -52,7 +54,7 @@ type ParticipationRecord = {
   };
 };
 
-type StudentStats = {
+export type StudentStats = {
   averageGrade: number;
   attendance: { p: number, a: number, total: number };
   gradesByGroup: { group: string, grade: number, criteriaDetails: { name: string, earned: number, weight: number }[] }[];
@@ -72,6 +74,13 @@ export default function StudentProfilePage() {
   const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
   const [generatedFeedback, setGeneratedFeedback] = useState('');
   
+  const printRef = useRef<HTMLDivElement>(null);
+
+  const handlePrint = useReactToPrint({
+    content: () => printRef.current,
+    documentTitle: `Informe - ${student?.name || 'Estudiante'}`,
+  });
+
   const calculateFinalGradeDetails = useCallback((studentId: string, criteria: EvaluationCriteria[], grades: Grades, participations: ParticipationRecord): { finalGrade: number; criteriaDetails: { name: string, earned: number, weight: number }[] } => {
     if (!criteria || criteria.length === 0) return { finalGrade: 0, criteriaDetails: [] };
     
@@ -192,11 +201,6 @@ export default function StudentProfilePage() {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
-
-
   if (isLoading) {
     return (
         <div className="flex justify-center items-center h-full">
@@ -216,8 +220,18 @@ export default function StudentProfilePage() {
 
   
   return (
-    <div className="flex flex-col gap-6" id="print-content">
-       <Card className="bg-accent/50 print:hidden">
+    <div className="flex flex-col gap-6">
+       <div style={{ display: 'none' }}>
+        <StudentPrintReport 
+            ref={printRef} 
+            student={student} 
+            studentStats={studentStats}
+            observations={observations}
+            generatedFeedback={generatedFeedback}
+            attendanceRate={attendanceRate}
+        />
+      </div>
+       <Card className="bg-accent/50">
           <CardHeader>
             <div className="flex items-center gap-4">
                <div className="bg-background p-3 rounded-full">
@@ -240,7 +254,7 @@ export default function StudentProfilePage() {
           </CardContent>
        </Card>
       
-      <h2 className="text-xl font-bold text-center print:hidden">Informe Individual del Estudiante</h2>
+      <h2 className="text-xl font-bold text-center">Informe Individual del Estudiante</h2>
 
       <div className="flex flex-col gap-6">
         <Card>
@@ -274,13 +288,6 @@ export default function StudentProfilePage() {
                                 <p className="font-semibold">{student.email || 'No registrado'}</p>
                             </div>
                         </div>
-                         <div className="flex items-start gap-3">
-                            <Contact className="h-6 w-6 text-primary mt-1 flex-shrink-0"/>
-                            <div>
-                                <p className="text-sm text-muted-foreground">ID de Estudiante:</p>
-                                <p className="font-semibold">{student.id}</p>
-                            </div>
-                        </div>
                     </div>
                      <div className="space-y-4">
                         <div className="flex items-start gap-3">
@@ -297,12 +304,19 @@ export default function StudentProfilePage() {
                                 <p className="font-semibold">{student.tutorPhone || 'No registrado'}</p>
                             </div>
                         </div>
+                         <div className="flex items-start gap-3">
+                            <Contact className="h-6 w-6 text-primary mt-1 flex-shrink-0"/>
+                            <div>
+                                <p className="text-sm text-muted-foreground">ID de Estudiante:</p>
+                                <p className="font-semibold">{student.id}</p>
+                            </div>
+                        </div>
                     </div>
                  </div>
             </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 print:grid-cols-2">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div>
                 <Card>
                     <CardHeader>
@@ -398,12 +412,12 @@ export default function StudentProfilePage() {
                         <div className="p-4 bg-muted/50 rounded-md border whitespace-pre-wrap text-sm">
                             {generatedFeedback}
                         </div>
-                         <Button variant="secondary" size="sm" onClick={() => setGeneratedFeedback('')} className="print:hidden">
+                         <Button variant="secondary" size="sm" onClick={() => setGeneratedFeedback('')}>
                             Ocultar retroalimentación
                          </Button>
                     </div>
                 ) : (
-                    <div className="text-center p-4 print:hidden">
+                    <div className="text-center p-4">
                         <p className="text-muted-foreground mb-4">
                             Haz clic en el botón para generar un análisis completo del desempeño y obtener recomendaciones.
                         </p>
@@ -420,28 +434,6 @@ export default function StudentProfilePage() {
             </CardContent>
         </Card>
       </div>
-       <style jsx global>{`
-        @media print {
-          body * {
-            visibility: hidden;
-          }
-          #print-content, #print-content * {
-            visibility: visible;
-          }
-          #print-content {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            margin: 0;
-            padding: 1rem;
-          }
-          .card {
-            border: 1px solid #e5e7eb !important;
-            box-shadow: none !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }
