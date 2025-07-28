@@ -7,19 +7,21 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Student, Group, StudentObservation } from '@/lib/placeholder-data';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
-import { Mail, User, Contact, EyeOff, Printer, FileText, Loader2 } from 'lucide-react';
+import { Mail, User, Contact, EyeOff, Printer, FileText, Loader2, Phone, Wand2 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { generateStudentFeedback } from '@/ai/flows/student-feedback';
 
 type EvaluationCriteria = {
   id: string;
@@ -53,7 +55,7 @@ type ParticipationRecord = {
 type StudentStats = {
   averageGrade: number;
   attendance: { p: number, a: number, total: number };
-  gradesByGroup: { group: string, grade: number }[];
+  gradesByGroup: { group: string, grade: number, criteriaDetails: { name: string, earned: number, weight: number }[] }[];
 };
 
 
@@ -67,11 +69,15 @@ export default function StudentProfilePage() {
   const [observations, setObservations] = useState<StudentObservation[]>([]);
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
+  const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
+  const [generatedFeedback, setGeneratedFeedback] = useState('');
   
-  const calculateFinalGrade = useCallback((studentId: string, criteria: EvaluationCriteria[], grades: Grades, participations: ParticipationRecord) => {
-    if (!criteria || criteria.length === 0) return 0;
+  const calculateFinalGradeDetails = useCallback((studentId: string, criteria: EvaluationCriteria[], grades: Grades, participations: ParticipationRecord): { finalGrade: number; criteriaDetails: { name: string, earned: number, weight: number }[] } => {
+    if (!criteria || criteria.length === 0) return { finalGrade: 0, criteriaDetails: [] };
     
     let finalGrade = 0;
+    const criteriaDetails: { name: string, earned: number, weight: number }[] = [];
+
     for (const criterion of criteria) {
       let performanceRatio = 0;
 
@@ -89,9 +95,12 @@ export default function StudentProfilePage() {
             performanceRatio = delivered / expected;
           }
       }
-      finalGrade += performanceRatio * criterion.weight;
+      const earnedPercentage = performanceRatio * criterion.weight;
+      finalGrade += earnedPercentage;
+      criteriaDetails.push({ name: criterion.name, earned: earnedPercentage, weight: criterion.weight });
     }
-    return finalGrade > 100 ? 100 : finalGrade;
+    
+    return { finalGrade: finalGrade > 100 ? 100 : finalGrade, criteriaDetails };
   }, []);
 
 
@@ -109,15 +118,15 @@ export default function StudentProfilePage() {
         const storedGroups: Group[] = JSON.parse(localStorage.getItem('groups') || '[]');
         const studentGroups = storedGroups.filter(g => g.students.some(s => s.id === studentId));
 
-        const gradesByGroup: { group: string, grade: number }[] = [];
+        const gradesByGroup: StudentStats['gradesByGroup'] = [];
         let totalGradeSum = 0;
         
         studentGroups.forEach(group => {
             const criteria: EvaluationCriteria[] = JSON.parse(localStorage.getItem(`criteria_${group.id}`) || '[]');
             const grades: Grades = JSON.parse(localStorage.getItem(`grades_${group.id}`) || '{}');
             const participations: ParticipationRecord = JSON.parse(localStorage.getItem(`participations_${group.id}`) || '{}');
-            const finalGrade = calculateFinalGrade(studentId, criteria, grades, participations);
-            gradesByGroup.push({ group: group.subject, grade: finalGrade });
+            const { finalGrade, criteriaDetails } = calculateFinalGradeDetails(studentId, criteria, grades, participations);
+            gradesByGroup.push({ group: group.subject, grade: finalGrade, criteriaDetails });
             totalGradeSum += finalGrade;
         });
 
@@ -127,6 +136,7 @@ export default function StudentProfilePage() {
         const allDates = Object.keys(globalAttendance);
         
         allDates.forEach(date => {
+            // Check if the student belongs to any group that might have had this attendance record. This is a simplification.
             if (globalAttendance[date]?.[studentId] !== undefined) {
                 attendanceStats.total++;
                 if (globalAttendance[date][studentId]) attendanceStats.p++;
@@ -149,8 +159,34 @@ export default function StudentProfilePage() {
     } finally {
         setIsLoading(false);
     }
-  }, [studentId, calculateFinalGrade, toast]);
+  }, [studentId, calculateFinalGradeDetails, toast]);
   
+   const handleGenerateFeedback = async () => {
+    if (!student || !studentStats) return;
+    setIsGeneratingFeedback(true);
+    setGeneratedFeedback('');
+    try {
+      const input = {
+        studentName: student.name,
+        gradesByGroup: studentStats.gradesByGroup.map(g => ({ group: g.group, grade: g.grade })),
+        attendance: studentStats.attendance,
+        observations: observations.map(o => ({ type: o.type, details: o.details })),
+      };
+      const result = await generateStudentFeedback(input);
+      setGeneratedFeedback(result.feedback);
+    } catch (error) {
+      console.error("Error generating feedback:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Error de IA',
+        description: 'No se pudo generar la retroalimentación. Inténtalo de nuevo.',
+      });
+    } finally {
+      setIsGeneratingFeedback(false);
+    }
+  };
+
+
   if (isLoading) {
     return (
         <div className="flex justify-center items-center h-full">
@@ -201,7 +237,7 @@ export default function StudentProfilePage() {
             <CardHeader>
                 <CardTitle>Información Personal</CardTitle>
             </CardHeader>
-            <CardContent className="grid md:grid-cols-3 gap-8 items-center">
+            <CardContent className="grid md:grid-cols-3 gap-6 items-start">
                  <div className="md:col-span-1 flex justify-center">
                     <Image
                         alt="Avatar"
@@ -212,72 +248,101 @@ export default function StudentProfilePage() {
                         width={192}
                     />
                  </div>
-                 <div className="md:col-span-2 space-y-6">
-                    <div className="flex items-center gap-4">
-                        <User className="h-8 w-8 text-primary"/>
+                 <div className="md:col-span-2 space-y-4">
+                    <div className="flex items-start gap-3">
+                        <User className="h-6 w-6 text-primary mt-1"/>
                         <div>
                             <p className="text-sm text-muted-foreground">Nombre Completo:</p>
                             <p className="font-semibold text-lg">{student.name}</p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                        <Mail className="h-8 w-8 text-primary"/>
+                     <div className="flex items-start gap-3">
+                        <Contact className="h-6 w-6 text-primary mt-1"/>
+                        <div>
+                            <p className="text-sm text-muted-foreground">ID de Estudiante:</p>
+                            <p className="font-semibold">{student.id}</p>
+                        </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                        <Mail className="h-6 w-6 text-primary mt-1"/>
                         <div>
                             <p className="text-sm text-muted-foreground">Email:</p>
                             <p className="font-semibold">{student.email || 'No registrado'}</p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                        <Contact className="h-8 w-8 text-primary"/>
+                     <div className="flex items-start gap-3">
+                        <User className="h-6 w-6 text-primary mt-1"/>
                         <div>
-                            <p className="text-sm text-muted-foreground">ID de Estudiante:</p>
-                            <p className="font-semibold">{student.id}</p>
+                            <p className="text-sm text-muted-foreground">Tutor:</p>
+                            <p className="font-semibold">{student.tutorName || 'No registrado'}</p>
+                        </div>
+                    </div>
+                     <div className="flex items-start gap-3">
+                        <Phone className="h-6 w-6 text-primary mt-1"/>
+                        <div>
+                            <p className="text-sm text-muted-foreground">Teléfono Tutor:</p>
+                            <p className="font-semibold">{student.tutorPhone || 'No registrado'}</p>
                         </div>
                     </div>
                  </div>
             </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Resumen de Calificaciones</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-3">
-                        {studentStats?.gradesByGroup.map(item => (
-                            <div key={item.group} className="flex justify-between items-center p-3 rounded-md border">
-                                <p>{item.group}</p>
-                                <Badge variant={item.grade >= 70 ? "default" : "destructive"} className="text-base">{item.grade.toFixed(1)}%</Badge>
-                            </div>
-                        ))}
-                        {studentStats && studentStats.gradesByGroup.length > 0 && (
-                            <div className="flex justify-between items-center p-3 rounded-md bg-green-100 border-green-300 dark:bg-green-900/50 dark:border-green-700">
-                                <p className="font-bold text-green-800 dark:text-green-300">Promedio Semestral:</p>
-                                <Badge className="text-lg bg-green-600 hover:bg-green-600">{studentStats.averageGrade.toFixed(1)}%</Badge>
-                            </div>
-                        )}
-                        {studentStats?.gradesByGroup.length === 0 && (
-                            <p className="text-sm text-center text-muted-foreground py-4">No hay calificaciones registradas.</p>
-                        )}
-                    </div>
-                </CardContent>
-            </Card>
-             <Card>
-                <CardHeader>
-                    <CardTitle>Historial de Asistencia</CardTitle>
-                    <CardDescription>Resumen de todos los grupos</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                    <div className="flex justify-between p-2 border-b"><span>Total de Clases Registradas:</span> <span className="font-bold">{studentStats?.attendance.total || 0}</span></div>
-                    <div className="flex justify-between p-2 rounded-md bg-green-100 dark:bg-green-900/50"><span>Presente:</span> <span className="font-bold">{studentStats?.attendance.p || 0}</span></div>
-                    <div className="flex justify-between p-2 rounded-md bg-red-100 dark:bg-red-900/50"><span>Ausente:</span> <span className="font-bold">{studentStats?.attendance.a || 0}</span></div>
-                    <div className="flex justify-between items-center p-3 rounded-md bg-blue-100 dark:bg-blue-900/50 mt-2">
-                        <p className="font-bold text-blue-800 dark:text-blue-300">Tasa de Asistencia:</p>
-                        <Badge className="text-lg bg-blue-600 hover:bg-blue-600">{attendanceRate.toFixed(1)}%</Badge>
-                    </div>
-                </CardContent>
-            </Card>
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            <div className="lg:col-span-3">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Resumen de Calificaciones</CardTitle>
+                         <CardDescription>Desglose de calificaciones por materia y promedio semestral.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-4">
+                            {studentStats?.gradesByGroup.map(item => (
+                                <div key={item.group}>
+                                    <div className="flex justify-between items-center p-3 rounded-t-md border bg-muted/50">
+                                        <p className="font-semibold">{item.group}</p>
+                                        <Badge variant={item.grade >= 70 ? "default" : "destructive"} className="text-base">{item.grade.toFixed(1)}%</Badge>
+                                    </div>
+                                    <div className='p-3 border-x border-b rounded-b-md text-xs space-y-1'>
+                                        {item.criteriaDetails.map(c => (
+                                            <div key={c.name} className='flex justify-between'>
+                                                <span>{c.name} ({c.weight}%):</span>
+                                                <span className='font-medium'>{c.earned.toFixed(1)}%</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                            {studentStats && studentStats.gradesByGroup.length > 0 && (
+                                <div className="flex justify-between items-center p-3 rounded-md bg-green-100 border-green-300 dark:bg-green-900/50 dark:border-green-700 mt-4">
+                                    <p className="font-bold text-green-800 dark:text-green-300">Promedio Semestral:</p>
+                                    <Badge className="text-lg bg-green-600 hover:bg-green-600">{studentStats.averageGrade.toFixed(1)}%</Badge>
+                                </div>
+                            )}
+                            {studentStats?.gradesByGroup.length === 0 && (
+                                <p className="text-sm text-center text-muted-foreground py-4">No hay calificaciones registradas.</p>
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+             <div className="lg:col-span-2">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Historial de Asistencia</CardTitle>
+                        <CardDescription>Resumen de todos los grupos</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                        <div className="flex justify-between p-2 border-b"><span>Total de Clases Registradas:</span> <span className="font-bold">{studentStats?.attendance.total || 0}</span></div>
+                        <div className="flex justify-between p-2 rounded-md bg-green-100 dark:bg-green-900/50"><span>Presente:</span> <span className="font-bold">{studentStats?.attendance.p || 0}</span></div>
+                        <div className="flex justify-between p-2 rounded-md bg-red-100 dark:bg-red-900/50"><span>Ausente:</span> <span className="font-bold">{studentStats?.attendance.a || 0}</span></div>
+                        <div className="flex justify-between items-center p-3 rounded-md bg-blue-100 dark:bg-blue-900/50 mt-2">
+                            <p className="font-bold text-blue-800 dark:text-blue-300">Tasa de Asistencia:</p>
+                            <Badge className="text-lg bg-blue-600 hover:bg-blue-600">{attendanceRate.toFixed(1)}%</Badge>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
         </div>
         
         <Card>
@@ -298,7 +363,42 @@ export default function StudentProfilePage() {
                         ))}
                     </div>
                 ) : (
-                    <p className="text-sm text-center text-muted-foreground py-4">No hay observaciones.</p>
+                    <p className="text-sm text-center text-muted-foreground py-4">No hay observaciones registradas.</p>
+                )}
+            </CardContent>
+        </Card>
+
+        <Card>
+            <CardHeader>
+                <CardTitle>Retroalimentación y Recomendaciones (IA)</CardTitle>
+                <CardDescription>
+                    Análisis del desempeño del estudiante y sugerencias generadas por inteligencia artificial.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                {generatedFeedback ? (
+                    <div className="space-y-4">
+                        <div className="p-4 bg-muted/50 rounded-md border whitespace-pre-wrap text-sm">
+                            {generatedFeedback}
+                        </div>
+                         <Button variant="secondary" size="sm" onClick={() => setGeneratedFeedback('')}>
+                            Ocultar retroalimentación
+                         </Button>
+                    </div>
+                ) : (
+                    <div className="text-center p-4">
+                        <p className="text-muted-foreground mb-4">
+                            Haz clic en el botón para generar un análisis completo del desempeño y obtener recomendaciones.
+                        </p>
+                        <Button onClick={handleGenerateFeedback} disabled={isGeneratingFeedback}>
+                            {isGeneratingFeedback ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                                <Wand2 className="mr-2 h-4 w-4" />
+                            )}
+                            {isGeneratingFeedback ? 'Generando...' : 'Generar Retroalimentación'}
+                        </Button>
+                    </div>
                 )}
             </CardContent>
         </Card>
