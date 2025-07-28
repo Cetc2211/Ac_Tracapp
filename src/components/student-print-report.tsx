@@ -19,15 +19,16 @@ interface StudentPrintReportProps {
   attendanceRate: number;
 }
 
-export const StudentPrintReport = React.forwardRef<HTMLDivElement, StudentPrintReportProps>(
-  ({ student, studentStats, observations, generatedFeedback, attendanceRate }, ref) => {
-    
+export class StudentPrintReport extends React.Component<StudentPrintReportProps> {
+  render() {
+    const { student, studentStats, observations, generatedFeedback, attendanceRate } = this.props;
+
     if (!student) {
       return null;
     }
 
     return (
-      <div ref={ref} className="p-8 font-sans">
+      <div className="p-8 font-sans">
         <h1 className="text-3xl font-bold text-center mb-2">Informe Individual del Estudiante</h1>
         <p className="text-center text-muted-foreground mb-8">
             Generado el {format(new Date(), "PPP", { locale: es })}
@@ -164,6 +165,4 @@ export const StudentPrintReport = React.forwardRef<HTMLDivElement, StudentPrintR
       </div>
     );
   }
-);
-
-StudentPrintReport.displayName = 'StudentPrintReport';
+}
