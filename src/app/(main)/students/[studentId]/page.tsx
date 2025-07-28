@@ -74,10 +74,10 @@ export default function StudentProfilePage() {
   const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
   const [generatedFeedback, setGeneratedFeedback] = useState('');
   
-  const printRef = useRef<HTMLDivElement>(null);
+  const componentRef = useRef<StudentPrintReport>(null);
 
   const handlePrint = useReactToPrint({
-    content: () => printRef.current,
+    content: () => componentRef.current,
     documentTitle: `Informe - ${student?.name || 'Estudiante'}`,
   });
 
@@ -223,7 +223,7 @@ export default function StudentProfilePage() {
     <div className="flex flex-col gap-6">
        <div style={{ display: 'none' }}>
         <StudentPrintReport 
-            ref={printRef} 
+            ref={componentRef} 
             student={student} 
             studentStats={studentStats}
             observations={observations}
