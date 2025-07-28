@@ -161,7 +161,7 @@ export default function GroupGradesPage() {
   };
   
   const calculateFinalGrade = useCallback((studentId: string) => {
-    if (!evaluationCriteria || evaluationCriteria.length === 0) return '0.00%';
+    if (!evaluationCriteria || evaluationCriteria.length === 0) return '0%';
 
     let finalGrade = 0;
     
@@ -183,7 +183,7 @@ export default function GroupGradesPage() {
       }
       finalGrade += performanceRatio * criterion.weight;
     }
-    return `${finalGrade.toFixed(2)}%`;
+    return `${finalGrade.toFixed(0)}%`;
   }, [grades, evaluationCriteria, participationData]);
   
   const studentsInGroup = useMemo(() => {
@@ -297,7 +297,7 @@ export default function GroupGradesPage() {
                               <span className="font-bold">{participationData[student.id]?.participated ?? 0} de {participationData[student.id]?.total ?? 0}</span>
                               <Label className='text-xs mt-2'>Porcentaje Ganado</Label>
                                <span className="font-bold text-lg">
-                                  {earnedPercentage.toFixed(2)}%
+                                  {earnedPercentage.toFixed(0)}%
                               </span>
                           </div>
                         ) : (
@@ -318,7 +318,7 @@ export default function GroupGradesPage() {
                             <div className='flex-1'>
                                 <Label className='text-xs'>Porcentaje Ganado</Label>
                                 <div className="h-8 flex items-center justify-center font-bold text-lg">
-                                  {earnedPercentage.toFixed(2)}%
+                                  {earnedPercentage.toFixed(0)}%
                                 </div>
                             </div>
                           </div>
@@ -339,5 +339,6 @@ export default function GroupGradesPage() {
     </div>
   );
 }
+
 
 
