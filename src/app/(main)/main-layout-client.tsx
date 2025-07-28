@@ -36,6 +36,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useState, useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SheetTitle } from '@/components/ui/sheet';
 
 
 const navItems = [
@@ -45,6 +46,7 @@ const navItems = [
   { href: '/participations', icon: PenSquare, label: 'Participaciones' },
   { href: '/observations', icon: BookText, label: 'Observaciones' },
   { href: '/progressions', icon: Presentation, label: 'Progresiones' },
+  { href: '/reports', icon: FileText, label: 'Informes' },
   { href: '/statistics', icon: BarChart3, label: 'Estadísticas' },
   { href: '/tutors', icon: Contact, label: 'Tutores' },
 ];
@@ -90,6 +92,7 @@ export default function MainLayoutClient({
   return (
     <SidebarProvider>
       <Sidebar>
+        <SheetTitle className="sr-only">Menú de Navegación</SheetTitle>
         <SidebarHeader>
           {isClient ? (
             <AppLogo name={settings.institutionName} logoUrl={settings.logo} />

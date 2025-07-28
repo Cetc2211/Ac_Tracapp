@@ -10,14 +10,6 @@ import {
   CardTitle,
   CardFooter,
 } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Phone, Users, Eye } from 'lucide-react';
 import { groups as initialGroups, Group, Student } from '@/lib/placeholder-data';
@@ -30,6 +22,78 @@ import {
   DialogDescription,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
+
+// Extracted TutorListDialog to be a top-level component.
+const TutorListDialog = ({ group, studentsWithTutors }: { group: Group, studentsWithTutors: Student[] }) => {
+    return (
+        <Dialog>
+            <DialogTrigger asChild>
+                <Button variant="outline" className="w-full" disabled={studentsWithTutors.length === 0}>
+                    <Eye className="mr-2 h-4 w-4" />
+                    Ver Lista de Tutores
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl">
+                <DialogHeader>
+                    <DialogTitle>Tutores del Grupo: {group.subject}</DialogTitle>
+                    <DialogDescription>
+                        Lista completa de estudiantes y la información de contacto de sus tutores.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="max-h-[60vh] overflow-y-auto">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Estudiante</TableHead>
+                                <TableHead>Tutor</TableHead>
+                                <TableHead>Teléfono del Tutor</TableHead>
+                                <TableHead className="text-right">Acciones</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {studentsWithTutors.map((student) => (
+                                <TableRow key={student.id}>
+                                    <TableCell className="font-medium flex items-center gap-3">
+                                        <Image
+                                            alt="Foto del estudiante"
+                                            className="aspect-square rounded-full object-cover"
+                                            height="40"
+                                            src={student.photo}
+                                            data-ai-hint="student photo"
+                                            width="40"
+                                        />
+                                        {student.name}
+                                    </TableCell>
+                                    <TableCell>{student.tutorName}</TableCell>
+                                    <TableCell>{student.tutorPhone}</TableCell>
+                                    <TableCell className="text-right">
+                                        {student.tutorPhone &&
+                                            <Button variant="outline" size="sm" asChild>
+                                                <a href={`tel:${student.tutorPhone}`}>
+                                                    <Phone className="mr-2 h-4 w-4" />
+                                                    Llamar
+                                                </a>
+                                            </Button>
+                                        }
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+            </DialogContent>
+        </Dialog>
+    );
+};
+
 
 export default function TutorsPage() {
   const [groups, setGroups] = useState<Group[]>(initialGroups);
@@ -64,96 +128,42 @@ export default function TutorsPage() {
                 const remainingStudentsCount = studentsWithTutors.length - displayedStudents.length;
 
                 return (
-                    <Dialog key={group.id}>
-                        <Card className="flex flex-col">
-                            <CardHeader>
-                                <CardTitle>{group.subject}</CardTitle>
-                                <CardDescription>
-                                    {studentsWithTutors.length} de {group.students.length} estudiantes tienen información de tutor.
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="flex-grow">
-                                <div className="flex items-center space-x-2">
-                                    <div className="flex -space-x-4">
-                                        {displayedStudents.map(student => (
-                                            <Image
-                                                key={student.id}
-                                                alt={student.name}
-                                                className="aspect-square rounded-full object-cover border-2 border-card"
-                                                height="40"
-                                                src={student.photo}
-                                                data-ai-hint="student avatar"
-                                                width="40"
-                                            />
-                                        ))}
-                                    </div>
-                                    {remainingStudentsCount > 0 && (
-                                        <span className="text-sm text-muted-foreground">
-                                            + {remainingStudentsCount} más
-                                        </span>
-                                    )}
-                                     {studentsWithTutors.length === 0 && (
-                                        <p className="text-sm text-muted-foreground">No hay tutores registrados.</p>
-                                    )}
+                    <Card key={group.id} className="flex flex-col">
+                        <CardHeader>
+                            <CardTitle>{group.subject}</CardTitle>
+                            <CardDescription>
+                                {studentsWithTutors.length} de {group.students.length} estudiantes tienen información de tutor.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="flex-grow">
+                            <div className="flex items-center space-x-2">
+                                <div className="flex -space-x-4">
+                                    {displayedStudents.map(student => (
+                                        <Image
+                                            key={student.id}
+                                            alt={student.name}
+                                            className="aspect-square rounded-full object-cover border-2 border-card"
+                                            height="40"
+                                            src={student.photo}
+                                            data-ai-hint="student avatar"
+                                            width="40"
+                                        />
+                                    ))}
                                 </div>
-                            </CardContent>
-                            <CardFooter>
-                                <DialogTrigger asChild>
-                                    <Button variant="outline" className="w-full" disabled={studentsWithTutors.length === 0}>
-                                        <Eye className="mr-2 h-4 w-4" />
-                                        Ver Lista de Tutores
-                                    </Button>
-                                </DialogTrigger>
-                            </CardFooter>
-                        </Card>
-                        <DialogContent className="max-w-4xl">
-                            <DialogHeader>
-                            <DialogTitle>Tutores del Grupo: {group.subject}</DialogTitle>
-                            <DialogDescription>
-                                Lista completa de estudiantes y la información de contacto de sus tutores.
-                            </DialogDescription>
-                            </DialogHeader>
-                             <div className="max-h-[60vh] overflow-y-auto">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                        <TableHead>Estudiante</TableHead>
-                                        <TableHead>Tutor</TableHead>
-                                        <TableHead>Teléfono del Tutor</TableHead>
-                                        <TableHead className="text-right">Acciones</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {studentsWithTutors.map((student) => (
-                                        <TableRow key={student.id}>
-                                            <TableCell className="font-medium flex items-center gap-3">
-                                            <Image
-                                                alt="Foto del estudiante"
-                                                className="aspect-square rounded-full object-cover"
-                                                height="40"
-                                                src={student.photo}
-                                                data-ai-hint="student photo"
-                                                width="40"
-                                            />
-                                            {student.name}
-                                            </TableCell>
-                                            <TableCell>{student.tutorName}</TableCell>
-                                            <TableCell>{student.tutorPhone}</TableCell>
-                                            <TableCell className="text-right">
-                                            <Button variant="outline" size="sm" asChild>
-                                                <a href={`tel:${student.tutorPhone}`}>
-                                                <Phone className="mr-2 h-4 w-4" />
-                                                Llamar
-                                                </a>
-                                            </Button>
-                                            </TableCell>
-                                        </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
+                                {remainingStudentsCount > 0 && (
+                                    <span className="text-sm text-muted-foreground">
+                                        + {remainingStudentsCount} más
+                                    </span>
+                                )}
+                                 {studentsWithTutors.length === 0 && (
+                                    <p className="text-sm text-muted-foreground">No hay tutores registrados.</p>
+                                )}
                             </div>
-                        </DialogContent>
-                    </Dialog>
+                        </CardContent>
+                        <CardFooter>
+                           <TutorListDialog group={group} studentsWithTutors={studentsWithTutors} />
+                        </CardFooter>
+                    </Card>
                 )
             })}
              {groups.length === 0 && (
@@ -162,8 +172,8 @@ export default function TutorsPage() {
                         <div className="bg-muted rounded-full p-4">
                             <Users className="h-12 w-12 text-muted-foreground" />
                         </div>
-                        <CardTitle>No hay grupos creados</CardTitle>
-                        <CardDescription>No se puede mostrar la información de tutores porque no existen grupos.</CardDescription>
+                        <h1 className="text-2xl font-bold">No hay grupos creados</h1>
+                        <p className="text-muted-foreground">No se puede mostrar la información de tutores porque no existen grupos.</p>
                     </CardContent>
                 </Card>
             )}

@@ -21,6 +21,7 @@ import {
   Eye,
   BookOpenCheck,
   User,
+  Printer,
 } from 'lucide-react';
 import { Group, Student, StudentObservation } from '@/lib/placeholder-data';
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -71,7 +72,7 @@ type QuickStats = {
 export default function ReportsPage() {
   const [activeGroup, setActiveGroup] = useState<Group | null>(null);
   const [quickStats, setQuickStats] = useState<QuickStats | null>(null);
-  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const calculateFinalGrade = useCallback((studentId: string, criteria: EvaluationCriteria[], grades: Grades, participations: ParticipationRecord) => {
@@ -115,6 +116,8 @@ export default function ReportsPage() {
       setActiveGroup(group || null);
 
       if (group) {
+        setSelectedStudent(group.students[0] || null);
+
         const criteria: EvaluationCriteria[] = JSON.parse(localStorage.getItem(`criteria_${group.id}`) || '[]');
         const grades: Grades = JSON.parse(localStorage.getItem(`grades_${group.id}`) || '{}');
         const participations: ParticipationRecord = JSON.parse(localStorage.getItem(`participations_${group.id}`) || '{}');
@@ -171,11 +174,9 @@ export default function ReportsPage() {
     const participations: ParticipationRecord = JSON.parse(localStorage.getItem(`participations_${activeGroup.id}`) || '{}');
 
     let csvContent = "data:text/csv;charset=utf-8,";
-    // Headers
     const headers = ["ID Estudiante", "Nombre", ...criteria.map(c => `${c.name} (${c.weight}%)`), "Calificacion Final"];
     csvContent += headers.join(",") + "\r\n";
 
-    // Rows
     activeGroup.students.forEach(student => {
         const row = [student.id, student.name];
         const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations);
@@ -185,8 +186,8 @@ export default function ReportsPage() {
             if(criterion.name === 'Participación') {
                  const participationDates = Object.keys(participations);
                 if (participationDates.length > 0) {
-                    const participatedClasses = participationDates.filter(date => participations[date]?.[student.id]).length;
-                    performanceRatio = participatedClasses / participationDates.length;
+                    const studentParticipations = Object.values(participations).filter(p => p[student.id]).length;
+                    performanceRatio = studentParticipations / participationDates.length;
                 }
             } else {
                 const gradeDetail = grades[student.id]?.[criterion.id];
@@ -207,11 +208,16 @@ export default function ReportsPage() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `calificaciones_${activeGroup.subject.replace(' ', '_')}.csv`);
+    link.setAttribute("download", `calificaciones_${activeGroup.subject.replace(/\\s+/g, '_')}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
+  
+  const handleStudentChange = (studentId: string) => {
+      const student = activeGroup?.students.find(s => s.id === studentId);
+      setSelectedStudent(student || null);
+  }
 
   if (isLoading) {
       return <div>Cargando...</div>;
@@ -244,115 +250,136 @@ export default function ReportsPage() {
         </p>
       </div>
 
-       <Tabs defaultValue="grupal">
-        <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="grupal">Informe Grupal</TabsTrigger>
-            <TabsTrigger value="individual">Informe Individual</TabsTrigger>
-        </TabsList>
-        <TabsContent value="grupal" className="mt-6 space-y-6">
-            <Card className="bg-muted/30">
-                <CardHeader>
-                <div className="flex justify-between items-start">
-                    <div>
-                    <p className="text-sm font-semibold text-primary flex items-center gap-2"><BookOpenCheck /> Grupo Activo</p>
-                    <CardTitle className="text-2xl mt-1">{activeGroup.subject}</CardTitle>
-                    <CardDescription>{quickStats?.studentCount} estudiantes • {quickStats?.criteriaCount} criterios de evaluación</CardDescription>
-                    </div>
-                    <div className="text-right">
-                    <p className="text-sm text-muted-foreground">Total de registros de asistencia:</p>
-                    <p className="text-3xl font-bold text-primary">{quickStats?.totalAttendanceRecords}</p>
-                    </div>
-                </div>
-                </CardHeader>
-            </Card>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><FileText /> Reporte Académico General</CardTitle>
-                        <CardDescription>Informe global con los promedios y estadísticas consolidadas del grupo.</CardDescription>
-                    </CardHeader>
-                    <CardFooter>
-                        <Button className="w-full" asChild>
-                            <Link href={`/reports/${activeGroup.id}`}>
-                                <Eye className="mr-2 h-4 w-4" /> Vista Previa y Descarga
-                            </Link>
-                        </Button>
-                    </CardFooter>
-                </Card>
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><Download /> Exportar Calificaciones (CSV)</CardTitle>
-                        <CardDescription>Descarga los datos de calificaciones en formato CSV, ideal para hojas de cálculo.</CardDescription>
-                    </CardHeader>
-                    <CardFooter>
-                        <Button variant="secondary" className="w-full" onClick={handleDownloadCsv}>
-                            <Download className="mr-2 h-4 w-4" /> Descargar CSV
-                        </Button>
-                    </CardFooter>
-                </Card>
+       <Card className="bg-muted/30">
+          <CardHeader>
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-sm font-semibold text-primary flex items-center gap-2"><BookOpenCheck /> Grupo Activo</p>
+                <CardTitle className="text-2xl mt-1">{activeGroup.subject}</CardTitle>
+                <CardDescription>{quickStats?.studentCount} estudiantes • {quickStats?.criteriaCount} criterios de evaluación</CardDescription>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-muted-foreground">Total de registros de asistencia:</p>
+                <p className="text-3xl font-bold text-primary">{quickStats?.totalAttendanceRecords}</p>
+              </div>
             </div>
-             <Card>
-                <CardHeader>
-                    <CardTitle>Estadísticas Rápidas</CardTitle>
-                </CardHeader>
-                <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-                    <div className="flex flex-col items-center gap-1">
-                        <Users className="h-8 w-8 text-muted-foreground"/>
-                        <p className="text-2xl font-bold">{quickStats?.studentCount}</p>
-                        <p className="text-sm text-muted-foreground">Estudiantes</p>
-                    </div>
-                    <div className="flex flex-col items-center gap-1">
-                        <TrendingUp className="h-8 w-8 text-muted-foreground"/>
-                        <p className="text-2xl font-bold">{quickStats?.groupAverage}</p>
-                        <p className="text-sm text-muted-foreground">Promedio del Grupo</p>
-                    </div>
-                    <div className="flex flex-col items-center gap-1">
-                        <Percent className="h-8 w-8 text-muted-foreground"/>
-                        <p className="text-2xl font-bold">{quickStats?.attendanceRate}%</p>
-                        <p className="text-sm text-muted-foreground">Asistencia</p>
-                    </div>
-                    <div className="flex flex-col items-center gap-1">
-                        <CheckCircle className="h-8 w-8 text-muted-foreground"/>
-                        <p className="text-2xl font-bold">{quickStats?.approvedCount}</p>
-                        <p className="text-sm text-muted-foreground">Aprobados (≥70)</p>
-                    </div>
-                </CardContent>
-            </Card>
-        </TabsContent>
-        <TabsContent value="individual" className="mt-6">
+          </CardHeader>
+        </Card>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card>
+              <CardHeader>
+                  <CardTitle className="flex items-center gap-2"><FileText /> Reporte de Calificaciones</CardTitle>
+                  <CardDescription>Calificaciones detalladas por estudiante y parcial</CardDescription>
+              </CardHeader>
+              <CardFooter>
+                  <Button className="w-full">
+                      <Eye className="mr-2 h-4 w-4" /> Vista Previa y Descarga
+                  </Button>
+              </CardFooter>
+          </Card>
+          <Card>
+              <CardHeader>
+                  <CardTitle className="flex items-center gap-2"><BarChart /> Reporte de Asistencia</CardTitle>
+                  <CardDescription>Estadísticas de asistencia por estudiante</CardDescription>
+              </CardHeader>
+              <CardFooter>
+                   <Button className="w-full">
+                      <Eye className="mr-2 h-4 w-4" /> Vista Previa y Descarga
+                  </Button>
+              </CardFooter>
+          </Card>
             <Card>
                 <CardHeader>
-                <CardTitle className="flex items-center gap-2"><User /> Informes Individuales</CardTitle>
-                <CardDescription>
-                    Elige un estudiante para generar y visualizar su informe individual detallado, incluyendo calificaciones, asistencia y observaciones.
-                </CardDescription>
+                    <CardTitle className="flex items-center gap-2"><FileText /> Reporte Académico Completo</CardTitle>
+                    <CardDescription>Reporte integral con calificaciones, asistencia y estadísticas</CardDescription>
                 </CardHeader>
-                <CardContent>
-                    <div className="flex flex-col sm:flex-row gap-4 items-center">
-                        <Select onValueChange={setSelectedStudentId} value={selectedStudentId || ''}>
-                            <SelectTrigger className="flex-grow">
-                                <SelectValue placeholder="Seleccionar Estudiante..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {activeGroup.students.sort((a,b) => a.name.localeCompare(b.name)).map(student => (
-                                    <SelectItem key={student.id} value={student.id}>
-                                        {student.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <Button asChild disabled={!selectedStudentId} className="w-full sm:w-auto">
-                            <Link href={`/students/${selectedStudentId}`}>
-                                Generar Informe Individual
-                            </Link>
-                        </Button>
-                    </div>
-                </CardContent>
+                <CardFooter>
+                    <Button className="w-full" asChild>
+                        <Link href={`/reports/${activeGroup.id}`}>
+                            <Eye className="mr-2 h-4 w-4" /> Vista Previa y Descarga
+                        </Link>
+                    </Button>
+                </CardFooter>
             </Card>
-        </TabsContent>
-      </Tabs>
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Download /> Exportar Calificaciones (CSV)</CardTitle>
+                    <CardDescription>Datos de calificaciones en formato CSV para Excel</CardDescription>
+                </CardHeader>
+                <CardFooter>
+                    <Button variant="secondary" className="w-full" onClick={handleDownloadCsv}>
+                        <Download className="mr-2 h-4 w-4" /> Descargar CSV
+                    </Button>
+                </CardFooter>
+            </Card>
+        </div>
+         <Card>
+            <CardHeader>
+                <CardTitle>Estadísticas Rápidas</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+                <div className="flex flex-col items-center gap-1">
+                    <p className="text-3xl font-bold text-green-600">{quickStats?.studentCount}</p>
+                    <p className="text-sm text-muted-foreground">Estudiantes</p>
+                </div>
+                <div className="flex flex-col items-center gap-1">
+                    <p className="text-3xl font-bold text-blue-600">{quickStats?.groupAverage}</p>
+                    <p className="text-sm text-muted-foreground">Promedio del Grupo</p>
+                </div>
+                <div className="flex flex-col items-center gap-1">
+                    <p className="text-3xl font-bold text-yellow-500">{quickStats?.attendanceRate}%</p>
+                    <p className="text-sm text-muted-foreground">Asistencia</p>
+                </div>
+                <div className="flex flex-col items-center gap-1">
+                    <p className="text-3xl font-bold text-purple-600">{quickStats?.approvedCount}</p>
+                    <p className="text-sm text-muted-foreground">Aprobados (≥70)</p>
+                </div>
+            </CardContent>
+        </Card>
+        <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><User /> Informes Individuales de Estudiantes</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <div>
+                  <Label>Seleccionar Estudiante:</Label>
+                   <Select onValueChange={handleStudentChange} defaultValue={selectedStudent?.id}>
+                      <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar Estudiante..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                          {activeGroup.students.sort((a,b) => a.name.localeCompare(b.name)).map(student => (
+                              <SelectItem key={student.id} value={student.id}>
+                                  {student.name} ({student.email})
+                              </SelectItem>
+                          ))}
+                      </SelectContent>
+                  </Select>
+                </div>
+                {selectedStudent && (
+                    <div className="p-4 rounded-md bg-muted/50 border border-muted-foreground/20">
+                        <h4 className="font-semibold">{selectedStudent.name}</h4>
+                        <p className="text-sm text-muted-foreground">
+                            Informe completo con perfil del estudiante, calificaciones detalladas, asistencia y fechas específicas
+                        </p>
+                        <div className="mt-4 flex flex-wrap gap-2">
+                             <Button asChild size="sm" variant="secondary">
+                                <Link href={`/students/${selectedStudent.id}`}>
+                                    <Eye className="mr-2 h-4 w-4" /> Ver Perfil Visual
+                                </Link>
+                            </Button>
+                             <Button size="sm" variant="secondary">
+                                <Printer className="mr-2 h-4 w-4" /> Formato Impresión
+                            </Button>
+                             <Button size="sm" variant="secondary">
+                                <FileText className="mr-2 h-4 w-4" /> Ver Informe Texto
+                            </Button>
+                        </div>
+                    </div>
+                )}
+            </CardContent>
+        </Card>
     </div>
   );
 }
-
