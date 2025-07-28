@@ -9,35 +9,16 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { students as initialStudents, Student, Group, StudentObservation } from '@/lib/placeholder-data';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
-import { ArrowLeft, Edit, Mail, Phone, User, Save, Contact, CalendarDays, TrendingUp, BookText, EyeOff, Printer, FileText } from 'lucide-react';
+import { ArrowLeft, Mail, User, Contact, EyeOff, Printer, FileText } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Link from 'next/link';
-import { Progress } from '@/components/ui/progress';
 import { useRouter } from 'next/navigation';
 
 type EvaluationCriteria = {
@@ -146,7 +127,6 @@ export default function StudentProfilePage() {
 
         let attendanceStats = { p: 0, a: 0, l: 0, total: 0 };
         if (activeGroupId) {
-          const globalAttendance: { [date: string]: {[sId: string]: boolean} } = JSON.parse(localStorage.getItem('globalAttendance') || '{}');
           const groupAttendance: DailyAttendance = JSON.parse(localStorage.getItem(`attendance_${activeGroupId}`) || '{}');
           
           Object.values(groupAttendance).forEach(record => {
@@ -156,7 +136,12 @@ export default function StudentProfilePage() {
                  else if (record[studentId] === 'late') attendanceStats.l++;
             }
           });
-          attendanceStats.total = Object.keys(groupAttendance).length;
+          
+          const groupForAttendance = storedGroups.find(g => g.id === activeGroupId);
+          if (groupForAttendance) {
+             const allDates = Object.keys(JSON.parse(localStorage.getItem(`attendance_${activeGroupId}`) || '{}'));
+             attendanceStats.total = allDates.length;
+          }
         }
 
         const observations: StudentObservation[] = JSON.parse(localStorage.getItem(`observations_${studentId}`) || '[]');
@@ -199,11 +184,11 @@ export default function StudentProfilePage() {
           </CardHeader>
           <CardContent>
              <div className="flex items-center gap-2">
-                <Button asChild variant="outline" onClick={() => router.back()}>
-                   <Link href="#"><EyeOff /> Ocultar Perfil</Link>
+                <Button variant="outline" onClick={() => router.back()}>
+                   <EyeOff className="mr-2 h-4 w-4" /> Ocultar Perfil
                 </Button>
-                <Button variant="outline"><Printer /> Formato Impresión</Button>
-                <Button variant="outline"><FileText /> Ver Informe Texto</Button>
+                <Button variant="outline"><Printer className="mr-2 h-4 w-4" /> Formato Impresión</Button>
+                <Button variant="outline"><FileText className="mr-2 h-4 w-4" /> Ver Informe Texto</Button>
              </div>
           </CardContent>
        </Card>
@@ -260,13 +245,13 @@ export default function StudentProfilePage() {
                         {studentStats?.gradesByGroup.map(item => (
                             <div key={item.group} className="flex justify-between items-center p-3 rounded-md border">
                                 <p>{item.group}</p>
-                                <Badge variant="secondary">{item.grade.toFixed(1)}%</Badge>
+                                <Badge variant={item.grade >= 70 ? "default" : "destructive"} className="text-base">{item.grade.toFixed(1)}%</Badge>
                             </div>
                         ))}
                         {studentStats && studentStats.gradesByGroup.length > 0 && (
-                             <div className="flex justify-between items-center p-3 rounded-md bg-green-100 border-green-300">
-                                <p className="font-bold text-green-800">Promedio Semestral:</p>
-                                <Badge className="text-lg bg-green-600">{studentStats.averageGrade.toFixed(1)}%</Badge>
+                             <div className="flex justify-between items-center p-3 rounded-md bg-green-100 border-green-300 dark:bg-green-900/50 dark:border-green-700">
+                                <p className="font-bold text-green-800 dark:text-green-300">Promedio Semestral:</p>
+                                <Badge className="text-lg bg-green-600 hover:bg-green-600">{studentStats.averageGrade.toFixed(1)}%</Badge>
                             </div>
                         )}
                          {studentStats?.gradesByGroup.length === 0 && (
@@ -284,12 +269,12 @@ export default function StudentProfilePage() {
                 </CardHeader>
                 <CardContent className="space-y-2">
                     <div className="flex justify-between p-2 border-b"><span>Total de Clases:</span> <span className="font-bold">{studentStats?.attendance.total || 0}</span></div>
-                    <div className="flex justify-between p-2 rounded-md bg-green-100"><span>Presente:</span> <span className="font-bold">{studentStats?.attendance.p || 0}</span></div>
-                    <div className="flex justify-between p-2 rounded-md bg-yellow-100"><span>Tarde:</span> <span className="font-bold">{studentStats?.attendance.l || 0}</span></div>
-                    <div className="flex justify-between p-2 rounded-md bg-red-100"><span>Ausente:</span> <span className="font-bold">{studentStats?.attendance.a || 0}</span></div>
-                    <div className="flex justify-between items-center p-3 rounded-md bg-blue-100 mt-2">
-                        <p className="font-bold text-blue-800">Tasa de Asistencia:</p>
-                        <Badge className="text-lg bg-blue-600">{attendanceRate.toFixed(1)}%</Badge>
+                    <div className="flex justify-between p-2 rounded-md bg-green-100 dark:bg-green-900/50"><span>Presente:</span> <span className="font-bold">{studentStats?.attendance.p || 0}</span></div>
+                    <div className="flex justify-between p-2 rounded-md bg-yellow-100 dark:bg-yellow-900/50"><span>Tarde:</span> <span className="font-bold">{studentStats?.attendance.l || 0}</span></div>
+                    <div className="flex justify-between p-2 rounded-md bg-red-100 dark:bg-red-900/50"><span>Ausente:</span> <span className="font-bold">{studentStats?.attendance.a || 0}</span></div>
+                    <div className="flex justify-between items-center p-3 rounded-md bg-blue-100 dark:bg-blue-900/50 mt-2">
+                        <p className="font-bold text-blue-800 dark:text-blue-300">Tasa de Asistencia:</p>
+                        <Badge className="text-lg bg-blue-600 hover:bg-blue-600">{attendanceRate.toFixed(1)}%</Badge>
                     </div>
                 </CardContent>
             </Card>
@@ -319,5 +304,5 @@ export default function StudentProfilePage() {
       </div>
     </div>
   );
-}
 
+    
