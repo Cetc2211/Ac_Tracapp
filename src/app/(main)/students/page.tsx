@@ -46,7 +46,9 @@ import { useRouter } from 'next/navigation';
 import { StudentObservationDialog } from '@/components/student-observation-dialog';
 
 export default function StudentsPage() {
+  const [studentsToDisplay, setStudentsToDisplay] = useState<Student[]>([]);
   const [allStudents, setAllStudents] = useState<Student[]>([]);
+  const [activeGroupName, setActiveGroupName] = useState<string | null>(null);
   const [isObservationDialogOpen, setIsObservationDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
@@ -55,25 +57,36 @@ export default function StudentsPage() {
 
   useEffect(() => {
     try {
-        const storedStudents = localStorage.getItem('students');
-        if (storedStudents) {
-          setAllStudents(JSON.parse(storedStudents));
-        } else {
-            const allGroupsJson = localStorage.getItem('groups');
-            const allGroups: Group[] = allGroupsJson ? JSON.parse(allGroupsJson) : initialGroups;
-            const studentsFromGroups = allGroups.flatMap(g => g.students);
-            const uniqueStudents = Array.from(new Map(studentsFromGroups.map(s => [s.id, s])).values());
-            setAllStudents(uniqueStudents);
-            localStorage.setItem('students', JSON.stringify(uniqueStudents));
-        }
+      const activeGroupId = localStorage.getItem('activeGroupId');
+      const groupName = localStorage.getItem('activeGroupName');
+      setActiveGroupName(groupName);
+
+      let relevantStudents: Student[] = [];
+      const allGroupsJson = localStorage.getItem('groups');
+      const allGroups: Group[] = allGroupsJson ? JSON.parse(allGroupsJson) : [];
+      
+      const storedStudents = localStorage.getItem('students');
+      const allStudentsList = storedStudents ? JSON.parse(storedStudents) : initialStudents;
+      setAllStudents(allStudentsList);
+
+      if (activeGroupId) {
+        const activeGroup = allGroups.find(g => g.id === activeGroupId);
+        relevantStudents = activeGroup ? activeGroup.students : allStudentsList;
+      } else {
+        relevantStudents = allStudentsList;
+      }
+      setStudentsToDisplay(relevantStudents);
+
     } catch (error) {
-        console.error("Failed to parse students from localStorage", error);
+        console.error("Failed to parse data from localStorage", error);
         setAllStudents(initialStudents);
+        setStudentsToDisplay(initialStudents);
     }
   }, []);
 
   const saveStudents = (newStudents: Student[]) => {
       setAllStudents(newStudents);
+      setStudentsToDisplay(newStudents);
       localStorage.setItem('students', JSON.stringify(newStudents));
   }
 
@@ -83,7 +96,8 @@ export default function StudentsPage() {
   };
   
   const handleDeleteStudent = (studentId: string) => {
-    saveStudents(allStudents.filter(s => s.id !== studentId));
+    const updatedStudents = allStudents.filter(s => s.id !== studentId);
+    saveStudents(updatedStudents);
     // Also remove from all groups
     const storedGroups = localStorage.getItem('groups');
     if (storedGroups) {
@@ -108,14 +122,15 @@ export default function StudentsPage() {
   
   const handleSelectAll = (checked: boolean | 'indeterminate') => {
       if(checked) {
-          setSelectedStudents(allStudents.map(s => s.id));
+          setSelectedStudents(studentsToDisplay.map(s => s.id));
       } else {
           setSelectedStudents([]);
       }
   };
 
   const handleDeleteSelectedStudents = () => {
-      saveStudents(allStudents.filter(s => !selectedStudents.includes(s.id)));
+      const updatedStudents = allStudents.filter(s => !selectedStudents.includes(s.id));
+      saveStudents(updatedStudents);
       
        // Also remove from all groups
         const storedGroups = localStorage.getItem('groups');
@@ -138,8 +153,8 @@ export default function StudentsPage() {
   const numSelected = selectedStudents.length;
   
   const sortedStudents = useMemo(() => {
-    return [...allStudents].sort((a,b) => a.name.localeCompare(b.name));
-  }, [allStudents]);
+    return [...studentsToDisplay].sort((a,b) => a.name.localeCompare(b.name));
+  }, [studentsToDisplay]);
 
   return (
     <Card>
@@ -148,7 +163,10 @@ export default function StudentsPage() {
           <div>
             <CardTitle>Estudiantes</CardTitle>
             <CardDescription>
-              Lista consolidada de todos los estudiantes en tus grupos. Para agregar estudiantes, ve a un grupo específico.
+              {activeGroupName 
+                ? `Mostrando estudiantes del grupo: ${activeGroupName}.`
+                : 'Lista consolidada de todos los estudiantes. Para agregar, ve a un grupo específico.'
+              }
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
@@ -192,7 +210,7 @@ export default function StudentsPage() {
             <TableRow>
               <TableHead padding="checkbox">
                  <Checkbox
-                    checked={numSelected === allStudents.length && allStudents.length > 0 ? true : (numSelected > 0 ? 'indeterminate' : false)}
+                    checked={numSelected === studentsToDisplay.length && studentsToDisplay.length > 0 ? true : (numSelected > 0 ? 'indeterminate' : false)}
                     onCheckedChange={(checked) => handleSelectAll(checked)}
                     aria-label="Seleccionar todo"
                   />
@@ -257,10 +275,13 @@ export default function StudentsPage() {
                 </TableCell>
               </TableRow>
             ))}
-             {allStudents.length === 0 && (
+             {studentsToDisplay.length === 0 && (
                 <TableRow>
                     <TableCell colSpan={7} className="text-center text-muted-foreground p-8">
-                        No hay estudiantes registrados. Agrégalos desde la página de un grupo.
+                      {activeGroupName 
+                        ? "Este grupo no tiene estudiantes."
+                        : "No hay estudiantes registrados. Agrégalos desde la página de un grupo."
+                      }
                     </TableCell>
                 </TableRow>
               )}
