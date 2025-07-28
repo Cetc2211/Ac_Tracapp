@@ -325,9 +325,9 @@ export default function GroupsPage() {
                   </div>
                 </CardContent>
                 <CardFooter className="flex justify-between gap-2">
-                  <Button asChild variant="outline" className="w-full bg-transparent border-card-foreground-alt/50 text-card-foreground-alt hover:bg-white/20 hover:text-card-foreground-alt">
+                  <Button asChild variant="outline" className="bg-transparent border-card-foreground-alt/50 text-card-foreground-alt hover:bg-white/20 hover:text-card-foreground-alt">
                     <Link href={`/groups/${group.id}`}>
-                      <ClipboardList className="mr-2 h-4 w-4" /> Ver Detalles
+                      <ClipboardList className="mr-2 h-4 w-4" /> Detalles
                     </Link>
                   </Button>
                   <AttendanceRandomizer students={group.students} variant="outline" className="bg-transparent border-card-foreground-alt/50 text-card-foreground-alt hover:bg-white/20 hover:text-card-foreground-alt" />
