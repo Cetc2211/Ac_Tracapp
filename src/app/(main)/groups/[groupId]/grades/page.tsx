@@ -67,6 +67,7 @@ export default function GroupGradesPage() {
   const { toast } = useToast();
 
   useEffect(() => {
+    if (!groupId) return;
     try {
       const storedGroups = localStorage.getItem('groups');
       const allGroups = storedGroups ? JSON.parse(storedGroups) : initialGroups;
@@ -82,9 +83,9 @@ export default function GroupGradesPage() {
         setGrades(JSON.parse(storedGrades));
       }
 
-      // Calculate participation
+      // Calculate participation only if a group and a participation criterion exist
       const participationCriterion = localCriteria.find(c => c.name === 'Participación');
-      if (participationCriterion && currentGroup && currentGroup.students.length > 0) {
+      if (participationCriterion && currentGroup && currentGroup.students && currentGroup.students.length > 0) {
           const storedParticipations = localStorage.getItem(`participations_${groupId}`);
           const participation: ParticipationRecord = storedParticipations ? JSON.parse(storedParticipations) : {};
           const participationDates = Object.keys(participation);
@@ -97,7 +98,7 @@ export default function GroupGradesPage() {
           }
           setParticipationData(newParticipationData);
           
-          // Also set the expected value for participation criterion dynamically
+           // Also set the expected value for participation criterion dynamically
            setEvaluationCriteria(prevCriteria => 
                 prevCriteria.map(c => 
                     c.name === 'Participación' ? { ...c, expectedValue: totalClasses } : c
@@ -230,7 +231,21 @@ export default function GroupGradesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {studentsInGroup.map(student => (
+                {studentsInGroup.length === 0 && (
+                  <TableRow>
+                      <TableCell colSpan={evaluationCriteria.length + 2} className="text-center h-24">
+                          No hay estudiantes en este grupo.
+                      </TableCell>
+                  </TableRow>
+                )}
+                {studentsInGroup.length > 0 && evaluationCriteria.length === 0 && (
+                  <TableRow>
+                      <TableCell colSpan={2} className="text-center h-24">
+                          No has definido criterios de evaluación. <Link href={`/groups/${groupId}/criteria`} className="text-primary underline">Defínelos aquí.</Link>
+                      </TableCell>
+                  </TableRow>
+                )}
+                {studentsInGroup.length > 0 && evaluationCriteria.length > 0 && studentsInGroup.map(student => (
                   <TableRow key={student.id}>
                     <TableCell className="font-medium sticky left-0 bg-card z-10 flex items-center gap-2">
                       <Image 
@@ -294,20 +309,6 @@ export default function GroupGradesPage() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {studentsInGroup.length === 0 && (
-                  <TableRow>
-                      <TableCell colSpan={evaluationCriteria.length + 2} className="text-center h-24">
-                          No hay estudiantes en este grupo.
-                      </TableCell>
-                  </TableRow>
-                )}
-                {evaluationCriteria.length === 0 && studentsInGroup.length > 0 && (
-                  <TableRow>
-                      <TableCell colSpan={2} className="text-center h-24">
-                          No has definido criterios de evaluación. <Link href={`/groups/${groupId}/criteria`} className="text-primary underline">Defínelos aquí.</Link>
-                      </TableCell>
-                  </TableRow>
-                )}
               </TableBody>
             </Table>
           </div>
