@@ -92,7 +92,6 @@ export default function MainLayoutClient({
   return (
     <SidebarProvider>
       <Sidebar>
-        <SheetTitle className="sr-only">Menú de Navegación</SheetTitle>
         <SidebarHeader>
           {isClient ? (
             <AppLogo name={settings.institutionName} logoUrl={settings.logo} />
