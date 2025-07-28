@@ -86,7 +86,17 @@ export default function StudentsPage() {
 
   const saveStudents = (newStudents: Student[]) => {
       setAllStudents(newStudents);
-      setStudentsToDisplay(newStudents);
+      
+      const activeGroupId = localStorage.getItem('activeGroupId');
+      if (activeGroupId) {
+         const allGroupsJson = localStorage.getItem('groups');
+         const allGroups: Group[] = allGroupsJson ? JSON.parse(allGroupsJson) : [];
+         const activeGroup = allGroups.find(g => g.id === activeGroupId);
+         setStudentsToDisplay(activeGroup ? activeGroup.students : newStudents);
+      } else {
+        setStudentsToDisplay(newStudents);
+      }
+      
       localStorage.setItem('students', JSON.stringify(newStudents));
   }
 
@@ -97,17 +107,21 @@ export default function StudentsPage() {
   
   const handleDeleteStudent = (studentId: string) => {
     const updatedStudents = allStudents.filter(s => s.id !== studentId);
-    saveStudents(updatedStudents);
+    
     // Also remove from all groups
     const storedGroups = localStorage.getItem('groups');
+    let updatedGroups: Group[] = [];
     if (storedGroups) {
         const groups: Group[] = JSON.parse(storedGroups);
-        const updatedGroups = groups.map(g => ({
+        updatedGroups = groups.map(g => ({
             ...g,
             students: g.students.filter(s => s.id !== studentId)
         }));
         localStorage.setItem('groups', JSON.stringify(updatedGroups));
     }
+
+    saveStudents(updatedStudents);
+    
     toast({
         title: "Estudiante eliminado",
         description: "El estudiante ha sido eliminado de la lista y de todos los grupos.",
@@ -130,7 +144,6 @@ export default function StudentsPage() {
 
   const handleDeleteSelectedStudents = () => {
       const updatedStudents = allStudents.filter(s => !selectedStudents.includes(s.id));
-      saveStudents(updatedStudents);
       
        // Also remove from all groups
         const storedGroups = localStorage.getItem('groups');
@@ -142,6 +155,8 @@ export default function StudentsPage() {
             }));
             localStorage.setItem('groups', JSON.stringify(updatedGroups));
         }
+
+      saveStudents(updatedStudents);
 
       toast({
         title: "Estudiantes eliminados",
