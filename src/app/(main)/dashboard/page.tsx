@@ -79,6 +79,7 @@ export default function DashboardPage() {
   const [atRiskStudents, setAtRiskStudents] = useState<StudentWithRisk[]>([]);
   const [groupAverages, setGroupAverages] = useState<{[groupId: string]: number}>({});
   const [searchQuery, setSearchQuery] = useState('');
+  const [isRiskDialogOpen, setIsRiskDialogOpen] = useState(false);
 
   const calculateFinalGrade = useCallback((studentId: string, groupId: string, criteria: EvaluationCriteria[], grades: Grades) => {
     if (!grades || !criteria || criteria.length === 0) return 0;
@@ -355,7 +356,7 @@ export default function DashboardPage() {
                   width={40}
                 />
                 <div className="grid gap-1">
-                  <Link href={`/students/${student.id}`} className="text-sm font-medium leading-none hover:underline">
+                  <Link href={`/students/${student.id}`} className="text-sm font-medium leading-none hover:underline" onClick={() => isRiskDialogOpen && setIsRiskDialogOpen(false)}>
                     {student.name}
                   </Link>
                   <p className="text-sm text-muted-foreground">{student.calculatedRisk.reason}</p>
@@ -378,7 +379,7 @@ export default function DashboardPage() {
           </CardContent>
           {atRiskStudents.length > 0 && (
             <CardFooter>
-                 <Dialog>
+                 <Dialog open={isRiskDialogOpen} onOpenChange={setIsRiskDialogOpen}>
                   <DialogTrigger asChild>
                     <Button variant="outline" className="w-full">
                         Ver todos ({atRiskStudents.length})
@@ -417,7 +418,7 @@ export default function DashboardPage() {
                                 width={40}
                                 />
                                 <div className="grid gap-1 flex-grow">
-                                <Link href={`/students/${student.id}`} className="text-sm font-medium leading-none hover:underline">
+                                <Link href={`/students/${student.id}`} className="text-sm font-medium leading-none hover:underline" onClick={() => setIsRiskDialogOpen(false)}>
                                     {student.name}
                                 </Link>
                                 <p className="text-sm text-muted-foreground">{student.calculatedRisk.reason}</p>
