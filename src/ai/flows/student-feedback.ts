@@ -51,7 +51,7 @@ const prompt = ai.definePrompt({
   output: { schema: StudentFeedbackOutputSchema },
   prompt: `
     You are an expert educational psychologist. Generate a brief, constructive, and personalized feedback for a student in Spanish.
-    The feedback must be structured into two distinct sections: "Recomendaciones" and "Retroalimentación Positiva".
+    The feedback must start with a "Recomendaciones:" section, followed by a positive reinforcement paragraph without a title.
 
     **Data for {{{studentName}}}:**
 
@@ -73,17 +73,18 @@ const prompt = ai.definePrompt({
     {{/if}}
 
     **Output Instructions:**
-    1.  **Recomendaciones:**
+    1.  **Start with "Recomendaciones:":**
         - Be direct and concise.
         - Identify the most critical areas for improvement (low grades, high absences, negative observations like 'Problema de conducta' or 'Problema de lectura').
-        - Provide one or two concrete, actionable recommendations. For example: "Se observa que tu desempeño en [Subject] necesita mejorar. Te recomendamos solicitar asesorías o formar grupos de estudio para reforzar los temas."
+        - Provide one or two concrete, actionable recommendations. For example: "Recomendaciones:\nSe observa que tu desempeño en [Subject] necesita mejorar. Te recomendamos solicitar asesorías o formar grupos de estudio para reforzar los temas."
     
-    2.  **Retroalimentación Positiva:**
+    2.  **Follow with a Positive Reinforcement Paragraph (No Title):**
+        - After the recommendations, write a new paragraph.
         - Be encouraging and motivational.
         - Highlight one or two key strengths (high grades, perfect attendance, positive observations like 'Mérito').
         - End on a positive note, expressing confidence in the student's ability to succeed. For example: "¡Felicidades por tu excelente asistencia! Ese compromiso es tu mayor fortaleza y te ayudará a alcanzar tus metas."
 
-    Combine both sections into a single, coherent text under the "feedback" field.
+    Combine both parts into a single, coherent text under the "feedback" field.
   `,
 });
 
