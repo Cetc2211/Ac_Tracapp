@@ -79,6 +79,7 @@ export default function DashboardPage() {
   const [atRiskStudents, setAtRiskStudents] = useState<StudentWithRisk[]>([]);
   const [groupAverages, setGroupAverages] = useState<{[groupId: string]: number}>({});
   const [searchQuery, setSearchQuery] = useState('');
+  const [studentSearchQuery, setStudentSearchQuery] = useState('');
   const [isRiskDialogOpen, setIsRiskDialogOpen] = useState(false);
 
   const calculateFinalGrade = useCallback((studentId: string, groupId: string, criteria: EvaluationCriteria[], grades: Grades) => {
@@ -229,6 +230,13 @@ export default function DashboardPage() {
     );
   }, [atRiskStudents, searchQuery]);
 
+  const filteredStudentsForSearch = useMemo(() => {
+    if (!studentSearchQuery) return [];
+    return students.filter(student =>
+      student.name.toLowerCase().includes(studentSearchQuery.toLowerCase())
+    ).slice(0, 5); // Limit results to 5
+  }, [students, studentSearchQuery]);
+
 
   return (
     <div className="flex flex-col gap-6">
@@ -290,6 +298,55 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+       <Card>
+        <CardHeader>
+          <CardTitle>Buscar Estudiante</CardTitle>
+          <CardDescription>
+            Encuentra rápidamente el perfil de un estudiante por su nombre.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Escribe el nombre del estudiante..."
+              className="pl-8 w-full"
+              value={studentSearchQuery}
+              onChange={(e) => setStudentSearchQuery(e.target.value)}
+            />
+          </div>
+          <div className="mt-4 space-y-2">
+            {filteredStudentsForSearch.map(student => (
+              <Link href={`/students/${student.id}`} key={student.id} className="flex items-center gap-4 p-2 rounded-md hover:bg-muted">
+                <Image
+                  alt="Avatar"
+                  className="rounded-full"
+                  height={40}
+                  src={student.photo}
+                  data-ai-hint="student avatar"
+                  style={{
+                    aspectRatio: '40/40',
+                    objectFit: 'cover',
+                  }}
+                  width={40}
+                />
+                <div className="grid gap-1">
+                  <p className="text-sm font-medium leading-none">{student.name}</p>
+                  <p className="text-sm text-muted-foreground">{student.email}</p>
+                </div>
+              </Link>
+            ))}
+            {studentSearchQuery && filteredStudentsForSearch.length === 0 && (
+              <p className="text-sm text-center text-muted-foreground py-4">
+                No se encontraron estudiantes con ese nombre.
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid gap-4 md:gap-8 lg:grid-cols-2 xl:grid-cols-3">
         <Card className="xl:col-span-2">
           <CardHeader className="flex flex-row items-center">
