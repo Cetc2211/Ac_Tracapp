@@ -277,26 +277,26 @@ export default function StudentsPage() {
                 <TableCell>
                     <AlertDialog>
                         <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button aria-haspopup="true" size="icon" variant="ghost">
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Toggle menu</span>
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => router.push(`/students/${student.id}`)}>
-                                Ver Perfil
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                             <AlertDialogTrigger asChild>
-                                <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}>
-                                    Eliminar
+                            <DropdownMenuTrigger asChild>
+                                <Button aria-haspopup="true" size="icon" variant="ghost">
+                                <MoreHorizontal className="h-4 w-4" />
+                                <span className="sr-only">Toggle menu</span>
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                <DropdownMenuItem onClick={() => router.push(`/students/${student.id}`)}>
+                                    Ver Perfil
                                 </DropdownMenuItem>
-                            </AlertDialogTrigger>
-                        </DropdownMenuContent>
+                                <DropdownMenuSeparator />
+                                <AlertDialogTrigger asChild>
+                                    <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}>
+                                        Eliminar
+                                    </DropdownMenuItem>
+                                </AlertDialogTrigger>
+                            </DropdownMenuContent>
                         </DropdownMenu>
-                         <AlertDialogContent>
+                        <AlertDialogContent>
                             <AlertDialogHeader>
                                 <AlertDialogTitle>¿Estás seguro de eliminar a {student.name}?</AlertDialogTitle>
                                 <AlertDialogDescription>
