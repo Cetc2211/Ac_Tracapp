@@ -59,6 +59,8 @@ export default function GroupCriteriaPage() {
   const [editingCriterion, setEditingCriterion] = useState<EvaluationCriteria | null>(null);
 
   const { toast } = useToast();
+  
+  const isParticipationSelected = useMemo(() => (selectedName === 'Participación'), [selectedName]);
 
   useEffect(() => {
     try {
@@ -77,6 +79,15 @@ export default function GroupCriteriaPage() {
     }
   }, [groupId]);
 
+  useEffect(() => {
+    if(isParticipationSelected) {
+        setNewCriterionValue('0');
+    } else {
+        setNewCriterionValue('');
+    }
+  }, [isParticipationSelected]);
+
+
   const saveCriteria = (newCriteria: EvaluationCriteria[]) => {
     setEvaluationCriteria(newCriteria);
     localStorage.setItem(`criteria_${groupId}`, JSON.stringify(newCriteria));
@@ -89,7 +100,7 @@ export default function GroupCriteriaPage() {
     const weight = parseFloat(finalWeight);
     const expectedValue = parseInt(newCriterionValue, 10);
 
-    if (!finalName || isNaN(weight) || weight <= 0 || weight > 100 || isNaN(expectedValue) || expectedValue < 0 ) {
+    if (!finalName || isNaN(weight) || weight <= 0 || weight > 100 || (isNaN(expectedValue) && !isParticipationSelected) || (!isParticipationSelected && expectedValue < 0) ) {
         toast({
             variant: 'destructive',
             title: 'Datos inválidos',
@@ -112,7 +123,7 @@ export default function GroupCriteriaPage() {
         id: `C${Date.now()}`,
         name: finalName,
         weight: weight,
-        expectedValue: expectedValue,
+        expectedValue: isParticipationSelected ? 0 : expectedValue, // For participation, expected value is calculated dynamically
     };
 
     saveCriteria([...evaluationCriteria, newCriterion]);
@@ -152,8 +163,9 @@ export default function GroupCriteriaPage() {
 
     const weight = editingCriterion.weight;
     const expectedValue = editingCriterion.expectedValue;
+    const isParticipation = editingCriterion.name === 'Participación';
 
-     if (!editingCriterion.name.trim() || isNaN(weight) || weight <= 0 || weight > 100 || isNaN(expectedValue) || expectedValue < 0 ) {
+     if (!editingCriterion.name.trim() || isNaN(weight) || weight <= 0 || weight > 100 || (isNaN(expectedValue) && !isParticipation) || (!isParticipation && expectedValue < 0) ) {
         toast({
             variant: 'destructive',
             title: 'Datos inválidos',
@@ -199,7 +211,7 @@ export default function GroupCriteriaPage() {
   
   const finalNameForCheck = selectedName === 'Otros' ? customName.trim() : selectedName;
   const finalWeightForCheck = selectedWeight === 'Otros' ? customWeight : selectedWeight;
-  const isAddButtonDisabled = !finalNameForCheck || !finalWeightForCheck || !newCriterionValue;
+  const isAddButtonDisabled = !finalNameForCheck || !finalWeightForCheck || (!newCriterionValue && !isParticipationSelected);
 
 
   return (
@@ -259,7 +271,7 @@ export default function GroupCriteriaPage() {
                         </SelectTrigger>
                         <SelectContent>
                              {weightOptions.map(option => (
-                                <SelectItem key={option} value={option}>{option === 'Otros' ? option : `${option}%`}</SelectItem>
+                                <SelectItem key={option} value={option}>{option === 'Otros' ? option : `${option}`}</SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
@@ -279,10 +291,11 @@ export default function GroupCriteriaPage() {
                 <Input 
                     id="criterion-value"
                     type="number" 
-                    placeholder="Valor Esperado"
+                    placeholder={isParticipationSelected ? "Automático por asistencia" : "Valor Esperado"}
                     className="w-[180px]"
                     value={newCriterionValue}
                     onChange={(e) => setNewCriterionValue(e.target.value)}
+                    disabled={isParticipationSelected}
                 />
              </div>
             <Button size="icon" onClick={handleAddCriterion} disabled={isAddButtonDisabled} className="self-end">
@@ -297,7 +310,12 @@ export default function GroupCriteriaPage() {
                 <div key={criterion.id} className="flex items-center justify-between p-3 bg-muted rounded-md">
                     <div>
                         <span className="font-medium">{criterion.name}</span>
-                        <p className="text-xs text-muted-foreground">{criterion.expectedValue} es el valor esperado</p>
+                        <p className="text-xs text-muted-foreground">
+                          {criterion.name === 'Participación' 
+                            ? 'Calculado automáticamente por asistencia' 
+                            : `${criterion.expectedValue} es el valor esperado`
+                          }
+                        </p>
                     </div>
                     <div className="flex items-center gap-2">
                         <Badge variant="secondary">{criterion.weight}%</Badge>
@@ -350,6 +368,7 @@ export default function GroupCriteriaPage() {
                   value={editingCriterion.name}
                   onChange={(e) => setEditingCriterion({ ...editingCriterion, name: e.target.value })}
                   className="col-span-3"
+                  disabled={editingCriterion.name === 'Participación'}
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
@@ -374,6 +393,8 @@ export default function GroupCriteriaPage() {
                   value={editingCriterion.expectedValue}
                   onChange={(e) => setEditingCriterion({ ...editingCriterion, expectedValue: parseInt(e.target.value, 10) || 0 })}
                   className="col-span-3"
+                  disabled={editingCriterion.name === 'Participación'}
+                  placeholder={editingCriterion.name === 'Participación' ? 'Automático por asistencia' : ''}
                 />
               </div>
             </div>
@@ -388,3 +409,5 @@ export default function GroupCriteriaPage() {
     </div>
   );
 }
+
+    
