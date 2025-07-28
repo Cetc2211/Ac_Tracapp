@@ -74,7 +74,7 @@ export default function StudentProfilePage() {
   const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
   const [generatedFeedback, setGeneratedFeedback] = useState('');
   
-  const componentRef = useRef<StudentPrintReport>(null);
+  const componentRef = useRef<HTMLDivElement>(null);
 
   const handlePrint = useReactToPrint({
     content: () => componentRef.current,
@@ -437,5 +437,3 @@ export default function StudentProfilePage() {
     </div>
   );
 }
-
-    
