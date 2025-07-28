@@ -83,6 +83,12 @@ type DailyAttendance = {
     [date: string]: AttendanceRecord;
 }
 
+type ParticipationRecord = {
+  [date: string]: {
+    [studentId: string]: boolean;
+  };
+};
+
 export default function GroupDetailsPage() {
   const params = useParams();
   const groupId = params.groupId as string;
@@ -104,21 +110,31 @@ export default function GroupDetailsPage() {
 
   const [isLoading, setIsLoading] = useState(true);
   
-  const calculateFinalGrade = useCallback((studentId: string, criteria: EvaluationCriteria[], grades: Grades) => {
+ const calculateFinalGrade = useCallback((studentId: string, criteria: EvaluationCriteria[], grades: Grades, participations: ParticipationRecord) => {
     if (!grades || !criteria || criteria.length === 0) return 0;
     const studentGrades = grades[studentId];
-    if (!studentGrades) return 0;
     
     let finalGrade = 0;
     for (const criterion of criteria) {
-      const gradeDetail = studentGrades[criterion.id];
-      const delivered = gradeDetail?.delivered ?? 0;
-      const average = gradeDetail?.average ?? 0;
-      const expected = criterion.expectedValue;
+      if(criterion.name === 'Participación') {
+          const participationDates = Object.keys(participations);
+          const totalClasses = participationDates.length;
+          if (totalClasses > 0) {
+              const participatedClasses = participationDates.filter(date => participations[date]?.[studentId]).length;
+              const participationScore = (participatedClasses / totalClasses) * 10;
+              finalGrade += participationScore * (criterion.weight / 100);
+          }
+      } else {
+        if (!studentGrades) continue;
+        const gradeDetail = studentGrades[criterion.id];
+        const delivered = gradeDetail?.delivered ?? 0;
+        const average = gradeDetail?.average ?? 0;
+        const expected = criterion.expectedValue;
 
-      if(expected > 0) {
-        const criterionScore = (delivered / expected) * average;
-        finalGrade += criterionScore * (criterion.weight / 100);
+        if(expected > 0) {
+            const criterionScore = (delivered / expected) * average;
+            finalGrade += criterionScore * (criterion.weight / 100);
+        }
       }
     }
     return parseFloat(finalGrade.toFixed(2));
@@ -159,19 +175,22 @@ export default function GroupDetailsPage() {
       const storedGrades = localStorage.getItem(`grades_${groupId}`);
       const localGrades: Grades = storedGrades ? JSON.parse(storedGrades) : {};
 
-      const storedAttendance = localStorage.getItem(`attendance_${groupId}`);
-      const localAttendance: DailyAttendance = storedAttendance ? JSON.parse(storedAttendance) : {};
+      const storedAttendance = localStorage.getItem(`globalAttendance`);
+      const localAttendance: {[date: string]: {[studentId: string]: boolean}} = storedAttendance ? JSON.parse(storedAttendance) : {};
+
+      const storedParticipations = localStorage.getItem(`participations_${groupId}`);
+      const localParticipations: ParticipationRecord = storedParticipations ? JSON.parse(storedParticipations) : {};
 
       const riskLevels : {[studentId: string]: 'low' | 'medium' | 'high'} = {};
       
-      const getStudentRiskLevel = (student: Student, criteria: EvaluationCriteria[], grades: Grades, attendance: DailyAttendance) => {
-        const finalGrade = calculateFinalGrade(student.id, criteria, grades);
+      const getStudentRiskLevel = (student: Student, criteria: EvaluationCriteria[], grades: Grades, attendance: {[date: string]: {[studentId: string]: boolean}}, participations: ParticipationRecord) => {
+        const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations);
 
         const totalDays = Object.keys(attendance).length;
         let absences = 0;
         if(totalDays > 0) {
             for(const date in attendance) {
-                if(attendance[date][student.id] === 'absent') {
+                if(attendance[date][student.id] !== true) {
                     absences++;
                 }
             }
@@ -184,7 +203,7 @@ export default function GroupDetailsPage() {
       };
 
       currentGroup.students.forEach((s: Student) => {
-          riskLevels[s.id] = getStudentRiskLevel(s, localCriteria, localGrades, localAttendance);
+          riskLevels[s.id] = getStudentRiskLevel(s, localCriteria, localGrades, localAttendance, localParticipations);
       });
       setStudentRiskLevels(riskLevels);
 
@@ -232,6 +251,7 @@ export default function GroupDetailsPage() {
     localStorage.removeItem(`criteria_${groupId}`);
     localStorage.removeItem(`grades_${groupId}`);
     localStorage.removeItem(`attendance_${groupId}`);
+    localStorage.removeItem(`participations_${groupId}`);
     localStorage.removeItem('activeGroupId');
     localStorage.removeItem('activeGroupName');
      // Dispatch a storage event to notify other tabs/components
@@ -572,7 +592,12 @@ export default function GroupDetailsPage() {
                         <div key={criterion.id} className="flex items-center justify-between p-2 bg-muted rounded-md">
                             <div>
                                 <span className="font-medium">{criterion.name}</span>
-                                <p className="text-xs text-muted-foreground">{criterion.expectedValue} valor esperado</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {criterion.name === 'Participación' 
+                                    ? 'Automático por participación' 
+                                    : `${criterion.expectedValue} es el valor esperado`
+                                  }
+                                </p>
                             </div>
                             <Badge variant="secondary">{criterion.weight}%</Badge>
                         </div>

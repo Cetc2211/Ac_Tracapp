@@ -291,7 +291,7 @@ export default function GroupCriteriaPage() {
                 <Input 
                     id="criterion-value"
                     type="number" 
-                    placeholder={isParticipationSelected ? "Automático por asistencia" : "Valor Esperado"}
+                    placeholder={isParticipationSelected ? "Automático por participación" : "Valor Esperado"}
                     className="w-[180px]"
                     value={newCriterionValue}
                     onChange={(e) => setNewCriterionValue(e.target.value)}
@@ -312,7 +312,7 @@ export default function GroupCriteriaPage() {
                         <span className="font-medium">{criterion.name}</span>
                         <p className="text-xs text-muted-foreground">
                           {criterion.name === 'Participación' 
-                            ? 'Calculado automáticamente por asistencia' 
+                            ? 'Calculado automáticamente por participación' 
                             : `${criterion.expectedValue} es el valor esperado`
                           }
                         </p>
@@ -394,7 +394,7 @@ export default function GroupCriteriaPage() {
                   onChange={(e) => setEditingCriterion({ ...editingCriterion, expectedValue: parseInt(e.target.value, 10) || 0 })}
                   className="col-span-3"
                   disabled={editingCriterion.name === 'Participación'}
-                  placeholder={editingCriterion.name === 'Participación' ? 'Automático por asistencia' : ''}
+                  placeholder={editingCriterion.name === 'Participación' ? 'Automático por participación' : ''}
                 />
               </div>
             </div>
@@ -409,5 +409,3 @@ export default function GroupCriteriaPage() {
     </div>
   );
 }
-
-    

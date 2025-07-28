@@ -85,8 +85,8 @@ export default function GroupGradesPage() {
       // Calculate participation
       const participationCriterion = localCriteria.find(c => c.name === 'Participación');
       if (participationCriterion && currentGroup) {
-          const storedParticipation = localStorage.getItem(`participations_${groupId}`);
-          const participation: ParticipationRecord = storedParticipation ? JSON.parse(storedParticipation) : {};
+          const storedParticipations = localStorage.getItem(`participations_${groupId}`);
+          const participation: ParticipationRecord = storedParticipations ? JSON.parse(storedParticipations) : {};
           const participationDates = Object.keys(participation);
           const totalClasses = participationDates.length;
 
@@ -183,7 +183,7 @@ export default function GroupGradesPage() {
     return notFound();
   }
   
-  const studentsInGroup = group.students;
+  const studentsInGroup = [...group.students].sort((a,b) => a.name.localeCompare(b.name));
 
 
   return (
