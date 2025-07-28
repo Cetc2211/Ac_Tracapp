@@ -65,6 +65,7 @@ export default function GroupGradesPage() {
   const [grades, setGrades] = useState<Grades>({});
   const [participationData, setParticipationData] = useState<ParticipationData>({});
   const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (!groupId) return;
@@ -76,8 +77,7 @@ export default function GroupGradesPage() {
 
       const storedCriteria = localStorage.getItem(`criteria_${groupId}`);
       const localCriteria: EvaluationCriteria[] = storedCriteria ? JSON.parse(storedCriteria) : [];
-      setEvaluationCriteria(localCriteria);
-
+      
       const storedGrades = localStorage.getItem(`grades_${groupId}`);
       if (storedGrades) {
         setGrades(JSON.parse(storedGrades));
@@ -85,30 +85,33 @@ export default function GroupGradesPage() {
 
       // Calculate participation only if a group and a participation criterion exist
       const participationCriterion = localCriteria.find(c => c.name === 'Participación');
-      if (participationCriterion && currentGroup && currentGroup.students && currentGroup.students.length > 0) {
+      if (participationCriterion && currentGroup?.students?.length) {
           const storedParticipations = localStorage.getItem(`participations_${groupId}`);
-          const participation: ParticipationRecord = storedParticipations ? JSON.parse(storedParticipations) : {};
-          const participationDates = Object.keys(participation);
+          const participations: ParticipationRecord = storedParticipations ? JSON.parse(storedParticipations) : {};
+          const participationDates = Object.keys(participations);
           const totalClasses = participationDates.length;
 
           const newParticipationData: ParticipationData = {};
           for (const student of currentGroup.students) {
-              const participatedClasses = participationDates.filter(date => participation[date]?.[student.id]).length;
+              const participatedClasses = participationDates.filter(date => participations[date]?.[student.id]).length;
               newParticipationData[student.id] = { participated: participatedClasses, total: totalClasses };
           }
           setParticipationData(newParticipationData);
           
-           // Also set the expected value for participation criterion dynamically
-           setEvaluationCriteria(prevCriteria => 
-                prevCriteria.map(c => 
-                    c.name === 'Participación' ? { ...c, expectedValue: totalClasses } : c
-                )
-           );
+          // Also set the expected value for participation criterion dynamically
+          const updatedCriteria = localCriteria.map(c => 
+              c.name === 'Participación' ? { ...c, expectedValue: totalClasses } : c
+          );
+          setEvaluationCriteria(updatedCriteria);
+      } else {
+        setEvaluationCriteria(localCriteria);
       }
-
+      
     } catch (error) {
       console.error("Failed to parse data from localStorage", error);
       setGroup(null);
+    } finally {
+      setIsLoading(false);
     }
   }, [groupId]);
 
@@ -153,7 +156,7 @@ export default function GroupGradesPage() {
   };
   
   const calculateFinalGrade = useCallback((studentId: string) => {
-    if (evaluationCriteria.length === 0) return 0;
+    if (!evaluationCriteria || evaluationCriteria.length === 0) return 0;
 
     let finalGrade = 0;
     
@@ -179,13 +182,19 @@ export default function GroupGradesPage() {
 
     return parseFloat(finalGrade.toFixed(2));
   }, [grades, evaluationCriteria, participationData]);
+  
+  const studentsInGroup = useMemo(() => {
+      if (!group || !group.students) return [];
+      return [...group.students].sort((a,b) => a.name.localeCompare(b.name));
+  }, [group]);
+
+  if (isLoading) {
+    return <div>Cargando...</div>;
+  }
 
   if (!group) {
     return notFound();
   }
-  
-  const studentsInGroup = [...group.students].sort((a,b) => a.name.localeCompare(b.name));
-
 
   return (
     <div className="flex flex-col gap-6">
@@ -317,3 +326,5 @@ export default function GroupGradesPage() {
     </div>
   );
 }
+
+    
