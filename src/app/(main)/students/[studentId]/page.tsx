@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Student, Group, StudentObservation } from '@/lib/placeholder-data';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
-import { ArrowLeft, Mail, User, Contact, EyeOff, Printer, FileText, Loader2 } from 'lucide-react';
+import { Mail, User, Contact, EyeOff, Printer, FileText, Loader2 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -38,12 +38,6 @@ type Grades = {
   };
 };
 
-type AttendanceStatus = 'present' | 'absent' | 'late';
-
-type DailyAttendance = {
-    [date: string]: { [studentId: string]: AttendanceStatus };
-}
-
 type GlobalAttendanceRecord = {
   [date: string]: {
     [studentId: string]: boolean;
@@ -58,7 +52,7 @@ type ParticipationRecord = {
 
 type StudentStats = {
   averageGrade: number;
-  attendance: { p: number, a: number, l: number, total: number };
+  attendance: { p: number, a: number, total: number };
   gradesByGroup: { group: string, grade: number }[];
 };
 
@@ -127,10 +121,8 @@ export default function StudentProfilePage() {
             totalGradeSum += finalGrade;
         });
 
-        const activeGroupId = localStorage.getItem('activeGroupId');
-        let attendanceStats = { p: 0, a: 0, l: 0, total: 0 };
+        let attendanceStats = { p: 0, a: 0, total: 0 };
         
-        // Use global attendance as a fallback for stats
         const globalAttendance: GlobalAttendanceRecord = JSON.parse(localStorage.getItem('globalAttendance') || '{}');
         const allDates = Object.keys(globalAttendance);
         
@@ -205,88 +197,90 @@ export default function StudentProfilePage() {
       <h2 className="text-xl font-bold text-center">Informe Individual del Estudiante</h2>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-3 space-y-6">
             <Card>
                 <CardHeader>
                     <CardTitle>Información Personal</CardTitle>
                 </CardHeader>
-                <CardContent className="grid md:grid-cols-2 gap-6">
-                     <div className="flex items-center gap-4">
+                <CardContent className="flex flex-col md:flex-row items-center gap-8">
+                     <div className="flex-shrink-0 w-48 h-48">
                         <Image
                             alt="Avatar"
-                            className="rounded-full"
-                            height={64}
+                            className="rounded-full aspect-square object-cover"
+                            height={192}
                             src={student.photo}
                             data-ai-hint="student avatar"
-                            style={{
-                                aspectRatio: '64/64',
-                                objectFit: 'cover',
-                            }}
-                            width={64}
+                            width={192}
                         />
-                        <div>
-                            <p className="text-sm text-muted-foreground">Nombre Completo:</p>
-                            <p className="font-semibold">{student.name}</p>
-                        </div>
                      </div>
-                      <div className="flex items-center gap-4">
-                        <Mail className="h-8 w-8 text-primary"/>
-                        <div>
-                            <p className="text-sm text-muted-foreground">Email:</p>
-                            <p className="font-semibold">{student.email || 'No registrado'}</p>
-                        </div>
-                     </div>
-                      <div className="flex items-center gap-4">
-                        <Contact className="h-8 w-8 text-primary"/>
-                        <div>
-                            <p className="text-sm text-muted-foreground">ID de Estudiante:</p>
-                            <p className="font-semibold">{student.id}</p>
-                        </div>
-                     </div>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader>
-                    <CardTitle>Resumen de Calificaciones</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-3">
-                        {studentStats?.gradesByGroup.map(item => (
-                            <div key={item.group} className="flex justify-between items-center p-3 rounded-md border">
-                                <p>{item.group}</p>
-                                <Badge variant={item.grade >= 70 ? "default" : "destructive"} className="text-base">{item.grade.toFixed(1)}%</Badge>
+                     <div className="flex-grow space-y-6">
+                        <div className="flex items-center gap-4">
+                            <User className="h-8 w-8 text-primary"/>
+                            <div>
+                                <p className="text-sm text-muted-foreground">Nombre Completo:</p>
+                                <p className="font-semibold text-lg">{student.name}</p>
                             </div>
-                        ))}
-                        {studentStats && studentStats.gradesByGroup.length > 0 && (
-                             <div className="flex justify-between items-center p-3 rounded-md bg-green-100 border-green-300 dark:bg-green-900/50 dark:border-green-700">
-                                <p className="font-bold text-green-800 dark:text-green-300">Promedio Semestral:</p>
-                                <Badge className="text-lg bg-green-600 hover:bg-green-600">{studentStats.averageGrade.toFixed(1)}%</Badge>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <Mail className="h-8 w-8 text-primary"/>
+                            <div>
+                                <p className="text-sm text-muted-foreground">Email:</p>
+                                <p className="font-semibold">{student.email || 'No registrado'}</p>
                             </div>
-                        )}
-                         {studentStats?.gradesByGroup.length === 0 && (
-                            <p className="text-sm text-center text-muted-foreground py-4">No hay calificaciones registradas.</p>
-                         )}
-                    </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <Contact className="h-8 w-8 text-primary"/>
+                            <div>
+                                <p className="text-sm text-muted-foreground">ID de Estudiante:</p>
+                                <p className="font-semibold">{student.id}</p>
+                            </div>
+                        </div>
+                     </div>
                 </CardContent>
             </Card>
-        </div>
-        <div className="space-y-6">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Historial de Asistencia</CardTitle>
-                    <CardDescription>Resumen de todos los grupos</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                    <div className="flex justify-between p-2 border-b"><span>Total de Clases Registradas:</span> <span className="font-bold">{studentStats?.attendance.total || 0}</span></div>
-                    <div className="flex justify-between p-2 rounded-md bg-green-100 dark:bg-green-900/50"><span>Presente:</span> <span className="font-bold">{studentStats?.attendance.p || 0}</span></div>
-                    <div className="flex justify-between p-2 rounded-md bg-yellow-100 dark:bg-yellow-900/50"><span>Tarde:</span> <span className="font-bold">{studentStats?.attendance.l || 0}</span></div>
-                    <div className="flex justify-between p-2 rounded-md bg-red-100 dark:bg-red-900/50"><span>Ausente:</span> <span className="font-bold">{studentStats?.attendance.a || 0}</span></div>
-                    <div className="flex justify-between items-center p-3 rounded-md bg-blue-100 dark:bg-blue-900/50 mt-2">
-                        <p className="font-bold text-blue-800 dark:text-blue-300">Tasa de Asistencia:</p>
-                        <Badge className="text-lg bg-blue-600 hover:bg-blue-600">{attendanceRate.toFixed(1)}%</Badge>
-                    </div>
-                </CardContent>
-            </Card>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Resumen de Calificaciones</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-3">
+                            {studentStats?.gradesByGroup.map(item => (
+                                <div key={item.group} className="flex justify-between items-center p-3 rounded-md border">
+                                    <p>{item.group}</p>
+                                    <Badge variant={item.grade >= 70 ? "default" : "destructive"} className="text-base">{item.grade.toFixed(1)}%</Badge>
+                                </div>
+                            ))}
+                            {studentStats && studentStats.gradesByGroup.length > 0 && (
+                                <div className="flex justify-between items-center p-3 rounded-md bg-green-100 border-green-300 dark:bg-green-900/50 dark:border-green-700">
+                                    <p className="font-bold text-green-800 dark:text-green-300">Promedio Semestral:</p>
+                                    <Badge className="text-lg bg-green-600 hover:bg-green-600">{studentStats.averageGrade.toFixed(1)}%</Badge>
+                                </div>
+                            )}
+                            {studentStats?.gradesByGroup.length === 0 && (
+                                <p className="text-sm text-center text-muted-foreground py-4">No hay calificaciones registradas.</p>
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Historial de Asistencia</CardTitle>
+                        <CardDescription>Resumen de todos los grupos</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                        <div className="flex justify-between p-2 border-b"><span>Total de Clases Registradas:</span> <span className="font-bold">{studentStats?.attendance.total || 0}</span></div>
+                        <div className="flex justify-between p-2 rounded-md bg-green-100 dark:bg-green-900/50"><span>Presente:</span> <span className="font-bold">{studentStats?.attendance.p || 0}</span></div>
+                        <div className="flex justify-between p-2 rounded-md bg-red-100 dark:bg-red-900/50"><span>Ausente:</span> <span className="font-bold">{studentStats?.attendance.a || 0}</span></div>
+                        <div className="flex justify-between items-center p-3 rounded-md bg-blue-100 dark:bg-blue-900/50 mt-2">
+                            <p className="font-bold text-blue-800 dark:text-blue-300">Tasa de Asistencia:</p>
+                            <Badge className="text-lg bg-blue-600 hover:bg-blue-600">{attendanceRate.toFixed(1)}%</Badge>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+            
             <Card>
                 <CardHeader>
                     <CardTitle>Bitácora de Observaciones</CardTitle>
@@ -314,5 +308,3 @@ export default function StudentProfilePage() {
     </div>
   );
 }
-
-    
