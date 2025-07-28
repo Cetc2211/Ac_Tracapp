@@ -14,6 +14,7 @@ import {
   Package,
   BookText,
   PenSquare,
+  FilePen,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -42,6 +43,7 @@ import { SheetTitle } from '@/components/ui/sheet';
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/groups', icon: BookCopy, label: 'Grupos' },
+  { href: '/grades', icon: FilePen, label: 'Calificaciones' },
   { href: '/attendance', icon: CalendarCheck, label: 'Asistencia' },
   { href: '/participations', icon: PenSquare, label: 'Participaciones' },
   { href: '/observations', icon: BookText, label: 'Observaciones' },
