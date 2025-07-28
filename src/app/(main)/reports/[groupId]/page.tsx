@@ -69,6 +69,8 @@ type ReportSummary = {
     approvedCount: number;
     failedCount: number;
     studentsWithObservations: number;
+    canalizedCount: number;
+    followUpCount: number;
 }
 
 export default function GroupReportPage() {
@@ -126,6 +128,9 @@ export default function GroupReportPage() {
 
         let approved = 0;
         let studentsWithObservations = 0;
+        let canalizedStudents = 0;
+        let followUpStudents = 0;
+
 
         const studentData = currentGroup.students.map(student => {
           const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations);
@@ -136,6 +141,12 @@ export default function GroupReportPage() {
           const studentObservations: StudentObservation[] = JSON.parse(localStorage.getItem(`observations_${student.id}`) || '[]');
           if(studentObservations.length > 0) {
               studentsWithObservations++;
+              if(studentObservations.some(o => o.requiresCanalization)) {
+                canalizedStudents++;
+              }
+              if(studentObservations.some(o => o.requiresFollowUp)) {
+                followUpStudents++;
+              }
           }
 
           let attendanceCount = 0;
@@ -167,7 +178,9 @@ export default function GroupReportPage() {
             totalStudents: currentGroup.students.length,
             approvedCount: approved,
             failedCount: currentGroup.students.length - approved,
-            studentsWithObservations: studentsWithObservations
+            studentsWithObservations: studentsWithObservations,
+            canalizedCount: canalizedStudents,
+            followUpCount: followUpStudents,
         });
       }
       
@@ -248,16 +261,20 @@ export default function GroupReportPage() {
 
         <section>
             <h2 className="text-xl font-semibold mb-2">Resumen del Grupo</h2>
-            <p className="text-muted-foreground leading-relaxed">
+            <p className="text-muted-foreground leading-relaxed mt-2">
                 Por medio del presente, se muestran los resultados obtenidos durante el semestre actual para el grupo 
                 de <span className="font-bold text-foreground">{group.subject}</span>, que cuenta con un total de 
                 <span className="font-bold text-foreground"> {summary.totalStudents} estudiante(s)</span>.
-            </p>
-            <p className="text-muted-foreground leading-relaxed mt-2">
                 Del total, <span className="font-bold text-foreground">{summary.approvedCount} estudiante(s)</span> han resultado aprobados,
                 mientras que <span className="font-bold text-foreground">{summary.failedCount} estudiante(s)</span> se encuentran en estado de reprobación.
-                Se han registrado observaciones en la bitácora para <span className="font-bold text-foreground">{summary.studentsWithObservations} estudiante(s)</span> a lo largo del periodo.
             </p>
+            {summary.studentsWithObservations > 0 && (
+              <p className="text-muted-foreground leading-relaxed mt-2">
+                Se han registrado observaciones en la bitácora para <span className="font-bold text-foreground">{summary.studentsWithObservations} estudiante(s)</span> a lo largo del periodo.
+                {summary.canalizedCount > 0 && ` De estos, ${summary.canalizedCount} fueron canalizados a otra área.`}
+                {summary.followUpCount > 0 && ` Se ha marcado que ${summary.followUpCount} estudiante(s) requieren seguimiento docente.`}
+              </p>
+            )}
         </section>
         
         <section className="mt-8">
