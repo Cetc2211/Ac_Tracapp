@@ -267,13 +267,13 @@ export default function GroupGradesPage() {
                       const gradeDetail = grades[student.id]?.[criterion.id];
                       const delivered = gradeDetail?.delivered ?? 0;
                       const expected = criterion.expectedValue;
-                      let criterionAverage = 0;
+                      let criterionPercentage = 0;
                       if (!isParticipation && expected > 0) {
-                        criterionAverage = (delivered / expected) * 10;
+                        criterionPercentage = (delivered / expected) * 100;
                       } else if (isParticipation) {
                         const pData = participationData[student.id];
                         if (pData && pData.total > 0) {
-                          criterionAverage = (pData.participated / pData.total) * 10;
+                          criterionPercentage = (pData.participated / pData.total) * 100;
                         }
                       }
 
@@ -285,7 +285,7 @@ export default function GroupGradesPage() {
                               <span className="font-bold">{participationData[student.id]?.participated ?? 0} de {participationData[student.id]?.total ?? 0}</span>
                               <Label className='text-xs mt-2'>Promedio</Label>
                                <span className="font-bold">
-                                  {criterionAverage.toFixed(1)}
+                                  {criterionPercentage.toFixed(1)}%
                               </span>
                           </div>
                         ) : (
@@ -306,7 +306,7 @@ export default function GroupGradesPage() {
                             <div className='flex-1'>
                                 <Label className='text-xs'>Promedio</Label>
                                 <div className="h-8 flex items-center justify-center font-bold">
-                                  {criterionAverage.toFixed(1)}
+                                  {criterionPercentage.toFixed(1)}%
                                 </div>
                             </div>
                           </div>
