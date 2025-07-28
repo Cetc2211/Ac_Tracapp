@@ -38,6 +38,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Link from 'next/link';
 import { Progress } from '@/components/ui/progress';
+import { useRouter } from 'next/navigation';
 
 type EvaluationCriteria = {
   id: string;
@@ -83,6 +84,7 @@ type StudentStats = {
 export default function StudentProfilePage() {
   const params = useParams();
   const studentId = params.studentId as string;
+  const router = useRouter();
   
   const [student, setStudent] = useState<Student | null>(null);
   const [studentStats, setStudentStats] = useState<StudentStats | null>(null);
@@ -145,14 +147,15 @@ export default function StudentProfilePage() {
 
         let attendanceStats = { p: 0, a: 0, l: 0, total: 0 };
         if (activeGroupId) {
-          const attendance: DailyAttendance = JSON.parse(localStorage.getItem(`attendance_${activeGroupId}`) || '{}');
-          Object.values(attendance).forEach(record => {
-            const status = record[studentId];
-            if (status === 'present') attendanceStats.p++;
-            else if (status === 'absent') attendanceStats.a++;
-            else if (status === 'late') attendanceStats.l++;
+          const globalAttendance: { [date: string]: {[sId: string]: boolean} } = JSON.parse(localStorage.getItem('globalAttendance') || '{}');
+          
+          Object.values(globalAttendance).forEach(record => {
+            if (record.hasOwnProperty(studentId)) {
+                 if (record[studentId] === true) attendanceStats.p++;
+                 else attendanceStats.a++;
+            }
           });
-          attendanceStats.total = Object.keys(attendance).length;
+          attendanceStats.total = Object.keys(globalAttendance).length;
         }
 
         const observations: StudentObservation[] = JSON.parse(localStorage.getItem(`observations_${studentId}`) || '[]');
@@ -195,7 +198,7 @@ export default function StudentProfilePage() {
           </CardHeader>
           <CardContent>
              <div className="flex items-center gap-2">
-                <Button asChild variant="outline">
+                <Button asChild variant="outline" onClick={() => router.push('/students')}>
                    <Link href="/students"><EyeOff /> Ocultar Perfil</Link>
                 </Button>
                 <Button variant="outline"><Printer /> Formato Impresión</Button>
