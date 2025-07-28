@@ -17,15 +17,16 @@ interface StudentPrintReportProps {
   attendanceRate: number;
 }
 
-export const StudentPrintReport = React.forwardRef<HTMLDivElement, StudentPrintReportProps>(
-  ({ student, studentStats, observations, generatedFeedback, attendanceRate }, ref) => {
-    
+export class StudentPrintReport extends React.Component<StudentPrintReportProps> {
+  render() {
+    const { student, studentStats, observations, generatedFeedback, attendanceRate } = this.props;
+
     if (!student) {
       return null;
     }
 
     return (
-      <div ref={ref} className="p-8 font-sans">
+      <div className="p-8 font-sans">
         <h1 className="text-3xl font-bold text-center mb-2">Informe Individual del Estudiante</h1>
         <p className="text-center text-muted-foreground mb-8">
             Generado el {format(new Date(), "PPP", { locale: es })}
@@ -91,7 +92,7 @@ export const StudentPrintReport = React.forwardRef<HTMLDivElement, StudentPrintR
                 </CardContent>
             </Card>
 
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-2 gap-6" style={{ breakInside: 'avoid-page' }}>
                 <div>
                     <Card>
                         <CardHeader>
@@ -101,7 +102,7 @@ export const StudentPrintReport = React.forwardRef<HTMLDivElement, StudentPrintR
                         <CardContent>
                             <div className="space-y-4">
                                 {studentStats?.gradesByGroup.map(item => (
-                                    <div key={item.group}>
+                                    <div key={item.group} style={{ breakInside: 'avoid' }}>
                                         <div className="flex justify-between items-center p-3 rounded-t-md border bg-muted/50">
                                             <p className="font-semibold">{item.group}</p>
                                         </div>
@@ -134,13 +135,13 @@ export const StudentPrintReport = React.forwardRef<HTMLDivElement, StudentPrintR
                 </div>
             </div>
             
-            <Card>
+            <Card style={{ breakInside: 'avoid-page' }}>
                 <CardHeader><CardTitle>Bitácora de Observaciones</CardTitle></CardHeader>
                 <CardContent>
                     {observations.length > 0 ? (
                         <div className="space-y-4">
                             {observations.map(obs => (
-                                <div key={obs.id} className="border-l-4 pl-3 py-1" style={{borderColor: obs.type === 'Mérito' ? 'hsl(var(--chart-2))' : 'hsl(var(--destructive))'}}>
+                                <div key={obs.id} className="border-l-4 pl-3 py-1" style={{borderColor: obs.type === 'Mérito' ? 'hsl(var(--chart-2))' : 'hsl(var(--destructive))', breakInside: 'avoid' }}>
                                     <div className="flex justify-between items-center"><p className="font-semibold text-sm">{obs.type}</p><p className="text-xs text-muted-foreground">{format(new Date(obs.date), "dd/MM/yy", { locale: es })}</p></div>
                                     <p className="text-xs mt-1">{obs.details}</p>
                                 </div>
@@ -151,7 +152,7 @@ export const StudentPrintReport = React.forwardRef<HTMLDivElement, StudentPrintR
             </Card>
 
             {generatedFeedback &&
-                <Card>
+                <Card style={{ breakInside: 'avoid-page' }}>
                     <CardHeader><CardTitle>Retroalimentación y Recomendaciones</CardTitle></CardHeader>
                     <CardContent>
                         <div className="p-4 bg-muted/50 rounded-md border whitespace-pre-wrap text-sm">{generatedFeedback}</div>
@@ -162,5 +163,4 @@ export const StudentPrintReport = React.forwardRef<HTMLDivElement, StudentPrintR
       </div>
     );
   }
-);
-StudentPrintReport.displayName = 'StudentPrintReport';
+}
