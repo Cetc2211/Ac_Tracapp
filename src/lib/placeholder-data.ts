@@ -19,9 +19,14 @@ export type Group = {
 export type StudentObservation = {
     id: string;
     studentId: string;
-    date: string;
-    type: 'Problemas de conducta' | 'Episodios emocionales' | 'Cambio de conducta significativo' | 'Mérito' | 'Demérito' | 'Irresponsabilidad' | 'Otros';
+    date: string; // ISO date string
+    type: 'Problema de conducta' | 'Episodio emocional' | 'Mérito' | 'Demérito' | 'Asesoría académica' | 'Otros' | string;
     details: string;
+    requiresCanalization: boolean;
+    canalizationTarget?: 'Tutor' | 'Atención psicológica' | 'Directivo' | 'Padre/Madre/Tutor legal' | 'Otros' | string;
+    requiresFollowUp: boolean;
+    followUpUpdates: { date: string; update: string }[];
+    isClosed: boolean;
 };
 
 export const students: Student[] = [
