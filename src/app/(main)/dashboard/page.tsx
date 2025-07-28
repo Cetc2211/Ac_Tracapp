@@ -7,6 +7,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from '@/components/ui/card';
 import {
   Table,
@@ -17,12 +18,21 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { ArrowUpRight, BookCopy, Users, AlertTriangle } from 'lucide-react';
+import { ArrowUpRight, BookCopy, Users, AlertTriangle, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { students as initialStudents, groups as initialGroups, Student, Group } from '@/lib/placeholder-data';
 import Image from 'next/image';
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 
 type EvaluationCriteria = {
   id: string;
@@ -68,6 +78,7 @@ export default function DashboardPage() {
   const [allCriteria, setAllCriteria] = useState<{[groupId: string]: EvaluationCriteria[]}>({});
   const [atRiskStudents, setAtRiskStudents] = useState<StudentWithRisk[]>([]);
   const [groupAverages, setGroupAverages] = useState<{[groupId: string]: number}>({});
+  const [searchQuery, setSearchQuery] = useState('');
 
   const calculateFinalGrade = useCallback((studentId: string, groupId: string, criteria: EvaluationCriteria[], grades: Grades) => {
     if (!grades || !criteria || criteria.length === 0) return 0;
@@ -210,6 +221,12 @@ export default function DashboardPage() {
     }
     return totalPossibleAttendance > 0 ? Math.round((totalPresents / totalPossibleAttendance) * 100) : 100;
   }, [allAttendance, groups]);
+  
+  const filteredAtRiskStudents = useMemo(() => {
+    return atRiskStudents.filter(student =>
+      student.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [atRiskStudents, searchQuery]);
 
 
   return (
@@ -315,15 +332,15 @@ export default function DashboardPage() {
             </Table>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="flex flex-col">
           <CardHeader>
             <CardTitle>Estudiantes con Alertas</CardTitle>
             <CardDescription>
               Estudiantes que requieren seguimiento por rendimiento o ausencias.
             </CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-6">
-            {atRiskStudents.map((student) => (
+          <CardContent className="grid gap-6 flex-grow">
+            {atRiskStudents.slice(0, 4).map((student) => (
               <div key={student.id} className="flex items-center gap-4">
                 <Image
                   alt="Avatar"
@@ -359,6 +376,74 @@ export default function DashboardPage() {
                 <p className="text-sm text-center text-muted-foreground">No hay estudiantes con alertas.</p>
             )}
           </CardContent>
+          {atRiskStudents.length > 0 && (
+            <CardFooter>
+                 <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="w-full">
+                        Ver todos ({atRiskStudents.length})
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>Estudiantes en Riesgo</DialogTitle>
+                      <DialogDescription>
+                        Lista completa de estudiantes que requieren atención especial.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="relative">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            type="search"
+                            placeholder="Buscar estudiante..."
+                            className="pl-8 w-full"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                    <div className="max-h-[50vh] overflow-y-auto space-y-4 pr-2">
+                        {filteredAtRiskStudents.map((student) => (
+                           <div key={student.id} className="flex items-center gap-4 p-2 rounded-md hover:bg-muted">
+                                <Image
+                                alt="Avatar"
+                                className="rounded-full"
+                                height={40}
+                                src={student.photo}
+                                data-ai-hint="student avatar"
+                                style={{
+                                    aspectRatio: '40/40',
+                                    objectFit: 'cover',
+                                }}
+                                width={40}
+                                />
+                                <div className="grid gap-1 flex-grow">
+                                <Link href={`/students/${student.id}`} className="text-sm font-medium leading-none hover:underline">
+                                    {student.name}
+                                </Link>
+                                <p className="text-sm text-muted-foreground">{student.calculatedRisk.reason}</p>
+                                </div>
+                                <div className="ml-auto font-medium">
+                                {student.calculatedRisk.level === 'high' && (
+                                    <Badge variant="destructive">Alto Riesgo</Badge>
+                                )}
+                                {student.calculatedRisk.level === 'medium' && (
+                                    <Badge variant="secondary" className="bg-amber-400 text-black">
+                                    Riesgo Medio
+                                    </Badge>
+                                )}
+                                </div>
+                            </div>
+                        ))}
+                        {filteredAtRiskStudents.length === 0 && (
+                            <p className="text-sm text-center text-muted-foreground py-8">
+                                No se encontraron estudiantes con ese nombre.
+                            </p>
+                        )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+            </CardFooter>
+          )}
         </Card>
       </div>
     </div>
