@@ -222,14 +222,15 @@ export default function StudentProfilePage() {
   return (
     <div className="flex flex-col gap-6">
        <div style={{ display: 'none' }}>
-        <StudentPrintReport 
-            ref={componentRef} 
-            student={student} 
-            studentStats={studentStats}
-            observations={observations}
-            generatedFeedback={generatedFeedback}
-            attendanceRate={attendanceRate}
-        />
+        <div ref={componentRef}>
+            <StudentPrintReport 
+                student={student} 
+                studentStats={studentStats}
+                observations={observations}
+                generatedFeedback={generatedFeedback}
+                attendanceRate={attendanceRate}
+            />
+        </div>
       </div>
        <Card className="bg-accent/50">
           <CardHeader>
