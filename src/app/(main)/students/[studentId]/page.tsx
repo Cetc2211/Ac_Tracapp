@@ -197,7 +197,7 @@ export default function StudentProfilePage() {
   }
 
   if (!student) {
-    return notFound();
+    notFound();
   }
 
   const attendanceRate = studentStats && studentStats.attendance.total > 0 
@@ -257,18 +257,18 @@ export default function StudentProfilePage() {
                                 <p className="font-semibold text-lg">{student.name}</p>
                             </div>
                         </div>
+                         <div className="flex items-start gap-3">
+                            <Mail className="h-6 w-6 text-primary mt-1 flex-shrink-0"/>
+                            <div>
+                                <p className="text-sm text-muted-foreground">Email:</p>
+                                <p className="font-semibold">{student.email || 'No registrado'}</p>
+                            </div>
+                        </div>
                         <div className="flex items-start gap-3">
                             <Contact className="h-6 w-6 text-primary mt-1 flex-shrink-0"/>
                             <div>
                                 <p className="text-sm text-muted-foreground">ID de Estudiante:</p>
                                 <p className="font-semibold">{student.id}</p>
-                            </div>
-                        </div>
-                        <div className="flex items-start gap-3">
-                            <Mail className="h-6 w-6 text-primary mt-1 flex-shrink-0"/>
-                            <div>
-                                <p className="text-sm text-muted-foreground">Email:</p>
-                                <p className="font-semibold">{student.email || 'No registrado'}</p>
                             </div>
                         </div>
                     </div>
