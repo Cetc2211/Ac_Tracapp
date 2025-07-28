@@ -264,7 +264,7 @@ export default function StudentProfilePage() {
                                 <p className="font-semibold">{student.email || 'No registrado'}</p>
                             </div>
                         </div>
-                        <div className="flex items-start gap-3">
+                         <div className="flex items-start gap-3">
                             <Contact className="h-6 w-6 text-primary mt-1 flex-shrink-0"/>
                             <div>
                                 <p className="text-sm text-muted-foreground">ID de Estudiante:</p>
@@ -305,24 +305,27 @@ export default function StudentProfilePage() {
                                 <div key={item.group}>
                                     <div className="flex justify-between items-center p-3 rounded-t-md border bg-muted/50">
                                         <p className="font-semibold">{item.group}</p>
-                                        <Badge variant={item.grade >= 70 ? "default" : "destructive"} className="text-base">{item.grade.toFixed(1)}%</Badge>
                                     </div>
-                                    <div className='p-3 border-x border-b rounded-b-md text-xs space-y-1'>
-                                        {item.criteriaDetails.map(c => (
-                                            <div key={c.name} className='flex justify-between'>
-                                                <span>{c.name} ({c.weight}%):</span>
-                                                <span className='font-medium'>{c.earned.toFixed(1)}%</span>
-                                            </div>
-                                        ))}
+                                    <div className='p-3 border-x border-b rounded-b-md text-sm space-y-2'>
+                                        <div className='flex justify-between'>
+                                            <span>Primer Parcial:</span>
+                                            <span className='font-medium'>0.0%</span>
+                                        </div>
+                                         <div className='flex justify-between'>
+                                            <span>Segundo Parcial:</span>
+                                            <span className='font-medium'>0.0%</span>
+                                        </div>
+                                         <div className='flex justify-between'>
+                                            <span>Tercer Parcial:</span>
+                                            <span className='font-medium'>0.0%</span>
+                                        </div>
+                                         <div className='flex justify-between pt-2 border-t mt-2'>
+                                            <span className="font-bold">Promedio Semestral:</span>
+                                            <Badge variant={item.grade >= 70 ? "default" : "destructive"} className="text-base">{item.grade.toFixed(1)}%</Badge>
+                                        </div>
                                     </div>
                                 </div>
                             ))}
-                            {studentStats && studentStats.gradesByGroup.length > 0 && (
-                                <div className="flex justify-between items-center p-3 rounded-md bg-green-100 border-green-300 dark:bg-green-900/50 dark:border-green-700 mt-4">
-                                    <p className="font-bold text-green-800 dark:text-green-300">Promedio Semestral:</p>
-                                    <Badge className="text-lg bg-green-600 hover:bg-green-600">{studentStats.averageGrade.toFixed(1)}%</Badge>
-                                </div>
-                            )}
                             {studentStats?.gradesByGroup.length === 0 && (
                                 <p className="text-sm text-center text-muted-foreground py-4">No hay calificaciones registradas.</p>
                             )}
@@ -410,3 +413,5 @@ export default function StudentProfilePage() {
     </div>
   );
 }
+
+    
