@@ -345,7 +345,7 @@ export default function GroupsPage() {
                      <div className="bg-muted rounded-full p-4">
                         <BookCopy className="h-12 w-12 text-muted-foreground" />
                     </div>
-                    <CardTitle>No hay grupos todavía</CardTitle>
+                    <h3 className="text-2xl font-semibold leading-none tracking-tight">No hay grupos todavía</h3>
                     <CardDescription>Crea tu primer grupo para empezar a organizar a tus estudiantes.</CardDescription>
                 </CardContent>
             </Card>
@@ -354,5 +354,3 @@ export default function GroupsPage() {
     </div>
   );
 }
-
-    

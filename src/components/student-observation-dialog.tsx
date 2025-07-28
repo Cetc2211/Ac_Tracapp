@@ -147,5 +147,3 @@ export function StudentObservationDialog({ student, open, onOpenChange }: Studen
     </Dialog>
   );
 }
-
-    

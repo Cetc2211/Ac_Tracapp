@@ -301,7 +301,7 @@ export default function DashboardPage() {
 
        <Card>
         <CardHeader>
-          <CardTitle>Buscar Estudiante</CardTitle>
+          <h3 className="text-2xl font-semibold leading-none tracking-tight">Buscar Estudiante</h3>
           <CardDescription>
             Encuentra rápidamente el perfil de un estudiante por su nombre.
           </CardDescription>
