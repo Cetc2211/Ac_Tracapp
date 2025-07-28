@@ -7,7 +7,6 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle,
   CardFooter,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -130,7 +129,7 @@ export default function TutorsPage() {
                 return (
                     <Card key={group.id} className="flex flex-col">
                         <CardHeader>
-                            <CardTitle>{group.subject}</CardTitle>
+                            <h2 className="text-2xl font-semibold leading-none tracking-tight">{group.subject}</h2>
                             <CardDescription>
                                 {studentsWithTutors.length} de {group.students.length} estudiantes tienen información de tutor.
                             </CardDescription>
