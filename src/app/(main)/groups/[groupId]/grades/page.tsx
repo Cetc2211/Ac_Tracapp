@@ -265,17 +265,23 @@ export default function GroupGradesPage() {
                     {evaluationCriteria.map(criterion => {
                       const isParticipation = criterion.name === 'Participación';
                       const gradeDetail = grades[student.id]?.[criterion.id];
-                      const delivered = gradeDetail?.delivered ?? 0;
-                      const expected = criterion.expectedValue;
-                      let criterionPercentage = 0;
-                      if (!isParticipation && expected > 0) {
-                        criterionPercentage = (delivered / expected) * 100;
-                      } else if (isParticipation) {
+                      
+                      let performanceScore = 0;
+                      if (isParticipation) {
                         const pData = participationData[student.id];
                         if (pData && pData.total > 0) {
-                          criterionPercentage = (pData.participated / pData.total) * 100;
+                          performanceScore = (pData.participated / pData.total) * 10;
+                        }
+                      } else {
+                        const delivered = gradeDetail?.delivered ?? 0;
+                        const expected = criterion.expectedValue;
+                        if(expected > 0) {
+                          performanceScore = (delivered / expected) * 10;
                         }
                       }
+
+                      const weightedScore = performanceScore * (criterion.weight / 100);
+                      const maxWeightedScore = 10 * (criterion.weight / 100);
 
                       return (
                       <TableCell key={criterion.id} className="text-center">
@@ -283,9 +289,9 @@ export default function GroupGradesPage() {
                           <div className="flex flex-col items-center justify-center p-1">
                               <Label className='text-xs'>Participaciones</Label>
                               <span className="font-bold">{participationData[student.id]?.participated ?? 0} de {participationData[student.id]?.total ?? 0}</span>
-                              <Label className='text-xs mt-2'>Promedio</Label>
+                              <Label className='text-xs mt-2'>Puntaje Ponderado</Label>
                                <span className="font-bold">
-                                  {criterionPercentage.toFixed(1)}%
+                                  {weightedScore.toFixed(2)} / {maxWeightedScore.toFixed(2)} pts
                               </span>
                           </div>
                         ) : (
@@ -304,9 +310,9 @@ export default function GroupGradesPage() {
                                 />
                             </div>
                             <div className='flex-1'>
-                                <Label className='text-xs'>Promedio</Label>
+                                <Label className='text-xs'>Puntaje Ponderado</Label>
                                 <div className="h-8 flex items-center justify-center font-bold">
-                                  {criterionPercentage.toFixed(1)}%
+                                  {weightedScore.toFixed(2)} / {maxWeightedScore.toFixed(2)} pts
                                 </div>
                             </div>
                           </div>
