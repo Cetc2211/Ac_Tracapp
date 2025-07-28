@@ -46,7 +46,6 @@ const navItems = [
   { href: '/observations', icon: BookText, label: 'Observaciones' },
   { href: '/progressions', icon: Presentation, label: 'Progresiones' },
   { href: '/statistics', icon: BarChart3, label: 'Estadísticas' },
-  { href: '/reports', icon: FileText, label: 'Informes' },
   { href: '/tutors', icon: Contact, label: 'Tutores' },
 ];
 
