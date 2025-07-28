@@ -19,7 +19,10 @@ interface StudentPrintReportProps {
   attendanceRate: number;
 }
 
-export function StudentPrintReport({ student, studentStats, observations, generatedFeedback, attendanceRate }: StudentPrintReportProps) {
+export class StudentPrintReport extends React.Component<StudentPrintReportProps> {
+  render() {
+    const { student, studentStats, observations, generatedFeedback, attendanceRate } = this.props;
+
     if (!student) {
       return null;
     }
@@ -161,4 +164,5 @@ export function StudentPrintReport({ student, studentStats, observations, genera
         </div>
       </div>
     );
+  }
 }
