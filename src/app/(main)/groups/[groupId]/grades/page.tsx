@@ -84,7 +84,7 @@ export default function GroupGradesPage() {
 
       // Calculate participation
       const participationCriterion = localCriteria.find(c => c.name === 'Participación');
-      if (participationCriterion && currentGroup) {
+      if (participationCriterion && currentGroup && currentGroup.students.length > 0) {
           const storedParticipations = localStorage.getItem(`participations_${groupId}`);
           const participation: ParticipationRecord = storedParticipations ? JSON.parse(storedParticipations) : {};
           const participationDates = Object.keys(participation);
