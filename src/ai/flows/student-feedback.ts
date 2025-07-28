@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -27,18 +28,18 @@ const ObservationSchema = z.object({
   details: z.string().describe('The details of the observation.'),
 });
 
-export const StudentFeedbackInputSchema = z.object({
+const StudentFeedbackInputSchema = z.object({
   studentName: z.string().describe('The name of the student.'),
   gradesByGroup: z.array(GradeItemSchema).describe('A list of final grades for each subject.'),
   attendance: AttendanceSchema.describe('The student\'s attendance record.'),
   observations: z.array(ObservationSchema).optional().describe('A list of observations made by the teacher.'),
 });
-export type StudentFeedbackInput = z.infer<typeof StudentFeedbackInputSchema>;
+type StudentFeedbackInput = z.infer<typeof StudentFeedbackInputSchema>;
 
-export const StudentFeedbackOutputSchema = z.object({
+const StudentFeedbackOutputSchema = z.object({
   feedback: z.string().describe('A comprehensive feedback text for the student, written in Spanish.'),
 });
-export type StudentFeedbackOutput = z.infer<typeof StudentFeedbackOutputSchema>;
+type StudentFeedbackOutput = z.infer<typeof StudentFeedbackOutputSchema>;
 
 export async function generateStudentFeedback(input: StudentFeedbackInput): Promise<StudentFeedbackOutput> {
   return studentFeedbackFlow(input);
