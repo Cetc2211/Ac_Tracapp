@@ -23,6 +23,9 @@ import Image from 'next/image';
 import { Student, Group } from '@/lib/placeholder-data';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
+import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 type GlobalAttendanceRecord = {
   [date: string]: {
@@ -35,19 +38,23 @@ export default function AttendancePage() {
   const [attendance, setAttendance] = useState<GlobalAttendanceRecord>({});
   const [attendanceDates, setAttendanceDates] = useState<string[]>([]);
   const [activeGroupName, setActiveGroupName] = useState<string | null>(null);
+  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
+  const router = useRouter();
+
 
   useEffect(() => {
     try {
-      const activeGroupId = localStorage.getItem('activeGroupId');
+      const storedActiveGroupId = localStorage.getItem('activeGroupId');
       const groupName = localStorage.getItem('activeGroupName');
       setActiveGroupName(groupName);
+      setActiveGroupId(storedActiveGroupId);
 
       let relevantStudents: Student[] = [];
       const allGroupsJson = localStorage.getItem('groups');
       const allGroups: Group[] = allGroupsJson ? JSON.parse(allGroupsJson) : [];
 
-      if (activeGroupId) {
-        const activeGroup = allGroups.find(g => g.id === activeGroupId);
+      if (storedActiveGroupId) {
+        const activeGroup = allGroups.find(g => g.id === storedActiveGroupId);
         relevantStudents = activeGroup ? activeGroup.students : [];
       } else {
          const allStudentsJson = localStorage.getItem('students');
@@ -108,14 +115,22 @@ export default function AttendancePage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Registro de Asistencia General</h1>
-          <p className="text-muted-foreground">
-            {activeGroupName 
-                ? `Mostrando asistencia para el grupo: ${activeGroupName}` 
-                : 'Marca la asistencia de todos los estudiantes para una fecha específica.'
-            }
-          </p>
+        <div className="flex items-center gap-4">
+             <Button asChild variant="outline" size="icon">
+              <Link href={activeGroupId ? `/groups/${activeGroupId}` : '/groups'}>
+                <ArrowLeft />
+                <span className="sr-only">Regresar</span>
+              </Link>
+            </Button>
+            <div>
+                <h1 className="text-3xl font-bold">Registro de Asistencia General</h1>
+                <p className="text-muted-foreground">
+                    {activeGroupName 
+                        ? `Mostrando asistencia para el grupo: ${activeGroupName}` 
+                        : 'Marca la asistencia de todos los estudiantes para una fecha específica.'
+                    }
+                </p>
+            </div>
         </div>
         <Button onClick={handleRegisterToday}>Registrar Asistencia de Hoy</Button>
       </div>
