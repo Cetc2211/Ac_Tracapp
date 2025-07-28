@@ -35,7 +35,7 @@ type EvaluationCriteria = {
 
 type GradeDetail = {
   delivered: number | null;
-  average: number | null;
+  // We no longer need a manual average
 };
 
 type Grades = {
@@ -70,39 +70,44 @@ export default function GroupGradesPage() {
   useEffect(() => {
     if (!groupId) return;
     try {
+      // Load group
       const storedGroups = localStorage.getItem('groups');
       const allGroups = storedGroups ? JSON.parse(storedGroups) : initialGroups;
       const currentGroup = allGroups.find((g: any) => g.id === groupId);
       setGroup(currentGroup || null);
 
+      // Load criteria
       const storedCriteria = localStorage.getItem(`criteria_${groupId}`);
       const localCriteria: EvaluationCriteria[] = storedCriteria ? JSON.parse(storedCriteria) : [];
       
+      // Load grades
       const storedGrades = localStorage.getItem(`grades_${groupId}`);
-      if (storedGrades) {
-        setGrades(JSON.parse(storedGrades));
-      }
+      setGrades(storedGrades ? JSON.parse(storedGrades) : {});
 
       // Calculate participation only if a group and a participation criterion exist
-      const participationCriterion = localCriteria.find(c => c.name === 'Participación');
-      if (participationCriterion && currentGroup?.students?.length) {
-          const storedParticipations = localStorage.getItem(`participations_${groupId}`);
-          const participations: ParticipationRecord = storedParticipations ? JSON.parse(storedParticipations) : {};
-          const participationDates = Object.keys(participations);
-          const totalClasses = participationDates.length;
+      if (currentGroup?.students?.length) {
+        const participationCriterion = localCriteria.find(c => c.name === 'Participación');
+        if (participationCriterion) {
+            const storedParticipations = localStorage.getItem(`participations_${groupId}`);
+            const participations: ParticipationRecord = storedParticipations ? JSON.parse(storedParticipations) : {};
+            const participationDates = Object.keys(participations);
+            const totalClasses = participationDates.length;
 
-          const newParticipationData: ParticipationData = {};
-          for (const student of currentGroup.students) {
-              const participatedClasses = participationDates.filter(date => participations[date]?.[student.id]).length;
-              newParticipationData[student.id] = { participated: participatedClasses, total: totalClasses };
-          }
-          setParticipationData(newParticipationData);
-          
-          // Also set the expected value for participation criterion dynamically
-          const updatedCriteria = localCriteria.map(c => 
-              c.name === 'Participación' ? { ...c, expectedValue: totalClasses } : c
-          );
-          setEvaluationCriteria(updatedCriteria);
+            const newParticipationData: ParticipationData = {};
+            for (const student of currentGroup.students) {
+                const participatedClasses = participationDates.filter(date => participations[date]?.[student.id]).length;
+                newParticipationData[student.id] = { participated: participatedClasses, total: totalClasses };
+            }
+            setParticipationData(newParticipationData);
+            
+            // Also set the expected value for participation criterion dynamically
+            const updatedCriteria = localCriteria.map(c => 
+                c.name === 'Participación' ? { ...c, expectedValue: totalClasses } : c
+            );
+            setEvaluationCriteria(updatedCriteria);
+        } else {
+             setEvaluationCriteria(localCriteria);
+        }
       } else {
         setEvaluationCriteria(localCriteria);
       }
@@ -123,18 +128,10 @@ export default function GroupGradesPage() {
     });
   };
 
-  const handleGradeChange = (studentId: string, criterionId: string, field: 'delivered' | 'average', value: string) => {
+  const handleGradeChange = (studentId: string, criterionId: string, value: string) => {
     const numericValue = value === '' ? null : parseFloat(value);
     
-    if (field === 'average' && value !== '' && (isNaN(numericValue!) || numericValue! < 0 || numericValue! > 10)) {
-        toast({
-            variant: "destructive",
-            title: "Valor inválido",
-            description: "El promedio debe ser un número entre 0 y 10."
-        })
-        return;
-    }
-     if (field === 'delivered' && value !== '' && (isNaN(numericValue!) || numericValue! < 0 )) {
+     if (value !== '' && (isNaN(numericValue!) || numericValue! < 0 )) {
         toast({
             variant: "destructive",
             title: "Valor inválido",
@@ -149,7 +146,7 @@ export default function GroupGradesPage() {
         ...prev[studentId],
         [criterionId]: {
           ...prev[studentId]?.[criterionId],
-          [field]: numericValue,
+          delivered: numericValue,
         },
       },
     }));
@@ -170,11 +167,10 @@ export default function GroupGradesPage() {
       } else {
           const gradeDetail = grades[studentId]?.[criterion.id];
           const delivered = gradeDetail?.delivered ?? 0;
-          const average = gradeDetail?.average ?? 0;
           const expected = criterion.expectedValue;
 
           if(expected > 0) {
-            const criterionScore = (delivered / expected) * average;
+            const criterionScore = (delivered / expected) * 10;
             finalGrade += criterionScore * (criterion.weight / 100);
           }
       }
@@ -266,18 +262,30 @@ export default function GroupGradesPage() {
                       />
                       {student.name}
                     </TableCell>
-                    {evaluationCriteria.map(criterion => (
+                    {evaluationCriteria.map(criterion => {
+                      const isParticipation = criterion.name === 'Participación';
+                      const gradeDetail = grades[student.id]?.[criterion.id];
+                      const delivered = gradeDetail?.delivered ?? 0;
+                      const expected = criterion.expectedValue;
+                      let criterionAverage = 0;
+                      if (!isParticipation && expected > 0) {
+                        criterionAverage = (delivered / expected) * 10;
+                      } else if (isParticipation) {
+                        const pData = participationData[student.id];
+                        if (pData && pData.total > 0) {
+                          criterionAverage = (pData.participated / pData.total) * 10;
+                        }
+                      }
+
+                      return (
                       <TableCell key={criterion.id} className="text-center">
-                        {criterion.name === 'Participación' ? (
+                        {isParticipation ? (
                           <div className="flex flex-col items-center justify-center p-1">
                               <Label className='text-xs'>Participaciones</Label>
                               <span className="font-bold">{participationData[student.id]?.participated ?? 0} de {participationData[student.id]?.total ?? 0}</span>
                               <Label className='text-xs mt-2'>Promedio</Label>
                                <span className="font-bold">
-                                  {participationData[student.id]?.total > 0
-                                      ? ((participationData[student.id]!.participated / participationData[student.id]!.total) * 10).toFixed(1)
-                                      : '0.0'
-                                  }
+                                  {criterionAverage.toFixed(1)}
                               </span>
                           </div>
                         ) : (
@@ -292,27 +300,20 @@ export default function GroupGradesPage() {
                                     min={0}
                                     max={criterion.expectedValue}
                                     value={grades[student.id]?.[criterion.id]?.delivered ?? ''}
-                                    onChange={e => handleGradeChange(student.id, criterion.id, 'delivered', e.target.value)}
+                                    onChange={e => handleGradeChange(student.id, criterion.id, e.target.value)}
                                 />
                             </div>
                             <div className='flex-1'>
-                                <Label htmlFor={`average-${student.id}-${criterion.id}`} className='text-xs'>Promedio</Label>
-                                <Input 
-                                    id={`average-${student.id}-${criterion.id}`}
-                                    type="number"
-                                    className="h-8 text-center"
-                                    placeholder="Prom."
-                                    min={0}
-                                    max={10}
-                                    step="0.1"
-                                    value={grades[student.id]?.[criterion.id]?.average ?? ''}
-                                    onChange={e => handleGradeChange(student.id, criterion.id, 'average', e.target.value)}
-                                />
+                                <Label className='text-xs'>Promedio</Label>
+                                <div className="h-8 flex items-center justify-center font-bold">
+                                  {criterionAverage.toFixed(1)}
+                                </div>
                             </div>
                           </div>
                         )}
                       </TableCell>
-                    ))}
+                      )
+                    })}
                     <TableCell className="text-center font-bold text-lg sticky right-0 bg-card z-10">
                       {calculateFinalGrade(student.id)}
                     </TableCell>
@@ -326,5 +327,3 @@ export default function GroupGradesPage() {
     </div>
   );
 }
-
-    
