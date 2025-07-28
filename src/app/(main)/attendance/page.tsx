@@ -20,7 +20,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import Image from 'next/image';
-import { Student, students as initialStudents, Group } from '@/lib/placeholder-data';
+import { Student, Group } from '@/lib/placeholder-data';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -31,23 +31,34 @@ type GlobalAttendanceRecord = {
 };
 
 export default function AttendancePage() {
-  const [allStudents, setAllStudents] = useState<Student[]>([]);
+  const [studentsToDisplay, setStudentsToDisplay] = useState<Student[]>([]);
   const [attendance, setAttendance] = useState<GlobalAttendanceRecord>({});
   const [attendanceDates, setAttendanceDates] = useState<string[]>([]);
+  const [activeGroupName, setActiveGroupName] = useState<string | null>(null);
 
   useEffect(() => {
     try {
-      // Load all students from localStorage or fallback
-      const storedStudents = localStorage.getItem('students');
-      if (storedStudents) {
-        setAllStudents(JSON.parse(storedStudents));
+      const activeGroupId = localStorage.getItem('activeGroupId');
+      const groupName = localStorage.getItem('activeGroupName');
+      setActiveGroupName(groupName);
+
+      let relevantStudents: Student[] = [];
+      const allGroupsJson = localStorage.getItem('groups');
+      const allGroups: Group[] = allGroupsJson ? JSON.parse(allGroupsJson) : [];
+
+      if (activeGroupId) {
+        const activeGroup = allGroups.find(g => g.id === activeGroupId);
+        relevantStudents = activeGroup ? activeGroup.students : [];
       } else {
-        const allGroupsJson = localStorage.getItem('groups');
-        const allGroups: Group[] = allGroupsJson ? JSON.parse(allGroupsJson) : [];
-        const studentsFromGroups = allGroups.flatMap(g => g.students);
-        const uniqueStudents = Array.from(new Map(studentsFromGroups.map(s => [s.id, s])).values());
-        setAllStudents(uniqueStudents);
+         const allStudentsJson = localStorage.getItem('students');
+         if(allStudentsJson){
+            relevantStudents = JSON.parse(allStudentsJson);
+         } else {
+            const studentsFromGroups = allGroups.flatMap(g => g.students);
+            relevantStudents = Array.from(new Map(studentsFromGroups.map(s => [s.id, s])).values());
+         }
       }
+      setStudentsToDisplay(relevantStudents);
 
       // Load attendance data
       const storedAttendance = localStorage.getItem('globalAttendance');
@@ -63,8 +74,8 @@ export default function AttendancePage() {
   }, []);
   
   const sortedStudents = useMemo(() => {
-    return [...allStudents].sort((a, b) => a.name.localeCompare(b.name));
-  }, [allStudents]);
+    return [...studentsToDisplay].sort((a, b) => a.name.localeCompare(b.name));
+  }, [studentsToDisplay]);
 
   const handleRegisterToday = () => {
     const today = format(new Date(), 'yyyy-MM-dd');
@@ -100,7 +111,10 @@ export default function AttendancePage() {
         <div>
           <h1 className="text-3xl font-bold">Registro de Asistencia General</h1>
           <p className="text-muted-foreground">
-            Marca la asistencia de todos los estudiantes para una fecha específica.
+            {activeGroupName 
+                ? `Mostrando asistencia para el grupo: ${activeGroupName}` 
+                : 'Marca la asistencia de todos los estudiantes para una fecha específica.'
+            }
           </p>
         </div>
         <Button onClick={handleRegisterToday}>Registrar Asistencia de Hoy</Button>
@@ -143,14 +157,14 @@ export default function AttendancePage() {
                     ))}
                   </TableRow>
                 ))}
-                 {allStudents.length === 0 && (
+                 {studentsToDisplay.length === 0 && (
                     <TableRow>
                         <TableCell colSpan={attendanceDates.length + 1} className="text-center h-24">
-                            No hay estudiantes registrados.
+                            No hay estudiantes para mostrar.
                         </TableCell>
                     </TableRow>
                 )}
-                 {attendanceDates.length === 0 && allStudents.length > 0 && (
+                 {attendanceDates.length === 0 && studentsToDisplay.length > 0 && (
                     <TableRow>
                         <TableCell colSpan={1} className="text-center h-24">
                            Haz clic en "Registrar Asistencia de Hoy" para empezar.

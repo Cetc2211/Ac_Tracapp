@@ -11,6 +11,7 @@ import {
   BarChart3,
   FileText,
   CalendarCheck,
+  Package,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -59,6 +60,7 @@ export default function MainLayoutClient({
 }) {
   const pathname = usePathname();
   const [settings, setSettings] = useState(defaultSettings);
+  const [activeGroupName, setActiveGroupName] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -68,6 +70,16 @@ export default function MainLayoutClient({
         if (savedSettings) {
             setSettings(JSON.parse(savedSettings));
         }
+        const groupName = localStorage.getItem('activeGroupName');
+        setActiveGroupName(groupName);
+
+        const handleStorageChange = () => {
+            const groupName = localStorage.getItem('activeGroupName');
+            setActiveGroupName(groupName);
+        }
+        window.addEventListener('storage', handleStorageChange);
+        return () => window.removeEventListener('storage', handleStorageChange);
+
     } catch(e) {
         console.error("Could not parse settings from localStorage", e);
     }
@@ -90,6 +102,18 @@ export default function MainLayoutClient({
           )}
         </SidebarHeader>
         <SidebarContent>
+           {isClient && activeGroupName && (
+                <>
+                  <div className="px-4 py-2">
+                      <p className="text-xs font-semibold text-sidebar-foreground/70 tracking-wider uppercase">Grupo Activo</p>
+                      <p className="font-bold text-sidebar-foreground flex items-center gap-2">
+                        <Package className="h-4 w-4"/>
+                        {activeGroupName}
+                      </p>
+                  </div>
+                  <Separator className="my-2" />
+                </>
+            )}
           <SidebarMenu>
             {navItems.map((item) => (
               <SidebarMenuItem key={item.href}>

@@ -129,6 +129,10 @@ export default function GroupsPage() {
 
   useEffect(() => {
     try {
+        localStorage.removeItem('activeGroupId');
+        localStorage.removeItem('activeGroupName');
+        window.dispatchEvent(new Event('storage'));
+
         const storedGroups = localStorage.getItem('groups');
         const loadedGroups = storedGroups ? JSON.parse(storedGroups) : initialGroups;
         setGroups(loadedGroups);

@@ -138,6 +138,12 @@ export default function GroupDetailsPage() {
         return;
       }
       setGroup(currentGroup);
+      // Set active group in localStorage
+      localStorage.setItem('activeGroupId', groupId);
+      localStorage.setItem('activeGroupName', currentGroup.subject);
+       // Dispatch a storage event to notify other tabs/components
+      window.dispatchEvent(new Event('storage'));
+
 
       const storedStudents = localStorage.getItem('students');
       if(storedStudents) {
@@ -226,6 +232,10 @@ export default function GroupDetailsPage() {
     localStorage.removeItem(`criteria_${groupId}`);
     localStorage.removeItem(`grades_${groupId}`);
     localStorage.removeItem(`attendance_${groupId}`);
+    localStorage.removeItem('activeGroupId');
+    localStorage.removeItem('activeGroupName');
+     // Dispatch a storage event to notify other tabs/components
+    window.dispatchEvent(new Event('storage'));
     toast({
         title: 'Grupo Eliminado',
         description: `El grupo "${group.subject}" ha sido eliminado.`,
