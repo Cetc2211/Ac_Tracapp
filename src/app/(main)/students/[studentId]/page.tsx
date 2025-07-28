@@ -134,10 +134,10 @@ export default function StudentProfilePage() {
         const attendanceStats = { p: 0, a: 0, total: 0 };
         const globalAttendance: GlobalAttendanceRecord = JSON.parse(localStorage.getItem('globalAttendance') || '{}');
         
-        Object.values(globalAttendance).forEach(record => {
-            if (record[studentId] !== undefined) {
+        Object.keys(globalAttendance).forEach(date => {
+            if (globalAttendance[date]?.[studentId] !== undefined) {
                 attendanceStats.total++;
-                if (record[studentId] === true) {
+                if (globalAttendance[date]?.[studentId] === true) {
                     attendanceStats.p++;
                 } else {
                     attendanceStats.a++;
@@ -153,6 +153,8 @@ export default function StudentProfilePage() {
           attendance: attendanceStats,
           gradesByGroup,
         });
+      } else {
+        setStudent(null);
       }
     } catch (error) {
       console.error("Failed to load student data from localStorage", error);
@@ -313,7 +315,7 @@ export default function StudentProfilePage() {
                                     <div className='p-3 border-x border-b rounded-b-md text-sm space-y-2'>
                                         <div className='flex justify-between'>
                                             <span>Primer Parcial:</span>
-                                            <span className='font-medium'>0.0%</span>
+                                            <span className='font-medium'>{item.grade.toFixed(1)}%</span>
                                         </div>
                                          <div className='flex justify-between'>
                                             <span>Segundo Parcial:</span>
