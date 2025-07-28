@@ -118,9 +118,8 @@ export default function ParticipationsPage() {
     if (!activeGroupId) return;
 
     if (hasParticipated) {
-      const attendanceForDay = attendance[date];
-      const studentAttendance = attendanceForDay?.[studentId];
-      if (studentAttendance !== 'present') {
+      const studentHasAttendance = attendance[date]?.[studentId] === 'present';
+      if (!studentHasAttendance) {
         toast({
           variant: 'destructive',
           title: 'Incongruencia en el registro',
