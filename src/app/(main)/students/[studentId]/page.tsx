@@ -118,6 +118,7 @@ export default function StudentProfilePage() {
         setStudent(currentStudent);
         const storedGroups: Group[] = JSON.parse(localStorage.getItem('groups') || '[]');
         const studentGroups = storedGroups.filter(g => g.students.some(s => s.id === studentId));
+        const studentGroupIds = new Set(studentGroups.map(g => g.id));
 
         const gradesByGroup: StudentStats['gradesByGroup'] = [];
         let totalGradeSum = 0;
@@ -131,19 +132,28 @@ export default function StudentProfilePage() {
             totalGradeSum += finalGrade;
         });
 
-        let attendanceStats = { p: 0, a: 0, total: 0 };
-        
+        const attendanceStats = { p: 0, a: 0, total: 0 };
         const globalAttendance: GlobalAttendanceRecord = JSON.parse(localStorage.getItem('globalAttendance') || '{}');
-        const allDates = Object.keys(globalAttendance);
-        
-        allDates.forEach(date => {
-            if (globalAttendance[date]?.[studentId] !== undefined) {
-                attendanceStats.total++;
-                if (globalAttendance[date][studentId]) attendanceStats.p++;
-                else attendanceStats.a++;
+        const studentAttendanceDates = new Set<string>();
+
+        // Find all dates where this student had an attendance record in any of their groups
+         Object.entries(globalAttendance).forEach(([date, records]) => {
+            if (records[studentId] !== undefined) {
+                 // To avoid double counting, we need to know if this attendance record belongs to one of the student's groups.
+                 // This is a limitation of the current data model. We'll assume any record for the student is valid for now.
+                 studentAttendanceDates.add(date);
             }
         });
         
+        attendanceStats.total = studentAttendanceDates.size;
+        studentAttendanceDates.forEach(date => {
+            if (globalAttendance[date]?.[studentId] === true) {
+                attendanceStats.p++;
+            } else {
+                attendanceStats.a++;
+            }
+        });
+
         const observations: StudentObservation[] = JSON.parse(localStorage.getItem(`observations_${studentId}`) || '[]');
         setObservations(observations.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
         
@@ -162,7 +172,10 @@ export default function StudentProfilePage() {
   }, [studentId, calculateFinalGradeDetails, toast]);
   
    const handleGenerateFeedback = async () => {
-    if (!student || !studentStats) return;
+    if (!student || !studentStats) {
+        toast({ variant: 'destructive', title: 'Datos no disponibles', description: 'Las estadísticas del estudiante aún no están listas.' });
+        return;
+    };
     setIsGeneratingFeedback(true);
     setGeneratedFeedback('');
     try {
@@ -397,7 +410,7 @@ export default function StudentProfilePage() {
                         <p className="text-muted-foreground mb-4">
                             Haz clic en el botón para generar un análisis completo del desempeño y obtener recomendaciones.
                         </p>
-                        <Button onClick={handleGenerateFeedback} disabled={isGeneratingFeedback}>
+                        <Button onClick={handleGenerateFeedback} disabled={isGeneratingFeedback || !studentStats}>
                             {isGeneratingFeedback ? (
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                             ) : (
@@ -413,5 +426,3 @@ export default function StudentProfilePage() {
     </div>
   );
 }
-
-    
