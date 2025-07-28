@@ -25,6 +25,13 @@ import {
   DialogFooter,
   DialogDescription,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 type EvaluationCriteria = {
   id: string;
@@ -33,13 +40,19 @@ type EvaluationCriteria = {
   expectedValue: number;
 };
 
+const nameOptions = ["Actividades", "Portafolio", "Participación", "Examen", "Proyecto Integrador", "Otros"];
+const weightOptions = ["10", "20", "30", "40", "50", "60", "70", "80", "90", "100", "Otros"];
+
 export default function GroupCriteriaPage() {
   const params = useParams();
   const groupId = params.groupId as string;
   const [group, setGroup] = useState<(typeof initialGroups)[0] | null>(null);
   const [evaluationCriteria, setEvaluationCriteria] = useState<EvaluationCriteria[]>([]);
-  const [newCriterionName, setNewCriterionName] = useState('');
-  const [newCriterionWeight, setNewCriterionWeight] = useState('');
+
+  const [selectedName, setSelectedName] = useState('');
+  const [customName, setCustomName] = useState('');
+  const [selectedWeight, setSelectedWeight] = useState('');
+  const [customWeight, setCustomWeight] = useState('');
   const [newCriterionValue, setNewCriterionValue] = useState('');
   
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -70,10 +83,13 @@ export default function GroupCriteriaPage() {
   };
   
   const handleAddCriterion = () => {
-    const weight = parseFloat(newCriterionWeight);
+    const finalName = selectedName === 'Otros' ? customName.trim() : selectedName;
+    const finalWeight = selectedWeight === 'Otros' ? customWeight : selectedWeight;
+    
+    const weight = parseFloat(finalWeight);
     const expectedValue = parseInt(newCriterionValue, 10);
 
-    if (!newCriterionName.trim() || isNaN(weight) || weight <= 0 || weight > 100 || isNaN(expectedValue) || expectedValue < 0 ) {
+    if (!finalName || isNaN(weight) || weight <= 0 || weight > 100 || isNaN(expectedValue) || expectedValue < 0 ) {
         toast({
             variant: 'destructive',
             title: 'Datos inválidos',
@@ -94,14 +110,16 @@ export default function GroupCriteriaPage() {
 
     const newCriterion: EvaluationCriteria = {
         id: `C${Date.now()}`,
-        name: newCriterionName.trim(),
+        name: finalName,
         weight: weight,
         expectedValue: expectedValue,
     };
 
     saveCriteria([...evaluationCriteria, newCriterion]);
-    setNewCriterionName('');
-    setNewCriterionWeight('');
+    setSelectedName('');
+    setCustomName('');
+    setSelectedWeight('');
+    setCustomWeight('');
     setNewCriterionValue('');
     toast({ title: 'Criterio Agregado', description: `Se agregó "${newCriterion.name}" a la lista.`});
   };
@@ -178,8 +196,11 @@ export default function GroupCriteriaPage() {
         </div>
     )
   }
+  
+  const finalNameForCheck = selectedName === 'Otros' ? customName.trim() : selectedName;
+  const finalWeightForCheck = selectedWeight === 'Otros' ? customWeight : selectedWeight;
+  const isAddButtonDisabled = !finalNameForCheck || !finalWeightForCheck || !newCriterionValue;
 
-  const isAddButtonDisabled = !newCriterionName.trim() || !newCriterionWeight.trim() || !newCriterionValue.trim();
 
   return (
     <div className="flex flex-col gap-6">
@@ -206,37 +227,65 @@ export default function GroupCriteriaPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-2 mb-6">
-            <div className="flex-grow">
-                <Label htmlFor="criterion-name" className="sr-only">Nombre del criterio</Label>
-                <Input 
-                    id="criterion-name"
-                    placeholder="Nombre del criterio (Ej. Tareas)" 
-                    value={newCriterionName}
-                    onChange={(e) => setNewCriterionName(e.target.value)}
-                />
+          <div className="flex items-start gap-2 mb-6">
+            <div className="flex-grow space-y-1">
+                <Label htmlFor="criterion-name">Nombre del criterio</Label>
+                <div className="flex gap-2">
+                    <Select value={selectedName} onValueChange={setSelectedName}>
+                        <SelectTrigger id="criterion-name">
+                            <SelectValue placeholder="Selecciona un nombre" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {nameOptions.map(option => (
+                                <SelectItem key={option} value={option}>{option}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    {selectedName === 'Otros' && (
+                        <Input 
+                            placeholder="Nombre personalizado" 
+                            value={customName}
+                            onChange={(e) => setCustomName(e.target.value)}
+                        />
+                    )}
+                </div>
             </div>
-             <div className="w-[120px]">
-                <Label htmlFor="criterion-weight" className="sr-only">Peso del criterio</Label>
-                <Input 
-                    id="criterion-weight"
-                    type="number" 
-                    placeholder="Peso %" 
-                    value={newCriterionWeight}
-                    onChange={(e) => setNewCriterionWeight(e.target.value)}
-                />
+             <div className="space-y-1">
+                <Label htmlFor="criterion-weight">Peso %</Label>
+                <div className="flex gap-2">
+                    <Select value={selectedWeight} onValueChange={setSelectedWeight}>
+                        <SelectTrigger id="criterion-weight" className="w-[120px]">
+                            <SelectValue placeholder="Peso" />
+                        </SelectTrigger>
+                        <SelectContent>
+                             {weightOptions.map(option => (
+                                <SelectItem key={option} value={option}>{option === 'Otros' ? option : `${option}%`}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                     {selectedWeight === 'Otros' && (
+                        <Input 
+                            type="number"
+                            placeholder="Peso %" 
+                            className="w-[120px]"
+                            value={customWeight}
+                            onChange={(e) => setCustomWeight(e.target.value)}
+                        />
+                     )}
+                </div>
              </div>
-             <div className="w-[180px]">
-                <Label htmlFor="criterion-value" className="sr-only">Valor Esperado</Label>
+             <div className="space-y-1">
+                <Label htmlFor="criterion-value">Valor Esperado</Label>
                 <Input 
                     id="criterion-value"
                     type="number" 
-                    placeholder="Valor Esperado" 
+                    placeholder="Valor Esperado"
+                    className="w-[180px]"
                     value={newCriterionValue}
                     onChange={(e) => setNewCriterionValue(e.target.value)}
                 />
              </div>
-            <Button size="icon" onClick={handleAddCriterion} disabled={isAddButtonDisabled}>
+            <Button size="icon" onClick={handleAddCriterion} disabled={isAddButtonDisabled} className="self-end">
                 <PlusCircle className="h-4 w-4"/>
                 <span className="sr-only">Agregar</span>
             </Button>
