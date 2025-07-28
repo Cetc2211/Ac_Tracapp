@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Student, Group, StudentObservation } from '@/lib/placeholder-data';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
-import { ArrowLeft, Mail, User, Contact, EyeOff, Printer, FileText } from 'lucide-react';
+import { ArrowLeft, Mail, User, Contact, EyeOff, Printer, FileText, Loader2 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -40,13 +40,15 @@ type Grades = {
 
 type AttendanceStatus = 'present' | 'absent' | 'late';
 
-type AttendanceRecord = {
-  [studentId: string]: AttendanceStatus;
-};
-
 type DailyAttendance = {
-    [date: string]: AttendanceRecord;
+    [date: string]: { [studentId: string]: AttendanceStatus };
 }
+
+type GlobalAttendanceRecord = {
+  [date: string]: {
+    [studentId: string]: boolean;
+  };
+};
 
 type ParticipationRecord = {
   [date: string]: {
@@ -70,6 +72,7 @@ export default function StudentProfilePage() {
   const [studentStats, setStudentStats] = useState<StudentStats | null>(null);
   const [observations, setObservations] = useState<StudentObservation[]>([]);
   const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(true);
   
   const calculateFinalGrade = useCallback((studentId: string, criteria: EvaluationCriteria[], grades: Grades, participations: ParticipationRecord) => {
     if (!criteria || criteria.length === 0) return 0;
@@ -99,13 +102,16 @@ export default function StudentProfilePage() {
 
 
   useEffect(() => {
-    if (!studentId) return;
+    if (!studentId) {
+        setIsLoading(false);
+        return;
+    };
     try {
       const storedStudents: Student[] = JSON.parse(localStorage.getItem('students') || '[]');
       const currentStudent = storedStudents.find(s => s.id === studentId);
-      setStudent(currentStudent || null);
-
+      
       if (currentStudent) {
+        setStudent(currentStudent);
         const storedGroups: Group[] = JSON.parse(localStorage.getItem('groups') || '[]');
         const studentGroups = storedGroups.filter(g => g.students.some(s => s.id === studentId));
 
@@ -123,22 +129,19 @@ export default function StudentProfilePage() {
 
         const activeGroupId = localStorage.getItem('activeGroupId');
         let attendanceStats = { p: 0, a: 0, l: 0, total: 0 };
-
-        if (activeGroupId) {
-          const groupAttendance: DailyAttendance = JSON.parse(localStorage.getItem(`attendance_${activeGroupId}`) || '{}');
-          const allDates = Object.keys(groupAttendance);
-          attendanceStats.total = allDates.length;
-          
-          allDates.forEach(date => {
-            if (groupAttendance[date]?.[studentId]) {
-                 const status = groupAttendance[date][studentId];
-                 if (status === 'present') attendanceStats.p++;
-                 else if (status === 'absent') attendanceStats.a++;
-                 else if (status === 'late') attendanceStats.l++;
+        
+        // Use global attendance as a fallback for stats
+        const globalAttendance: GlobalAttendanceRecord = JSON.parse(localStorage.getItem('globalAttendance') || '{}');
+        const allDates = Object.keys(globalAttendance);
+        
+        allDates.forEach(date => {
+            if (globalAttendance[date]?.[studentId] !== undefined) {
+                attendanceStats.total++;
+                if (globalAttendance[date][studentId]) attendanceStats.p++;
+                else attendanceStats.a++;
             }
-          });
-        }
-
+        });
+        
         const observations: StudentObservation[] = JSON.parse(localStorage.getItem(`observations_${studentId}`) || '[]');
         setObservations(observations.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
         
@@ -151,10 +154,20 @@ export default function StudentProfilePage() {
     } catch (error) {
       console.error("Failed to load student data from localStorage", error);
       toast({ variant: 'destructive', title: 'Error al cargar datos', description: 'No se pudo cargar la información del estudiante.'})
-      setStudent(null);
+    } finally {
+        setIsLoading(false);
     }
   }, [studentId, calculateFinalGrade, toast]);
   
+  if (isLoading) {
+    return (
+        <div className="flex justify-center items-center h-full">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <span className="ml-2">Cargando perfil...</span>
+        </div>
+    );
+  }
+
   if (!student) {
     return notFound();
   }
@@ -261,10 +274,10 @@ export default function StudentProfilePage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Historial de Asistencia</CardTitle>
-                    <CardDescription>Para el grupo activo</CardDescription>
+                    <CardDescription>Resumen de todos los grupos</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                    <div className="flex justify-between p-2 border-b"><span>Total de Clases:</span> <span className="font-bold">{studentStats?.attendance.total || 0}</span></div>
+                    <div className="flex justify-between p-2 border-b"><span>Total de Clases Registradas:</span> <span className="font-bold">{studentStats?.attendance.total || 0}</span></div>
                     <div className="flex justify-between p-2 rounded-md bg-green-100 dark:bg-green-900/50"><span>Presente:</span> <span className="font-bold">{studentStats?.attendance.p || 0}</span></div>
                     <div className="flex justify-between p-2 rounded-md bg-yellow-100 dark:bg-yellow-900/50"><span>Tarde:</span> <span className="font-bold">{studentStats?.attendance.l || 0}</span></div>
                     <div className="flex justify-between p-2 rounded-md bg-red-100 dark:bg-red-900/50"><span>Ausente:</span> <span className="font-bold">{studentStats?.attendance.a || 0}</span></div>

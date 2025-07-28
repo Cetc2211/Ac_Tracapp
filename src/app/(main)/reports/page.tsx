@@ -117,7 +117,7 @@ export default function ReportsPage() {
       setActiveGroup(group || null);
 
       if (group) {
-        setSelectedStudent(group.students[0] || null);
+        setSelectedStudent(group.students.sort((a,b) => a.name.localeCompare(b.name))[0] || null);
 
         const criteria: EvaluationCriteria[] = JSON.parse(localStorage.getItem(`criteria_${group.id}`) || '[]');
         const grades: Grades = JSON.parse(localStorage.getItem(`grades_${group.id}`) || '{}');
@@ -367,7 +367,7 @@ export default function ReportsPage() {
                         <div className="mt-4 flex flex-wrap gap-2">
                              <Button asChild size="sm" variant="secondary">
                                 <Link href={`/students/${selectedStudent.id}`}>
-                                    <Eye className="mr-2 h-4 w-4" /> Ver Perfil Visual
+                                    <Eye className="mr-2 h-4 w-4" /> Ver Informe Visual
                                 </Link>
                             </Button>
                              <Button size="sm" variant="secondary">
@@ -384,3 +384,5 @@ export default function ReportsPage() {
     </div>
   );
 }
+
+    
