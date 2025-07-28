@@ -250,16 +250,16 @@ export default function GroupsPage() {
             Gestiona tus grupos, toma asistencia y registra actividades.
           </p>
         </div>
-         <Button size="sm" className="gap-1" onClick={() => setIsDialogOpen(true)}>
-            <PlusCircle className="h-3.5 w-3.5" />
-            <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                Nuevo Grupo
-            </span>
-        </Button>
-      </div>
-
-       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="sm:max-w-4xl">
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+                <Button size="sm" className="gap-1">
+                    <PlusCircle className="h-3.5 w-3.5" />
+                    <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                        Nuevo Grupo
+                    </span>
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-4xl">
               <DialogHeader>
                   <DialogTitle>Crear Nuevo Grupo</DialogTitle>
                   <DialogDescription>
@@ -295,7 +295,8 @@ export default function GroupsPage() {
                   <Button onClick={handleCreateGroup}>Crear Grupo</Button>
               </DialogFooter>
           </DialogContent>
-       </Dialog>
+        </Dialog>
+      </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {groups.map((group, index) => {

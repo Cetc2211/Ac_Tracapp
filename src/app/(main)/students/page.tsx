@@ -188,31 +188,29 @@ export default function StudentsPage() {
               }
             </CardDescription>
           </div>
-          <div className="flex items-center gap-2">
-            {numSelected > 0 && (
-                <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                        <Button variant="destructive" size="sm" className="gap-1">
-                            <Trash2 className="h-3.5 w-3.5" />
-                            <span>Eliminar ({numSelected})</span>
-                        </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                Esta acción no se puede deshacer. Esto eliminará permanentemente a los {numSelected} estudiantes seleccionados
-                                y todos sus datos asociados de todos los grupos.
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleDeleteSelectedStudents}>Sí, eliminar</AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
+           {numSelected > 0 && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="sm" className="gap-1">
+                        <Trash2 className="h-3.5 w-3.5" />
+                        <span>Eliminar ({numSelected})</span>
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Esta acción no se puede deshacer. Esto eliminará permanentemente a los {numSelected} estudiantes seleccionados
+                            y todos sus datos asociados de todos los grupos.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteSelectedStudents}>Sí, eliminar</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             )}
-          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -275,7 +273,7 @@ export default function StudentsPage() {
                 <TableCell className="hidden md:table-cell">{student.email}</TableCell>
                 <TableCell className="hidden md:table-cell">{student.phone}</TableCell>
                 <TableCell>
-                    <AlertDialog>
+                     <AlertDialog>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button aria-haspopup="true" size="icon" variant="ghost">
@@ -330,3 +328,5 @@ export default function StudentsPage() {
     </Card>
   );
 }
+
+    

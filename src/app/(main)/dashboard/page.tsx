@@ -351,7 +351,7 @@ export default function DashboardPage() {
         <Card className="xl:col-span-2">
           <CardHeader className="flex flex-row items-center">
             <div className="grid gap-2">
-              <CardTitle className="text-2xl font-semibold leading-none tracking-tight">Grupos Recientes</CardTitle>
+              <h3 className="text-2xl font-semibold leading-none tracking-tight">Grupos Recientes</h3>
               <CardDescription>
                 Resumen de los grupos y su rendimiento.
               </CardDescription>
@@ -507,3 +507,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
