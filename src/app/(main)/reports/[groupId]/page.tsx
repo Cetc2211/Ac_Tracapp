@@ -7,6 +7,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from '@/components/ui/card';
 import {
   Table,
@@ -21,8 +22,8 @@ import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, Printer } from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react';
-import { Group, Student } from '@/lib/placeholder-data';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Group, Student, StudentObservation } from '@/lib/placeholder-data';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -63,11 +64,19 @@ type StudentReportData = {
   participations: number;
 };
 
+type ReportSummary = {
+    totalStudents: number;
+    approvedCount: number;
+    failedCount: number;
+    studentsWithObservations: number;
+}
+
 export default function GroupReportPage() {
   const params = useParams();
   const groupId = params.groupId as string;
   const [group, setGroup] = useState<Group | null>(null);
   const [reportData, setReportData] = useState<StudentReportData[]>([]);
+  const [summary, setSummary] = useState<ReportSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [institutionName, setInstitutionName] = useState('Academic Tracker');
   const [institutionLogo, setInstitutionLogo] = useState('');
@@ -115,8 +124,19 @@ export default function GroupReportPage() {
         const totalClassesWithParticipation = Object.keys(participations).length;
         const allAttendanceDates = Object.keys(attendance);
 
+        let approved = 0;
+        let studentsWithObservations = 0;
+
         const studentData = currentGroup.students.map(student => {
           const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations);
+          if (parseInt(finalGrade) >= 70) {
+              approved++;
+          }
+          
+          const studentObservations: StudentObservation[] = JSON.parse(localStorage.getItem(`observations_${student.id}`) || '[]');
+          if(studentObservations.length > 0) {
+              studentsWithObservations++;
+          }
 
           let attendanceCount = 0;
           let absenceCount = 0;
@@ -143,6 +163,12 @@ export default function GroupReportPage() {
         }).sort((a, b) => a.student.name.localeCompare(b.student.name));
         
         setReportData(studentData);
+        setSummary({
+            totalStudents: currentGroup.students.length,
+            approvedCount: approved,
+            failedCount: currentGroup.students.length - approved,
+            studentsWithObservations: studentsWithObservations
+        });
       }
       
       const appSettings = JSON.parse(localStorage.getItem('appSettings') || '{}');
@@ -164,7 +190,7 @@ export default function GroupReportPage() {
     return <div>Generando informe...</div>;
   }
 
-  if (!group) {
+  if (!group || !summary) {
     return notFound();
   }
 
@@ -191,12 +217,12 @@ export default function GroupReportPage() {
          </Button>
       </div>
 
-      <Card id="report-content">
-        <CardHeader className="border-b">
-           <div className="flex justify-between items-center">
+      <Card id="report-content" className="p-4 sm:p-6 md:p-8">
+        <header className="border-b pb-6 mb-6">
+           <div className="flex justify-between items-start">
                 <div className="flex flex-col">
                     <h1 className="text-2xl font-bold">{institutionName}</h1>
-                    <p className="text-lg">Informe de Rendimiento del Grupo</p>
+                    <p className="text-lg text-muted-foreground">Informe de Rendimiento Académico</p>
                 </div>
                  {institutionLogo && (
                     <Image
@@ -208,62 +234,81 @@ export default function GroupReportPage() {
                     />
                  )}
            </div>
-           <div className="pt-4 flex justify-between text-sm">
+           <div className="pt-4 flex justify-between text-sm text-muted-foreground">
                 <div>
-                    <span className="font-bold">Asignatura: </span>
+                    <span className="font-semibold text-foreground">Asignatura: </span>
                     <span>{group.subject}</span>
                 </div>
                 <div>
-                    <span className="font-bold">Fecha del Informe: </span>
+                    <span className="font-semibold text-foreground">Fecha del Informe: </span>
                     <span>{format(new Date(), 'PPP', {locale: es})}</span>
                 </div>
            </div>
-        </CardHeader>
-        <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[300px]">Estudiante</TableHead>
-                  <TableHead className="text-center">Calificación Final</TableHead>
-                  <TableHead className="text-center">Asistencias</TableHead>
-                  <TableHead className="text-center">Inasistencias</TableHead>
-                  <TableHead className="text-center">Participaciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {reportData.map(data => (
-                  <TableRow key={data.student.id}>
-                    <TableCell className="font-medium flex items-center gap-3">
-                       <Image
-                        src={data.student.photo}
-                        alt={data.student.name}
-                        width={40}
-                        height={40}
-                        className="rounded-full"
-                      />
-                      {data.student.name}
-                    </TableCell>
-                    <TableCell className="text-center font-bold text-lg">{data.finalGrade}</TableCell>
-                    <TableCell className="text-center">{data.attendance}</TableCell>
-                    <TableCell className="text-center">{data.absences}</TableCell>
-                    <TableCell className="text-center">{data.participations}</TableCell>
-                  </TableRow>
-                ))}
-                {reportData.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center h-24">
-                      No hay estudiantes en este grupo para generar un informe.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-        </CardContent>
-        <CardHeader className="border-t mt-4">
-             <div className="text-xs text-muted-foreground text-center">
-                Fin del informe.
-            </div>
-        </CardHeader>
+        </header>
+
+        <section>
+            <h2 className="text-xl font-semibold mb-2">Resumen del Grupo</h2>
+            <p className="text-muted-foreground leading-relaxed">
+                Por medio del presente, se muestran los resultados obtenidos durante el semestre actual para el grupo 
+                de <span className="font-bold text-foreground">{group.subject}</span>, que cuenta con un total de 
+                <span className="font-bold text-foreground"> {summary.totalStudents} estudiante(s)</span>.
+            </p>
+            <p className="text-muted-foreground leading-relaxed mt-2">
+                Del total, <span className="font-bold text-foreground">{summary.approvedCount} estudiante(s)</span> han resultado aprobados,
+                mientras que <span className="font-bold text-foreground">{summary.failedCount} estudiante(s)</span> se encuentran en estado de reprobación.
+                Se han registrado observaciones en la bitácora para <span className="font-bold text-foreground">{summary.studentsWithObservations} estudiante(s)</span> a lo largo del periodo.
+            </p>
+        </section>
+        
+        <section className="mt-8">
+            <h2 className="text-xl font-semibold mb-2">Detalle por Estudiante</h2>
+             <Card className="border">
+                <CardContent className="p-0">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                            <TableHead className="w-[300px]">Estudiante</TableHead>
+                            <TableHead className="text-center">Calificación Final</TableHead>
+                            <TableHead className="text-center">Asistencias</TableHead>
+                            <TableHead className="text-center">Inasistencias</TableHead>
+                            <TableHead className="text-center">Participaciones</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {reportData.map(data => (
+                            <TableRow key={data.student.id}>
+                                <TableCell className="font-medium flex items-center gap-3">
+                                <Image
+                                    src={data.student.photo}
+                                    alt={data.student.name}
+                                    width={40}
+                                    height={40}
+                                    className="rounded-full"
+                                />
+                                {data.student.name}
+                                </TableCell>
+                                <TableCell className="text-center font-bold text-lg">{data.finalGrade}</TableCell>
+                                <TableCell className="text-center">{data.attendance}</TableCell>
+                                <TableCell className="text-center">{data.absences}</TableCell>
+                                <TableCell className="text-center">{data.participations}</TableCell>
+                            </TableRow>
+                            ))}
+                            {reportData.length === 0 && (
+                            <TableRow>
+                                <TableCell colSpan={5} className="text-center h-24">
+                                No hay estudiantes en este grupo para generar un informe.
+                                </TableCell>
+                            </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+        </section>
+
+        <footer className="border-t mt-8 pt-6 text-center text-xs text-muted-foreground">
+            <p>Fin del informe.</p>
+        </footer>
       </Card>
       <style jsx global>{`
         @media print {
@@ -278,6 +323,8 @@ export default function GroupReportPage() {
             left: 0;
             top: 0;
             width: 100%;
+            border: none;
+            box-shadow: none;
           }
         }
       `}</style>
