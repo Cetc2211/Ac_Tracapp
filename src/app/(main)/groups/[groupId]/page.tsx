@@ -175,7 +175,7 @@ export default function GroupDetailsPage() {
       const storedGrades = localStorage.getItem(`grades_${groupId}`);
       const localGrades: Grades = storedGrades ? JSON.parse(storedGrades) : {};
 
-      const storedAttendance = localStorage.getItem(`globalAttendance`);
+      const storedAttendance = localStorage.getItem('globalAttendance');
       const localAttendance: {[date: string]: {[studentId: string]: boolean}} = storedAttendance ? JSON.parse(storedAttendance) : {};
 
       const storedParticipations = localStorage.getItem(`participations_${groupId}`);
@@ -358,35 +358,35 @@ export default function GroupDetailsPage() {
          </div>
          <div className="flex items-center gap-2">
             <AlertDialog>
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Opciones del Grupo</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <AlertDialogTrigger asChild>
-                             <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive flex items-center gap-2">
-                                <Trash2 className="h-4 w-4" />
-                                <span>Eliminar Grupo</span>
-                            </DropdownMenuItem>
-                        </AlertDialogTrigger>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-                 <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Esta acción no se puede deshacer. Esto eliminará permanentemente el grupo y todos sus datos asociados (criterios, calificaciones, etc.).
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDeleteGroup}>Sí, eliminar</AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Opciones del Grupo</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <AlertDialogTrigger asChild>
+                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive flex items-center gap-2">
+                      <Trash2 className="h-4 w-4" />
+                      <span>Eliminar Grupo</span>
+                    </DropdownMenuItem>
+                  </AlertDialogTrigger>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Esta acción no se puede deshacer. Esto eliminará permanentemente el grupo y todos sus datos asociados (criterios, calificaciones, etc.).
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteGroup}>Sí, eliminar</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
             </AlertDialog>
          </div>
       </div>

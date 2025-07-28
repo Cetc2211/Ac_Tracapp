@@ -190,7 +190,7 @@ export default function StudentsPage() {
           </div>
           <div className="flex items-center gap-2">
             {numSelected > 0 && (
-                 <AlertDialog>
+                <AlertDialog>
                     <AlertDialogTrigger asChild>
                         <Button variant="destructive" size="sm" className="gap-1">
                             <Trash2 className="h-3.5 w-3.5" />
