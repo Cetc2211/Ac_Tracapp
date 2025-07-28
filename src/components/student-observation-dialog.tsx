@@ -24,33 +24,32 @@ interface StudentObservationDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const observationTypes: StudentObservation['type'][] = [
-  'Problemas de conducta',
-  'Episodios emocionales',
-  'Cambio de conducta significativo',
+const observationTypes: Exclude<StudentObservation['type'], 'Otros' | string>[] = [
+  'Problema de conducta',
+  'Episodio emocional',
   'Mérito',
   'Demérito',
-  'Irresponsabilidad',
-  'Otros',
+  'Asesoría académica',
 ];
 
 export function StudentObservationDialog({ student, open, onOpenChange }: StudentObservationDialogProps) {
-  const [step, setStep] = useState(1);
-  const [observationType, setObservationType] = useState<StudentObservation['type'] | null>(null);
+  const [observationType, setObservationType] = useState<StudentObservation['type'] | ''>('');
   const [details, setDetails] = useState('');
   const { toast } = useToast();
 
-  const handleNext = () => {
-    if (observationType) {
-      setStep(2);
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Selección requerida',
-        description: 'Por favor, elige un tipo de observación.',
-      });
+  const resetState = () => {
+    setObservationType('');
+    setDetails('');
+  }
+
+  const handleClose = (isOpen: boolean) => {
+    if (!isOpen) {
+      setTimeout(() => {
+        resetState();
+      }, 300);
     }
-  };
+    onOpenChange(isOpen);
+  }
 
   const handleSave = () => {
     if (!student || !observationType || !details.trim()) {
@@ -62,12 +61,22 @@ export function StudentObservationDialog({ student, open, onOpenChange }: Studen
       return;
     }
 
+    // This is just a placeholder and won't be used
+    const dummyCanalizationLogic = {
+        requiresCanalization: false,
+        canalizationTarget: undefined,
+        requiresFollowUp: false,
+        followUpUpdates: [],
+        isClosed: true,
+    }
+
     const newObservation: StudentObservation = {
       id: `OBS-${Date.now()}`,
       studentId: student.id,
       date: new Date().toISOString(),
       type: observationType,
       details: details.trim(),
+      ...dummyCanalizationLogic,
     };
 
     try {
@@ -82,7 +91,7 @@ export function StudentObservationDialog({ student, open, onOpenChange }: Studen
         description: `Se ha añadido una nueva entrada a la bitácora de ${student.name}.`,
       });
 
-      handleClose();
+      handleClose(false);
     } catch (error) {
       console.error('Error saving observation to localStorage', error);
       toast({
@@ -93,70 +102,50 @@ export function StudentObservationDialog({ student, open, onOpenChange }: Studen
     }
   };
 
-  const handleClose = () => {
-    onOpenChange(false);
-    // Reset state after a short delay to allow dialog to close
-    setTimeout(() => {
-        setStep(1);
-        setObservationType(null);
-        setDetails('');
-    }, 300);
-  }
-
   if (!student) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Nueva Observación para {student.name}</DialogTitle>
           <DialogDescription>
-            {step === 1 ? 'Selecciona el tipo de conducta o situación a registrar.' : 'Describe detalladamente la situación.'}
+            Registra una nueva conducta o situación para este estudiante.
           </DialogDescription>
         </DialogHeader>
 
-        {step === 1 && (
-          <div className="py-4 space-y-4">
+        <div className="py-4 space-y-4">
             <Label>Tipo de Observación</Label>
-            <RadioGroup onValueChange={(value: StudentObservation['type']) => setObservationType(value)}>
+            <RadioGroup onValueChange={(value: StudentObservation['type']) => setObservationType(value)} value={observationType}>
               <div className="grid grid-cols-2 gap-4">
                 {observationTypes.map((type) => (
                   <div key={type} className="flex items-center">
-                    <RadioGroupItem value={type} id={type} />
-                    <Label htmlFor={type} className="ml-2 font-normal cursor-pointer">{type}</Label>
+                    <RadioGroupItem value={type} id={`type-${type}`} />
+                    <Label htmlFor={`type-${type}`} className="ml-2 font-normal cursor-pointer">{type}</Label>
                   </div>
                 ))}
+                 <div className="flex items-center">
+                    <RadioGroupItem value="Otros" id="type-Otros" />
+                    <Label htmlFor="type-Otros" className="ml-2 font-normal cursor-pointer">Otros</Label>
+                  </div>
               </div>
             </RadioGroup>
-          </div>
-        )}
-
-        {step === 2 && (
-          <div className="py-4 space-y-4">
-            <Label htmlFor="observation-details">Observaciones Detalladas</Label>
+            
+            <Label htmlFor="observation-details" className="pt-4">Observaciones Detalladas</Label>
             <Textarea
               id="observation-details"
               value={details}
               onChange={(e) => setDetails(e.target.value)}
-              rows={6}
+              rows={4}
               placeholder={`Describe la conducta de tipo "${observationType}"...`}
             />
-          </div>
-        )}
+        </div>
 
         <DialogFooter>
-          {step === 1 && (
-            <>
-                <Button variant="outline" onClick={handleClose}>Cancelar</Button>
-                <Button onClick={handleNext} disabled={!observationType}>Siguiente</Button>
-            </>
-          )}
-          {step === 2 && (
-             <>
-                <Button variant="outline" onClick={() => setStep(1)}>Volver</Button>
-                <Button onClick={handleSave} disabled={!details.trim()}>Guardar Observación</Button>
-            </>
-          )}
+          <DialogClose asChild>
+            <Button variant="outline">Cancelar</Button>
+          </DialogClose>
+          <Button onClick={handleSave} disabled={!details.trim() || !observationType}>Guardar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
