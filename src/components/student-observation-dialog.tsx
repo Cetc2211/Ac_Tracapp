@@ -16,7 +16,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Student, StudentObservation } from '@/lib/placeholder-data';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface StudentObservationDialogProps {
   student: Student | null;
@@ -37,19 +37,15 @@ export function StudentObservationDialog({ student, open, onOpenChange }: Studen
   const [details, setDetails] = useState('');
   const { toast } = useToast();
 
-  const resetState = () => {
-    setObservationType('');
-    setDetails('');
-  }
-
-  const handleClose = (isOpen: boolean) => {
-    if (!isOpen) {
+  useEffect(() => {
+    if (!open) {
+      // Reset state when dialog closes
       setTimeout(() => {
-        resetState();
-      }, 300);
+        setObservationType('');
+        setDetails('');
+      }, 300); 
     }
-    onOpenChange(isOpen);
-  }
+  }, [open]);
 
   const handleSave = () => {
     if (!student || !observationType || !details.trim()) {
@@ -91,7 +87,7 @@ export function StudentObservationDialog({ student, open, onOpenChange }: Studen
         description: `Se ha añadido una nueva entrada a la bitácora de ${student.name}.`,
       });
 
-      handleClose(false);
+      onOpenChange(false);
     } catch (error) {
       console.error('Error saving observation to localStorage', error);
       toast({
@@ -105,7 +101,7 @@ export function StudentObservationDialog({ student, open, onOpenChange }: Studen
   if (!student) return null;
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Nueva Observación para {student.name}</DialogTitle>
