@@ -61,7 +61,6 @@ export default function StudentsPage() {
       const groupName = localStorage.getItem('activeGroupName');
       setActiveGroupName(groupName);
 
-      let relevantStudents: Student[] = [];
       const allGroupsJson = localStorage.getItem('groups');
       const allGroups: Group[] = allGroupsJson ? JSON.parse(allGroupsJson) : [];
       
@@ -71,11 +70,16 @@ export default function StudentsPage() {
 
       if (activeGroupId) {
         const activeGroup = allGroups.find(g => g.id === activeGroupId);
-        relevantStudents = activeGroup ? activeGroup.students : allStudentsList;
+        if (activeGroup) {
+          setStudentsToDisplay(activeGroup.students);
+        } else {
+          // Fallback if group not found for some reason
+          setStudentsToDisplay(allStudentsList);
+          setActiveGroupName(null); // Clear invalid group name
+        }
       } else {
-        relevantStudents = allStudentsList;
+        setStudentsToDisplay(allStudentsList);
       }
-      setStudentsToDisplay(relevantStudents);
 
     } catch (error) {
         console.error("Failed to parse data from localStorage", error);
