@@ -44,17 +44,15 @@ type Grades = {
   };
 };
 
-type AttendanceRecord = {
-  [studentId: string]: 'present' | 'absent' | 'late';
+type ParticipationRecord = {
+  [date: string]: {
+    [studentId: string]: boolean;
+  };
 };
-
-type DailyAttendance = {
-    [date: string]: AttendanceRecord;
-}
 
 type ParticipationData = {
     [studentId: string]: {
-        attended: number;
+        participated: number;
         total: number;
     }
 }
@@ -87,17 +85,24 @@ export default function GroupGradesPage() {
       // Calculate participation
       const participationCriterion = localCriteria.find(c => c.name === 'Participación');
       if (participationCriterion && currentGroup) {
-          const storedAttendance = localStorage.getItem(`attendance_${groupId}`);
-          const attendance: DailyAttendance = storedAttendance ? JSON.parse(storedAttendance) : {};
-          const attendanceDates = Object.keys(attendance);
-          const totalClasses = attendanceDates.length;
+          const storedParticipation = localStorage.getItem(`participations_${groupId}`);
+          const participation: ParticipationRecord = storedParticipation ? JSON.parse(storedParticipation) : {};
+          const participationDates = Object.keys(participation);
+          const totalClasses = participationDates.length;
 
           const newParticipationData: ParticipationData = {};
           for (const student of currentGroup.students) {
-              const attendedClasses = attendanceDates.filter(date => attendance[date][student.id] === 'present').length;
-              newParticipationData[student.id] = { attended: attendedClasses, total: totalClasses };
+              const participatedClasses = participationDates.filter(date => participation[date]?.[student.id]).length;
+              newParticipationData[student.id] = { participated: participatedClasses, total: totalClasses };
           }
           setParticipationData(newParticipationData);
+          
+          // Also set the expected value for participation criterion dynamically
+           setEvaluationCriteria(prevCriteria => 
+                prevCriteria.map(c => 
+                    c.name === 'Participación' ? { ...c, expectedValue: totalClasses } : c
+                )
+           );
       }
 
     } catch (error) {
@@ -155,7 +160,7 @@ export default function GroupGradesPage() {
       if(criterion.name === 'Participación') {
           const pData = participationData[studentId];
           if(pData && pData.total > 0) {
-              const participationScore = (pData.attended / pData.total) * 10;
+              const participationScore = (pData.participated / pData.total) * 10;
               finalGrade += participationScore * (criterion.weight / 100);
           }
       } else {
@@ -215,7 +220,7 @@ export default function GroupGradesPage() {
                     <TableHead key={c.id} className="text-center min-w-[250px]">
                       <div className='font-bold'>{c.name}</div>
                       <div className="font-normal text-muted-foreground">
-                        ({c.weight}%, {c.name === 'Participación' ? 'Auto' : `${c.expectedValue} esp.`})
+                        ({c.weight}%, {c.name === 'Participación' ? `${c.expectedValue} clases` : `${c.expectedValue} esp.`})
                       </div>
                     </TableHead>
                   ))}
@@ -241,12 +246,12 @@ export default function GroupGradesPage() {
                       <TableCell key={criterion.id} className="text-center">
                         {criterion.name === 'Participación' ? (
                           <div className="flex flex-col items-center justify-center p-1">
-                              <Label className='text-xs'>Asistencias</Label>
-                              <span className="font-bold">{participationData[student.id]?.attended ?? 0} de {participationData[student.id]?.total ?? 0}</span>
+                              <Label className='text-xs'>Participaciones</Label>
+                              <span className="font-bold">{participationData[student.id]?.participated ?? 0} de {participationData[student.id]?.total ?? 0}</span>
                               <Label className='text-xs mt-2'>Promedio</Label>
                                <span className="font-bold">
                                   {participationData[student.id]?.total > 0
-                                      ? ((participationData[student.id]!.attended / participationData[student.id]!.total) * 10).toFixed(1)
+                                      ? ((participationData[student.id]!.participated / participationData[student.id]!.total) * 10).toFixed(1)
                                       : '0.0'
                                   }
                               </span>
@@ -311,5 +316,3 @@ export default function GroupGradesPage() {
     </div>
   );
 }
-
-    

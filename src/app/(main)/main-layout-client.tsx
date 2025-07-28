@@ -13,6 +13,7 @@ import {
   CalendarCheck,
   Package,
   BookText,
+  PenSquare,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -41,6 +42,7 @@ const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/groups', icon: BookCopy, label: 'Grupos' },
   { href: '/attendance', icon: CalendarCheck, label: 'Asistencia' },
+  { href: '/participations', icon: PenSquare, label: 'Participaciones' },
   { href: '/observations', icon: BookText, label: 'Observaciones' },
   { href: '/progressions', icon: Presentation, label: 'Progresiones' },
   { href: '/statistics', icon: BarChart3, label: 'Estadísticas' },

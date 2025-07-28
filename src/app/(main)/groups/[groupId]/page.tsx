@@ -21,7 +21,7 @@ import { groups as initialGroups, students as initialStudents, Student } from '@
 import { notFound, useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, MoreHorizontal, UserPlus, Trash2, CalendarCheck, FilePen, Edit, Loader2 } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, UserPlus, Trash2, CalendarCheck, FilePen, Edit, Loader2, PenSquare } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -541,6 +541,12 @@ export default function GroupDetailsPage() {
                     <Link href={`/attendance`}>
                         <CalendarCheck className="mr-2 h-4 w-4" />
                         Tomar Asistencia
+                    </Link>
+                </Button>
+                 <Button asChild variant="outline">
+                    <Link href={`/participations`}>
+                        <PenSquare className="mr-2 h-4 w-4" />
+                        Registrar Participaciones
                     </Link>
                 </Button>
                  <Button asChild variant="outline">
