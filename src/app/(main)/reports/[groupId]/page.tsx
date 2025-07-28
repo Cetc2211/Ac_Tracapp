@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -148,8 +149,10 @@ export default function GroupReportPage() {
           });
           
           Object.keys(participations).forEach(date => {
-              totalParticipationOpportunities++;
-              if (participations[date]?.[student.id]) totalParticipations++;
+              if (Object.prototype.hasOwnProperty.call(participations[date], student.id)) {
+                  totalParticipationOpportunities++;
+                  if (participations[date]?.[student.id]) totalParticipations++;
+              }
           })
         });
         
@@ -213,7 +216,7 @@ export default function GroupReportPage() {
          </Button>
       </div>
 
-      <Card id="report-content" className="p-4 sm:p-6 md:p-8">
+      <Card id="report-content" className="p-4 sm:p-6 md:p-8 print:shadow-none print:border-none">
         <header className="border-b pb-6 mb-6">
            <div className="flex justify-between items-start">
                 <div className="flex flex-col">
@@ -250,7 +253,7 @@ export default function GroupReportPage() {
                 <span className="font-bold text-foreground"> {summary.totalStudents} estudiante(s)</span>.
             </p>
 
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 my-6">
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 my-6 print:grid-cols-3">
                 <Card className="text-center">
                     <CardHeader><CardTitle className="text-base">Aprobación</CardTitle></CardHeader>
                     <CardContent>
@@ -308,11 +311,11 @@ export default function GroupReportPage() {
             left: 0;
             top: 0;
             width: 100%;
-            border: none;
-            box-shadow: none;
           }
         }
       `}</style>
     </div>
   );
 }
+
+    
