@@ -37,6 +37,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import Link from 'next/link';
 
 type EvaluationCriteria = {
   id: string;
@@ -255,9 +256,11 @@ export default function StudentProfilePage() {
     <div className="flex flex-col gap-6">
        <div className="flex items-center justify-between">
          <div className="flex items-center gap-4">
-            <Button variant="outline" size="icon" onClick={() => router.back()}>
-              <ArrowLeft />
-              <span className="sr-only">Volver</span>
+            <Button asChild variant="outline" size="icon">
+              <Link href="/students">
+                <ArrowLeft />
+                <span className="sr-only">Volver</span>
+              </Link>
             </Button>
             <div>
             <h1 className="text-3xl font-bold">Perfil del Estudiante</h1>
