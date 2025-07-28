@@ -25,6 +25,7 @@ import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 type ParticipationRecord = {
   [date: string]: {
@@ -32,12 +33,25 @@ type ParticipationRecord = {
   };
 };
 
+type AttendanceStatus = 'present' | 'absent' | 'late';
+
+type AttendanceRecord = {
+  [studentId: string]: AttendanceStatus;
+};
+
+type DailyAttendance = {
+    [date: string]: AttendanceRecord;
+}
+
+
 export default function ParticipationsPage() {
   const [studentsToDisplay, setStudentsToDisplay] = useState<Student[]>([]);
   const [participations, setParticipations] = useState<ParticipationRecord>({});
+  const [attendance, setAttendance] = useState<DailyAttendance>({});
   const [participationDates, setParticipationDates] = useState<string[]>([]);
   const [activeGroupName, setActiveGroupName] = useState<string | null>(null);
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     try {
@@ -64,9 +78,16 @@ export default function ParticipationsPage() {
           const dates = Object.keys(parsedParticipations).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
           setParticipationDates(dates);
         }
+        
+        const storedAttendance = localStorage.getItem(`attendance_${storedActiveGroupId}`);
+        if (storedAttendance) {
+            setAttendance(JSON.parse(storedAttendance));
+        }
+
       } else {
         setParticipations({});
         setParticipationDates([]);
+        setAttendance({});
       }
     } catch (error) {
       console.error("Failed to parse data from localStorage", error);
@@ -95,6 +116,19 @@ export default function ParticipationsPage() {
   
   const handleParticipationChange = (studentId: string, date: string, hasParticipated: boolean) => {
     if (!activeGroupId) return;
+
+    if (hasParticipated) {
+      const attendanceForDay = attendance[date];
+      const studentAttendance = attendanceForDay?.[studentId];
+      if (studentAttendance !== 'present') {
+        toast({
+          variant: 'destructive',
+          title: 'Incongruencia en el registro',
+          description: 'El estudiante no tiene asistencia registrada para este día.',
+        });
+        return; 
+      }
+    }
 
     const newParticipations = { ...participations };
     if (!newParticipations[date]) {
