@@ -243,9 +243,9 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <h3 className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium">
               Estudiantes Activos
-            </h3>
+            </CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -257,7 +257,7 @@ export default function DashboardPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <h3 className="text-sm font-medium">Grupos Creados</h3>
+            <CardTitle className="text-sm font-medium">Grupos Creados</CardTitle>
             <BookCopy className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -269,9 +269,9 @@ export default function DashboardPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <h3 className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium">
               Estudiantes en Riesgo
-            </h3>
+            </CardTitle>
             <AlertTriangle className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
@@ -285,9 +285,9 @@ export default function DashboardPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <h3 className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium">
               Asistencia Media
-            </h3>
+            </CardTitle>
             <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -351,7 +351,7 @@ export default function DashboardPage() {
         <Card className="xl:col-span-2">
           <CardHeader className="flex flex-row items-center">
             <div className="grid gap-2">
-              <h3 className="text-2xl font-semibold leading-none tracking-tight">Grupos Recientes</h3>
+              <CardTitle className="text-2xl font-semibold leading-none tracking-tight">Grupos Recientes</CardTitle>
               <CardDescription>
                 Resumen de los grupos y su rendimiento.
               </CardDescription>
@@ -507,3 +507,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
