@@ -39,7 +39,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/groups', icon: BookCopy, label: 'Grupos' },
-  { href: '/students', icon: Users, label: 'Estudiantes' },
   { href: '/attendance', icon: CalendarCheck, label: 'Asistencia' },
   { href: '/progressions', icon: Presentation, label: 'Progresiones' },
   { href: '/statistics', icon: BarChart3, label: 'Estadísticas' },
