@@ -50,10 +50,10 @@ export default function TutorsPage() {
     <div className="flex flex-col gap-6">
        <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="text-3xl font-bold">Contacto de Tutores</CardTitle>
-            <CardDescription>
+            <h1 className="text-3xl font-bold">Contacto de Tutores</h1>
+            <p className="text-muted-foreground">
               Lista de estudiantes y la información de contacto de sus tutores, agrupados por asignatura.
-            </CardDescription>
+            </p>
           </div>
         </div>
 
