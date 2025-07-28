@@ -25,6 +25,7 @@ import { Input } from '@/components/ui/input';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 
 type EvaluationCriteria = {
   id: string;
@@ -35,7 +36,6 @@ type EvaluationCriteria = {
 
 type GradeDetail = {
   delivered: number | null;
-  // We no longer need a manual average
 };
 
 type Grades = {
@@ -57,6 +57,14 @@ type ParticipationData = {
     }
 }
 
+const criterionColors = [
+  'bg-chart-1/10',
+  'bg-chart-2/10',
+  'bg-chart-3/10',
+  'bg-chart-4/10',
+  'bg-chart-5/10',
+];
+
 export default function GroupGradesPage() {
   const params = useParams();
   const groupId = params.groupId as string;
@@ -70,6 +78,7 @@ export default function GroupGradesPage() {
   useEffect(() => {
     if (!groupId) return;
     try {
+      setIsLoading(true);
       // Load group
       const storedGroups = localStorage.getItem('groups');
       const allGroups = storedGroups ? JSON.parse(storedGroups) : initialGroups;
@@ -100,7 +109,6 @@ export default function GroupGradesPage() {
             }
             setParticipationData(newParticipationData);
             
-            // Also set the expected value for participation criterion dynamically
             const updatedCriteria = localCriteria.map(c => 
                 c.name === 'Participación' ? { ...c, expectedValue: totalClasses } : c
             );
@@ -175,8 +183,8 @@ export default function GroupGradesPage() {
       }
       finalGrade += performanceRatio * criterion.weight;
     }
-
-    return parseFloat(finalGrade.toFixed(2));
+    // The final grade is a percentage (e.g., 85.5), so we divide by 10 to get it on a scale of 10.
+    return (finalGrade / 10).toFixed(2);
   }, [grades, evaluationCriteria, participationData]);
   
   const studentsInGroup = useMemo(() => {
@@ -222,8 +230,8 @@ export default function GroupGradesPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[250px] sticky left-0 bg-card z-10">Estudiante</TableHead>
-                  {evaluationCriteria.map(c => (
-                    <TableHead key={c.id} className="text-center min-w-[250px]">
+                  {evaluationCriteria.map((c, index) => (
+                    <TableHead key={c.id} className={cn("text-center min-w-[250px] align-top", criterionColors[index % criterionColors.length])}>
                       <div className='font-bold'>{c.name}</div>
                       <div className="font-normal text-muted-foreground">
                         ({c.weight}%, {c.name === 'Participación' ? `${c.expectedValue} clases` : `${c.expectedValue} esp.`})
@@ -262,9 +270,8 @@ export default function GroupGradesPage() {
                       />
                       {student.name}
                     </TableCell>
-                    {evaluationCriteria.map(criterion => {
+                    {evaluationCriteria.map((criterion, index) => {
                       const isParticipation = criterion.name === 'Participación';
-                      const gradeDetail = grades[student.id]?.[criterion.id];
                       
                       let performanceRatio = 0;
                       if (isParticipation) {
@@ -273,6 +280,7 @@ export default function GroupGradesPage() {
                           performanceRatio = pData.participated / pData.total;
                         }
                       } else {
+                        const gradeDetail = grades[student.id]?.[criterion.id];
                         const delivered = gradeDetail?.delivered ?? 0;
                         const expected = criterion.expectedValue;
                         if(expected > 0) {
@@ -283,7 +291,7 @@ export default function GroupGradesPage() {
                       const earnedPercentage = performanceRatio * criterion.weight;
 
                       return (
-                      <TableCell key={criterion.id} className="text-center">
+                      <TableCell key={criterion.id} className={cn("text-center", criterionColors[index % criterionColors.length])}>
                         {isParticipation ? (
                           <div className="flex flex-col items-center justify-center p-1">
                               <Label className='text-xs'>Participaciones</Label>
@@ -320,7 +328,7 @@ export default function GroupGradesPage() {
                       )
                     })}
                     <TableCell className="text-center font-bold text-lg sticky right-0 bg-card z-10">
-                      {(calculateFinalGrade(student.id) / 10).toFixed(2)}
+                      {calculateFinalGrade(student.id)}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -332,3 +340,4 @@ export default function GroupGradesPage() {
     </div>
   );
 }
+
