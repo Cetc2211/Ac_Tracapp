@@ -250,53 +250,52 @@ export default function GroupsPage() {
             Gestiona tus grupos, toma asistencia y registra actividades.
           </p>
         </div>
-         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-                 <Button size="sm" className="gap-1">
-                    <PlusCircle className="h-3.5 w-3.5" />
-                    <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                        Nuevo Grupo
-                    </span>
-                </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-4xl">
-                <DialogHeader>
-                    <DialogTitle>Crear Nuevo Grupo</DialogTitle>
-                    <DialogDescription>
-                        Ingresa los detalles para crear un nuevo grupo de asignatura y añade a sus estudiantes.
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-6 py-4">
-                    <div className="grid gap-2">
-                        <Label htmlFor="group-name">Nombre de la Asignatura*</Label>
-                        <Input 
-                            id="group-name" 
-                            placeholder="Ej. Cálculo Diferencial"
-                            value={newGroupName}
-                            onChange={(e) => setNewGroupName(e.target.value)}
-                        />
-                    </div>
-                     <div className="grid gap-2">
-                        <Label>Añadir Estudiantes al Grupo (Opcional)</Label>
-                         <p className="text-sm text-muted-foreground">
-                            Pega una columna de datos en cada campo. Asegúrate de que cada línea corresponda al mismo estudiante. Los estudiantes nuevos se crearán y añadirán al grupo.
-                        </p>
-                        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-                            <Textarea className="lg:col-span-1" placeholder="Nombres* (uno por línea)" rows={5} value={bulkNames} onChange={(e) => setBulkNames(e.target.value)} />
-                            <Textarea className="lg:col-span-1" placeholder="Emails (opcional)" rows={5} value={bulkEmails} onChange={(e) => setBulkEmails(e.target.value)} />
-                            <Textarea className="lg:col-span-1" placeholder="Teléfonos (opcional)" rows={5} value={bulkPhones} onChange={(e) => setBulkPhones(e.target.value)} />
-                            <Textarea className="lg:col-span-1" placeholder="Nombres Tutor (opcional)" rows={5} value={bulkTutorNames} onChange={(e) => setBulkTutorNames(e.target.value)} />
-                            <Textarea className="lg:col-span-1" placeholder="Teléfonos Tutor (opcional)" rows={5} value={bulkTutorPhones} onChange={(e) => setBulkTutorPhones(e.target.value)} />
-                        </div>
-                    </div>
-                </div>
-                <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
-                    <Button onClick={handleCreateGroup}>Crear Grupo</Button>
-                </DialogFooter>
-            </DialogContent>
-         </Dialog>
+         <Button size="sm" className="gap-1" onClick={() => setIsDialogOpen(true)}>
+            <PlusCircle className="h-3.5 w-3.5" />
+            <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                Nuevo Grupo
+            </span>
+        </Button>
       </div>
+
+       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent className="sm:max-w-4xl">
+              <DialogHeader>
+                  <DialogTitle>Crear Nuevo Grupo</DialogTitle>
+                  <DialogDescription>
+                      Ingresa los detalles para crear un nuevo grupo de asignatura y añade a sus estudiantes.
+                  </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-6 py-4">
+                  <div className="grid gap-2">
+                      <Label htmlFor="group-name">Nombre de la Asignatura*</Label>
+                      <Input 
+                          id="group-name" 
+                          placeholder="Ej. Cálculo Diferencial"
+                          value={newGroupName}
+                          onChange={(e) => setNewGroupName(e.target.value)}
+                      />
+                  </div>
+                    <div className="grid gap-2">
+                      <Label>Añadir Estudiantes al Grupo (Opcional)</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Pega una columna de datos en cada campo. Asegúrate de que cada línea corresponda al mismo estudiante. Los estudiantes nuevos se crearán y añadirán al grupo.
+                      </p>
+                      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                          <Textarea className="lg:col-span-1" placeholder="Nombres* (uno por línea)" rows={5} value={bulkNames} onChange={(e) => setBulkNames(e.target.value)} />
+                          <Textarea className="lg:col-span-1" placeholder="Emails (opcional)" rows={5} value={bulkEmails} onChange={(e) => setBulkEmails(e.target.value)} />
+                          <Textarea className="lg:col-span-1" placeholder="Teléfonos (opcional)" rows={5} value={bulkPhones} onChange={(e) => setBulkPhones(e.target.value)} />
+                          <Textarea className="lg:col-span-1" placeholder="Nombres Tutor (opcional)" rows={5} value={bulkTutorNames} onChange={(e) => setBulkTutorNames(e.target.value)} />
+                          <Textarea className="lg:col-span-1" placeholder="Teléfonos Tutor (opcional)" rows={5} value={bulkTutorPhones} onChange={(e) => setBulkTutorPhones(e.target.value)} />
+                      </div>
+                  </div>
+              </div>
+              <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
+                  <Button onClick={handleCreateGroup}>Crear Grupo</Button>
+              </DialogFooter>
+          </DialogContent>
+       </Dialog>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {groups.map((group, index) => {
@@ -317,7 +316,7 @@ export default function GroupsPage() {
                         <Button asChild variant="ghost" size="icon" className="text-card-foreground-alt hover:bg-white/20 hover:text-card-foreground-alt">
                             <Link href={`/groups/${group.id}`}>
                                 <Settings className="h-5 w-5" />
-                                 <span className="sr-only">Configurar</span>
+                                  <span className="sr-only">Configurar</span>
                             </Link>
                         </Button>
                     </div>
@@ -354,3 +353,5 @@ export default function GroupsPage() {
     </div>
   );
 }
+
+    
