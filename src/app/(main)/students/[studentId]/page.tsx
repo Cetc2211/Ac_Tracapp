@@ -49,7 +49,6 @@ type EvaluationCriteria = {
 
 type GradeDetail = {
   delivered: number | null;
-  average: number | null;
 };
 
 type Grades = {
@@ -148,14 +147,16 @@ export default function StudentProfilePage() {
         let attendanceStats = { p: 0, a: 0, l: 0, total: 0 };
         if (activeGroupId) {
           const globalAttendance: { [date: string]: {[sId: string]: boolean} } = JSON.parse(localStorage.getItem('globalAttendance') || '{}');
+          const groupAttendance: DailyAttendance = JSON.parse(localStorage.getItem(`attendance_${activeGroupId}`) || '{}');
           
-          Object.values(globalAttendance).forEach(record => {
+          Object.values(groupAttendance).forEach(record => {
             if (record.hasOwnProperty(studentId)) {
-                 if (record[studentId] === true) attendanceStats.p++;
-                 else attendanceStats.a++;
+                 if (record[studentId] === 'present') attendanceStats.p++;
+                 else if (record[studentId] === 'absent') attendanceStats.a++;
+                 else if (record[studentId] === 'late') attendanceStats.l++;
             }
           });
-          attendanceStats.total = Object.keys(globalAttendance).length;
+          attendanceStats.total = Object.keys(groupAttendance).length;
         }
 
         const observations: StudentObservation[] = JSON.parse(localStorage.getItem(`observations_${studentId}`) || '[]');
@@ -198,8 +199,8 @@ export default function StudentProfilePage() {
           </CardHeader>
           <CardContent>
              <div className="flex items-center gap-2">
-                <Button asChild variant="outline" onClick={() => router.push('/students')}>
-                   <Link href="/students"><EyeOff /> Ocultar Perfil</Link>
+                <Button asChild variant="outline" onClick={() => router.back()}>
+                   <Link href="#"><EyeOff /> Ocultar Perfil</Link>
                 </Button>
                 <Button variant="outline"><Printer /> Formato Impresión</Button>
                 <Button variant="outline"><FileText /> Ver Informe Texto</Button>
@@ -217,7 +218,18 @@ export default function StudentProfilePage() {
                 </CardHeader>
                 <CardContent className="grid md:grid-cols-2 gap-6">
                      <div className="flex items-center gap-4">
-                        <User className="h-8 w-8 text-primary"/>
+                        <Image
+                            alt="Avatar"
+                            className="rounded-full"
+                            height={64}
+                            src={student.photo}
+                            data-ai-hint="student avatar"
+                            style={{
+                                aspectRatio: '64/64',
+                                objectFit: 'cover',
+                            }}
+                            width={64}
+                        />
                         <div>
                             <p className="text-sm text-muted-foreground">Nombre Completo:</p>
                             <p className="font-semibold">{student.name}</p>
@@ -248,13 +260,13 @@ export default function StudentProfilePage() {
                         {studentStats?.gradesByGroup.map(item => (
                             <div key={item.group} className="flex justify-between items-center p-3 rounded-md border">
                                 <p>{item.group}</p>
-                                <Badge variant="secondary">{item.grade.toFixed(2)}</Badge>
+                                <Badge variant="secondary">{item.grade.toFixed(1)}%</Badge>
                             </div>
                         ))}
                         {studentStats && studentStats.gradesByGroup.length > 0 && (
                              <div className="flex justify-between items-center p-3 rounded-md bg-green-100 border-green-300">
                                 <p className="font-bold text-green-800">Promedio Semestral:</p>
-                                <Badge className="text-lg bg-green-600">{studentStats.averageGrade.toFixed(2)}</Badge>
+                                <Badge className="text-lg bg-green-600">{studentStats.averageGrade.toFixed(1)}%</Badge>
                             </div>
                         )}
                          {studentStats?.gradesByGroup.length === 0 && (
@@ -308,3 +320,4 @@ export default function StudentProfilePage() {
     </div>
   );
 }
+
