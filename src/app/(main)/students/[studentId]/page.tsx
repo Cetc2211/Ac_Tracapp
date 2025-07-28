@@ -192,6 +192,10 @@ export default function StudentProfilePage() {
     }
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
 
   if (isLoading) {
     return (
@@ -212,8 +216,8 @@ export default function StudentProfilePage() {
 
   
   return (
-    <div className="flex flex-col gap-6">
-       <Card className="bg-accent/50">
+    <div className="flex flex-col gap-6" id="print-content">
+       <Card className="bg-accent/50 print:hidden">
           <CardHeader>
             <div className="flex items-center gap-4">
                <div className="bg-background p-3 rounded-full">
@@ -230,13 +234,13 @@ export default function StudentProfilePage() {
                 <Button variant="outline" onClick={() => router.back()}>
                    <EyeOff className="mr-2 h-4 w-4" /> Ocultar Perfil
                 </Button>
-                <Button variant="outline"><Printer className="mr-2 h-4 w-4" /> Formato Impresión</Button>
+                <Button variant="outline" onClick={handlePrint}><Printer className="mr-2 h-4 w-4" /> Formato Impresión</Button>
                 <Button variant="outline"><FileText className="mr-2 h-4 w-4" /> Ver Informe Texto</Button>
              </div>
           </CardContent>
        </Card>
       
-      <h2 className="text-xl font-bold text-center">Informe Individual del Estudiante</h2>
+      <h2 className="text-xl font-bold text-center print:hidden">Informe Individual del Estudiante</h2>
 
       <div className="flex flex-col gap-6">
         <Card>
@@ -298,7 +302,7 @@ export default function StudentProfilePage() {
             </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 print:grid-cols-2">
             <div>
                 <Card>
                     <CardHeader>
@@ -394,12 +398,12 @@ export default function StudentProfilePage() {
                         <div className="p-4 bg-muted/50 rounded-md border whitespace-pre-wrap text-sm">
                             {generatedFeedback}
                         </div>
-                         <Button variant="secondary" size="sm" onClick={() => setGeneratedFeedback('')}>
+                         <Button variant="secondary" size="sm" onClick={() => setGeneratedFeedback('')} className="print:hidden">
                             Ocultar retroalimentación
                          </Button>
                     </div>
                 ) : (
-                    <div className="text-center p-4">
+                    <div className="text-center p-4 print:hidden">
                         <p className="text-muted-foreground mb-4">
                             Haz clic en el botón para generar un análisis completo del desempeño y obtener recomendaciones.
                         </p>
@@ -416,6 +420,28 @@ export default function StudentProfilePage() {
             </CardContent>
         </Card>
       </div>
+       <style jsx global>{`
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          #print-content, #print-content * {
+            visibility: visible;
+          }
+          #print-content {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            margin: 0;
+            padding: 1rem;
+          }
+          .card {
+            border: 1px solid #e5e7eb !important;
+            box-shadow: none !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
