@@ -118,7 +118,6 @@ export default function StudentProfilePage() {
         setStudent(currentStudent);
         const storedGroups: Group[] = JSON.parse(localStorage.getItem('groups') || '[]');
         const studentGroups = storedGroups.filter(g => g.students.some(s => s.id === studentId));
-        const studentGroupIds = new Set(studentGroups.map(g => g.id));
 
         const gradesByGroup: StudentStats['gradesByGroup'] = [];
         let totalGradeSum = 0;
@@ -134,23 +133,15 @@ export default function StudentProfilePage() {
 
         const attendanceStats = { p: 0, a: 0, total: 0 };
         const globalAttendance: GlobalAttendanceRecord = JSON.parse(localStorage.getItem('globalAttendance') || '{}');
-        const studentAttendanceDates = new Set<string>();
-
-        // Find all dates where this student had an attendance record in any of their groups
-         Object.entries(globalAttendance).forEach(([date, records]) => {
-            if (records[studentId] !== undefined) {
-                 // To avoid double counting, we need to know if this attendance record belongs to one of the student's groups.
-                 // This is a limitation of the current data model. We'll assume any record for the student is valid for now.
-                 studentAttendanceDates.add(date);
-            }
-        });
         
-        attendanceStats.total = studentAttendanceDates.size;
-        studentAttendanceDates.forEach(date => {
-            if (globalAttendance[date]?.[studentId] === true) {
-                attendanceStats.p++;
-            } else {
-                attendanceStats.a++;
+        Object.values(globalAttendance).forEach(record => {
+            if (record[studentId] !== undefined) {
+                attendanceStats.total++;
+                if (record[studentId] === true) {
+                    attendanceStats.p++;
+                } else {
+                    attendanceStats.a++;
+                }
             }
         });
 
