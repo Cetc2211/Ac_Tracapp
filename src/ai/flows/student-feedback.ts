@@ -34,7 +34,7 @@ const StudentFeedbackInputSchema = z.object({
   attendance: AttendanceSchema.describe('The student\'s attendance record.'),
   observations: z.array(ObservationSchema).optional().describe('A list of observations made by the teacher.'),
 });
-export type StudentFeedbackInput = z.infer<typeof StudentFeedbackInputSchema>;
+type StudentFeedbackInput = z.infer<typeof StudentFeedbackInputSchema>;
 
 const StudentFeedbackOutputSchema = z.object({
   feedback: z.string().describe('A comprehensive feedback text for the student, written in Spanish.'),
@@ -50,41 +50,40 @@ const prompt = ai.definePrompt({
   input: { schema: StudentFeedbackInputSchema },
   output: { schema: StudentFeedbackOutputSchema },
   prompt: `
-    You are an expert educational psychologist and academic advisor.
-    Your task is to generate a constructive, encouraging, and personalized feedback for a high school student based on their academic performance.
-    The feedback should be written in Spanish, in a supportive and clear tone.
+    You are an expert educational psychologist. Generate a brief, constructive, and personalized feedback for a student in Spanish.
+    The feedback must be structured into two distinct sections: "Recomendaciones" and "Retroalimentación Positiva".
 
-    Analyze the following data for the student, {{{studentName}}}:
+    **Data for {{{studentName}}}:**
 
-    **1. Academic Performance (Grades out of 100):**
-    {{#each gradesByGroup}}
-    - Subject: {{{group}}}, Final Grade: {{{grade}}}
-    {{/each}}
+    1.  **Grades (out of 100):**
+        {{#each gradesByGroup}}
+        - {{{group}}}: {{{grade}}}
+        {{/each}}
 
-    **2. Attendance Record:**
-    - Total Classes: {{{attendance.total}}}
-    - Attended: {{{attendance.p}}}
-    - Absences: {{{attendance.a}}}
+    2.  **Attendance:**
+        - Attended: {{{attendance.p}}}
+        - Absences: {{{attendance.a}}}
+        - Total: {{{attendance.total}}}
 
     {{#if observations}}
-    **3. Teacher's Observations:**
-    {{#each observations}}
-    - Type: {{{type}}}
-      Details: {{{details}}}
-    {{/each}}
+    3.  **Teacher's Observations:**
+        {{#each observations}}
+        - Type: {{{type}}}, Details: {{{details}}}
+        {{/each}}
     {{/if}}
 
-    **Instructions for generating the feedback:**
-    1.  **Introduction:** Start with a positive and encouraging opening addressing the student by name.
-    2.  **Analyze Strengths:** Identify areas where the student is performing well. Mention specific subjects with high grades and good attendance as indicators of responsibility and commitment.
-    3.  **Identify Areas for Improvement:** Gently point out areas that need attention. This could be subjects with lower grades or a pattern of absences. Frame this constructively, focusing on potential and growth. If there are negative observations (e.g., 'Problema de conducta'), address them as behaviors that can be improved and may be affecting their performance, offering a path forward.
-    4.  **Provide Specific, Actionable Recommendations:** Based on the analysis (especially teacher observations), provide concrete suggestions. 
-        - If 'Problema de lectura' is mentioned, suggest specific strategies like reading 20 minutes daily or using text-to-speech tools.
-        - If there are behavioral issues, suggest talking to a counselor or teacher.
-        - For academic struggles, recommend seeking extra help, forming study groups, or reviewing specific concepts.
-    5.  **Closing:** End with a motivational and forward-looking statement, expressing confidence in the student's ability to succeed.
+    **Output Instructions:**
+    1.  **Recomendaciones:**
+        - Be direct and concise.
+        - Identify the most critical areas for improvement (low grades, high absences, negative observations like 'Problema de conducta' or 'Problema de lectura').
+        - Provide one or two concrete, actionable recommendations. For example: "Se observa que tu desempeño en [Subject] necesita mejorar. Te recomendamos solicitar asesorías o formar grupos de estudio para reforzar los temas."
+    
+    2.  **Retroalimentación Positiva:**
+        - Be encouraging and motivational.
+        - Highlight one or two key strengths (high grades, perfect attendance, positive observations like 'Mérito').
+        - End on a positive note, expressing confidence in the student's ability to succeed. For example: "¡Felicidades por tu excelente asistencia! Ese compromiso es tu mayor fortaleza y te ayudará a alcanzar tus metas."
 
-    Combine all these points into a single, coherent text in the "feedback" field.
+    Combine both sections into a single, coherent text under the "feedback" field.
   `,
 });
 
