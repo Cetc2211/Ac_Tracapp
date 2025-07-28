@@ -538,7 +538,7 @@ export default function GroupDetailsPage() {
             </CardHeader>
             <CardContent className="grid gap-4">
                 <Button asChild variant="outline">
-                    <Link href={`/groups/${group.id}/attendance`}>
+                    <Link href={`/attendance`}>
                         <CalendarCheck className="mr-2 h-4 w-4" />
                         Tomar Asistencia
                     </Link>
