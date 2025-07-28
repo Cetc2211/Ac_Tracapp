@@ -77,8 +77,8 @@ export default function GroupGradesPage() {
 
   useEffect(() => {
     if (!groupId) return;
+    setIsLoading(true);
     try {
-      setIsLoading(true);
       // Load group
       const storedGroups = localStorage.getItem('groups');
       const allGroups = storedGroups ? JSON.parse(storedGroups) : initialGroups;
@@ -161,7 +161,7 @@ export default function GroupGradesPage() {
   };
   
   const calculateFinalGrade = useCallback((studentId: string) => {
-    if (!evaluationCriteria || evaluationCriteria.length === 0) return 0;
+    if (!evaluationCriteria || evaluationCriteria.length === 0) return '0.00%';
 
     let finalGrade = 0;
     
@@ -183,8 +183,7 @@ export default function GroupGradesPage() {
       }
       finalGrade += performanceRatio * criterion.weight;
     }
-    // The final grade is a percentage (e.g., 85.5), so we divide by 10 to get it on a scale of 10.
-    return (finalGrade / 10).toFixed(2);
+    return `${finalGrade.toFixed(2)}%`;
   }, [grades, evaluationCriteria, participationData]);
   
   const studentsInGroup = useMemo(() => {
@@ -340,4 +339,5 @@ export default function GroupGradesPage() {
     </div>
   );
 }
+
 
