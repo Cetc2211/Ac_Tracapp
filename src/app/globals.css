@@ -197,6 +197,54 @@ body {
     --sidebar-foreground: 340 30% 25%;
     --sidebar-accent: 330 70% 88%;
   }
+
+  .theme-pro {
+    --background: 240 2% 96%;
+    --foreground: 240 10% 3.9%;
+    --card: 240 2% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --primary: 240 6% 10%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 2% 92%;
+    --secondary-foreground: 240 10% 3.9%;
+    --muted: 240 2% 90%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 2% 88%;
+    --accent-foreground: 240 10% 3.9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 2% 85%;
+    --input: 240 2% 85%;
+    --ring: 240 10% 3.9%;
+    --sidebar-background: 240 6% 10%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-accent: 240 6% 15%;
+    --sidebar-accent-foreground: 0 0% 98%;
+  }
+
+  .theme-mint {
+    --background: 150 50% 98%;
+    --foreground: 150 40% 20%;
+    --card: 150 50% 100%;
+    --card-foreground: 150 40% 20%;
+    --primary: 155 70% 40%;
+    --primary-foreground: 155 70% 98%;
+    --secondary: 150 50% 94%;
+    --secondary-foreground: 150 40% 20%;
+    --muted: 150 50% 90%;
+    --muted-foreground: 150 40% 40%;
+    --accent: 155 70% 90%;
+    --accent-foreground: 155 70% 20%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 150 50% 88%;
+    --input: 150 50% 88%;
+    --ring: 155 70% 40%;
+    --sidebar-background: 155 70% 40%;
+    --sidebar-foreground: 155 70% 98%;
+    --sidebar-accent: 155 70% 50%;
+    --sidebar-accent-foreground: 155 70% 98%;
+  }
 }
 
 @layer base {

@@ -18,7 +18,7 @@ export const themes = [
     {
         name: 'Forest',
         id: 'theme-forest',
-        colors: ['#22c55e', '#e5e7eb', '#1f2937']
+        colors: ['#16a34a', '#f0fdf4', '#14532d']
     },
     {
         name: 'Candy',
@@ -45,6 +45,16 @@ export const themes = [
         id: 'theme-sakura',
         colors: ['#f472b6', '#fff1f7', '#500724'],
     },
+    {
+        name: 'Pro',
+        id: 'theme-pro',
+        colors: ['#111827', '#f3f4f6', '#9ca3af']
+    },
+    {
+        name: 'Mint',
+        id: 'theme-mint',
+        colors: ['#10b981', '#f0fdfa', '#047857']
+    }
 ];
 
 interface ThemeSwitcherProps {
