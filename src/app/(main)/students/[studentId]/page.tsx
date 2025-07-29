@@ -14,16 +14,13 @@ import { Badge } from '@/components/ui/badge';
 import { Student, Group, StudentObservation } from '@/lib/placeholder-data';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
-import { Mail, User, Contact, EyeOff, Printer, FileText, Loader2, Phone, Wand2 } from 'lucide-react';
+import { Mail, User, Contact, EyeOff, Printer, FileText, Loader2, Phone, Wand2, Download } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { generateStudentFeedback } from '@/ai/flows/student-feedback';
-import { useReactToPrint } from 'react-to-print';
-import { StudentPrintReport } from '@/components/student-print-report';
 
 type EvaluationCriteria = {
   id: string;
@@ -73,13 +70,6 @@ export default function StudentProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
   const [generatedFeedback, setGeneratedFeedback] = useState('');
-  
-  const componentRef = useRef<StudentPrintReport>(null);
-
-  const handlePrint = useReactToPrint({
-    content: () => componentRef.current,
-    documentTitle: `Informe - ${student?.name || 'Estudiante'}`,
-  });
 
   const calculateFinalGradeDetails = useCallback((studentId: string, criteria: EvaluationCriteria[], grades: Grades, participations: ParticipationRecord): { finalGrade: number; criteriaDetails: { name: string, earned: number, weight: number }[] } => {
     if (!criteria || criteria.length === 0) return { finalGrade: 0, criteriaDetails: [] };
@@ -201,6 +191,79 @@ export default function StudentProfilePage() {
     }
   };
 
+  const generateReportText = () => {
+    if (!student || !studentStats) return "";
+
+    let report = `INFORME INDIVIDUAL DEL ESTUDIANTE\n`;
+    report += `Generado el: ${format(new Date(), "PPP", { locale: es })}\n\n`;
+    report += `----------------------------------------\n`;
+    report += `INFORMACIÓN PERSONAL\n`;
+    report += `----------------------------------------\n`;
+    report += `Nombre: ${student.name}\n`;
+    report += `ID: ${student.id}\n`;
+    report += `Email: ${student.email || 'No registrado'}\n`;
+    report += `Tutor: ${student.tutorName || 'No registrado'}\n`;
+    report += `Teléfono Tutor: ${student.tutorPhone || 'No registrado'}\n\n`;
+
+    report += `----------------------------------------\n`;
+    report += `RESUMEN DE CALIFICACIONES\n`;
+    report += `----------------------------------------\n`;
+    if (studentStats.gradesByGroup.length > 0) {
+        studentStats.gradesByGroup.forEach(item => {
+            report += `Asignatura: ${item.group}\n`;
+            report += `  - Promedio Semestral: ${item.grade.toFixed(1)}%\n`;
+        });
+    } else {
+        report += `No hay calificaciones registradas.\n`;
+    }
+    report += `\nPromedio General: ${studentStats.averageGrade.toFixed(1)}%\n\n`;
+
+    report += `----------------------------------------\n`;
+    report += `HISTORIAL DE ASISTENCIA\n`;
+    report += `----------------------------------------\n`;
+    const attendanceRate = studentStats.attendance.total > 0 ? (studentStats.attendance.p / studentStats.attendance.total) * 100 : 0;
+    report += `Total de Clases: ${studentStats.attendance.total}\n`;
+    report += `Asistencias: ${studentStats.attendance.p}\n`;
+    report += `Inasistencias: ${studentStats.attendance.a}\n`;
+    report += `Tasa de Asistencia: ${attendanceRate.toFixed(1)}%\n\n`;
+
+    report += `----------------------------------------\n`;
+    report += `BITÁCORA DE OBSERVACIONES\n`;
+    report += `----------------------------------------\n`;
+    if (observations.length > 0) {
+        observations.forEach(obs => {
+            report += `Fecha: ${format(new Date(obs.date), "dd/MM/yy")}\n`;
+            report += `Tipo: ${obs.type}\n`;
+            report += `Detalles: ${obs.details}\n\n`;
+        });
+    } else {
+        report += `No hay observaciones registradas.\n\n`;
+    }
+
+    if (generatedFeedback) {
+        report += `----------------------------------------\n`;
+        report += `RETROALIMENTACIÓN (IA)\n`;
+        report += `----------------------------------------\n`;
+        report += `${generatedFeedback}\n`;
+    }
+
+    return report;
+  };
+
+  const handleDownloadReport = () => {
+    const reportText = generateReportText();
+    const blob = new Blob([reportText], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `informe_${student?.name.replace(/\s+/g, '_')}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+
   if (isLoading) {
     return (
         <div className="flex justify-center items-center h-full">
@@ -221,16 +284,6 @@ export default function StudentProfilePage() {
   
   return (
     <div className="flex flex-col gap-6">
-       <div style={{ display: 'none' }}>
-          <StudentPrintReport 
-              ref={componentRef}
-              student={student}
-              studentStats={studentStats}
-              observations={observations}
-              generatedFeedback={generatedFeedback}
-              attendanceRate={attendanceRate}
-          />
-        </div>
        <Card className="bg-accent/50">
           <CardHeader>
             <div className="flex items-center gap-4">
@@ -248,8 +301,9 @@ export default function StudentProfilePage() {
                 <Button variant="outline" onClick={() => router.back()}>
                    <EyeOff className="mr-2 h-4 w-4" /> Ocultar Perfil
                 </Button>
-                <Button variant="outline" onClick={handlePrint}><Printer className="mr-2 h-4 w-4" /> Formato Impresión</Button>
-                <Button variant="outline"><FileText className="mr-2 h-4 w-4" /> Ver Informe Texto</Button>
+                <Button variant="outline" onClick={handleDownloadReport}>
+                  <Download className="mr-2 h-4 w-4" /> Descargar Informe
+                </Button>
              </div>
           </CardContent>
        </Card>
