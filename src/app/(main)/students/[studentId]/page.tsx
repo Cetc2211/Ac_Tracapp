@@ -74,7 +74,7 @@ export default function StudentProfilePage() {
   const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
   const [generatedFeedback, setGeneratedFeedback] = useState('');
   
-  const componentRef = useRef<StudentPrintReport>(null);
+  const componentRef = useRef(null);
 
   const handlePrint = useReactToPrint({
     content: () => componentRef.current,
@@ -221,15 +221,16 @@ export default function StudentProfilePage() {
   
   return (
     <div className="flex flex-col gap-6">
-       <div style={{ display: 'none' }}>
-          <StudentPrintReport 
-            ref={componentRef}
-            student={student} 
-            studentStats={studentStats}
-            observations={observations}
-            generatedFeedback={generatedFeedback}
-            attendanceRate={attendanceRate}
-          />
+      <div style={{ display: 'none' }}>
+        <div ref={componentRef}>
+            <StudentPrintReport
+                student={student}
+                studentStats={studentStats}
+                observations={observations}
+                generatedFeedback={generatedFeedback}
+                attendanceRate={attendanceRate}
+            />
+        </div>
       </div>
        <Card className="bg-accent/50">
           <CardHeader>
