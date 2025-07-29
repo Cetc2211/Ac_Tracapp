@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Student, Group, StudentObservation } from '@/lib/placeholder-data';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
-import { Mail, User, Contact, ArrowLeft, Printer, FileText, Loader2, Phone, Wand2, Download } from 'lucide-react';
+import { Mail, User, Contact, ArrowLeft, Download, FileText, Loader2, Phone, Wand2 } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -23,6 +23,12 @@ import { useRouter } from 'next/navigation';
 import { generateStudentFeedback } from '@/ai/flows/student-feedback';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 
 type EvaluationCriteria = {
@@ -59,6 +65,23 @@ export type StudentStats = {
   attendance: { p: number, a: number, total: number };
   gradesByGroup: { group: string, grade: number, criteriaDetails: { name: string, earned: number, weight: number }[] }[];
 };
+
+const WhatsAppIcon = () => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-4 w-4"
+    >
+      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+    </svg>
+);
 
 
 export default function StudentProfilePage() {
@@ -241,6 +264,23 @@ export default function StudentProfilePage() {
     }
   };
 
+  const handleSendWhatsApp = (target: 'student' | 'tutor') => {
+    if (!student) return;
+
+    const phone = target === 'tutor' ? student.tutorPhone : student.phone;
+    if (!phone) {
+        toast({ variant: 'destructive', title: 'Número no disponible', description: `El ${target} no tiene un número de teléfono registrado.` });
+        return;
+    }
+    
+    const message = encodeURIComponent(`Hola, le comparto el informe académico de ${student.name}.`);
+    // Limpiar el número de teléfono de cualquier caracter que no sea un dígito
+    const cleanPhone = phone.replace(/\D/g, '');
+    const url = `https://wa.me/${cleanPhone}?text=${message}`;
+    
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
 
   if (isLoading) {
     return (
@@ -282,6 +322,29 @@ export default function StudentProfilePage() {
                 <Button variant="outline" onClick={handleDownloadPdf}>
                   <Download className="mr-2 h-4 w-4" /> Descargar PDF
                 </Button>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline">
+                            <WhatsAppIcon />
+                            <span className="ml-2">Enviar por WhatsApp</span>
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                        {student.tutorPhone && (
+                            <DropdownMenuItem onClick={() => handleSendWhatsApp('tutor')}>
+                                Enviar al Tutor ({student.tutorName})
+                            </DropdownMenuItem>
+                        )}
+                        {student.phone && (
+                            <DropdownMenuItem onClick={() => handleSendWhatsApp('student')}>
+                                Enviar al Estudiante
+                            </DropdownMenuItem>
+                        )}
+                         {!student.tutorPhone && !student.phone && (
+                             <DropdownMenuItem disabled>No hay teléfonos registrados</DropdownMenuItem>
+                         )}
+                    </DropdownMenuContent>
+                </DropdownMenu>
              </div>
           </CardContent>
        </Card>
