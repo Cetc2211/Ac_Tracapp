@@ -67,6 +67,8 @@ type ReportSummary = {
     studentsWithObservations: number;
     canalizedCount: number;
     followUpCount: number;
+    improvedCount: number;
+    stillInObservationCount: number;
 }
 
 export default function GroupReportPage() {
@@ -123,6 +125,8 @@ export default function GroupReportPage() {
         let studentsWithObservations = 0;
         let canalizedStudents = 0;
         let followUpStudents = 0;
+        let improvedStudents = 0;
+        let stillInObservationStudents = 0;
         let totalGroupGrade = 0;
         let totalPossibleAttendance = 0;
         let totalPresent = 0;
@@ -138,7 +142,15 @@ export default function GroupReportPage() {
           if(studentObservations.length > 0) {
               studentsWithObservations++;
               if(studentObservations.some(o => o.requiresCanalization)) canalizedStudents++;
-              if(studentObservations.some(o => o.requiresFollowUp)) followUpStudents++;
+              if(studentObservations.some(o => o.requiresFollowUp)) {
+                  followUpStudents++;
+                  const followUpCases = studentObservations.filter(o => o.requiresFollowUp);
+                  if (followUpCases.some(c => c.isClosed)) {
+                      improvedStudents++;
+                  } else {
+                      stillInObservationStudents++;
+                  }
+              }
           }
           
           Object.keys(attendance).forEach(date => {
@@ -167,6 +179,8 @@ export default function GroupReportPage() {
             studentsWithObservations: studentsWithObservations,
             canalizedCount: canalizedStudents,
             followUpCount: followUpStudents,
+            improvedCount: improvedStudents,
+            stillInObservationCount: stillInObservationStudents,
         });
       }
       
@@ -285,6 +299,11 @@ export default function GroupReportPage() {
                 En cuanto al seguimiento, se han registrado observaciones en la bitácora para <span className="font-bold text-foreground">{summary.studentsWithObservations} estudiante(s)</span>.
                 {summary.canalizedCount > 0 && ` De estos, ${summary.canalizedCount} fueron canalizados para atención especial.`}
                 {summary.followUpCount > 0 && ` Se ha marcado que ${summary.followUpCount} estudiante(s) requieren seguimiento docente.`}
+                {summary.followUpCount > 0 && (
+                  <>
+                    {` De ellos, ${summary.improvedCount} han mostrado mejoría y ${summary.stillInObservationCount} continúan en observación.`}
+                  </>
+                )}
               </p>
             )}
             {summary.studentsWithObservations === 0 && (
