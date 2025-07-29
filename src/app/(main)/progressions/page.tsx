@@ -382,31 +382,31 @@ export default function ProgressionsPage() {
               </TableHeader>
               <TableBody>
                 <TableRow>
-                  <TableCell className="border-r">
+                  <TableCell className="border-r align-top">
                     <Label htmlFor="actividadApertura" className='font-bold'>APERTURA:</Label>
-                    <Textarea id="actividadApertura" className='mt-1' rows={3} value={formData.actividadApertura} onChange={handleInputChange} onPaste={handlePaste}></Textarea>
+                    <Textarea id="actividadApertura" className='mt-1' rows={6} value={formData.actividadApertura} onChange={handleInputChange} onPaste={handlePaste}></Textarea>
                   </TableCell>
-                  <TableCell className="border-r"><Textarea id="tecnicaApertura" className='h-full' value={formData.tecnicaApertura} onChange={handleInputChange}></Textarea></TableCell>
-                  <TableCell className="border-r"><Textarea id="evidenciaApertura" className='h-full' value={formData.evidenciaApertura} onChange={handleInputChange}></Textarea></TableCell>
-                  <TableCell><Textarea id="evaluacionApertura" className='h-full' value={formData.evaluacionApertura} onChange={handleInputChange}></Textarea></TableCell>
+                  <TableCell className="border-r align-top"><Textarea id="tecnicaApertura" rows={2} value={formData.tecnicaApertura} onChange={handleInputChange}></Textarea></TableCell>
+                  <TableCell className="border-r align-top"><Textarea id="evidenciaApertura" rows={2} value={formData.evidenciaApertura} onChange={handleInputChange}></Textarea></TableCell>
+                  <TableCell className="align-top"><Textarea id="evaluacionApertura" rows={2} value={formData.evaluacionApertura} onChange={handleInputChange}></Textarea></TableCell>
                 </TableRow>
                 <TableRow>
-                   <TableCell className="border-r">
+                   <TableCell className="border-r align-top">
                     <Label htmlFor="actividadDesarrollo" className='font-bold'>DESARROLLO:</Label>
-                    <Textarea id="actividadDesarrollo" className='mt-1' rows={5} value={formData.actividadDesarrollo} onChange={handleInputChange} onPaste={handlePaste}></Textarea>
+                    <Textarea id="actividadDesarrollo" className='mt-1' rows={10} value={formData.actividadDesarrollo} onChange={handleInputChange} onPaste={handlePaste}></Textarea>
                   </TableCell>
-                  <TableCell className="border-r"><Textarea id="tecnicaDesarrollo" className='h-full' value={formData.tecnicaDesarrollo} onChange={handleInputChange}></Textarea></TableCell>
-                  <TableCell className="border-r"><Textarea id="evidenciaDesarrollo" className='h-full' value={formData.evidenciaDesarrollo} onChange={handleInputChange}></Textarea></TableCell>
-                  <TableCell><Textarea id="evaluacionDesarrollo" className='h-full' value={formData.evaluacionDesarrollo} onChange={handleInputChange}></Textarea></TableCell>
+                  <TableCell className="border-r align-top"><Textarea id="tecnicaDesarrollo" rows={3} value={formData.tecnicaDesarrollo} onChange={handleInputChange}></Textarea></TableCell>
+                  <TableCell className="border-r align-top"><Textarea id="evidenciaDesarrollo" rows={3} value={formData.evidenciaDesarrollo} onChange={handleInputChange}></Textarea></TableCell>
+                  <TableCell className="align-top"><Textarea id="evaluacionDesarrollo" rows={3} value={formData.evaluacionDesarrollo} onChange={handleInputChange}></Textarea></TableCell>
                 </TableRow>
                  <TableRow>
-                   <TableCell className="border-r">
+                   <TableCell className="border-r align-top">
                     <Label htmlFor="actividadCierre" className='font-bold'>CIERRE:</Label>
-                    <Textarea id="actividadCierre" className='mt-1' rows={3} value={formData.actividadCierre} onChange={handleInputChange} onPaste={handlePaste}></Textarea>
+                    <Textarea id="actividadCierre" className='mt-1' rows={6} value={formData.actividadCierre} onChange={handleInputChange} onPaste={handlePaste}></Textarea>
                   </TableCell>
-                  <TableCell className="border-r"><Textarea id="tecnicaCierre" className='h-full' value={formData.tecnicaCierre} onChange={handleInputChange}></Textarea></TableCell>
-                  <TableCell className="border-r"><Textarea id="evidenciaCierre" className='h-full' value={formData.evidenciaCierre} onChange={handleInputChange}></Textarea></TableCell>
-                  <TableCell><Textarea id="evaluacionCierre" className='h-full' value={formData.evaluacionCierre} onChange={handleInputChange}></Textarea></TableCell>
+                  <TableCell className="border-r align-top"><Textarea id="tecnicaCierre" rows={2} value={formData.tecnicaCierre} onChange={handleInputChange}></Textarea></TableCell>
+                  <TableCell className="border-r align-top"><Textarea id="evidenciaCierre" rows={2} value={formData.evidenciaCierre} onChange={handleInputChange}></Textarea></TableCell>
+                  <TableCell className="align-top"><Textarea id="evaluacionCierre" rows={2} value={formData.evaluacionCierre} onChange={handleInputChange}></Textarea></TableCell>
                 </TableRow>
               </TableBody>
             </Table>
