@@ -28,6 +28,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 
 
@@ -264,17 +265,26 @@ export default function StudentProfilePage() {
     }
   };
 
-  const handleSendWhatsApp = (target: 'student' | 'tutor') => {
+  const handleSendWhatsApp = (target: 'student' | 'tutor' | 'other') => {
     if (!student) return;
 
-    const phone = target === 'tutor' ? student.tutorPhone : student.phone;
+    let phone: string | null | undefined = null;
+
+    if (target === 'tutor') {
+      phone = student.tutorPhone;
+    } else if (target === 'student') {
+      phone = student.phone;
+    } else if (target === 'other') {
+      phone = prompt('Por favor, ingresa el número de teléfono (incluyendo código de país):');
+      if (!phone) return; // User cancelled the prompt
+    }
+
     if (!phone) {
-        toast({ variant: 'destructive', title: 'Número no disponible', description: `El ${target} no tiene un número de teléfono registrado.` });
+        toast({ variant: 'destructive', title: 'Número no disponible', description: `No hay un número de teléfono registrado.` });
         return;
     }
     
     const message = encodeURIComponent(`Hola, le comparto el informe académico de ${student.name}.`);
-    // Limpiar el número de teléfono de cualquier caracter que no sea un dígito
     const cleanPhone = phone.replace(/\D/g, '');
     const url = `https://wa.me/${cleanPhone}?text=${message}`;
     
@@ -340,9 +350,10 @@ export default function StudentProfilePage() {
                                 Enviar al Estudiante
                             </DropdownMenuItem>
                         )}
-                         {!student.tutorPhone && !student.phone && (
-                             <DropdownMenuItem disabled>No hay teléfonos registrados</DropdownMenuItem>
-                         )}
+                         <DropdownMenuSeparator />
+                         <DropdownMenuItem onClick={() => handleSendWhatsApp('other')}>
+                            Enviar a otro teléfono
+                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
              </div>
