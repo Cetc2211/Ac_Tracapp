@@ -222,7 +222,7 @@ export default function StudentProfilePage() {
   return (
     <div className="flex flex-col gap-6">
       <div style={{ display: 'none' }}>
-         <StudentPrintReport
+        <StudentPrintReport
             ref={componentRef}
             student={student}
             studentStats={studentStats}
