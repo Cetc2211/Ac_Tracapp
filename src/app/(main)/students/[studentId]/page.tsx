@@ -21,6 +21,9 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useRouter } from 'next/navigation';
 import { generateStudentFeedback } from '@/ai/flows/student-feedback';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+
 
 type EvaluationCriteria = {
   id: string;
@@ -70,6 +73,8 @@ export default function StudentProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
   const [generatedFeedback, setGeneratedFeedback] = useState('');
+  const reportRef = useRef<HTMLDivElement>(null);
+
 
   const calculateFinalGradeDetails = useCallback((studentId: string, criteria: EvaluationCriteria[], grades: Grades, participations: ParticipationRecord): { finalGrade: number; criteriaDetails: { name: string, earned: number, weight: number }[] } => {
     if (!criteria || criteria.length === 0) return { finalGrade: 0, criteriaDetails: [] };
@@ -191,76 +196,39 @@ export default function StudentProfilePage() {
     }
   };
 
-  const generateReportText = () => {
-    if (!student || !studentStats) return "";
+  const handleDownloadPdf = () => {
+    const input = reportRef.current;
+    if (input) {
+      toast({ title: 'Generando PDF...', description: 'Esto puede tardar un momento.' });
+      html2canvas(input, { scale: 2, useCORS: true }).then((canvas) => {
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        
+        const canvasWidth = canvas.width;
+        const canvasHeight = canvas.height;
+        const ratio = canvasWidth / canvasHeight;
+        
+        let imgWidth = pdfWidth - 20; // with margin
+        let imgHeight = imgWidth / ratio;
+        
+        let heightLeft = imgHeight;
+        let position = 10; // top margin
+        
+        pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+        heightLeft -= (pdfHeight - 20);
 
-    let report = `INFORME INDIVIDUAL DEL ESTUDIANTE\n`;
-    report += `Generado el: ${format(new Date(), "PPP", { locale: es })}\n\n`;
-    report += `----------------------------------------\n`;
-    report += `INFORMACIÓN PERSONAL\n`;
-    report += `----------------------------------------\n`;
-    report += `Nombre: ${student.name}\n`;
-    report += `ID: ${student.id}\n`;
-    report += `Email: ${student.email || 'No registrado'}\n`;
-    report += `Tutor: ${student.tutorName || 'No registrado'}\n`;
-    report += `Teléfono Tutor: ${student.tutorPhone || 'No registrado'}\n\n`;
-
-    report += `----------------------------------------\n`;
-    report += `RESUMEN DE CALIFICACIONES\n`;
-    report += `----------------------------------------\n`;
-    if (studentStats.gradesByGroup.length > 0) {
-        studentStats.gradesByGroup.forEach(item => {
-            report += `Asignatura: ${item.group}\n`;
-            report += `  - Promedio Semestral: ${item.grade.toFixed(1)}%\n`;
-        });
-    } else {
-        report += `No hay calificaciones registradas.\n`;
+        while (heightLeft > 0) {
+          position = heightLeft - imgHeight;
+          pdf.addPage();
+          pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+          heightLeft -= (pdfHeight - 20);
+        }
+        
+        pdf.save(`informe_${student?.name.replace(/\s+/g, '_') || 'estudiante'}.pdf`);
+      });
     }
-    report += `\nPromedio General: ${studentStats.averageGrade.toFixed(1)}%\n\n`;
-
-    report += `----------------------------------------\n`;
-    report += `HISTORIAL DE ASISTENCIA\n`;
-    report += `----------------------------------------\n`;
-    const attendanceRate = studentStats.attendance.total > 0 ? (studentStats.attendance.p / studentStats.attendance.total) * 100 : 0;
-    report += `Total de Clases: ${studentStats.attendance.total}\n`;
-    report += `Asistencias: ${studentStats.attendance.p}\n`;
-    report += `Inasistencias: ${studentStats.attendance.a}\n`;
-    report += `Tasa de Asistencia: ${attendanceRate.toFixed(1)}%\n\n`;
-
-    report += `----------------------------------------\n`;
-    report += `BITÁCORA DE OBSERVACIONES\n`;
-    report += `----------------------------------------\n`;
-    if (observations.length > 0) {
-        observations.forEach(obs => {
-            report += `Fecha: ${format(new Date(obs.date), "dd/MM/yy")}\n`;
-            report += `Tipo: ${obs.type}\n`;
-            report += `Detalles: ${obs.details}\n\n`;
-        });
-    } else {
-        report += `No hay observaciones registradas.\n\n`;
-    }
-
-    if (generatedFeedback) {
-        report += `----------------------------------------\n`;
-        report += `RETROALIMENTACIÓN (IA)\n`;
-        report += `----------------------------------------\n`;
-        report += `${generatedFeedback}\n`;
-    }
-
-    return report;
-  };
-
-  const handleDownloadReport = () => {
-    const reportText = generateReportText();
-    const blob = new Blob([reportText], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `informe_${student?.name.replace(/\s+/g, '_')}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
   };
 
 
@@ -284,7 +252,7 @@ export default function StudentProfilePage() {
   
   return (
     <div className="flex flex-col gap-6">
-       <Card className="bg-accent/50">
+       <Card className="bg-accent/50 print:hidden">
           <CardHeader>
             <div className="flex items-center gap-4">
                <div className="bg-background p-3 rounded-full">
@@ -301,16 +269,15 @@ export default function StudentProfilePage() {
                 <Button variant="outline" onClick={() => router.back()}>
                    <EyeOff className="mr-2 h-4 w-4" /> Ocultar Perfil
                 </Button>
-                <Button variant="outline" onClick={handleDownloadReport}>
-                  <Download className="mr-2 h-4 w-4" /> Descargar Informe
+                <Button variant="outline" onClick={handleDownloadPdf}>
+                  <Download className="mr-2 h-4 w-4" /> Descargar PDF
                 </Button>
              </div>
           </CardContent>
        </Card>
       
-      <h2 className="text-xl font-bold text-center">Informe Individual del Estudiante</h2>
-
-      <div className="flex flex-col gap-6">
+      <div ref={reportRef} className="flex flex-col gap-6 bg-background p-4 rounded-lg">
+        <h2 className="text-xl font-bold text-center">Informe Individual del Estudiante</h2>
         <Card>
             <CardHeader>
                 <CardTitle>Información Personal</CardTitle>
