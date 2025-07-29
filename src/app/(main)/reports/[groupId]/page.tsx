@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import {
@@ -22,11 +21,15 @@ import { Button } from '@/components/ui/button';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, Printer, CheckCircle, XCircle, TrendingUp, BarChart, Users, Eye, AlertTriangle } from 'lucide-react';
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { ArrowLeft, Download, CheckCircle, XCircle, TrendingUp, BarChart, Users, Eye, AlertTriangle } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Group, Student, StudentObservation } from '@/lib/placeholder-data';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useToast } from '@/hooks/use-toast';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+
 
 type EvaluationCriteria = {
   id: string;
@@ -81,6 +84,8 @@ export default function GroupReportPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [institutionName, setInstitutionName] = useState('Academic Tracker');
   const [institutionLogo, setInstitutionLogo] = useState('');
+  const reportRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   const calculateFinalGrade = useCallback((studentId: string, criteria: EvaluationCriteria[], grades: Grades, participations: ParticipationRecord) => {
     if (!criteria || criteria.length === 0) return 0;
@@ -219,8 +224,35 @@ export default function GroupReportPage() {
     }
   }, [groupId, calculateFinalGrade, getStudentRiskLevel]);
 
-  const handlePrint = () => {
-    window.print();
+  const handleDownloadPdf = () => {
+    const input = reportRef.current;
+    if (input) {
+      toast({ title: 'Generando PDF...', description: 'Esto puede tardar un momento.' });
+      html2canvas(input, { scale: 2, useCORS: true }).then((canvas) => {
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const canvasWidth = canvas.width;
+        const canvasHeight = canvas.height;
+        const ratio = canvasWidth / canvasHeight;
+        
+        let imgWidth = pdfWidth - 20;
+        let imgHeight = imgWidth / ratio;
+        
+        if (imgHeight > pdfHeight - 20) {
+            imgHeight = pdfHeight - 20;
+            imgWidth = imgHeight * ratio;
+        }
+
+        const x = (pdfWidth - imgWidth) / 2;
+        const y = 10;
+        
+        pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
+        pdf.save(`informe_grupal_${group?.subject.replace(/\s+/g, '_') || 'reporte'}.pdf`);
+      });
+    }
   };
   
   if (isLoading) {
@@ -233,7 +265,7 @@ export default function GroupReportPage() {
 
   return (
     <div className="flex flex-col gap-6">
-       <div className="flex items-center justify-between print:hidden">
+       <div className="flex items-center justify-between">
          <div className="flex items-center gap-4">
             <Button asChild variant="outline" size="icon">
               <Link href="/reports">
@@ -248,13 +280,13 @@ export default function GroupReportPage() {
               </p>
             </div>
          </div>
-         <Button onClick={handlePrint}>
-            <Printer className="mr-2 h-4 w-4"/>
-            Imprimir Informe
+         <Button onClick={handleDownloadPdf}>
+            <Download className="mr-2 h-4 w-4"/>
+            Descargar Informe
          </Button>
       </div>
 
-      <Card id="report-content" className="p-4 sm:p-6 md:p-8 print:shadow-none print:border-none">
+      <Card ref={reportRef} id="report-content" className="p-4 sm:p-6 md:p-8">
         <header className="border-b pb-6 mb-6">
            <div className="flex justify-between items-start">
                 <div className="flex flex-col">
@@ -291,7 +323,7 @@ export default function GroupReportPage() {
                 <span className="font-bold text-foreground"> {summary.totalStudents} estudiante(s)</span>.
             </p>
 
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 my-6 print:grid-cols-3">
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 my-6">
                 <Card className="text-center">
                     <CardHeader><CardTitle className="text-base">Aprobación</CardTitle></CardHeader>
                     <CardContent>
@@ -351,22 +383,6 @@ export default function GroupReportPage() {
             <p>Fin del informe.</p>
         </footer>
       </Card>
-      <style jsx global>{`
-        @media print {
-          body * {
-            visibility: hidden;
-          }
-          #report-content, #report-content * {
-            visibility: visible;
-          }
-          #report-content {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-          }
-        }
-      `}</style>
     </div>
   );
 }
