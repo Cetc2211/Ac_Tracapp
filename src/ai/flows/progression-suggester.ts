@@ -40,7 +40,7 @@ const prompt = ai.definePrompt({
   output: { schema: ProgressionSuggesterOutputSchema },
   prompt: `
     You are an expert in pedagogy and instructional design for high school education.
-    Based on the provided information, generate concise and practical suggestions for learning activities.
+    Based on the provided information, generate concise and practical suggestions for learning activities in Spanish.
     The activities should be divided into three moments: opening, development, and closing.
     The tone should be creative, inspiring, and aligned with modern teaching methodologies.
 
@@ -72,7 +72,7 @@ const prompt = ai.definePrompt({
     {{{crossConcepts}}}
     {{/if}}
 
-    Provide one distinct activity for each of the three moments.
+    Provide one distinct activity for each of the three moments. The response must be in Spanish.
   `,
 });
 
