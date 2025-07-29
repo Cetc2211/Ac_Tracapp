@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import {
@@ -123,7 +122,7 @@ export default function ReportsPage() {
         const criteria: EvaluationCriteria[] = JSON.parse(localStorage.getItem(`criteria_${group.id}`) || '[]');
         const grades: Grades = JSON.parse(localStorage.getItem(`grades_${group.id}`) || '{}');
         const participations: ParticipationRecord = JSON.parse(localStorage.getItem(`participations_${group.id}`) || '{}');
-        const attendance: GlobalAttendanceRecord = JSON.parse(localStorage.getItem('globalAttendance') || '{}');
+        const attendance: GlobalAttendanceRecord = JSON.parse(localStorage.getItem('globalAttendance') || '[]');
         
         const allAttendanceDates = Object.keys(attendance);
         let totalAttendanceRecords = 0;
@@ -341,19 +340,13 @@ export default function ReportsPage() {
                     <div className="p-4 rounded-md bg-muted/50 border border-muted-foreground/20">
                         <h4 className="font-semibold">{selectedStudent.name}</h4>
                         <p className="text-sm text-muted-foreground">
-                            Informe completo con perfil del estudiante, calificaciones detalladas, asistencia y fechas específicas
+                            Informe completo con perfil del estudiante, calificaciones detalladas, asistencia y fechas específicas.
                         </p>
                         <div className="mt-4 flex flex-wrap gap-2">
                              <Button asChild size="sm" variant="secondary">
                                 <Link href={`/students/${selectedStudent.id}`}>
                                     <Eye className="mr-2 h-4 w-4" /> Ver Informe Visual
                                 </Link>
-                            </Button>
-                             <Button size="sm" variant="secondary">
-                                <Printer className="mr-2 h-4 w-4" /> Formato Impresión
-                            </Button>
-                             <Button size="sm" variant="secondary">
-                                <FileText className="mr-2 h-4 w-4" /> Ver Informe Texto
                             </Button>
                         </div>
                     </div>
@@ -363,5 +356,7 @@ export default function ReportsPage() {
     </div>
   );
 }
+
+    
 
     
