@@ -75,30 +75,29 @@ body {
     --sidebar-foreground: 200 40% 20%;
     --sidebar-accent: 200 67% 78%;
     --sidebar-accent-foreground: 200 50% 15%;
-    --sidebar-border: 200 30% 70%;
   }
   
   .theme-forest {
-    --background: 220 13% 18%;
-    --foreground: 220 14% 90%;
-    --card: 220 13% 22%;
-    --card-foreground: 220 14% 90%;
-    --primary: 158 44% 52%;
-    --primary-foreground: 158 44% 10%;
-    --secondary: 220 13% 28%;
-    --secondary-foreground: 220 14% 90%;
-    --muted: 220 13% 28%;
-    --muted-foreground: 220 14% 60%;
-    --accent: 158 44% 32%;
-    --accent-foreground: 158 44% 90%;
-    --destructive: 0 72% 51%;
-    --border: 220 13% 28%;
-    --input: 220 13% 28%;
-    --ring: 158 44% 52%;
-    --sidebar-background: 220 13% 15%;
-    --sidebar-foreground: 220 14% 90%;
-    --sidebar-accent: 220 13% 25%;
-    --sidebar-accent-foreground: 158 44% 80%;
+    --background: 120 10% 96%;
+    --foreground: 120 25% 15%;
+    --card: 120 10% 100%;
+    --card-foreground: 120 25% 15%;
+    --primary: 140 60% 35%;
+    --primary-foreground: 140 60% 95%;
+    --secondary: 120 10% 90%;
+    --secondary-foreground: 120 25% 15%;
+    --muted: 120 10% 90%;
+    --muted-foreground: 120 25% 45%;
+    --accent: 140 60% 88%;
+    --accent-foreground: 140 60% 15%;
+    --destructive: 0 70% 50%;
+    --border: 120 10% 85%;
+    --input: 120 10% 90%;
+    --ring: 140 60% 35%;
+    --sidebar-background: 140 60% 35%;
+    --sidebar-foreground: 140 60% 95%;
+    --sidebar-accent: 140 60% 45%;
+    --sidebar-accent-foreground: 140 60% 95%;
   }
 
   .theme-candy {
@@ -165,16 +164,20 @@ body {
   }
 
   .theme-aurora {
-    --background: 260 20% 10%;
+    --background: 260 20% 12%;
     --foreground: 260 10% 90%;
+    --card: 260 20% 18%;
+    --card-foreground: 260 10% 90%;
     --primary: 280 80% 70%;
     --primary-foreground: 280 80% 98%;
-    --card: radial-gradient(circle, hsl(260, 20%, 15%) 0%, hsl(260, 20%, 10%) 100%);
-    --card-foreground: 260 10% 90%;
-    --secondary: 260 20% 20%;
-    --border: 260 20% 25%;
-    --accent: 180 80% 50%;
-    --accent-foreground: 180 80% 98%;
+    --secondary: 260 20% 25%;
+    --secondary-foreground: 260 10% 90%;
+    --accent: 280 80% 50%;
+    --accent-foreground: 280 80% 98%;
+    --destructive: 0 72% 51%;
+    --border: 260 20% 30%;
+    --input: 260 20% 25%;
+    --ring: 280 80% 70%;
     --sidebar-background: 280 80% 70%;
     --sidebar-foreground: 280 80% 98%;
     --sidebar-accent: 280 80% 80%;

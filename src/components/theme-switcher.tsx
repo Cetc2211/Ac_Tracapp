@@ -18,7 +18,7 @@ export const themes = [
     {
         name: 'Forest',
         id: 'theme-forest',
-        colors: ['#22c55e', '#292524', '#f5f5f4']
+        colors: ['#22c55e', '#e5e7eb', '#1f2937']
     },
     {
         name: 'Candy',
@@ -38,8 +38,7 @@ export const themes = [
     {
         name: 'Aurora',
         id: 'theme-aurora',
-        colors: ['#8b5cf6', '#1e1b4b', '#e0e7ff'],
-        gradient: 'linear-gradient(to right, #8b5cf6, #3b82f6)'
+        colors: ['#a855f7', '#4c1d95', '#f5f3ff'],
     },
     {
         name: 'Sakura',
