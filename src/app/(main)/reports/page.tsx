@@ -343,9 +343,9 @@ export default function ReportsPage() {
                             Informe completo con perfil del estudiante, calificaciones detalladas, asistencia y fechas específicas.
                         </p>
                         <div className="mt-4 flex flex-wrap gap-2">
-                             <Button asChild size="sm" variant="secondary">
+                             <Button asChild>
                                 <Link href={`/students/${selectedStudent.id}`}>
-                                    <Eye className="mr-2 h-4 w-4" /> Ver Informe Visual
+                                    <FileText className="mr-2 h-4 w-4" /> Generar Informe
                                 </Link>
                             </Button>
                         </div>
@@ -356,7 +356,3 @@ export default function ReportsPage() {
     </div>
   );
 }
-
-    
-
-    
