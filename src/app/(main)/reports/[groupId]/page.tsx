@@ -22,7 +22,7 @@ import { Button } from '@/components/ui/button';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, Printer, CheckCircle, XCircle, TrendingUp, BarChart, Users, Eye } from 'lucide-react';
+import { ArrowLeft, Printer, CheckCircle, XCircle, TrendingUp, BarChart, Users, Eye, AlertTriangle } from 'lucide-react';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Group, Student, StudentObservation } from '@/lib/placeholder-data';
 import { format } from 'date-fns';
@@ -67,6 +67,10 @@ type ReportSummary = {
     studentsWithObservations: number;
     canalizedCount: number;
     followUpCount: number;
+    improvedCount: number;
+    stillInObservationCount: number;
+    highRiskCount: number;
+    mediumRiskCount: number;
 }
 
 export default function GroupReportPage() {
@@ -104,6 +108,20 @@ export default function GroupReportPage() {
     return finalGrade > 100 ? 100 : finalGrade;
   }, []);
 
+  const getStudentRiskLevel = useCallback((finalGrade: number, attendance: GlobalAttendanceRecord, studentId: string) => {
+      const studentAttendanceDates = Object.keys(attendance).filter(date => attendance[date]?.[studentId] !== undefined);
+      const totalDays = studentAttendanceDates.length;
+      let absences = 0;
+      if (totalDays > 0) {
+          absences = studentAttendanceDates.filter(date => attendance[date]?.[studentId] === false).length;
+      }
+      const absencePercentage = totalDays > 0 ? (absences / totalDays) * 100 : 0;
+      
+      if (finalGrade < 70 || absencePercentage > 20) return 'high';
+      if (finalGrade < 80 || absencePercentage > 10) return 'medium';
+      return 'low';
+  }, []);
+
   useEffect(() => {
     if (!groupId) return;
     setIsLoading(true);
@@ -123,22 +141,38 @@ export default function GroupReportPage() {
         let studentsWithObservations = 0;
         let canalizedStudents = 0;
         let followUpStudents = 0;
+        let improvedStudents = 0;
+        let stillInObservationStudents = 0;
         let totalGroupGrade = 0;
         let totalPossibleAttendance = 0;
         let totalPresent = 0;
         let totalParticipations = 0;
         let totalParticipationOpportunities = 0;
+        let highRiskStudents = 0;
+        let mediumRiskStudents = 0;
 
         currentGroup.students.forEach(student => {
           const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations);
           totalGroupGrade += finalGrade;
           if (finalGrade >= 70) approved++;
+
+          const riskLevel = getStudentRiskLevel(finalGrade, attendance, student.id);
+          if (riskLevel === 'high') highRiskStudents++;
+          if (riskLevel === 'medium') mediumRiskStudents++;
           
           const studentObservations: StudentObservation[] = JSON.parse(localStorage.getItem(`observations_${student.id}`) || '[]');
           if(studentObservations.length > 0) {
               studentsWithObservations++;
               if(studentObservations.some(o => o.requiresCanalization)) canalizedStudents++;
-              if(studentObservations.some(o => o.requiresFollowUp)) followUpStudents++;
+              if(studentObservations.some(o => o.requiresFollowUp)) {
+                  followUpStudents++;
+                  const followUpCases = studentObservations.filter(o => o.requiresFollowUp);
+                  if (followUpCases.some(c => c.isClosed)) {
+                      improvedStudents++;
+                  } else {
+                      stillInObservationStudents++;
+                  }
+              }
           }
           
           Object.keys(attendance).forEach(date => {
@@ -167,6 +201,10 @@ export default function GroupReportPage() {
             studentsWithObservations: studentsWithObservations,
             canalizedCount: canalizedStudents,
             followUpCount: followUpStudents,
+            improvedCount: improvedStudents,
+            stillInObservationCount: stillInObservationStudents,
+            highRiskCount: highRiskStudents,
+            mediumRiskCount: mediumRiskStudents,
         });
       }
       
@@ -179,7 +217,7 @@ export default function GroupReportPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [groupId, calculateFinalGrade]);
+  }, [groupId, calculateFinalGrade, getStudentRiskLevel]);
 
   const handlePrint = () => {
     window.print();
@@ -279,19 +317,34 @@ export default function GroupReportPage() {
                     </CardContent>
                 </Card>
              </div>
+             
+              <div className="space-y-4 text-muted-foreground leading-relaxed">
+                {(summary.highRiskCount > 0 || summary.mediumRiskCount > 0) && (
+                    <p>
+                        Se ha identificado que <span className="font-bold text-destructive">{summary.highRiskCount} estudiante(s)</span> se encuentran en <span className="font-bold text-destructive">riesgo alto</span> y 
+                        <span className="font-bold text-amber-600"> {summary.mediumRiskCount} estudiante(s)</span> en <span className="font-bold text-amber-600">riesgo medio</span>, basado en su rendimiento y asistencia.
+                    </p>
+                )}
 
-            {summary.studentsWithObservations > 0 && (
-              <p className="text-muted-foreground leading-relaxed mt-4">
-                En cuanto al seguimiento, se han registrado observaciones en la bitácora para <span className="font-bold text-foreground">{summary.studentsWithObservations} estudiante(s)</span>.
-                {summary.canalizedCount > 0 && ` De estos, ${summary.canalizedCount} fueron canalizados para atención especial.`}
-                {summary.followUpCount > 0 && ` Se ha marcado que ${summary.followUpCount} estudiante(s) requieren seguimiento docente.`}
-              </p>
-            )}
-            {summary.studentsWithObservations === 0 && (
-                 <p className="text-muted-foreground leading-relaxed mt-4">
-                    No se han registrado observaciones, canalizaciones o seguimientos para ningún estudiante de este grupo durante el periodo.
-                </p>
-            )}
+                {summary.studentsWithObservations > 0 && (
+                  <p>
+                    En cuanto al seguimiento, se han registrado observaciones en la bitácora para <span className="font-bold text-foreground">{summary.studentsWithObservations} estudiante(s)</span>.
+                    {summary.canalizedCount > 0 && ` De estos, ${summary.canalizedCount} fueron canalizados para atención especial.`}
+                    {summary.followUpCount > 0 && ` Se ha marcado que ${summary.followUpCount} estudiante(s) requieren seguimiento docente.`}
+                    {summary.followUpCount > 0 && (
+                      <>
+                        {` De ellos, ${summary.improvedCount} han mostrado mejoría y ${summary.stillInObservationCount} continúan en observación.`}
+                      </>
+                    )}
+                  </p>
+                )}
+                {summary.studentsWithObservations === 0 && (
+                     <p>
+                        No se han registrado observaciones, canalizaciones o seguimientos para ningún estudiante de este grupo durante el periodo.
+                    </p>
+                )}
+            </div>
+
         </section>
 
         <footer className="border-t mt-8 pt-6 text-center text-xs text-muted-foreground">
@@ -317,5 +370,3 @@ export default function GroupReportPage() {
     </div>
   );
 }
-
-    
