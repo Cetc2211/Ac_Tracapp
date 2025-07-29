@@ -76,7 +76,7 @@ const prompt = ai.definePrompt({
     1.  **Start with "Recomendaciones:":**
         - Be direct and concise.
         - Identify the most critical areas for improvement (low grades, high absences, negative observations like 'Problema de conducta' or 'Problema de lectura').
-        - Provide one or two concrete, actionable recommendations. For example: "Recomendaciones:\nSe observa que tu desempeño en [Subject] necesita mejorar. Te recomendamos solicitar asesorías o formar grupos de estudio para reforzar los temas."
+        - Provide one or two concrete, actionable recommendations. For example: "Recomendaciones:\\nSe observa que tu desempeño en [Subject] necesita mejorar. Te recomendamos solicitar asesorías o formar grupos de estudio para reforzar los temas."
     
     2.  **Follow with a Positive Reinforcement Paragraph (No Title):**
         - After the recommendations, write a new paragraph.

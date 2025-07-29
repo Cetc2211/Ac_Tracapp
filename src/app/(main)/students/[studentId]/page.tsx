@@ -184,6 +184,10 @@ export default function StudentProfilePage() {
       };
       const result = await generateStudentFeedback(input);
       setGeneratedFeedback(result.feedback);
+      toast({
+        title: 'Retroalimentación Generada',
+        description: 'Las recomendaciones se han copiado al informe del estudiante.',
+      });
     } catch (error) {
       console.error("Error generating feedback:", error);
       toast({
@@ -213,14 +217,13 @@ export default function StudentProfilePage() {
         let imgWidth = pdfWidth - 20; // 10mm margin on each side
         let imgHeight = imgWidth / ratio;
         
-        // If the calculated height is greater than the page height, scale down
         if (imgHeight > pdfHeight - 20) {
             imgHeight = pdfHeight - 20; // 10mm margin top and bottom
             imgWidth = imgHeight * ratio;
         }
 
         const x = (pdfWidth - imgWidth) / 2;
-        const y = 10; // 10mm top margin
+        const y = 10;
         
         pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
         pdf.save(`informe_${student?.name.replace(/\s+/g, '_') || 'estudiante'}.pdf`);
@@ -417,41 +420,40 @@ export default function StudentProfilePage() {
             </CardContent>
         </Card>
 
-        <Card>
+        {generatedFeedback && (
+            <Card>
+                <CardHeader>
+                    <CardTitle>Recomendaciones</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="p-4 bg-muted/50 rounded-md border whitespace-pre-wrap text-sm">
+                        {generatedFeedback}
+                    </div>
+                </CardContent>
+            </Card>
+        )}
+      </div>
+
+       <Card className="print:hidden">
             <CardHeader>
-                <CardTitle>Recomendaciones</CardTitle>
+                <CardTitle>Generador de Retroalimentación (IA)</CardTitle>
                 <CardDescription>
-                    Análisis del desempeño del estudiante y sugerencias generadas por inteligencia artificial.
+                    Analiza el desempeño del estudiante y genera sugerencias. La retroalimentación se añadirá al informe.
                 </CardDescription>
             </CardHeader>
             <CardContent>
-                {generatedFeedback ? (
-                    <div className="space-y-4">
-                        <div className="p-4 bg-muted/50 rounded-md border whitespace-pre-wrap text-sm">
-                            {generatedFeedback}
-                        </div>
-                         <Button variant="secondary" size="sm" onClick={() => setGeneratedFeedback('')}>
-                            Ocultar retroalimentación
-                         </Button>
-                    </div>
-                ) : (
-                    <div className="text-center p-4">
-                        <p className="text-muted-foreground mb-4">
-                            Haz clic en el botón para generar un análisis completo del desempeño y obtener recomendaciones.
-                        </p>
-                        <Button onClick={handleGenerateFeedback} disabled={isGeneratingFeedback || !studentStats}>
-                            {isGeneratingFeedback ? (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                                <Wand2 className="mr-2 h-4 w-4" />
-                            )}
-                            {isGeneratingFeedback ? 'Generando...' : 'Generar Retroalimentación'}
-                        </Button>
-                    </div>
-                )}
+                <div className="text-center p-4">
+                    <Button onClick={handleGenerateFeedback} disabled={isGeneratingFeedback || !studentStats}>
+                        {isGeneratingFeedback ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                            <Wand2 className="mr-2 h-4 w-4" />
+                        )}
+                        {isGeneratingFeedback ? 'Generando...' : 'Generar y Copiar al Informe'}
+                    </Button>
+                </div>
             </CardContent>
         </Card>
-      </div>
     </div>
   );
 }
