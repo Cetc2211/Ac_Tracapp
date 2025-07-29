@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import {
@@ -22,11 +21,15 @@ import { Button } from '@/components/ui/button';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, Printer, CheckCircle, XCircle, TrendingUp, BarChart, Users, Eye } from 'lucide-react';
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { ArrowLeft, Download, CheckCircle, XCircle, TrendingUp, BarChart, Users, Eye, AlertTriangle } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Group, Student, StudentObservation } from '@/lib/placeholder-data';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useToast } from '@/hooks/use-toast';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+
 
 type EvaluationCriteria = {
   id: string;
@@ -69,6 +72,8 @@ type ReportSummary = {
     followUpCount: number;
     improvedCount: number;
     stillInObservationCount: number;
+    highRiskCount: number;
+    mediumRiskCount: number;
 }
 
 export default function GroupReportPage() {
@@ -79,6 +84,8 @@ export default function GroupReportPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [institutionName, setInstitutionName] = useState('Academic Tracker');
   const [institutionLogo, setInstitutionLogo] = useState('');
+  const reportRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   const calculateFinalGrade = useCallback((studentId: string, criteria: EvaluationCriteria[], grades: Grades, participations: ParticipationRecord) => {
     if (!criteria || criteria.length === 0) return 0;
@@ -104,6 +111,20 @@ export default function GroupReportPage() {
       finalGrade += performanceRatio * criterion.weight;
     }
     return finalGrade > 100 ? 100 : finalGrade;
+  }, []);
+
+  const getStudentRiskLevel = useCallback((finalGrade: number, attendance: GlobalAttendanceRecord, studentId: string) => {
+      const studentAttendanceDates = Object.keys(attendance).filter(date => attendance[date]?.[studentId] !== undefined);
+      const totalDays = studentAttendanceDates.length;
+      let absences = 0;
+      if (totalDays > 0) {
+          absences = studentAttendanceDates.filter(date => attendance[date]?.[studentId] === false).length;
+      }
+      const absencePercentage = totalDays > 0 ? (absences / totalDays) * 100 : 0;
+      
+      if (finalGrade < 70 || absencePercentage > 20) return 'high';
+      if (finalGrade < 80 || absencePercentage > 10) return 'medium';
+      return 'low';
   }, []);
 
   useEffect(() => {
@@ -132,11 +153,17 @@ export default function GroupReportPage() {
         let totalPresent = 0;
         let totalParticipations = 0;
         let totalParticipationOpportunities = 0;
+        let highRiskStudents = 0;
+        let mediumRiskStudents = 0;
 
         currentGroup.students.forEach(student => {
           const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations);
           totalGroupGrade += finalGrade;
           if (finalGrade >= 70) approved++;
+
+          const riskLevel = getStudentRiskLevel(finalGrade, attendance, student.id);
+          if (riskLevel === 'high') highRiskStudents++;
+          if (riskLevel === 'medium') mediumRiskStudents++;
           
           const studentObservations: StudentObservation[] = JSON.parse(localStorage.getItem(`observations_${student.id}`) || '[]');
           if(studentObservations.length > 0) {
@@ -181,6 +208,8 @@ export default function GroupReportPage() {
             followUpCount: followUpStudents,
             improvedCount: improvedStudents,
             stillInObservationCount: stillInObservationStudents,
+            highRiskCount: highRiskStudents,
+            mediumRiskCount: mediumRiskStudents,
         });
       }
       
@@ -193,10 +222,37 @@ export default function GroupReportPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [groupId, calculateFinalGrade]);
+  }, [groupId, calculateFinalGrade, getStudentRiskLevel]);
 
-  const handlePrint = () => {
-    window.print();
+  const handleDownloadPdf = () => {
+    const input = reportRef.current;
+    if (input) {
+      toast({ title: 'Generando PDF...', description: 'Esto puede tardar un momento.' });
+      html2canvas(input, { scale: 2, useCORS: true }).then((canvas) => {
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const canvasWidth = canvas.width;
+        const canvasHeight = canvas.height;
+        const ratio = canvasWidth / canvasHeight;
+        
+        let imgWidth = pdfWidth - 20;
+        let imgHeight = imgWidth / ratio;
+        
+        if (imgHeight > pdfHeight - 20) {
+            imgHeight = pdfHeight - 20;
+            imgWidth = imgHeight * ratio;
+        }
+
+        const x = (pdfWidth - imgWidth) / 2;
+        const y = 10;
+        
+        pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
+        pdf.save(`informe_grupal_${group?.subject.replace(/\s+/g, '_') || 'reporte'}.pdf`);
+      });
+    }
   };
   
   if (isLoading) {
@@ -209,7 +265,7 @@ export default function GroupReportPage() {
 
   return (
     <div className="flex flex-col gap-6">
-       <div className="flex items-center justify-between print:hidden">
+       <div className="flex items-center justify-between">
          <div className="flex items-center gap-4">
             <Button asChild variant="outline" size="icon">
               <Link href="/reports">
@@ -224,13 +280,13 @@ export default function GroupReportPage() {
               </p>
             </div>
          </div>
-         <Button onClick={handlePrint}>
-            <Printer className="mr-2 h-4 w-4"/>
-            Imprimir Informe
+         <Button onClick={handleDownloadPdf}>
+            <Download className="mr-2 h-4 w-4"/>
+            Descargar PDF
          </Button>
       </div>
 
-      <Card id="report-content" className="p-4 sm:p-6 md:p-8 print:shadow-none print:border-none">
+      <Card ref={reportRef} id="report-content" className="p-4 sm:p-6 md:p-8">
         <header className="border-b pb-6 mb-6">
            <div className="flex justify-between items-start">
                 <div className="flex flex-col">
@@ -267,7 +323,7 @@ export default function GroupReportPage() {
                 <span className="font-bold text-foreground"> {summary.totalStudents} estudiante(s)</span>.
             </p>
 
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 my-6 print:grid-cols-3">
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 my-6">
                 <Card className="text-center">
                     <CardHeader><CardTitle className="text-base">Aprobación</CardTitle></CardHeader>
                     <CardContent>
@@ -293,48 +349,40 @@ export default function GroupReportPage() {
                     </CardContent>
                 </Card>
              </div>
-
-            {summary.studentsWithObservations > 0 && (
-              <p className="text-muted-foreground leading-relaxed mt-4">
-                En cuanto al seguimiento, se han registrado observaciones en la bitácora para <span className="font-bold text-foreground">{summary.studentsWithObservations} estudiante(s)</span>.
-                {summary.canalizedCount > 0 && ` De estos, ${summary.canalizedCount} fueron canalizados para atención especial.`}
-                {summary.followUpCount > 0 && ` Se ha marcado que ${summary.followUpCount} estudiante(s) requieren seguimiento docente.`}
-                {summary.followUpCount > 0 && (
-                  <>
-                    {` De ellos, ${summary.improvedCount} han mostrado mejoría y ${summary.stillInObservationCount} continúan en observación.`}
-                  </>
+             
+              <div className="space-y-4 text-muted-foreground leading-relaxed">
+                {(summary.highRiskCount > 0 || summary.mediumRiskCount > 0) && (
+                    <p>
+                        Se ha identificado que <span className="font-bold text-destructive">{summary.highRiskCount} estudiante(s)</span> se encuentran en <span className="font-bold text-destructive">riesgo alto</span> y 
+                        <span className="font-bold text-amber-600"> {summary.mediumRiskCount} estudiante(s)</span> en <span className="font-bold text-amber-600">riesgo medio</span>, basado en su rendimiento y asistencia.
+                    </p>
                 )}
-              </p>
-            )}
-            {summary.studentsWithObservations === 0 && (
-                 <p className="text-muted-foreground leading-relaxed mt-4">
-                    No se han registrado observaciones, canalizaciones o seguimientos para ningún estudiante de este grupo durante el periodo.
-                </p>
-            )}
+
+                {summary.studentsWithObservations > 0 && (
+                  <p>
+                    En cuanto al seguimiento, se han registrado observaciones en la bitácora para <span className="font-bold text-foreground">{summary.studentsWithObservations} estudiante(s)</span>.
+                    {summary.canalizedCount > 0 && ` De estos, ${summary.canalizedCount} fueron canalizados para atención especial.`}
+                    {summary.followUpCount > 0 && ` Se ha marcado que ${summary.followUpCount} estudiante(s) requieren seguimiento docente.`}
+                    {summary.followUpCount > 0 && (
+                      <>
+                        {` De ellos, ${summary.improvedCount} han mostrado mejoría y ${summary.stillInObservationCount} continúan en observación.`}
+                      </>
+                    )}
+                  </p>
+                )}
+                {summary.studentsWithObservations === 0 && (
+                     <p>
+                        No se han registrado observaciones, canalizaciones o seguimientos para ningún estudiante de este grupo durante el periodo.
+                    </p>
+                )}
+            </div>
+
         </section>
 
         <footer className="border-t mt-8 pt-6 text-center text-xs text-muted-foreground">
             <p>Fin del informe.</p>
         </footer>
       </Card>
-      <style jsx global>{`
-        @media print {
-          body * {
-            visibility: hidden;
-          }
-          #report-content, #report-content * {
-            visibility: visible;
-          }
-          #report-content {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-          }
-        }
-      `}</style>
     </div>
   );
 }
-
-    
