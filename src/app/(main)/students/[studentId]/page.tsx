@@ -202,30 +202,27 @@ export default function StudentProfilePage() {
       toast({ title: 'Generando PDF...', description: 'Esto puede tardar un momento.' });
       html2canvas(input, { scale: 2, useCORS: true }).then((canvas) => {
         const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdf = new jsPDF('p', 'mm', 'a4'); // A4 size page of PDF
+        
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();
-        
         const canvasWidth = canvas.width;
         const canvasHeight = canvas.height;
         const ratio = canvasWidth / canvasHeight;
         
-        let imgWidth = pdfWidth - 20; // with margin
+        let imgWidth = pdfWidth - 20; // 10mm margin on each side
         let imgHeight = imgWidth / ratio;
         
-        let heightLeft = imgHeight;
-        let position = 10; // top margin
-        
-        pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-        heightLeft -= (pdfHeight - 20);
-
-        while (heightLeft > 0) {
-          position = heightLeft - imgHeight;
-          pdf.addPage();
-          pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-          heightLeft -= (pdfHeight - 20);
+        // If the calculated height is greater than the page height, scale down
+        if (imgHeight > pdfHeight - 20) {
+            imgHeight = pdfHeight - 20; // 10mm margin top and bottom
+            imgWidth = imgHeight * ratio;
         }
+
+        const x = (pdfWidth - imgWidth) / 2;
+        const y = 10; // 10mm top margin
         
+        pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
         pdf.save(`informe_${student?.name.replace(/\s+/g, '_') || 'estudiante'}.pdf`);
       });
     }
@@ -422,7 +419,7 @@ export default function StudentProfilePage() {
 
         <Card>
             <CardHeader>
-                <CardTitle>Retroalimentación y Recomendaciones (IA)</CardTitle>
+                <CardTitle>Recomendaciones</CardTitle>
                 <CardDescription>
                     Análisis del desempeño del estudiante y sugerencias generadas por inteligencia artificial.
                 </CardDescription>
