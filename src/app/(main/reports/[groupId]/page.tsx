@@ -282,7 +282,7 @@ export default function GroupReportPage() {
          </div>
          <Button onClick={handleDownloadPdf}>
             <Download className="mr-2 h-4 w-4"/>
-            Descargar PDF
+            Descargar Informe
          </Button>
       </div>
 
@@ -380,7 +380,14 @@ export default function GroupReportPage() {
         </section>
 
         <footer className="border-t mt-8 pt-6 text-center text-xs text-muted-foreground">
-            <p>Fin del informe.</p>
+            <div className="mt-12 pt-12">
+                <div className="inline-block">
+                    <div className="border-t border-foreground w-48 mx-auto"></div>
+                    <p className="mt-2 font-semibold">Nombre del Docente</p>
+                    <p>Firma del Docente</p>
+                </div>
+            </div>
+            <p className="mt-8">Fin del informe.</p>
         </footer>
       </Card>
     </div>

@@ -69,6 +69,7 @@ export default function StudentProfilePage() {
   const [student, setStudent] = useState<Student | null>(null);
   const [studentStats, setStudentStats] = useState<StudentStats | null>(null);
   const [observations, setObservations] = useState<StudentObservation[]>([]);
+  const [activeGroupName, setActiveGroupName] = useState('');
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
@@ -122,6 +123,15 @@ export default function StudentProfilePage() {
         setStudent(currentStudent);
         const storedGroups: Group[] = JSON.parse(localStorage.getItem('groups') || '[]');
         const studentGroups = storedGroups.filter(g => g.students.some(s => s.id === studentId));
+        
+        const activeGroupId = localStorage.getItem('activeGroupId');
+        const activeGroup = storedGroups.find(g => g.id === activeGroupId);
+        if(activeGroup && activeGroup.students.some(s => s.id === studentId)) {
+            setActiveGroupName(activeGroup.subject);
+        } else if (studentGroups.length > 0) {
+            setActiveGroupName(studentGroups[0].subject);
+        }
+
 
         const gradesByGroup: StudentStats['gradesByGroup'] = [];
         let totalGradeSum = 0;
@@ -277,7 +287,7 @@ export default function StudentProfilePage() {
        </Card>
       
       <div ref={reportRef} className="flex flex-col gap-6 bg-background p-4 rounded-lg">
-        <h2 className="text-xl font-bold text-center">Informe Individual del Estudiante</h2>
+        <h2 className="text-xl font-bold text-center">Informe Individual de {activeGroupName}</h2>
         <Card>
             <CardHeader>
                 <CardTitle>Información Personal</CardTitle>
@@ -432,6 +442,15 @@ export default function StudentProfilePage() {
                 </CardContent>
             </Card>
         )}
+        <CardFooter className="mt-8 pt-6 text-center text-xs text-muted-foreground">
+             <div className="mt-12 pt-12 w-full">
+                <div className="inline-block">
+                    <div className="border-t border-foreground w-48 mx-auto"></div>
+                    <p className="mt-2 font-semibold">Nombre del Docente</p>
+                    <p>Firma del Docente</p>
+                </div>
+            </div>
+        </CardFooter>
       </div>
 
        <Card className="print:hidden">
