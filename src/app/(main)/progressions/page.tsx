@@ -94,6 +94,34 @@ export default function ProgressionsPage() {
     const { id, value } = e.target;
     setFormData((prev) => ({ ...prev, [id]: value }));
   };
+  
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+    const pastedText = e.clipboardData.getData('text/plain');
+    // 1. Replace all forms of newlines with a single space.
+    // 2. Replace all multiple-space occurrences with a single space.
+    // 3. Trim leading/trailing whitespace.
+    const cleanedText = pastedText.replace(/(\r\n|\n|\r)/gm, " ").replace(/\s+/g, ' ').trim();
+    
+    const target = e.target as HTMLTextAreaElement;
+    const fieldName = target.id;
+    const start = target.selectionStart;
+    const end = target.selectionEnd;
+    const currentText = target.value;
+    
+    // Insert cleaned text at the cursor's position
+    const newText = currentText.substring(0, start) + cleanedText + currentText.substring(end);
+    
+    setFormData(prev => ({
+        ...prev,
+        [fieldName]: newText
+    }));
+
+    // Optional: move cursor to the end of pasted content
+    setTimeout(() => {
+        target.selectionStart = target.selectionEnd = start + cleanedText.length;
+    }, 0);
+  };
 
   const handleCheckboxChange = (id: string, checked: boolean | 'indeterminate') => {
     setFormData(prev => {
@@ -260,7 +288,7 @@ export default function ProgressionsPage() {
             <div className="p-2 border mb-4 space-y-2">
               <div>
                 <Label htmlFor="progresion" className="font-bold">PROGRESIÓN:</Label>
-                <Textarea id="progresion" className="mt-1" rows={3} value={formData.progresion} onChange={handleInputChange}></Textarea>
+                <Textarea id="progresion" className="mt-1" rows={3} value={formData.progresion} onChange={handleInputChange} onPaste={handlePaste}></Textarea>
               </div>
               <div className="flex items-center space-x-4 my-2">
                 <span className="font-bold">CATEGORÍA(S):</span>
@@ -279,27 +307,27 @@ export default function ProgressionsPage() {
               </div>
                <div>
                 <Label htmlFor="subcategorias" className="font-bold">SUBCATEGORÍA(S):</Label>
-                <Textarea id="subcategorias" className="mt-1" rows={2} value={formData.subcategorias} onChange={handleInputChange}></Textarea>
+                <Textarea id="subcategorias" className="mt-1" rows={2} value={formData.subcategorias} onChange={handleInputChange} onPaste={handlePaste}></Textarea>
               </div>
               <div>
                 <Label htmlFor="metasAprendizaje" className="font-bold">META(S) DE APRENDIZAJE:</Label>
-                <Textarea id="metasAprendizaje" className="mt-1" rows={3} value={formData.metasAprendizaje} onChange={handleInputChange}></Textarea>
+                <Textarea id="metasAprendizaje" className="mt-1" rows={3} value={formData.metasAprendizaje} onChange={handleInputChange} onPaste={handlePaste}></Textarea>
               </div>
               <div>
                 <Label htmlFor="productoEsperado" className="font-bold">PRODUCTO ESPERADO DE LA PROGRESIÓN:</Label>
-                <Textarea id="productoEsperado" className="mt-1" rows={3} value={formData.productoEsperado} onChange={handleInputChange}></Textarea>
+                <Textarea id="productoEsperado" className="mt-1" rows={3} value={formData.productoEsperado} onChange={handleInputChange} onPaste={handlePaste}></Textarea>
               </div>
                <div>
                 <Label htmlFor="recursosSociocognitivos" className="font-bold">RECURSOS SOCIOCOGNITIVOS (Opcional):</Label>
-                <Textarea id="recursosSociocognitivos" className="mt-1" rows={3} value={formData.recursosSociocognitivos} onChange={handleInputChange} placeholder="Pega aquí los recursos sociocognitivos del plan de estudios..."></Textarea>
+                <Textarea id="recursosSociocognitivos" className="mt-1" rows={3} value={formData.recursosSociocognitivos} onChange={handleInputChange} onPaste={handlePaste} placeholder="Pega aquí los recursos sociocognitivos del plan de estudios..."></Textarea>
               </div>
                <div>
                 <Label htmlFor="conceptosCentrales" className="font-bold">CONCEPTOS CENTRALES (Opcional):</Label>
-                <Textarea id="conceptosCentrales" className="mt-1" rows={3} value={formData.conceptosCentrales} onChange={handleInputChange} placeholder="Pega aquí los conceptos centrales del plan de estudios..."></Textarea>
+                <Textarea id="conceptosCentrales" className="mt-1" rows={3} value={formData.conceptosCentrales} onChange={handleInputChange} onPaste={handlePaste} placeholder="Pega aquí los conceptos centrales del plan de estudios..."></Textarea>
               </div>
               <div>
                 <Label htmlFor="conceptosTransversales" className="font-bold">CONCEPTOS TRANSVERSALES (Opcional):</Label>
-                <Textarea id="conceptosTransversales" className="mt-1" rows={3} value={formData.conceptosTransversales} onChange={handleInputChange} placeholder="Pega aquí los conceptos transversales del plan de estudios..."></Textarea>
+                <Textarea id="conceptosTransversales" className="mt-1" rows={3} value={formData.conceptosTransversales} onChange={handleInputChange} onPaste={handlePaste} placeholder="Pega aquí los conceptos transversales del plan de estudios..."></Textarea>
               </div>
             </div>
 
@@ -356,7 +384,7 @@ export default function ProgressionsPage() {
                 <TableRow>
                   <TableCell className="border-r">
                     <Label htmlFor="actividadApertura" className='font-bold'>APERTURA:</Label>
-                    <Textarea id="actividadApertura" className='mt-1' rows={3} value={formData.actividadApertura} onChange={handleInputChange}></Textarea>
+                    <Textarea id="actividadApertura" className='mt-1' rows={3} value={formData.actividadApertura} onChange={handleInputChange} onPaste={handlePaste}></Textarea>
                   </TableCell>
                   <TableCell className="border-r"><Textarea id="tecnicaApertura" className='h-full' value={formData.tecnicaApertura} onChange={handleInputChange}></Textarea></TableCell>
                   <TableCell className="border-r"><Textarea id="evidenciaApertura" className='h-full' value={formData.evidenciaApertura} onChange={handleInputChange}></Textarea></TableCell>
@@ -365,7 +393,7 @@ export default function ProgressionsPage() {
                 <TableRow>
                    <TableCell className="border-r">
                     <Label htmlFor="actividadDesarrollo" className='font-bold'>DESARROLLO:</Label>
-                    <Textarea id="actividadDesarrollo" className='mt-1' rows={5} value={formData.actividadDesarrollo} onChange={handleInputChange}></Textarea>
+                    <Textarea id="actividadDesarrollo" className='mt-1' rows={5} value={formData.actividadDesarrollo} onChange={handleInputChange} onPaste={handlePaste}></Textarea>
                   </TableCell>
                   <TableCell className="border-r"><Textarea id="tecnicaDesarrollo" className='h-full' value={formData.tecnicaDesarrollo} onChange={handleInputChange}></Textarea></TableCell>
                   <TableCell className="border-r"><Textarea id="evidenciaDesarrollo" className='h-full' value={formData.evidenciaDesarrollo} onChange={handleInputChange}></Textarea></TableCell>
@@ -374,7 +402,7 @@ export default function ProgressionsPage() {
                  <TableRow>
                    <TableCell className="border-r">
                     <Label htmlFor="actividadCierre" className='font-bold'>CIERRE:</Label>
-                    <Textarea id="actividadCierre" className='mt-1' rows={3} value={formData.actividadCierre} onChange={handleInputChange}></Textarea>
+                    <Textarea id="actividadCierre" className='mt-1' rows={3} value={formData.actividadCierre} onChange={handleInputChange} onPaste={handlePaste}></Textarea>
                   </TableCell>
                   <TableCell className="border-r"><Textarea id="tecnicaCierre" className='h-full' value={formData.tecnicaCierre} onChange={handleInputChange}></Textarea></TableCell>
                   <TableCell className="border-r"><Textarea id="evidenciaCierre" className='h-full' value={formData.evidenciaCierre} onChange={handleInputChange}></Textarea></TableCell>
