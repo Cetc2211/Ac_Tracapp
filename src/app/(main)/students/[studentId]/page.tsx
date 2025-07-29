@@ -30,6 +30,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import { WhatsAppDialog } from '@/components/whatsapp-dialog';
 
 
 type EvaluationCriteria = {
@@ -99,6 +100,7 @@ export default function StudentProfilePage() {
   const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
   const [generatedFeedback, setGeneratedFeedback] = useState('');
   const reportRef = useRef<HTMLDivElement>(null);
+  const [isWhatsAppDialogOpen, setIsWhatsAppDialogOpen] = useState(false);
 
 
   const calculateFinalGradeDetails = useCallback((studentId: string, criteria: EvaluationCriteria[], grades: Grades, participations: ParticipationRecord): { finalGrade: number; criteriaDetails: { name: string, earned: number, weight: number }[] } => {
@@ -265,7 +267,7 @@ export default function StudentProfilePage() {
     }
   };
 
-  const handleSendWhatsApp = (target: 'student' | 'tutor' | 'other') => {
+  const handleSendWhatsApp = (target: 'student' | 'tutor') => {
     if (!student) return;
 
     let phone: string | null | undefined = null;
@@ -274,10 +276,7 @@ export default function StudentProfilePage() {
       phone = student.tutorPhone;
     } else if (target === 'student') {
       phone = student.phone;
-    } else if (target === 'other') {
-      phone = prompt('Por favor, ingresa el número de teléfono (incluyendo código de país):');
-      if (!phone) return; // User cancelled the prompt
-    }
+    } 
 
     if (!phone) {
         toast({ variant: 'destructive', title: 'Número no disponible', description: `No hay un número de teléfono registrado.` });
@@ -311,6 +310,12 @@ export default function StudentProfilePage() {
 
   
   return (
+    <>
+    <WhatsAppDialog
+        open={isWhatsAppDialogOpen}
+        onOpenChange={setIsWhatsAppDialogOpen}
+        studentName={student.name}
+    />
     <div className="flex flex-col gap-6">
        <Card className="bg-accent/50 print:hidden">
           <CardHeader>
@@ -351,7 +356,7 @@ export default function StudentProfilePage() {
                             </DropdownMenuItem>
                         )}
                          <DropdownMenuSeparator />
-                         <DropdownMenuItem onClick={() => handleSendWhatsApp('other')}>
+                         <DropdownMenuItem onSelect={() => setIsWhatsAppDialogOpen(true)}>
                             Enviar a otro teléfono
                          </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -548,5 +553,6 @@ export default function StudentProfilePage() {
             </CardContent>
         </Card>
     </div>
+    </>
   );
 }
