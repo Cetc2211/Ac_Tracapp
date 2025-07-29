@@ -269,32 +269,10 @@ export default function ReportsPage() {
         </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card>
-              <CardHeader>
-                  <CardTitle className="flex items-center gap-2"><FileText /> Reporte de Calificaciones</CardTitle>
-                  <CardDescription>Calificaciones detalladas por estudiante y parcial</CardDescription>
-              </CardHeader>
-              <CardFooter>
-                  <Button className="w-full">
-                      <Eye className="mr-2 h-4 w-4" /> Vista Previa y Descarga
-                  </Button>
-              </CardFooter>
-          </Card>
-          <Card>
-              <CardHeader>
-                  <CardTitle className="flex items-center gap-2"><BarChart /> Reporte de Asistencia</CardTitle>
-                  <CardDescription>Estadísticas de asistencia por estudiante</CardDescription>
-              </CardHeader>
-              <CardFooter>
-                   <Button className="w-full">
-                      <Eye className="mr-2 h-4 w-4" /> Vista Previa y Descarga
-                  </Button>
-              </CardFooter>
-          </Card>
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><FileText /> Reporte Académico Completo</CardTitle>
-                    <CardDescription>Reporte integral con calificaciones, asistencia y estadísticas</CardDescription>
+                    <CardDescription>Reporte integral con calificaciones, asistencia y estadísticas del grupo.</CardDescription>
                 </CardHeader>
                 <CardFooter>
                     <Button className="w-full" asChild>
@@ -307,7 +285,7 @@ export default function ReportsPage() {
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><Download /> Exportar Calificaciones (CSV)</CardTitle>
-                    <CardDescription>Datos de calificaciones en formato CSV para Excel</CardDescription>
+                    <CardDescription>Descarga los datos de calificaciones en formato CSV para usar en Excel u otras herramientas.</CardDescription>
                 </CardHeader>
                 <CardFooter>
                     <Button variant="secondary" className="w-full" onClick={handleDownloadCsv}>
