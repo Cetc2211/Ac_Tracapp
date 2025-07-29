@@ -55,7 +55,8 @@ const navItems = [
 
 const defaultSettings = {
     institutionName: "Academic Tracker",
-    logo: ""
+    logo: "",
+    theme: "theme-default"
 };
 
 
@@ -74,14 +75,25 @@ export default function MainLayoutClient({
     try {
         const savedSettings = localStorage.getItem('appSettings');
         if (savedSettings) {
-            setSettings(JSON.parse(savedSettings));
+            const parsed = JSON.parse(savedSettings);
+            setSettings(parsed);
+            document.body.className = parsed.theme || defaultSettings.theme;
+        } else {
+             document.body.className = defaultSettings.theme;
         }
+
         const groupName = localStorage.getItem('activeGroupName');
         setActiveGroupName(groupName);
 
         const handleStorageChange = () => {
             const groupName = localStorage.getItem('activeGroupName');
             setActiveGroupName(groupName);
+            const savedSettings = localStorage.getItem('appSettings');
+             if (savedSettings) {
+                const parsed = JSON.parse(savedSettings);
+                setSettings(parsed);
+                document.body.className = parsed.theme || defaultSettings.theme;
+            }
         }
         window.addEventListener('storage', handleStorageChange);
         return () => window.removeEventListener('storage', handleStorageChange);

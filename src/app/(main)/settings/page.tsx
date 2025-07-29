@@ -15,10 +15,13 @@ import { Label } from '@/components/ui/label';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { ThemeSwitcher, themes } from '@/components/theme-switcher';
+import { Separator } from '@/components/ui/separator';
 
 const defaultSettings = {
     institutionName: "Instituto de Innovación Educativa",
-    logo: "https://placehold.co/200x200.png"
+    logo: "https://placehold.co/200x200.png",
+    theme: "theme-default",
 };
 
 export default function SettingsPage() {
@@ -45,9 +48,10 @@ export default function SettingsPage() {
     const handleSave = () => {
         const newSettings = { ...settings, logo: logoPreview };
         localStorage.setItem('appSettings', JSON.stringify(newSettings));
+        window.dispatchEvent(new Event('storage')); // Notificar a otros componentes
         toast({
             title: 'Ajustes Guardados',
-            description: 'La información de la institución ha sido actualizada.',
+            description: 'La información ha sido actualizada.',
         });
     };
 
@@ -66,6 +70,10 @@ export default function SettingsPage() {
             reader.readAsDataURL(file);
         }
     };
+    
+    const handleThemeChange = (theme: string) => {
+        setSettings(prev => ({ ...prev, theme }));
+    };
 
 
   return (
@@ -73,7 +81,7 @@ export default function SettingsPage() {
       <div>
         <h1 className="text-3xl font-bold">Ajustes</h1>
         <p className="text-muted-foreground">
-          Personaliza la información de tu institución educativa.
+          Personaliza la información de tu institución y la apariencia de la aplicación.
         </p>
       </div>
       <Card>
@@ -110,6 +118,16 @@ export default function SettingsPage() {
               Sube un archivo PNG o JPG. Tamaño recomendado: 200x200px.
             </p>
           </div>
+        </CardContent>
+        <Separator className="my-4" />
+        <CardHeader>
+            <CardTitle>Apariencia</CardTitle>
+            <CardDescription>
+                Elige un tema para personalizar los colores de la aplicación.
+            </CardDescription>
+        </CardHeader>
+         <CardContent>
+            <ThemeSwitcher selectedTheme={settings.theme} onThemeChange={handleThemeChange} />
         </CardContent>
         <CardFooter className="border-t px-6 py-4">
           <Button onClick={handleSave}>Guardar Cambios</Button>
