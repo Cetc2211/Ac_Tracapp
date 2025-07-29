@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Student, Group, StudentObservation } from '@/lib/placeholder-data';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
-import { Mail, User, Contact, EyeOff, Printer, FileText, Loader2, Phone, Wand2, Download } from 'lucide-react';
+import { Mail, User, Contact, ArrowLeft, Printer, FileText, Loader2, Phone, Wand2, Download } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -277,7 +277,7 @@ export default function StudentProfilePage() {
           <CardContent>
              <div className="flex items-center gap-2">
                 <Button variant="outline" onClick={() => router.back()}>
-                   <EyeOff className="mr-2 h-4 w-4" /> Ocultar Perfil
+                   <ArrowLeft className="mr-2 h-4 w-4" /> Regresar
                 </Button>
                 <Button variant="outline" onClick={handleDownloadPdf}>
                   <Download className="mr-2 h-4 w-4" /> Descargar PDF
