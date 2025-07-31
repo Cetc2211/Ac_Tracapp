@@ -112,7 +112,6 @@ export default function GroupDetailsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
-  const [lastSelectedStudentId, setLastSelectedStudentId] = useState<string | null>(null);
   
  const calculateFinalGrade = useCallback((studentId: string, criteria: EvaluationCriteria[], grades: Grades, participations: ParticipationRecord) => {
     if (!grades || !criteria || criteria.length === 0) return 0;
@@ -326,39 +325,14 @@ export default function GroupDetailsPage() {
     });
   };
 
- const handleSelectStudent = (studentId: string, event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
-      const shiftKey = event.shiftKey;
-      const studentList = group?.students || [];
-      const isChecked = !selectedStudents.includes(studentId);
-
-      if (shiftKey && lastSelectedStudentId) {
-          const lastIndex = studentList.findIndex(s => s.id === lastSelectedStudentId);
-          const currentIndex = studentList.findIndex(s => s.id === studentId);
-
-          if (lastIndex !== -1 && currentIndex !== -1) {
-              const start = Math.min(lastIndex, currentIndex);
-              const end = Math.max(lastIndex, currentIndex);
-              const rangeIds = studentList.slice(start, end + 1).map(s => s.id);
-
-              setSelectedStudents(prevSelected => {
-                  const newSelected = new Set(prevSelected);
-                  const shouldSelect = !prevSelected.includes(studentId);
-                  rangeIds.forEach(id => {
-                      if (shouldSelect) {
-                          newSelected.add(id);
-                      } else {
-                          newSelected.delete(id);
-                      }
-                  });
-                  return Array.from(newSelected);
-              });
-          }
-      } else {
-          setSelectedStudents(prev =>
-              isChecked ? [...prev, studentId] : prev.filter(id => id !== studentId)
-          );
-      }
-      setLastSelectedStudentId(studentId);
+  const handleSelectStudent = (studentId: string) => {
+    setSelectedStudents(prevSelected => {
+        if (prevSelected.includes(studentId)) {
+            return prevSelected.filter(id => id !== studentId);
+        } else {
+            return [...prevSelected, studentId];
+        }
+    });
   };
   
   const handleSelectAll = (checked: boolean | 'indeterminate') => {
@@ -367,7 +341,6 @@ export default function GroupDetailsPage() {
       } else {
           setSelectedStudents([]);
       }
-      setLastSelectedStudentId(null);
   };
   
   const handleDeleteSelectedStudents = () => {
@@ -387,13 +360,11 @@ export default function GroupDetailsPage() {
         description: `${selectedStudents.length} estudiante(s) han sido quitados del grupo.`,
     });
     setSelectedStudents([]);
-    setLastSelectedStudentId(null);
   };
 
   const handleCancelSelectionMode = () => {
     setIsSelectionMode(false);
     setSelectedStudents([]);
-    setLastSelectedStudentId(null);
   }
 
     
@@ -601,7 +572,7 @@ export default function GroupDetailsPage() {
                             <TableCell padding="checkbox">
                                 <Checkbox
                                     checked={selectedStudents.includes(student.id)}
-                                    onClick={(event) => handleSelectStudent(student.id, event)}
+                                    onCheckedChange={() => handleSelectStudent(student.id)}
                                     aria-label="Seleccionar fila"
                                 />
                             </TableCell>
