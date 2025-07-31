@@ -326,9 +326,10 @@ export default function GroupDetailsPage() {
     });
   };
 
-  const handleSelectStudent = (studentId: string, isChecked: boolean, event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
-      const shiftKey = event.nativeEvent.shiftKey;
+ const handleSelectStudent = (studentId: string, event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+      const shiftKey = event.shiftKey;
       const studentList = group?.students || [];
+      const isChecked = !selectedStudents.includes(studentId);
 
       if (shiftKey && lastSelectedStudentId) {
           const lastIndex = studentList.findIndex(s => s.id === lastSelectedStudentId);
@@ -600,7 +601,7 @@ export default function GroupDetailsPage() {
                             <TableCell padding="checkbox">
                                 <Checkbox
                                     checked={selectedStudents.includes(student.id)}
-                                    onCheckedChange={(checked, event: any) => handleSelectStudent(student.id, !!checked, event)}
+                                    onClick={(event) => handleSelectStudent(student.id, event)}
                                     aria-label="Seleccionar fila"
                                 />
                             </TableCell>
