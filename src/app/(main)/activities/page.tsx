@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Card,
   CardContent,
@@ -63,6 +63,8 @@ export default function ActivitiesPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newActivityName, setNewActivityName] = useState('');
   const [newActivityDueDate, setNewActivityDueDate] = useState<Date | undefined>(new Date());
+
+  const dialogContentRef = useRef<HTMLDivElement>(null);
   
   const { toast } = useToast();
 
@@ -162,7 +164,7 @@ export default function ActivitiesPage() {
   return (
     <div className="flex flex-col gap-6">
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent ref={dialogContentRef}>
             <DialogHeader>
                 <DialogTitle>Registrar Nueva Actividad</DialogTitle>
                 <DialogDescription>Ingresa los detalles de la nueva actividad para el grupo.</DialogDescription>
@@ -187,7 +189,7 @@ export default function ActivitiesPage() {
                             {newActivityDueDate ? format(newActivityDueDate, 'PPP', { locale: es }) : <span>Selecciona una fecha</span>}
                         </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
+                        <PopoverContent className="w-auto p-0" container={dialogContentRef.current}>
                         <Calendar
                             mode="single"
                             selected={newActivityDueDate}
