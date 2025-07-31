@@ -32,6 +32,7 @@ import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 type Activity = {
   id: string;
@@ -44,6 +45,10 @@ type ActivityRecord = {
   [studentId: string]: {
     [activityId: string]: boolean; // delivered or not
   };
+};
+
+type GroupedActivities = {
+  [dueDate: string]: Activity[];
 };
 
 export default function ActivitiesPage() {
@@ -95,6 +100,17 @@ export default function ActivitiesPage() {
   const sortedStudents = useMemo(() => {
     return [...studentsToDisplay].sort((a, b) => a.name.localeCompare(b.name));
   }, [studentsToDisplay]);
+  
+  const groupedActivities = useMemo(() => {
+    const groups: GroupedActivities = {};
+    activities.forEach(activity => {
+      if (!groups[activity.dueDate]) {
+        groups[activity.dueDate] = [];
+      }
+      groups[activity.dueDate].push(activity);
+    });
+    return Object.fromEntries(Object.entries(groups).sort(([dateA], [dateB]) => new Date(dateA).getTime() - new Date(dateB).getTime()));
+  }, [activities]);
 
   const handleRegisterActivity = () => {
     if (!newActivityName.trim() || !newActivityDueDate) {
@@ -114,7 +130,7 @@ export default function ActivitiesPage() {
       programmedDate: format(new Date(), 'yyyy-MM-dd'),
     };
 
-    const updatedActivities = [...activities, newActivity].sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+    const updatedActivities = [...activities, newActivity];
     setActivities(updatedActivities);
     localStorage.setItem(`activities_${activeGroupId}_${activePartial}`, JSON.stringify(updatedActivities));
 
@@ -217,48 +233,66 @@ export default function ActivitiesPage() {
 
       <Card>
         <CardContent className="p-0">
-          <div className="relative w-full overflow-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[300px] sticky left-0 bg-card z-10">Estudiante</TableHead>
-                  {activities.map(activity => (
-                    <TableHead key={activity.id} className="text-center min-w-[200px]">
-                      <div className="font-bold">{activity.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        Entrega: {format(parseISO(activity.dueDate), 'dd MMM', { locale: es })}
-                      </div>
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sortedStudents.map(student => (
-                  <TableRow key={student.id}>
-                    <TableCell className="font-medium sticky left-0 bg-card z-10 flex items-center gap-3">
-                       <Image
-                        src={student.photo}
-                        alt={student.name}
-                        width={40}
-                        height={40}
-                        className="rounded-full"
-                      />
-                      {student.name}
-                    </TableCell>
-                    {activities.map(activity => (
-                      <TableCell key={`${student.id}-${activity.id}`} className="text-center">
-                        <Checkbox 
-                           checked={activityRecords[student.id]?.[activity.id] || false}
-                           onCheckedChange={(checked) => handleRecordChange(student.id, activity.id, !!checked)}
-                        />
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))}
-                 {studentsToDisplay.length === 0 && (
+          <TooltipProvider>
+            <div className="relative w-full overflow-auto">
+                <Table>
+                <TableHeader>
                     <TableRow>
-                        <TableCell colSpan={activities.length + 1} className="text-center h-24">
-                           <div className="flex flex-col items-center gap-4">
+                    <TableHead className="w-[300px] sticky left-0 bg-card z-10">Estudiante</TableHead>
+                    {Object.entries(groupedActivities).map(([dueDate, dateActivities]) => (
+                        <TableHead key={dueDate} className="text-center min-w-[200px] align-top p-2 border-l">
+                            <div className="font-bold text-base mb-2">
+                                {format(parseISO(dueDate), 'dd MMM', { locale: es })}
+                            </div>
+                            <div className="space-y-1">
+                            {dateActivities.map(activity => (
+                                <div key={activity.id} className="text-xs text-muted-foreground p-1 bg-muted/50 rounded-md">
+                                    {activity.name}
+                                </div>
+                            ))}
+                            </div>
+                        </TableHead>
+                    ))}
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {sortedStudents.map(student => (
+                    <TableRow key={student.id}>
+                        <TableCell className="font-medium sticky left-0 bg-card z-10 flex items-center gap-3">
+                        <Image
+                            src={student.photo}
+                            alt={student.name}
+                            width={40}
+                            height={40}
+                            className="rounded-full"
+                        />
+                        {student.name}
+                        </TableCell>
+                        {Object.entries(groupedActivities).map(([dueDate, dateActivities]) => (
+                            <TableCell key={`${student.id}-${dueDate}`} className="text-center border-l">
+                                <div className="flex justify-center items-center gap-2">
+                                {dateActivities.map(activity => (
+                                     <Tooltip key={activity.id}>
+                                        <TooltipTrigger asChild>
+                                             <Checkbox 
+                                                checked={activityRecords[student.id]?.[activity.id] || false}
+                                                onCheckedChange={(checked) => handleRecordChange(student.id, activity.id, !!checked)}
+                                             />
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>{activity.name}</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                ))}
+                                </div>
+                            </TableCell>
+                        ))}
+                    </TableRow>
+                    ))}
+                    {studentsToDisplay.length === 0 && (
+                        <TableRow>
+                            <TableCell colSpan={Object.keys(groupedActivities).length + 1} className="text-center h-24">
+                            <div className="flex flex-col items-center gap-4">
                                 <ClipboardCheck className="h-12 w-12 text-muted-foreground" />
                                 <h3 className="text-lg font-semibold">
                                     {activeGroupName ? "Este grupo no tiene estudiantes" : "No hay un grupo activo"}
@@ -266,20 +300,21 @@ export default function ActivitiesPage() {
                                 <p className="text-sm text-muted-foreground">
                                     {activeGroupName ? "Agrega estudiantes desde la página del grupo." : "Por favor, ve a la sección 'Grupos' y selecciona uno."}
                                 </p>
-                           </div>
-                        </TableCell>
-                    </TableRow>
-                )}
-                 {activities.length === 0 && studentsToDisplay.length > 0 && (
-                    <TableRow>
-                        <TableCell colSpan={activities.length + 1} className="text-center h-24">
-                           Aún no hay actividades registradas para este parcial. <br/> Haz clic en "Registrar Nueva Actividad" para empezar.
-                        </TableCell>
-                    </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                            </div>
+                            </TableCell>
+                        </TableRow>
+                    )}
+                    {activities.length === 0 && studentsToDisplay.length > 0 && (
+                        <TableRow>
+                            <TableCell colSpan={1} className="text-center h-24">
+                            Aún no hay actividades registradas para este parcial. <br/> Haz clic en "Registrar Nueva Actividad" para empezar.
+                            </TableCell>
+                        </TableRow>
+                    )}
+                </TableBody>
+                </Table>
+            </div>
+          </TooltipProvider>
         </CardContent>
       </Card>
     </div>
