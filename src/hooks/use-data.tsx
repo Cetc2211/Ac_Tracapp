@@ -130,6 +130,7 @@ interface DataContextType {
   saveStudentObservation: (observation: StudentObservation) => void;
   deleteGroup: (groupId: string) => void;
   calculateFinalGrade: (studentId: string, criteria: EvaluationCriteria[], grades: Grades, participations: ParticipationRecord, activities: Activity[], activityRecords: ActivityRecord) => number;
+  getStudentRiskLevel: (finalGrade: number, attendance: AttendanceRecord, studentId: string) => CalculatedRisk;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -597,7 +598,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             groupStats, atRiskStudents, overallAverageParticipation, groupAverages,
             setStudents: setAllStudents, setGroups, setAllStudents, setSettings, setActiveGroupId, setActivePartialForGroup,
             setCriteria: setCriteriaWrapper, setGrades: setGradesWrapper, setAttendance: setAttendanceWrapper, setParticipations: setParticipationsWrapper, setActivities: setActivitiesWrapper, setActivityRecords: setActivityRecordsWrapper, setObservations: setObservationsWrapper,
-            saveStudentObservation, deleteGroup, calculateFinalGrade,
+            saveStudentObservation, deleteGroup, calculateFinalGrade, getStudentRiskLevel,
         }}>
             {children}
         </DataContext.Provider>
@@ -611,3 +612,4 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
+

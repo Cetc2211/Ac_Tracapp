@@ -17,11 +17,11 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { groups as initialGroups, students as initialStudents, Student } from '@/lib/placeholder-data';
+import { Student, Group } from '@/lib/placeholder-data';
 import { notFound, useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, MoreHorizontal, UserPlus, Trash2, CalendarCheck, FilePen, Edit, Loader2, PenSquare, X } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, UserPlus, Trash2, CalendarCheck, FilePen, Edit, Loader2, PenSquare, X, ImagePlus } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,56 +48,37 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-    AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-
-type EvaluationCriteria = {
-  id: string;
-  name: string;
-  weight: number;
-  expectedValue: number;
-};
-
-type GradeDetail = {
-  delivered: number | null;
-  average: number | null;
-};
-
-type Grades = {
-  [studentId: string]: {
-    [criterionId: string]: GradeDetail;
-  };
-};
-
-type AttendanceRecord = {
-  [date: string]: {
-    [studentId: string]: boolean;
-  };
-};
-
-type ParticipationRecord = {
-  [date: string]: {
-    [studentId: string]: boolean;
-  };
-};
+import { useData } from '@/hooks/use-data';
+import type { EvaluationCriteria, Grades, ParticipationRecord, Activity, ActivityRecord } from '@/hooks/use-data';
+import { Input } from '@/components/ui/input';
 
 export default function GroupDetailsPage() {
   const params = useParams();
   const groupId = params.groupId as string;
-  const [groups, setGroups] = useState<typeof initialGroups>([]);
-  const [allStudents, setAllStudents] = useState<typeof initialStudents>([]);
-  const { toast } = useToast();
-  const router = useRouter();
+  const { 
+    groups, 
+    allStudents, 
+    setGroups, 
+    setAllStudents, 
+    activeGroup, 
+    activePartial,
+    setActivePartialForGroup,
+    criteria,
+    calculateFinalGrade,
+    getStudentRiskLevel
+  } = useData();
 
-  const [group, setGroup] = useState<(typeof initialGroups)[0] | null>(null);
-  const [evaluationCriteria, setEvaluationCriteria] = useState<EvaluationCriteria[]>([]);
-  const [studentRiskLevels, setStudentRiskLevels] = useState<{[studentId: string]: 'low' | 'medium' | 'high'}>({});
+  const router = useRouter();
+  const { toast } = useToast();
+  
+  const [studentRiskLevels, setStudentRiskLevels] = useState<{[studentId: string]: ReturnType<typeof getStudentRiskLevel>}>({});
   const [isAddStudentDialogOpen, setIsAddStudentDialogOpen] = useState(false);
   
   const [bulkNames, setBulkNames] = useState('');
@@ -109,156 +90,54 @@ export default function GroupDetailsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
-  const [activePartial, setActivePartial] = useState('1');
+  const [isPhotoDialogOpen, setIsPhotoDialogOpen] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   
- const calculateFinalGrade = useCallback((studentId: string, criteria: EvaluationCriteria[], grades: Grades, participations: ParticipationRecord) => {
-    if (!grades || !criteria || criteria.length === 0) return 0;
-    const studentGrades = grades[studentId];
-    
-    let finalGrade = 0;
-    for (const criterion of criteria) {
-      if(criterion.name === 'Participación') {
-          const participationDates = Object.keys(participations);
-          const totalClasses = participationDates.length;
-          if (totalClasses > 0) {
-              const participatedClasses = participationDates.filter(date => participations[date]?.[studentId]).length;
-              const participationScore = (participatedClasses / totalClasses) * 10;
-              finalGrade += participationScore * (criterion.weight / 100);
-          }
-      } else {
-        if (!studentGrades) continue;
-        const gradeDetail = studentGrades[criterion.id];
-        const delivered = gradeDetail?.delivered ?? 0;
-        const average = gradeDetail?.average ?? 0;
-        const expected = criterion.expectedValue;
-
-        if(expected > 0) {
-            const criterionScore = (delivered / expected) * average;
-            finalGrade += criterionScore * (criterion.weight / 100);
-        }
-      }
-    }
-    return parseFloat(finalGrade.toFixed(2));
-  }, []);
-  
-  const loadDataForPartial = useCallback((partial: string) => {
-    if (!group) return;
-    try {
-      const storedCriteria = localStorage.getItem(`criteria_${groupId}_${partial}`);
-      const localCriteria : EvaluationCriteria[] = storedCriteria ? JSON.parse(storedCriteria) : [];
-      setEvaluationCriteria(localCriteria);
-
-      const storedGrades = localStorage.getItem(`grades_${groupId}_${partial}`);
-      const localGrades: Grades = storedGrades ? JSON.parse(storedGrades) : {};
-
-      const storedAttendance = localStorage.getItem(`attendance_${groupId}_${partial}`);
-      const localAttendance: AttendanceRecord = storedAttendance ? JSON.parse(storedAttendance) : {};
-
-      const storedParticipations = localStorage.getItem(`participations_${groupId}_${partial}`);
-      const localParticipations: ParticipationRecord = storedParticipations ? JSON.parse(storedParticipations) : {};
-
-      const riskLevels : {[studentId: string]: 'low' | 'medium' | 'high'} = {};
-      
-      const getStudentRiskLevel = (student: Student, criteria: EvaluationCriteria[], grades: Grades, attendance: AttendanceRecord, participations: ParticipationRecord) => {
-        const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations);
-
-        const totalDays = Object.keys(attendance).length;
-        let absences = 0;
-        if(totalDays > 0) {
-            for(const date in attendance) {
-                if(attendance[date][student.id] !== true) {
-                    absences++;
-                }
-            }
-        }
-        const absencePercentage = totalDays > 0 ? (absences / totalDays) * 100 : 0;
-        
-        if (finalGrade < 70 || absencePercentage > 20) return 'high';
-        if (finalGrade < 8 || absencePercentage > 10) return 'medium';
-        return 'low';
-      };
-
-      group.students.forEach((s: Student) => {
-          riskLevels[s.id] = getStudentRiskLevel(s, localCriteria, localGrades, localAttendance, localParticipations);
-      });
-      setStudentRiskLevels(riskLevels);
-    } catch(e) {
-      console.error(`Failed to load data for partial ${partial}`, e);
-    }
-  }, [group, groupId, calculateFinalGrade]);
 
   useEffect(() => {
     setIsLoading(true);
-    try {
-      const storedGroups = localStorage.getItem('groups');
-      const allGroups = storedGroups ? JSON.parse(storedGroups) : initialGroups;
-      setGroups(allGroups);
-
-      const currentGroup = allGroups.find((g: any) => g.id === groupId);
-       if (!currentGroup) {
-        setGroup(null);
-        setIsLoading(false);
-        return;
-      }
-      setGroup(currentGroup);
-
-      const storedPartial = localStorage.getItem(`activePartial_${groupId}`) || '1';
-      setActivePartial(storedPartial);
+    if (activeGroup) {
+      const riskLevels: {[studentId: string]: ReturnType<typeof getStudentRiskLevel>} = {};
+      const partial = activePartial || '1';
+      const grades = JSON.parse(localStorage.getItem(`grades_${groupId}_${partial}`) || '{}');
+      const participations = JSON.parse(localStorage.getItem(`participations_${groupId}_${partial}`) || '{}');
+      const attendance = JSON.parse(localStorage.getItem(`attendance_${groupId}_${partial}`) || '{}');
+      const activities = JSON.parse(localStorage.getItem(`activities_${groupId}_${partial}`) || '[]');
+      const activityRecords = JSON.parse(localStorage.getItem(`activityRecords_${groupId}_${partial}`) || '{}');
       
-      localStorage.setItem('activeGroupId', groupId);
-      localStorage.setItem('activeGroupName', currentGroup.subject);
-      window.dispatchEvent(new Event('storage'));
-
-      const storedStudents = localStorage.getItem('students');
-      if(storedStudents) {
-        setAllStudents(JSON.parse(storedStudents));
-      } else {
-        setAllStudents(initialStudents);
-      }
-      
-    } catch (error) {
-        console.error("Failed to parse data from localStorage", error);
-        setGroups(initialGroups);
-        setAllStudents(initialStudents);
-        setGroup(null);
-    } finally {
-        setIsLoading(false);
+      activeGroup.students.forEach((s: Student) => {
+          const finalGrade = calculateFinalGrade(s.id, criteria, grades, participations, activities, activityRecords);
+          riskLevels[s.id] = getStudentRiskLevel(finalGrade, attendance, s.id);
+      });
+      setStudentRiskLevels(riskLevels);
     }
-  }, [groupId]);
+    setIsLoading(false);
+  }, [activeGroup, activePartial, criteria, calculateFinalGrade, getStudentRiskLevel, groupId]);
 
-  useEffect(() => {
-    if (group) {
-        loadDataForPartial(activePartial);
-    }
-  }, [group, activePartial, loadDataForPartial]);
 
   const handlePartialChange = (partial: string) => {
-    setActivePartial(partial);
-    localStorage.setItem(`activePartial_${groupId}`, partial);
-    window.dispatchEvent(new Event('storage'));
+    if(!groupId) return;
+    setActivePartialForGroup(groupId, partial);
     setIsSelectionMode(false);
     setSelectedStudents([]);
   }
 
-  const saveState = (newGroups: typeof initialGroups, newAllStudents: typeof initialStudents) => {
+  const saveState = (newGroups: Group[], newAllStudents: Student[]) => {
       setGroups(newGroups);
-      localStorage.setItem('groups', JSON.stringify(newGroups));
-      
       setAllStudents(newAllStudents);
-      localStorage.setItem('students', JSON.stringify(newAllStudents));
   };
 
   const handleRemoveStudent = (studentId: string) => {
-    if (!group) return;
+    if (!activeGroup) return;
     const newGroups = groups.map(g => {
-        if (g.id === group!.id) {
+        if (g.id === activeGroup.id) {
             return { ...g, students: g.students.filter(s => s.id !== studentId) };
         }
         return g;
     });
     
     saveState(newGroups, allStudents);
-    setGroup(newGroups.find(g => g.id === groupId) || null);
     toast({
         title: "Estudiante eliminado",
         description: "El estudiante ha sido quitado del grupo.",
@@ -266,8 +145,8 @@ export default function GroupDetailsPage() {
   };
 
   const handleDeleteGroup = () => {
-    if (!group) return;
-    const newGroups = groups.filter(g => g.id !== group.id);
+    if (!activeGroup) return;
+    const newGroups = groups.filter(g => g.id !== activeGroup.id);
     saveState(newGroups, allStudents);
     // Remove all associated data
     for (let i = 1; i <= 3; i++) {
@@ -275,6 +154,8 @@ export default function GroupDetailsPage() {
         localStorage.removeItem(`grades_${groupId}_${i}`);
         localStorage.removeItem(`attendance_${groupId}_${i}`);
         localStorage.removeItem(`participations_${groupId}_${i}`);
+        localStorage.removeItem(`activities_${groupId}_${i}`);
+        localStorage.removeItem(`activityRecords_${groupId}_${i}`);
     }
     localStorage.removeItem(`activePartial_${groupId}`);
     localStorage.removeItem('activeGroupId');
@@ -282,13 +163,13 @@ export default function GroupDetailsPage() {
     window.dispatchEvent(new Event('storage'));
     toast({
         title: 'Grupo Eliminado',
-        description: `El grupo "${group.subject}" ha sido eliminado.`,
+        description: `El grupo "${activeGroup.subject}" ha sido eliminado.`,
     });
     router.push('/groups');
   };
   
   const handleAddStudents = () => {
-    if (!group) return;
+    if (!activeGroup) return;
 
     const names = bulkNames.trim().split('\n').filter(name => name);
     const emails = bulkEmails.trim().split('\n');
@@ -323,7 +204,7 @@ export default function GroupDetailsPage() {
     });
 
     const newGroups = groups.map(g => {
-        if (g.id === group.id) {
+        if (g.id === activeGroup.id) {
             const groupStudentIds = new Set(g.students.map(s => s.id));
             const studentsToAdd = newStudents.filter(s => !groupStudentIds.has(s.id));
             return { ...g, students: [...g.students, ...studentsToAdd] };
@@ -332,7 +213,6 @@ export default function GroupDetailsPage() {
     });
 
     saveState(newGroups, updatedAllStudents);
-    setGroup(newGroups.find(g => g.id === groupId) || null);
     
     setBulkNames('');
     setBulkEmails('');
@@ -357,25 +237,24 @@ export default function GroupDetailsPage() {
   };
   
   const handleSelectAll = (checked: boolean | 'indeterminate') => {
-      if(checked && group) {
-          setSelectedStudents(group.students.map(s => s.id));
+      if(checked && activeGroup) {
+          setSelectedStudents(activeGroup.students.map(s => s.id));
       } else {
           setSelectedStudents([]);
       }
   };
   
   const handleDeleteSelectedStudents = () => {
-    if (!group) return;
+    if (!activeGroup) return;
     const newGroups = groups.map(g => {
-        if (g.id === group.id) {
+        if (g.id === activeGroup.id) {
             return { ...g, students: g.students.filter(s => !selectedStudents.includes(s.id)) };
         }
         return g;
     });
     
     saveState(newGroups, allStudents);
-    setGroup(newGroups.find(g => g.id === groupId) || null);
-
+    
     toast({
         title: "Estudiantes eliminados",
         description: `${selectedStudents.length} estudiante(s) han sido quitados del grupo.`,
@@ -386,12 +265,52 @@ export default function GroupDetailsPage() {
   const handleCancelSelectionMode = () => {
     setIsSelectionMode(false);
     setSelectedStudents([]);
-  }
+  };
+  
+  const handleOpenPhotoDialog = (student: Student) => {
+    setEditingStudent(student);
+    setPhotoPreview(student.photo);
+    setIsPhotoDialogOpen(true);
+  };
+  
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSavePhoto = () => {
+    if (!editingStudent || !photoPreview) return;
+    
+    const updatedStudentList = allStudents.map(s => 
+      s.id === editingStudent.id ? { ...s, photo: photoPreview } : s
+    );
+    
+    const updatedGroups = groups.map(g => ({
+        ...g,
+        students: g.students.map(s => s.id === editingStudent.id ? { ...s, photo: photoPreview } : s)
+    }));
+    
+    saveState(updatedGroups, updatedStudentList);
+
+    toast({
+        title: "Foto actualizada",
+        description: `Se ha cambiado la foto de ${editingStudent.name}.`,
+    });
+    setIsPhotoDialogOpen(false);
+    setEditingStudent(null);
+    setPhotoPreview(null);
+  };
 
     
   const totalWeight = useMemo(() => {
-    return evaluationCriteria.reduce((sum, c) => sum + c.weight, 0);
-  }, [evaluationCriteria]);
+    return criteria.reduce((sum, c) => sum + c.weight, 0);
+  }, [criteria]);
 
   const numSelected = selectedStudents.length;
 
@@ -403,12 +322,39 @@ export default function GroupDetailsPage() {
     );
   }
 
-  if (!group) {
+  if (!activeGroup) {
     notFound();
   }
   
   return (
-    <Tabs value={activePartial} onValueChange={handlePartialChange} className="flex flex-col gap-6">
+    <>
+    {editingStudent && (
+      <Dialog open={isPhotoDialogOpen} onOpenChange={setIsPhotoDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cambiar Foto de {editingStudent.name}</DialogTitle>
+            <DialogDescription>
+              Selecciona una nueva foto de perfil para el estudiante.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 flex flex-col items-center gap-4">
+            <Image
+              alt="Vista previa"
+              className="rounded-full aspect-square object-cover w-32 h-32"
+              height={128}
+              src={photoPreview || editingStudent.photo}
+              width={128}
+            />
+            <Input type="file" accept="image/*" onChange={handlePhotoChange} />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsPhotoDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSavePhoto}>Guardar Foto</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    )}
+    <Tabs value={activePartial || '1'} onValueChange={handlePartialChange} className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
          <div className="flex items-center gap-4">
             <Button asChild variant="outline" size="icon">
@@ -418,7 +364,7 @@ export default function GroupDetailsPage() {
             </Link>
             </Button>
             <div>
-            <h1 className="text-3xl font-bold">{group.subject}</h1>
+            <h1 className="text-3xl font-bold">{activeGroup.subject}</h1>
             <p className="text-muted-foreground">
                 Detalles del grupo y lista de estudiantes.
             </p>
@@ -474,7 +420,7 @@ export default function GroupDetailsPage() {
                 <div>
                   <CardTitle>Estudiantes en el Grupo</CardTitle>
                   <CardDescription>
-                    Actualmente hay {group.students.length} estudiantes en este
+                    Actualmente hay {activeGroup.students.length} estudiantes en este
                     grupo.
                   </CardDescription>
                 </div>
@@ -526,7 +472,7 @@ export default function GroupDetailsPage() {
                         <DialogHeader>
                         <DialogTitle>Agregar Nuevos Estudiantes al Grupo</DialogTitle>
                         <DialogDescription>
-                            Añade nuevos estudiantes a "{group.subject}". Pega columnas de datos para agregarlos en masa.
+                            Añade nuevos estudiantes a "{activeGroup.subject}". Pega columnas de datos para agregarlos en masa.
                         </DialogDescription>
                         </DialogHeader>
                         <div className="grid gap-4 py-4 max-h-[400px] overflow-y-auto">
@@ -572,7 +518,7 @@ export default function GroupDetailsPage() {
                     {isSelectionMode && (
                         <TableHead padding="checkbox">
                             <Checkbox
-                                checked={group.students.length > 0 && numSelected === group.students.length ? true : (numSelected > 0 ? 'indeterminate' : false)}
+                                checked={activeGroup.students.length > 0 && numSelected === activeGroup.students.length ? true : (numSelected > 0 ? 'indeterminate' : false)}
                                 onCheckedChange={(checked) => handleSelectAll(checked)}
                                 aria-label="Seleccionar todo"
                             />
@@ -590,8 +536,8 @@ export default function GroupDetailsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {group.students.map((student, index) => {
-                    const riskLevel = studentRiskLevels[student.id] || 'low';
+                  {activeGroup.students.map((student, index) => {
+                    const risk = studentRiskLevels[student.id] || {level: 'low', reason: ''};
                     return (
                         <TableRow key={student.id} data-state={selectedStudents.includes(student.id) && "selected"}>
                           {isSelectionMode && (
@@ -620,10 +566,10 @@ export default function GroupDetailsPage() {
                             </Link>
                         </TableCell>
                         <TableCell>
-                            {riskLevel === 'high' && (
+                            {risk.level === 'high' && (
                             <Badge variant="destructive">Alto</Badge>
                             )}
-                            {riskLevel === 'medium' && (
+                            {risk.level === 'medium' && (
                             <Badge
                                 variant="secondary"
                                 className="bg-amber-400 text-black"
@@ -631,7 +577,7 @@ export default function GroupDetailsPage() {
                                 Medio
                             </Badge>
                             )}
-                            {riskLevel === 'low' && (
+                            {risk.level === 'low' && (
                             <Badge variant="secondary">Bajo</Badge>
                             )}
                         </TableCell>
@@ -650,6 +596,11 @@ export default function GroupDetailsPage() {
                             <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                                 <DropdownMenuItem onClick={() => router.push(`/students/${student.id}`)}>Ver Perfil Completo</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleOpenPhotoDialog(student)}>
+                                    <ImagePlus className="mr-2 h-4 w-4" />
+                                    Cambiar Foto
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={() => handleRemoveStudent(student.id)} className="text-destructive">
                                 Quitar del Grupo
                                 </DropdownMenuItem>
@@ -659,7 +610,7 @@ export default function GroupDetailsPage() {
                         </TableRow>
                     )
                   })}
-                   {group.students.length === 0 && (
+                   {activeGroup.students.length === 0 && (
                     <TableRow>
                         <TableCell colSpan={6} className="text-center text-muted-foreground p-8">
                             No hay estudiantes en este grupo.
@@ -692,13 +643,13 @@ export default function GroupDetailsPage() {
                     </Link>
                 </Button>
                  <Button asChild variant="outline">
-                    <Link href={`/groups/${group.id}/criteria`}>
+                    <Link href={`/groups/${activeGroup.id}/criteria`}>
                         <Edit className="mr-2 h-4 w-4" />
                         Gestionar Criterios
                     </Link>
                 </Button>
                  <Button asChild>
-                    <Link href={`/groups/${group.id}/grades`}>
+                    <Link href={`/groups/${activeGroup.id}/grades`}>
                         <FilePen className="mr-2 h-4 w-4" />
                         Registrar Calificaciones
                     </Link>
@@ -710,13 +661,13 @@ export default function GroupDetailsPage() {
             </CardHeader>
             <CardContent>
                  <div className="space-y-2">
-                    {evaluationCriteria.map(criterion => (
+                    {criteria.map(criterion => (
                         <div key={criterion.id} className="flex items-center justify-between p-2 bg-muted rounded-md">
                             <div>
                                 <span className="font-medium">{criterion.name}</span>
                                 <p className="text-xs text-muted-foreground">
-                                  {criterion.name === 'Participación' 
-                                    ? 'Automático por participación' 
+                                  {criterion.name === 'Participación' || criterion.name === 'Actividades' || criterion.name === 'Portafolio'
+                                    ? 'Cálculo automático'
                                     : `${criterion.expectedValue} es el valor esperado`
                                   }
                                 </p>
@@ -724,7 +675,7 @@ export default function GroupDetailsPage() {
                             <Badge variant="secondary">{criterion.weight}%</Badge>
                         </div>
                     ))}
-                    {evaluationCriteria.length === 0 && (
+                    {criteria.length === 0 && (
                         <p className="text-sm text-center text-muted-foreground py-4">No has definido criterios.</p>
                     )}
                      {totalWeight > 100 && (
@@ -738,5 +689,7 @@ export default function GroupDetailsPage() {
       </div>
 
     </Tabs>
+    </>
   );
 }
+
