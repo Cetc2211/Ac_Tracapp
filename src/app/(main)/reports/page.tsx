@@ -41,7 +41,8 @@ export default function ReportsPage() {
     participations, 
     attendance, 
     activities, 
-    activityRecords, 
+    activityRecords,
+    observations,
     calculateFinalGrade 
   } = useData();
 
@@ -68,7 +69,8 @@ export default function ReportsPage() {
 
     let approvedCount = 0;
     const groupGrades = activeGroup.students.map(student => {
-        const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords);
+        const studentObservations = observations.filter(o => o.studentId === student.id);
+        const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords, studentObservations);
         if (finalGrade >= 70) approvedCount++;
         return finalGrade;
     });
@@ -83,7 +85,7 @@ export default function ReportsPage() {
         totalAttendanceRecords: presentCount,
         criteriaCount: criteria.length,
     };
-  }, [activeGroup, attendance, criteria, grades, participations, activities, activityRecords, calculateFinalGrade]);
+  }, [activeGroup, attendance, criteria, grades, participations, activities, activityRecords, calculateFinalGrade, observations]);
 
 
   const handleDownloadCsv = () => {
@@ -95,7 +97,8 @@ export default function ReportsPage() {
 
     activeGroup.students.forEach(student => {
         const row = [student.id, student.name];
-        const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords);
+        const studentObservations = observations.filter(o => o.studentId === student.id);
+        const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords, studentObservations);
         
         criteria.forEach(criterion => {
             let performanceRatio = 0;

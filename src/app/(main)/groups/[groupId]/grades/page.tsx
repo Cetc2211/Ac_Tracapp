@@ -25,7 +25,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { useData } from '@/hooks/use-data';
-import type { EvaluationCriteria, Grades } from '@/hooks/use-data';
+import type { EvaluationCriteria, Grades, StudentObservation } from '@/hooks/use-data';
 import { useMemo } from 'react';
 
 const criterionColors = [
@@ -45,7 +45,8 @@ export default function GroupGradesPage() {
     grades, 
     participations, 
     activities, 
-    activityRecords, 
+    activityRecords,
+    observations, 
     setGrades,
     calculateFinalGrade
   } = useData();
@@ -91,11 +92,12 @@ export default function GroupGradesPage() {
     const calculatedGrades: {[studentId: string]: number} = {};
     if (activeGroup) {
       for (const student of activeGroup.students) {
-        calculatedGrades[student.id] = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords);
+         const studentObservations = observations.filter(o => o.studentId === student.id);
+        calculatedGrades[student.id] = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords, studentObservations);
       }
     }
     return calculatedGrades;
-  }, [activeGroup, criteria, grades, participations, activities, activityRecords, calculateFinalGrade]);
+  }, [activeGroup, criteria, grades, participations, activities, activityRecords, calculateFinalGrade, observations]);
 
   const studentsInGroup = useMemo(() => {
       if (!activeGroup || !activeGroup.students) return [];

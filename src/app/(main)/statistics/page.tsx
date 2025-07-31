@@ -84,7 +84,10 @@ export default function StatisticsPage() {
             const groupActivities = JSON.parse(localStorage.getItem(`activities_${group.id}_${partial}`) || '[]');
             const groupActivityRecords = JSON.parse(localStorage.getItem(`activityRecords_${group.id}_${partial}`) || '{}');
 
-            const finalGrades = group.students.map(s => calculateFinalGrade(s.id, groupCriteria, groupGrades, groupParticipations, groupActivities, groupActivityRecords));
+            const finalGrades = group.students.map(s => {
+                const studentObservations = observations.filter(o => o.studentId === s.id);
+                return calculateFinalGrade(s.id, groupCriteria, groupGrades, groupParticipations, groupActivities, groupActivityRecords, studentObservations);
+            });
             const averageGrade = finalGrades.length > 0 ? finalGrades.reduce((a, b) => a + b, 0) / finalGrades.length : 0;
 
             let totalAttendances = 0;
@@ -92,7 +95,8 @@ export default function StatisticsPage() {
             const riskLevels = { low: 0, medium: 0, high: 0 };
             
             group.students.forEach(student => {
-                const studentFinalGrade = calculateFinalGrade(student.id, groupCriteria, groupGrades, groupParticipations, groupActivities, groupActivityRecords);
+                const studentObservations = observations.filter(o => o.studentId === student.id);
+                const studentFinalGrade = calculateFinalGrade(student.id, groupCriteria, groupGrades, groupParticipations, groupActivities, groupActivityRecords, studentObservations);
                 const risk = getStudentRiskLevel(studentFinalGrade, groupAttendance, student.id);
                 riskLevels[risk.level]++;
                 
@@ -118,7 +122,7 @@ export default function StatisticsPage() {
             };
         });
 
-    }, [groups, calculateFinalGrade, getStudentRiskLevel]);
+    }, [groups, calculateFinalGrade, getStudentRiskLevel, observations]);
     
     useEffect(() => {
         setIsLoading(true);
@@ -135,14 +139,14 @@ export default function StatisticsPage() {
             ];
 
             for(const student of activeGroup.students) {
-                const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords);
+                const studentObservations = observations.filter(o => o.studentId === student.id);
+                const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords, studentObservations);
                 studentGrades.push({student, grade: finalGrade});
                 if(finalGrade >= 70) approved++; else failed++;
                 
                 const risk = getStudentRiskLevel(finalGrade, attendance, student.id);
                 riskDistribution[risk.level]++;
 
-                const studentObservations: StudentObservation[] = JSON.parse(localStorage.getItem(`observations_${student.id}`) || '[]');
                 observationCount += studentObservations.length;
                 canalizationCount += studentObservations.filter(o => o.requiresCanalization).length;
                 followUpCount += studentObservations.filter(o => o.requiresFollowUp).length;

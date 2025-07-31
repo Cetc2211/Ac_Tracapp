@@ -91,7 +91,8 @@ export default function GroupReportPage() {
       let mediumRiskStudents = 0;
 
       group.students.forEach(student => {
-        const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords);
+        const studentObservations: StudentObservation[] = JSON.parse(localStorage.getItem(`observations_${student.id}`) || '[]');
+        const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords, studentObservations);
         totalGroupGrade += finalGrade;
         if (finalGrade >= 70) approved++;
 
@@ -99,7 +100,6 @@ export default function GroupReportPage() {
         if (riskLevel.level === 'high') highRiskStudents++;
         if (riskLevel.level === 'medium') mediumRiskStudents++;
         
-        const studentObservations: StudentObservation[] = JSON.parse(localStorage.getItem(`observations_${student.id}`) || '[]');
         if(studentObservations.length > 0) {
             studentsWithObservations++;
             if(studentObservations.some(o => o.requiresCanalization)) canalizedStudents++;

@@ -104,7 +104,7 @@ export default function StudentProfilePage() {
   const [isWhatsAppDialogOpen, setIsWhatsAppDialogOpen] = useState(false);
 
 
-  const calculateFinalGradeDetails = useCallback((studentId: string, criteria: EvaluationCriteria[], grades: Grades, participations: ParticipationRecord, activities: Activity[], activityRecords: ActivityRecord): { finalGrade: number; criteriaDetails: { name: string, earned: number, weight: number }[] } => {
+  const calculateFinalGradeDetails = useCallback((studentId: string, criteria: EvaluationCriteria[], grades: Grades, participations: ParticipationRecord, activities: Activity[], activityRecords: ActivityRecord, studentObservations: StudentObservation[]): { finalGrade: number; criteriaDetails: { name: string, earned: number, weight: number }[] } => {
     if (!criteria || criteria.length === 0) return { finalGrade: 0, criteriaDetails: [] };
     
     let finalGrade = 0;
@@ -139,7 +139,18 @@ export default function StudentProfilePage() {
       criteriaDetails.push({ name: criterion.name, earned: earnedPercentage, weight: criterion.weight });
     }
     
-    return { finalGrade: finalGrade > 100 ? 100 : finalGrade, criteriaDetails };
+    studentObservations.forEach(obs => {
+        if (obs.type === 'Mérito') {
+            finalGrade += 1;
+        } else if (obs.type === 'Demérito') {
+            finalGrade -= 1;
+        }
+    });
+
+    if(finalGrade > 100) finalGrade = 100;
+    if(finalGrade < 0) finalGrade = 0;
+    
+    return { finalGrade, criteriaDetails };
   }, []);
 
 
@@ -169,6 +180,7 @@ export default function StudentProfilePage() {
 
         const gradesByGroup: StudentStats['gradesByGroup'] = [];
         let totalGradeSum = 0;
+        const studentObservations: StudentObservation[] = JSON.parse(localStorage.getItem(`observations_${studentId}`) || '[]');
         
         studentGroups.forEach(group => {
             const activePartial = localStorage.getItem(`activePartial_${group.id}`) || '1';
@@ -177,8 +189,8 @@ export default function StudentProfilePage() {
             const participations: ParticipationRecord = JSON.parse(localStorage.getItem(`participations_${group.id}_${activePartial}`) || '{}');
             const activities: Activity[] = JSON.parse(localStorage.getItem(`activities_${group.id}_${activePartial}`) || '[]');
             const activityRecords: ActivityRecord = JSON.parse(localStorage.getItem(`activityRecords_${group.id}_${activePartial}`) || '{}');
-
-            const { finalGrade, criteriaDetails } = calculateFinalGradeDetails(studentId, criteria, grades, participations, activities, activityRecords);
+            
+            const { finalGrade, criteriaDetails } = calculateFinalGradeDetails(studentId, criteria, grades, participations, activities, activityRecords, studentObservations);
             gradesByGroup.push({ group: group.subject, grade: finalGrade, criteriaDetails });
             totalGradeSum += finalGrade;
         });
@@ -196,9 +208,8 @@ export default function StudentProfilePage() {
                 }
             }
         });
-
-        const observations: StudentObservation[] = JSON.parse(localStorage.getItem(`observations_${studentId}`) || '[]');
-        setObservations(observations.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+        
+        setObservations(studentObservations.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
         
         setStudentStats({
           averageGrade: studentGroups.length > 0 ? totalGradeSum / studentGroups.length : 0,
