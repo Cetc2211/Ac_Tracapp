@@ -21,7 +21,6 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowUpRight, BookCopy, Users, AlertTriangle, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Student } from '@/lib/placeholder-data';
 import Image from 'next/image';
 import { useState, useMemo } from 'react';
 import {
@@ -34,10 +33,10 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { useData } from '@/hooks/use-data';
-import { StudentWithRisk, CalculatedRisk } from '@/hooks/use-data';
+import type { StudentWithRisk } from '@/hooks/use-data';
 
 export default function DashboardPage() {
-  const { students, groups, atRiskStudents, overallAverageParticipation, groupAverages } = useData();
+  const { allStudents, groups, atRiskStudents, overallAverageParticipation, groupAverages } = useData();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [studentSearchQuery, setStudentSearchQuery] = useState('');
@@ -52,10 +51,10 @@ export default function DashboardPage() {
 
   const filteredStudentsForSearch = useMemo(() => {
     if (!studentSearchQuery) return [];
-    return students.filter(student =>
+    return allStudents.filter(student =>
       student.name.toLowerCase().includes(studentSearchQuery.toLowerCase())
-    ).slice(0, 5); // Limit results to 5
-  }, [students, studentSearchQuery]);
+    ).slice(0, 5);
+  }, [allStudents, studentSearchQuery]);
 
 
   return (
@@ -69,7 +68,7 @@ export default function DashboardPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{students.length}</div>
+            <div className="text-2xl font-bold">{allStudents.length}</div>
             <p className="text-xs text-muted-foreground">
               Total de estudiantes registrados
             </p>
@@ -327,3 +326,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
