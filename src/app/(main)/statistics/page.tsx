@@ -17,38 +17,13 @@ import {
 } from "@/components/ui/chart"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Pie, PieChart, Cell, Tooltip, Legend } from "recharts"
 import { Badge } from '@/components/ui/badge';
-import { Student, Group, StudentObservation } from '@/lib/placeholder-data';
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useData } from '@/hooks/use-data';
+import type { Student, Group, StudentObservation, EvaluationCriteria, Grades, ParticipationRecord, Activity, ActivityRecord } from '@/hooks/use-data';
 
-type EvaluationCriteria = {
-  id: string;
-  name: string;
-  weight: number;
-  expectedValue: number;
-};
-
-type GradeDetail = {
-  delivered: number | null;
-};
-
-type Grades = {
-  [studentId: string]: {
-    [criterionId: string]: GradeDetail;
-  };
-};
-
-type ParticipationRecord = {
-  [date: string]: {
-    [studentId:string]: boolean;
-  }
-}
-
-type DailyAttendance = {
-    [date: string]: { [studentId: string]: 'present' | 'absent' | 'late' };
-}
 
 type GroupStats = {
   id: string;
@@ -81,176 +56,132 @@ const PIE_CHART_COLORS = {
 
 
 export default function StatisticsPage() {
+    const { 
+        groups,
+        activeGroup,
+        calculateFinalGrade,
+        getStudentRiskLevel,
+        criteria,
+        grades,
+        participations,
+        attendance,
+        activities,
+        activityRecords,
+        observations
+    } = useData();
+
     const [stats, setStats] = useState<GroupStats[]>([]);
     const [activeGroupStats, setActiveGroupStats] = useState<ActiveGroupStats | null>(null);
-    const [activeGroupName, setActiveGroupName] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    const calculateFinalGrade = useCallback((studentId: string, criteria: EvaluationCriteria[], grades: Grades, participations: ParticipationRecord) => {
-        if (!criteria || criteria.length === 0) return 0;
-        let finalGrade = 0;
-        
-        for (const criterion of criteria) {
-            let performanceRatio = 0;
+    const groupCalculations = useMemo(() => {
+        return groups.map(group => {
+            const partial = '1'; // Assuming partial 1 for now, this could be made dynamic
+            const groupCriteria = JSON.parse(localStorage.getItem(`criteria_${group.id}_${partial}`) || '[]');
+            const groupGrades = JSON.parse(localStorage.getItem(`grades_${group.id}_${partial}`) || '{}');
+            const groupParticipations = JSON.parse(localStorage.getItem(`participations_${group.id}_${partial}`) || '{}');
+            const groupAttendance = JSON.parse(localStorage.getItem(`attendance_${group.id}_${partial}`) || '{}');
+            const groupActivities = JSON.parse(localStorage.getItem(`activities_${group.id}_${partial}`) || '[]');
+            const groupActivityRecords = JSON.parse(localStorage.getItem(`activityRecords_${group.id}_${partial}`) || '{}');
 
-            if(criterion.name === 'Participación') {
-                const participationDates = Object.keys(participations);
-                if (participationDates.length > 0) {
-                  const participatedClasses = participationDates.filter(date => participations[date]?.[studentId]).length;
-                  performanceRatio = participatedClasses / participationDates.length;
-                }
-            } else {
-                const gradeDetail = grades[studentId]?.[criterion.id];
-                const delivered = gradeDetail?.delivered ?? 0;
-                const expected = criterion.expectedValue;
-                if(expected > 0) {
-                    performanceRatio = delivered / expected;
-                }
-            }
-            finalGrade += performanceRatio * criterion.weight;
-        }
+            const finalGrades = group.students.map(s => calculateFinalGrade(s.id, groupCriteria, groupGrades, groupParticipations, groupActivities, groupActivityRecords));
+            const averageGrade = finalGrades.length > 0 ? finalGrades.reduce((a, b) => a + b, 0) / finalGrades.length : 0;
 
-        return finalGrade > 100 ? 100 : finalGrade;
-    }, []);
-
-    const getStudentRiskLevel = useCallback((finalGrade: number, attendance: DailyAttendance, studentId: string) => {
-        const totalDays = Object.keys(attendance).length;
-        let absences = 0;
-        if (totalDays > 0) {
-            for (const date in attendance) {
-                if (attendance[date]?.[studentId] === 'absent') {
-                    absences++;
-                }
-            }
-        }
-        const absencePercentage = totalDays > 0 ? (absences / totalDays) * 100 : 0;
-        if (finalGrade < 70 || absencePercentage > 20) return 'high';
-        if (finalGrade < 80 || absencePercentage > 10) return 'medium';
-        return 'low';
-    }, []);
-
-    useEffect(() => {
-        try {
-            setIsLoading(true);
-            const storedGroups: Group[] = JSON.parse(localStorage.getItem('groups') || '[]');
-            const activeGroupId = localStorage.getItem('activeGroupId');
-
-            // General Stats Calculation
-            const calculatedStats = storedGroups.map(group => {
-                const criteria: EvaluationCriteria[] = JSON.parse(localStorage.getItem(`criteria_${group.id}`) || '[]');
-                const grades: Grades = JSON.parse(localStorage.getItem(`grades_${group.id}`) || '{}');
-                const attendance: DailyAttendance = JSON.parse(localStorage.getItem(`attendance_${group.id}`) || '{}');
-                const participations: ParticipationRecord = JSON.parse(localStorage.getItem(`participations_${group.id}`) || '{}');
-
-                const groupGrades = group.students.map(s => calculateFinalGrade(s.id, criteria, grades, participations));
-                const averageGrade = groupGrades.length > 0 ? groupGrades.reduce((a, b) => a + b, 0) / groupGrades.length : 0;
-
-                let totalAttendances = 0;
-                let presentAttendances = 0;
-                const riskLevels = { low: 0, medium: 0, high: 0 };
+            let totalAttendances = 0;
+            let presentAttendances = 0;
+            const riskLevels = { low: 0, medium: 0, high: 0 };
+            
+            group.students.forEach(student => {
+                const studentFinalGrade = calculateFinalGrade(student.id, groupCriteria, groupGrades, groupParticipations, groupActivities, groupActivityRecords);
+                const risk = getStudentRiskLevel(studentFinalGrade, groupAttendance, student.id);
+                riskLevels[risk.level]++;
                 
-                group.students.forEach(student => {
-                    const studentFinalGrade = calculateFinalGrade(student.id, criteria, grades, participations);
-                    const risk = getStudentRiskLevel(studentFinalGrade, attendance, student.id);
-                    riskLevels[risk]++;
-                    
-                    Object.values(attendance).forEach(dailyRecord => {
-                        if (dailyRecord.hasOwnProperty(student.id)) {
-                            totalAttendances++;
-                            if (dailyRecord[student.id] === 'present') {
-                                presentAttendances++;
-                            }
-                        }
-                    });
-                });
-
-                const attendanceRate = totalAttendances > 0 ? (presentAttendances / totalAttendances) * 100 : 100;
-
-                return {
-                    id: group.id,
-                    subject: group.subject,
-                    studentCount: group.students.length,
-                    averageGrade: parseFloat(averageGrade.toFixed(1)),
-                    attendanceRate: parseFloat(attendanceRate.toFixed(1)),
-                    riskLevels
-                };
-            });
-            setStats(calculatedStats);
-
-            // Active Group Stats Calculation
-            if(activeGroupId) {
-                const activeGroup = storedGroups.find(g => g.id === activeGroupId);
-                if (activeGroup) {
-                    setActiveGroupName(activeGroup.subject);
-                    const criteria: EvaluationCriteria[] = JSON.parse(localStorage.getItem(`criteria_${activeGroup.id}`) || '[]');
-                    const grades: Grades = JSON.parse(localStorage.getItem(`grades_${activeGroup.id}`) || '{}');
-                    const attendance: DailyAttendance = JSON.parse(localStorage.getItem(`attendance_${activeGroup.id}`) || '{}');
-                    const participations: ParticipationRecord = JSON.parse(localStorage.getItem(`participations_${activeGroup.id}`) || '{}');
-                    
-                    let approved = 0, failed = 0;
-                    let present = 0, absent = 0, late = 0;
-                    let observationCount = 0, canalizationCount = 0, followUpCount = 0;
-                    const studentGrades: {student: Student, grade: number}[] = [];
-                    const riskDistribution = { low: 0, medium: 0, high: 0 };
-                    const participationDistribution = [
-                        { name: '0-20%', students: 0 }, { name: '21-40%', students: 0 }, { name: '41-60%', students: 0 }, { name: '61-80%', students: 0 }, { name: '81-100%', students: 0 }
-                    ];
-
-                    for(const student of activeGroup.students) {
-                        const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations);
-                        studentGrades.push({student, grade: finalGrade});
-                        if(finalGrade >= 70) approved++; else failed++;
-                        
-                        const risk = getStudentRiskLevel(finalGrade, attendance, student.id);
-                        riskDistribution[risk]++;
-
-                        const studentObservations: StudentObservation[] = JSON.parse(localStorage.getItem(`observations_${student.id}`) || '[]');
-                        observationCount += studentObservations.length;
-                        canalizationCount += studentObservations.filter(o => o.requiresCanalization).length;
-                        followUpCount += studentObservations.filter(o => o.requiresFollowUp).length;
-
-                        const totalParticipationClasses = Object.keys(participations).length;
-                        if(totalParticipationClasses > 0) {
-                            const studentParticipations = Object.values(participations).filter(day => day[student.id]).length;
-                            const participationRate = (studentParticipations / totalParticipationClasses) * 100;
-                            if (participationRate <= 20) participationDistribution[0].students++;
-                            else if (participationRate <= 40) participationDistribution[1].students++;
-                            else if (participationRate <= 60) participationDistribution[2].students++;
-                            else if (participationRate <= 80) participationDistribution[3].students++;
-                            else participationDistribution[4].students++;
+                Object.values(groupAttendance).forEach(dailyRecord => {
+                    if (dailyRecord.hasOwnProperty(student.id)) {
+                        totalAttendances++;
+                        if (dailyRecord[student.id]) {
+                            presentAttendances++;
                         }
                     }
+                });
+            });
 
-                     Object.values(attendance).forEach(dailyRecord => {
-                        Object.values(dailyRecord).forEach(status => {
-                            if(status === 'present') present++;
-                            else if(status === 'absent') absent++;
-                            else if(status === 'late') late++;
-                        })
-                    });
+            const attendanceRate = totalAttendances > 0 ? (presentAttendances / totalAttendances) * 100 : 100;
 
-                    studentGrades.sort((a,b) => b.grade - a.grade);
+            return {
+                id: group.id,
+                subject: group.subject,
+                studentCount: group.students.length,
+                averageGrade: parseFloat(averageGrade.toFixed(1)),
+                attendanceRate: parseFloat(attendanceRate.toFixed(1)),
+                riskLevels
+            };
+        });
 
-                    setActiveGroupStats({
-                        approvalRate: { approved, failed },
-                        attendanceTotals: { present, absent, late },
-                        observationStats: { observations: observationCount, canalizations: canalizationCount, followUps: followUpCount },
-                        riskDistribution,
-                        topStudents: studentGrades.slice(0,5).map(s => ({name: s.student.name, grade: parseFloat(s.grade.toFixed(1))})),
-                        participationDistribution,
-                    });
+    }, [groups, calculateFinalGrade, getStudentRiskLevel]);
+    
+    useEffect(() => {
+        setIsLoading(true);
+        setStats(groupCalculations);
+
+        if (activeGroup) {
+            let approved = 0, failed = 0;
+            let present = 0, absent = 0, late = 0;
+            let observationCount = 0, canalizationCount = 0, followUpCount = 0;
+            const studentGrades: {student: Student, grade: number}[] = [];
+            const riskDistribution = { low: 0, medium: 0, high: 0 };
+            const participationDistribution = [
+                { name: '0-20%', students: 0 }, { name: '21-40%', students: 0 }, { name: '41-60%', students: 0 }, { name: '61-80%', students: 0 }, { name: '81-100%', students: 0 }
+            ];
+
+            for(const student of activeGroup.students) {
+                const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords);
+                studentGrades.push({student, grade: finalGrade});
+                if(finalGrade >= 70) approved++; else failed++;
+                
+                const risk = getStudentRiskLevel(finalGrade, attendance, student.id);
+                riskDistribution[risk.level]++;
+
+                const studentObservations: StudentObservation[] = JSON.parse(localStorage.getItem(`observations_${student.id}`) || '[]');
+                observationCount += studentObservations.length;
+                canalizationCount += studentObservations.filter(o => o.requiresCanalization).length;
+                followUpCount += studentObservations.filter(o => o.requiresFollowUp).length;
+
+                const totalParticipationClasses = Object.keys(participations).length;
+                if(totalParticipationClasses > 0) {
+                    const studentParticipations = Object.values(participations).filter(day => day[student.id]).length;
+                    const participationRate = (studentParticipations / totalParticipationClasses) * 100;
+                    if (participationRate <= 20) participationDistribution[0].students++;
+                    else if (participationRate <= 40) participationDistribution[1].students++;
+                    else if (participationRate <= 60) participationDistribution[2].students++;
+                    else if (participationRate <= 80) participationDistribution[3].students++;
+                    else participationDistribution[4].students++;
+                } else {
+                    // if no participation classes, all students are in the 0-20% bucket
+                    participationDistribution[0].students++;
                 }
-            } else {
-                 setActiveGroupStats(null);
-                 setActiveGroupName(null);
             }
+             Object.values(attendance).forEach(dailyRecord => {
+                Object.values(dailyRecord).forEach(status => {
+                    if(status) present++; else absent++;
+                })
+            });
 
-        } catch (e) {
-            console.error("Failed to calculate statistics", e);
-        } finally {
-            setIsLoading(false);
+            studentGrades.sort((a,b) => b.grade - a.grade);
+
+            setActiveGroupStats({
+                approvalRate: { approved, failed },
+                attendanceTotals: { present, absent, late: 0 }, // 'late' status is not used in the new structure
+                observationStats: { observations: observationCount, canalizations: canalizationCount, followUps: followUpCount },
+                riskDistribution,
+                topStudents: studentGrades.slice(0,5).map(s => ({name: s.student.name, grade: parseFloat(s.grade.toFixed(1))})),
+                participationDistribution,
+            });
+        } else {
+            setActiveGroupStats(null);
         }
-    }, [calculateFinalGrade, getStudentRiskLevel]);
+        setIsLoading(false);
+    }, [activeGroup, groups, criteria, grades, participations, attendance, activities, activityRecords, observations, calculateFinalGrade, getStudentRiskLevel, groupCalculations]);
 
     const approvalData = useMemo(() => {
         if (!activeGroupStats) return [];
@@ -265,7 +196,6 @@ export default function StatisticsPage() {
         return [
             { name: 'Asistencias', value: activeGroupStats.attendanceTotals.present, fill: PIE_CHART_COLORS.present },
             { name: 'Inasistencias', value: activeGroupStats.attendanceTotals.absent, fill: PIE_CHART_COLORS.absent },
-            { name: 'Retardos', value: activeGroupStats.attendanceTotals.late, fill: PIE_CHART_COLORS.late },
         ].filter(item => item.value > 0);
     }, [activeGroupStats]);
     
@@ -310,7 +240,7 @@ export default function StatisticsPage() {
       <Tabs defaultValue="general">
         <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="general">Visión General</TabsTrigger>
-            <TabsTrigger value="activeGroup" disabled={!activeGroupStats}>Grupo Activo: {activeGroupName || ''}</TabsTrigger>
+            <TabsTrigger value="activeGroup" disabled={!activeGroupStats}>Grupo Activo: {activeGroup?.subject || ''}</TabsTrigger>
         </TabsList>
         <TabsContent value="general" className="mt-6">
             {stats.length === 0 ? (
@@ -506,4 +436,3 @@ export default function StatisticsPage() {
     </div>
   );
 }
-
