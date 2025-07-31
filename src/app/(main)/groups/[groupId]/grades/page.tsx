@@ -27,6 +27,7 @@ import { cn } from '@/lib/utils';
 import { useData } from '@/hooks/use-data';
 import type { EvaluationCriteria, Grades, StudentObservation } from '@/hooks/use-data';
 import { useMemo } from 'react';
+import { Badge } from '@/components/ui/badge';
 
 const criterionColors = [
   'bg-chart-1/10',
@@ -171,6 +172,9 @@ export default function GroupGradesPage() {
                   </TableRow>
                 )}
                 {studentsInGroup.length > 0 && criteria.length > 0 && studentsInGroup.map(student => {
+                  const studentObservations = observations.filter(o => o.studentId === student.id);
+                  const merits = studentObservations.filter(o => o.type === 'Mérito').length;
+                  const demerits = studentObservations.filter(o => o.type === 'Demérito').length;
                   
                   return (
                   <TableRow key={student.id}>
@@ -263,7 +267,13 @@ export default function GroupGradesPage() {
                       )
                     })}
                     <TableCell className="text-center font-bold text-lg sticky right-0 bg-card z-10">
-                      {`${(finalGrades[student.id] || 0).toFixed(0)}%`}
+                      <div className="flex items-center justify-center gap-2">
+                        <span>{`${(finalGrades[student.id] || 0).toFixed(0)}%`}</span>
+                        <div className="flex flex-col gap-1">
+                          {merits > 0 && <Badge className="bg-green-600 text-white text-xs h-4 w-6 justify-center p-0">+{merits}</Badge>}
+                          {demerits > 0 && <Badge variant="destructive" className="text-xs h-4 w-6 justify-center p-0">-{demerits}</Badge>}
+                        </div>
+                      </div>
                     </TableCell>
                   </TableRow>
                   )
