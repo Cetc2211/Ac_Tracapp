@@ -11,8 +11,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Phone, Users, Eye } from 'lucide-react';
-import { groups as initialGroups, Group, Student } from '@/lib/placeholder-data';
-import { useState, useEffect } from 'react';
+import { Group, Student } from '@/lib/placeholder-data';
 import {
   Dialog,
   DialogContent,
@@ -29,6 +28,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useData } from '@/hooks/use-data';
 
 // Extracted TutorListDialog to be a top-level component.
 const TutorListDialog = ({ group, studentsWithTutors }: { group: Group, studentsWithTutors: Student[] }) => {
@@ -95,19 +95,7 @@ const TutorListDialog = ({ group, studentsWithTutors }: { group: Group, students
 
 
 export default function TutorsPage() {
-  const [groups, setGroups] = useState<Group[]>(initialGroups);
-  
-  useEffect(() => {
-    try {
-        const storedGroups = localStorage.getItem('groups');
-        if (storedGroups) {
-          setGroups(JSON.parse(storedGroups));
-        }
-    } catch (error) {
-        console.error("Failed to parse groups from localStorage", error);
-        setGroups(initialGroups);
-    }
-  }, []);
+  const { groups } = useData();
 
   return (
     <div className="flex flex-col gap-6">

@@ -1,13 +1,10 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
 import {
   Table,
@@ -20,103 +17,41 @@ import {
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import Image from 'next/image';
-import { Student, Group } from '@/lib/placeholder-data';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-
-type ParticipationRecord = {
-  [date: string]: {
-    [studentId: string]: boolean; 
-  };
-};
-
-type AttendanceRecord = {
-  [date: string]: {
-    [studentId: string]: boolean;
-  };
-};
-
+import { useData } from '@/hooks/use-data';
 
 export default function ParticipationsPage() {
-  const [studentsToDisplay, setStudentsToDisplay] = useState<Student[]>([]);
-  const [participations, setParticipations] = useState<ParticipationRecord>({});
-  const [attendance, setAttendance] = useState<AttendanceRecord>({});
-  const [participationDates, setParticipationDates] = useState<string[]>([]);
-  const [activeGroupName, setActiveGroupName] = useState<string | null>(null);
-  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
-  const [activePartial, setActivePartial] = useState<string | null>(null);
+  const { activeGroup, participations, setParticipations, attendance } = useData();
   const { toast } = useToast();
 
-  useEffect(() => {
-    try {
-      const storedActiveGroupId = localStorage.getItem('activeGroupId');
-       if (!storedActiveGroupId) {
-          setStudentsToDisplay([]);
-          return;
-      };
-      
-      const groupName = localStorage.getItem('activeGroupName');
-      const partial = localStorage.getItem(`activePartial_${storedActiveGroupId}`) || '1';
-      const allGroupsJson = localStorage.getItem('groups');
-      const allGroups: Group[] = allGroupsJson ? JSON.parse(allGroupsJson) : [];
+  const studentsToDisplay = useMemo(() => {
+    return activeGroup ? [...activeGroup.students].sort((a,b) => a.name.localeCompare(b.name)) : [];
+  }, [activeGroup]);
 
-      setActiveGroupName(groupName);
-      setActiveGroupId(storedActiveGroupId);
-      setActivePartial(partial);
+  const participationDates = useMemo(() => {
+    return Object.keys(participations).sort((a,b) => new Date(b).getTime() - new Date(a).getTime());
+  }, [participations]);
 
-      let relevantStudents: Student[] = [];
-      if (storedActiveGroupId) {
-        const activeGroup = allGroups.find(g => g.id === storedActiveGroupId);
-        relevantStudents = activeGroup ? activeGroup.students : [];
-      }
-      setStudentsToDisplay(relevantStudents);
-
-      if (storedActiveGroupId) {
-        const storedParticipations = localStorage.getItem(`participations_${storedActiveGroupId}_${partial}`);
-        if (storedParticipations) {
-          const parsedParticipations = JSON.parse(storedParticipations);
-          setParticipations(parsedParticipations);
-          const dates = Object.keys(parsedParticipations).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
-          setParticipationDates(dates);
-        }
-         const storedAttendance = localStorage.getItem(`attendance_${storedActiveGroupId}_${partial}`);
-        if (storedAttendance) {
-            setAttendance(JSON.parse(storedAttendance));
-        }
-      } else {
-        setParticipations({});
-        setParticipationDates([]);
-      }
-    } catch (error) {
-      console.error("Failed to parse data from localStorage", error);
-    }
-  }, []);
-  
-  const sortedStudents = useMemo(() => {
-    return [...studentsToDisplay].sort((a, b) => a.name.localeCompare(b.name));
-  }, [studentsToDisplay]);
 
   const handleRegisterToday = () => {
+    if (!activeGroup) return;
     const today = format(new Date(), 'yyyy-MM-dd');
-    if (!participationDates.includes(today)) {
-      const newDates = [today, ...participationDates].sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
-      setParticipationDates(newDates);
 
-      setParticipations(prev => {
+    setParticipations(prev => {
         const newParticipations = { ...prev };
         if (!newParticipations[today]) {
           newParticipations[today] = {};
         }
         return newParticipations;
-      });
-    }
+    });
   };
   
   const handleParticipationChange = (studentId: string, date: string, hasParticipated: boolean) => {
-    if (!activeGroupId || !activePartial) return;
+    if (!activeGroup) return;
 
     if (hasParticipated) {
       const studentHasAttendance = attendance[date]?.[studentId] === true;
@@ -129,14 +64,15 @@ export default function ParticipationsPage() {
         return; 
       }
     }
-
-    const newParticipations = { ...participations };
-    if (!newParticipations[date]) {
-      newParticipations[date] = {};
-    }
-    newParticipations[date][studentId] = hasParticipated;
-    setParticipations(newParticipations);
-    localStorage.setItem(`participations_${activeGroupId}_${activePartial}`, JSON.stringify(newParticipations));
+    
+    setParticipations(prev => {
+      const newParticipations = { ...prev };
+      if (!newParticipations[date]) {
+        newParticipations[date] = {};
+      }
+      newParticipations[date][studentId] = hasParticipated;
+      return newParticipations;
+    })
   };
 
 
@@ -145,7 +81,7 @@ export default function ParticipationsPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
              <Button asChild variant="outline" size="icon">
-              <Link href={activeGroupId ? `/groups/${activeGroupId}` : '/groups'}>
+              <Link href={activeGroup ? `/groups/${activeGroup.id}` : '/groups'}>
                 <ArrowLeft />
                 <span className="sr-only">Regresar</span>
               </Link>
@@ -153,14 +89,14 @@ export default function ParticipationsPage() {
             <div>
                 <h1 className="text-3xl font-bold">Registro de Participaciones</h1>
                 <p className="text-muted-foreground">
-                    {activeGroupName 
-                        ? `Mostrando participaciones para el grupo: ${activeGroupName}` 
+                    {activeGroup 
+                        ? `Mostrando participaciones para el grupo: ${activeGroup.subject}` 
                         : 'Selecciona un grupo para registrar participaciones.'
                     }
                 </p>
             </div>
         </div>
-        {activeGroupId && <Button onClick={handleRegisterToday}>Registrar Participaciones de Hoy</Button>}
+        {activeGroup && <Button onClick={handleRegisterToday}>Registrar Participaciones de Hoy</Button>}
       </div>
 
       <Card>
@@ -178,7 +114,7 @@ export default function ParticipationsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sortedStudents.map(student => (
+                {studentsToDisplay.map(student => (
                   <TableRow key={student.id}>
                     <TableCell className="font-medium sticky left-0 bg-card z-10 flex items-center gap-3">
                        <Image
@@ -203,7 +139,7 @@ export default function ParticipationsPage() {
                  {studentsToDisplay.length === 0 && (
                     <TableRow>
                         <TableCell colSpan={participationDates.length + 1} className="text-center h-24">
-                           {activeGroupName 
+                           {activeGroup 
                            ? "Este grupo no tiene estudiantes." 
                            : "No hay un grupo activo. Por favor, selecciona uno en la sección de 'Grupos'."
                            }

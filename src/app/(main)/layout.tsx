@@ -1,3 +1,4 @@
+import { DataProvider } from '@/hooks/use-data';
 import MainLayoutClient from './main-layout-client';
 
 export default function MainLayout({
@@ -5,5 +6,9 @@ export default function MainLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <MainLayoutClient>{children}</MainLayoutClient>;
+  return (
+    <DataProvider>
+      <MainLayoutClient>{children}</MainLayoutClient>
+    </DataProvider>
+  );
 }

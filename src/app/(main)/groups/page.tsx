@@ -22,42 +22,14 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { groups as initialGroups, students as initialStudents, Student, Group } from '@/lib/placeholder-data';
+import { Student, Group } from '@/lib/placeholder-data';
 import { Users, ClipboardList, PlusCircle, BookCopy, Settings, AlertTriangle } from 'lucide-react';
 import { AttendanceRandomizer } from '@/components/attendance-randomizer';
 import Link from 'next/link';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-
-type EvaluationCriteria = {
-  id: string;
-  name: string;
-  weight: number;
-  expectedValue: number;
-};
-
-type GradeDetail = {
-  delivered: number | null;
-  average: number | null;
-};
-
-type Grades = {
-  [studentId: string]: {
-    [criterionId: string]: GradeDetail;
-  };
-};
-
-type AttendanceRecord = {
-  [date: string]: {
-    [studentId: string]: boolean;
-  };
-};
-
-type GroupStats = {
-  average: number;
-  highRiskCount: number;
-}
+import { useData } from '@/hooks/use-data';
 
 const cardColors = [
     'bg-card-1',
@@ -69,8 +41,7 @@ const cardColors = [
 
 
 export default function GroupsPage() {
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [allStudents, setAllStudents] = useState<Student[]>(initialStudents);
+  const { groups, allStudents, setGroups, setAllStudents, groupStats } = useData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
   const [newGroupName, setNewGroupName] = useState('');
@@ -81,105 +52,6 @@ export default function GroupsPage() {
   const [bulkTutorPhones, setBulkTutorPhones] = useState('');
 
   const { toast } = useToast();
-  const [groupStats, setGroupStats] = useState<{[groupId: string]: GroupStats}>({});
-
-  const calculateFinalGrade = useCallback((studentId: string, criteria: EvaluationCriteria[], grades: Grades) => {
-    if (!criteria || criteria.length === 0 || !grades || !grades[studentId]) return 0;
-    
-    let finalGrade = 0;
-    const studentGrades = grades[studentId];
-    if (!studentGrades) return 0;
-    
-    for (const criterion of criteria) {
-      const gradeDetail = studentGrades[criterion.id];
-      const delivered = gradeDetail?.delivered ?? 0;
-      const average = gradeDetail?.average ?? 0;
-      const expected = criterion.expectedValue;
-
-      if(expected > 0) {
-        const criterionScore = (delivered / expected) * average;
-        finalGrade += criterionScore * (criterion.weight / 100);
-      }
-    }
-    return parseFloat(finalGrade.toFixed(2));
-  }, []);
-
-  const getStudentRiskLevel = useCallback((student: Student, criteria: EvaluationCriteria[], grades: Grades, attendance: AttendanceRecord) => {
-    const finalGrade = calculateFinalGrade(student.id, criteria, grades);
-
-    const totalDays = Object.keys(attendance).length;
-    let absences = 0;
-    if(totalDays > 0) {
-        for(const date in attendance) {
-            if(attendance[date][student.id] === false) {
-                absences++;
-            }
-        }
-    }
-    const absencePercentage = totalDays > 0 ? (absences / totalDays) * 100 : 0;
-    
-    if (finalGrade < 7 || absencePercentage > 20) return 'high';
-    if (finalGrade < 8 || absencePercentage > 10) return 'medium';
-    return 'low';
-  }, [calculateFinalGrade]);
-
-  useEffect(() => {
-    try {
-        localStorage.removeItem('activeGroupId');
-        localStorage.removeItem('activeGroupName');
-        window.dispatchEvent(new Event('storage'));
-
-        const storedGroups = localStorage.getItem('groups');
-        const loadedGroups = storedGroups ? JSON.parse(storedGroups) : initialGroups;
-        setGroups(loadedGroups);
-
-        const storedStudents = localStorage.getItem('students');
-        const loadedStudents = storedStudents ? JSON.parse(storedStudents) : initialStudents;
-        setAllStudents(loadedStudents);
-        
-        const allStats: {[groupId: string]: GroupStats} = {};
-
-        for(const group of loadedGroups) {
-            const partial = localStorage.getItem(`activePartial_${group.id}`) || '1';
-            const criteriaKey = `criteria_${group.id}_${partial}`;
-            const gradesKey = `grades_${group.id}_${partial}`;
-            const attendanceKey = `attendance_${group.id}_${partial}`;
-
-            const storedCriteria = localStorage.getItem(criteriaKey);
-            const evaluationCriteria: EvaluationCriteria[] = storedCriteria ? JSON.parse(storedCriteria) : [];
-
-            const storedGrades = localStorage.getItem(gradesKey);
-            const grades: Grades = storedGrades ? JSON.parse(storedGrades) : {};
-
-            const storedAttendance = localStorage.getItem(attendanceKey);
-            const attendance: AttendanceRecord = storedAttendance ? JSON.parse(storedAttendance) : {};
-
-            const groupGrades = group.students.map(s => calculateFinalGrade(s.id, evaluationCriteria, grades));
-            const groupAverage = groupGrades.length > 0 ? groupGrades.reduce((a, b) => a + b, 0) / groupGrades.length : 0;
-            const highRiskStudents = group.students.filter(s => getStudentRiskLevel(s, evaluationCriteria, grades, attendance) === 'high').length;
-            
-            allStats[group.id] = {
-                average: groupAverage,
-                highRiskCount: highRiskStudents
-            };
-        }
-        setGroupStats(allStats);
-
-    } catch(e) {
-        console.error("Could not parse data from local storage", e);
-        setGroups(initialGroups);
-        setAllStudents(initialStudents);
-    }
-  }, [calculateFinalGrade, getStudentRiskLevel]);
-  
-
-  const saveState = (newGroups: Group[], newAllStudents: Student[]) => {
-    setGroups(newGroups);
-    localStorage.setItem('groups', JSON.stringify(newGroups));
-
-    setAllStudents(newAllStudents);
-    localStorage.setItem('students', JSON.stringify(newAllStudents));
-  };
 
   const handleCreateGroup = () => {
     if (!newGroupName.trim()) {
@@ -221,7 +93,8 @@ export default function GroupsPage() {
         }
     });
 
-    saveState(updatedGroups, updatedAllStudents);
+    setGroups(updatedGroups);
+    setAllStudents(updatedAllStudents);
 
     // Reset form
     setNewGroupName('');

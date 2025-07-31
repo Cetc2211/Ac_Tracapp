@@ -21,9 +21,9 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowUpRight, BookCopy, Users, AlertTriangle, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { students as initialStudents, groups as initialGroups, Student, Group } from '@/lib/placeholder-data';
+import { Student } from '@/lib/placeholder-data';
 import Image from 'next/image';
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -33,198 +33,18 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-
-type EvaluationCriteria = {
-  id: string;
-  name: string;
-  weight: number;
-  expectedValue: number;
-};
-
-type GradeDetail = {
-  delivered: number | null;
-  average: number | null;
-};
-
-type Grades = {
-  [studentId: string]: {
-    [criterionId: string]: GradeDetail;
-  };
-};
-
-type AttendanceStatus = 'present' | 'absent' | 'late';
-
-type AttendanceRecord = {
-  [studentId: string]: AttendanceStatus;
-};
-
-type DailyAttendance = {
-    [date: string]: AttendanceRecord;
-}
-
-type CalculatedRisk = {
-    level: 'low' | 'medium' | 'high';
-    reason: string;
-}
-
-type StudentWithRisk = Student & { calculatedRisk: CalculatedRisk };
-
+import { useData } from '@/hooks/use-data';
+import { StudentWithRisk, CalculatedRisk } from '@/hooks/use-data';
 
 export default function DashboardPage() {
-  const [students, setStudents] = useState<Student[]>(initialStudents);
-  const [groups, setGroups] = useState<Group[]>(initialGroups);
-  const [allGrades, setAllGrades] = useState<{[groupId: string]: Grades}>({});
-  const [allAttendance, setAllAttendance] = useState<{[groupId: string]: DailyAttendance}>({});
-  const [allCriteria, setAllCriteria] = useState<{[groupId: string]: EvaluationCriteria[]}>({});
-  const [atRiskStudents, setAtRiskStudents] = useState<StudentWithRisk[]>([]);
-  const [groupAverages, setGroupAverages] = useState<{[groupId: string]: number}>({});
+  const { students, groups, atRiskStudents, overallAverageParticipation, groupAverages } = useData();
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [studentSearchQuery, setStudentSearchQuery] = useState('');
   const [isRiskDialogOpen, setIsRiskDialogOpen] = useState(false);
-
-  const calculateFinalGrade = useCallback((studentId: string, groupId: string, criteria: EvaluationCriteria[], grades: Grades) => {
-    if (!grades || !criteria || criteria.length === 0) return 0;
-    const studentGrades = grades[studentId];
-    if (!studentGrades) return 0;
-
-    let finalGrade = 0;
-    
-    for (const criterion of criteria) {
-      const gradeDetail = studentGrades[criterion.id];
-      const delivered = gradeDetail?.delivered ?? 0;
-      const average = gradeDetail?.average ?? 0;
-      const expected = criterion.expectedValue;
-
-      if(expected > 0) {
-        const criterionScore = (delivered / expected) * average;
-        finalGrade += criterionScore * (criterion.weight / 100);
-      }
-    }
-
-    return parseFloat(finalGrade.toFixed(2));
-  }, []);
-
-  const getStudentRiskLevel = useCallback((student: Student, studentGroups: Group[], localGrades: any, localCriteria: any, localAttendance: any): CalculatedRisk => {
-    if (studentGroups.length === 0) return {level: 'low', reason: 'No está en grupos.'};
-    
-    let totalGrades = 0;
-    let gradeSum = 0;
-    let maxAbsencePercentage = 0;
-
-    for(const group of studentGroups) {
-      const finalGrade = calculateFinalGrade(student.id, group.id, localCriteria[group.id] || [], localGrades[group.id] || {});
-      gradeSum += finalGrade;
-      totalGrades++;
-
-      const groupAttendance = localAttendance[group.id];
-      if (groupAttendance) {
-          const totalDays = Object.keys(groupAttendance).length;
-          if (totalDays > 0) {
-              let absences = 0;
-              for(const date in groupAttendance) {
-                  if(groupAttendance[date][student.id] === 'absent') {
-                      absences++;
-                  }
-              }
-              const absencePercentage = (absences / totalDays) * 100;
-              if(absencePercentage > maxAbsencePercentage) {
-                  maxAbsencePercentage = absencePercentage;
-              }
-          }
-      }
-    }
-
-    const averageGrade = totalGrades > 0 ? gradeSum / totalGrades : 10;
-
-    if (averageGrade < 7 || maxAbsencePercentage > 20) {
-        return {level: 'high', reason: `Promedio de ${averageGrade.toFixed(1)} o ${maxAbsencePercentage.toFixed(0)}% de ausencias.`};
-    }
-    if (averageGrade < 8 || maxAbsencePercentage > 10) {
-       return {level: 'medium', reason: `Promedio de ${averageGrade.toFixed(1)} o ${maxAbsencePercentage.toFixed(0)}% de ausencias.`};
-    }
-    
-    return {level: 'low', reason: `Promedio de ${averageGrade.toFixed(1)} y ${maxAbsencePercentage.toFixed(0)}% de ausencias.`};
-  }, [calculateFinalGrade]);
-
-  useEffect(() => {
-    try {
-      const storedStudents = localStorage.getItem('students');
-      const storedGroups = localStorage.getItem('groups');
-      
-      const loadedStudents = storedStudents ? JSON.parse(storedStudents) : initialStudents;
-      const loadedGroups = storedGroups ? JSON.parse(storedGroups) : initialGroups;
-
-      setStudents(loadedStudents);
-      setGroups(loadedGroups);
-
-      const localGrades: {[groupId: string]: Grades} = {};
-      const localAttendance: {[groupId: string]: DailyAttendance} = {};
-      const localCriteria: {[groupId: string]: EvaluationCriteria[]} = {};
-
-      for (const group of loadedGroups) {
-        const storedGrades = localStorage.getItem(`grades_${group.id}`);
-        if(storedGrades) localGrades[group.id] = JSON.parse(storedGrades);
-
-        const storedAttendance = localStorage.getItem(`attendance_${group.id}`);
-        if(storedAttendance) localAttendance[group.id] = JSON.parse(storedAttendance);
-
-        const storedCriteria = localStorage.getItem(`criteria_${group.id}`);
-        if(storedCriteria) localCriteria[group.id] = JSON.parse(storedCriteria);
-      }
-      setAllGrades(localGrades);
-      setAllAttendance(localAttendance);
-      setAllCriteria(localCriteria);
-
-      const calculatedAtRisk = loadedStudents.map((s: Student) => {
-          const studentGroups = loadedGroups.filter((g: Group) => g.students.some(sg => sg.id === s.id));
-          return { ...s, calculatedRisk: getStudentRiskLevel(s, studentGroups, localGrades, localCriteria, localAttendance) }
-      })
-      .filter((s: StudentWithRisk) => s.calculatedRisk.level === 'high' || s.calculatedRisk.level === 'medium')
-      .sort((a: StudentWithRisk, b: StudentWithRisk) => {
-          if (a.calculatedRisk.level === 'high' && b.calculatedRisk.level !== 'high') return -1;
-          if (a.calculatedRisk.level !== 'high' && b.calculatedRisk.level === 'high') return 1;
-          return 0;
-      });
-      setAtRiskStudents(calculatedAtRisk);
-
-      const newGroupAverages: {[groupId: string]: number} = {};
-      for(const group of loadedGroups) {
-          const groupGrades = group.students.map(s => calculateFinalGrade(s.id, group.id, localCriteria[group.id] || [], localGrades[group.id] || {}));
-          const groupAverage = groupGrades.length > 0 ? groupGrades.reduce((a,b) => a + b, 0) / groupGrades.length : 0;
-          newGroupAverages[group.id] = groupAverage;
-      }
-      setGroupAverages(newGroupAverages);
-
-    } catch (error) {
-        console.error("Failed to parse data from localStorage", error);
-        // Fallback to initial data if localStorage is corrupt
-        setStudents(initialStudents);
-        setGroups(initialGroups);
-    }
-  }, [getStudentRiskLevel, calculateFinalGrade]);
-
-
-  const overallAverageParticipation = useMemo(() => {
-    let totalPossibleAttendance = 0;
-    let totalPresents = 0;
-    for(const groupId in allAttendance) {
-      const groupAttendance = allAttendance[groupId];
-      const group = groups.find(g => g.id === groupId);
-      if(!group) continue;
-      
-      for(const date in groupAttendance){
-        totalPossibleAttendance += group.students.length;
-        for(const studentId in groupAttendance[date]) {
-          if (group.students.some(s => s.id === studentId) && groupAttendance[date][studentId] === 'present') {
-            totalPresents++;
-          }
-        }
-      }
-    }
-    return totalPossibleAttendance > 0 ? Math.round((totalPresents / totalPossibleAttendance) * 100) : 100;
-  }, [allAttendance, groups]);
   
   const filteredAtRiskStudents = useMemo(() => {
+    if (!searchQuery) return atRiskStudents;
     return atRiskStudents.filter(student =>
       student.name.toLowerCase().includes(searchQuery.toLowerCase())
     );

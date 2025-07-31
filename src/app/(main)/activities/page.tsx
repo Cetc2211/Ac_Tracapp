@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import {
   Card,
   CardContent,
@@ -20,7 +20,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import Image from 'next/image';
-import { Student, Group } from '@/lib/placeholder-data';
+import { Student } from '@/lib/placeholder-data';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Link from 'next/link';
@@ -32,81 +32,38 @@ import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-
-type Activity = {
-  id: string;
-  name: string;
-  dueDate: string; // YYYY-MM-DD
-  programmedDate: string; // YYYY-MM-DD
-};
-
-type ActivityRecord = {
-  [studentId: string]: {
-    [activityId: string]: boolean; // delivered or not
-  };
-};
-
-type GroupedActivities = {
-  [dueDate: string]: Activity[];
-};
+import { useData } from '@/hooks/use-data';
+import type { Activity, ActivityRecord, GroupedActivities } from '@/hooks/use-data';
 
 export default function ActivitiesPage() {
-  const [studentsToDisplay, setStudentsToDisplay] = useState<Student[]>([]);
-  const [activities, setActivities] = useState<Activity[]>([]);
-  const [activityRecords, setActivityRecords] = useState<ActivityRecord>({});
-  
-  const [activeGroupName, setActiveGroupName] = useState<string | null>(null);
-  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
-  const [activePartial, setActivePartial] = useState<string | null>(null);
+  const { 
+    activeGroup, 
+    activePartial, 
+    activities, 
+    activityRecords, 
+    setActivities, 
+    setActivityRecords 
+  } = useData();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newActivityName, setNewActivityName] = useState('');
   const [newActivityDueDate, setNewActivityDueDate] = useState<Date | undefined>(new Date());
+  const dialogContentRef = useRef<HTMLDivElement>(null);
   
   const { toast } = useToast();
 
-  useEffect(() => {
-    try {
-      const storedActiveGroupId = localStorage.getItem('activeGroupId');
-       if (!storedActiveGroupId) {
-          setStudentsToDisplay([]);
-          return;
-      };
-      
-      const groupName = localStorage.getItem('activeGroupName');
-      const partial = localStorage.getItem(`activePartial_${storedActiveGroupId}`) || '1';
-      const allGroupsJson = localStorage.getItem('groups');
-      const allGroups: Group[] = allGroupsJson ? JSON.parse(allGroupsJson) : [];
-
-      setActiveGroupName(groupName);
-      setActiveGroupId(storedActiveGroupId);
-      setActivePartial(partial);
-
-      const activeGroup = allGroups.find(g => g.id === storedActiveGroupId);
-      setStudentsToDisplay(activeGroup ? activeGroup.students : []);
-
-      const storedActivities = localStorage.getItem(`activities_${storedActiveGroupId}_${partial}`);
-      setActivities(storedActivities ? JSON.parse(storedActivities) : []);
-      
-      const storedActivityRecords = localStorage.getItem(`activityRecords_${storedActiveGroupId}_${partial}`);
-      setActivityRecords(storedActivityRecords ? JSON.parse(storedActivityRecords) : {});
-
-    } catch (error) {
-      console.error("Failed to parse data from localStorage", error);
-    }
-  }, []);
-
-  const sortedStudents = useMemo(() => {
-    return [...studentsToDisplay].sort((a, b) => a.name.localeCompare(b.name));
-  }, [studentsToDisplay]);
+  const studentsToDisplay = useMemo(() => {
+    return activeGroup ? [...activeGroup.students].sort((a, b) => a.name.localeCompare(b.name)) : [];
+  }, [activeGroup]);
   
   const groupedActivities = useMemo(() => {
     const groups: GroupedActivities = {};
     activities.forEach(activity => {
-      if (!groups[activity.dueDate]) {
-        groups[activity.dueDate] = [];
+      const dueDate = activity.dueDate.split('T')[0]; // Normalize date
+      if (!groups[dueDate]) {
+        groups[dueDate] = [];
       }
-      groups[activity.dueDate].push(activity);
+      groups[dueDate].push(activity);
     });
     return Object.fromEntries(Object.entries(groups).sort(([dateA], [dateB]) => new Date(dateA).getTime() - new Date(dateB).getTime()));
   }, [activities]);
@@ -120,7 +77,7 @@ export default function ActivitiesPage() {
       });
       return;
     }
-    if (!activeGroupId || !activePartial) return;
+    if (!activeGroup || !activePartial) return;
 
     const newActivity: Activity = {
       id: `ACT-${Date.now()}`,
@@ -128,10 +85,9 @@ export default function ActivitiesPage() {
       dueDate: format(newActivityDueDate, 'yyyy-MM-dd'),
       programmedDate: format(new Date(), 'yyyy-MM-dd'),
     };
-
+    
     const updatedActivities = [...activities, newActivity];
     setActivities(updatedActivities);
-    localStorage.setItem(`activities_${activeGroupId}_${activePartial}`, JSON.stringify(updatedActivities));
 
     toast({
       title: 'Actividad Registrada',
@@ -144,7 +100,7 @@ export default function ActivitiesPage() {
   };
   
   const handleRecordChange = (studentId: string, activityId: string, isDelivered: boolean) => {
-    if (!activeGroupId || !activePartial) return;
+    if (!activeGroup || !activePartial) return;
 
     setActivityRecords(prev => {
         const newRecords = { ...prev };
@@ -152,7 +108,6 @@ export default function ActivitiesPage() {
           newRecords[studentId] = {};
         }
         newRecords[studentId][activityId] = isDelivered;
-        localStorage.setItem(`activityRecords_${activeGroupId}_${activePartial}`, JSON.stringify(newRecords));
         return newRecords;
     });
   };
@@ -161,7 +116,7 @@ export default function ActivitiesPage() {
   return (
     <div className="flex flex-col gap-6">
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent ref={dialogContentRef} className="sm:max-w-md">
             <DialogHeader>
                 <DialogTitle>Registrar Nueva Actividad</DialogTitle>
                 <DialogDescription>Ingresa los detalles de la nueva actividad para el grupo.</DialogDescription>
@@ -197,7 +152,7 @@ export default function ActivitiesPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
              <Button asChild variant="outline" size="icon">
-              <Link href={activeGroupId ? `/groups/${activeGroupId}` : '/groups'}>
+              <Link href={activeGroup ? `/groups/${activeGroup.id}` : '/groups'}>
                 <ArrowLeft />
                 <span className="sr-only">Regresar</span>
               </Link>
@@ -205,14 +160,14 @@ export default function ActivitiesPage() {
             <div>
                 <h1 className="text-3xl font-bold">Registro de Actividades</h1>
                 <p className="text-muted-foreground">
-                    {activeGroupName 
-                        ? `Mostrando actividades para el grupo: ${activeGroupName}` 
+                    {activeGroup 
+                        ? `Mostrando actividades para el grupo: ${activeGroup.subject}` 
                         : 'Selecciona un grupo para registrar actividades.'
                     }
                 </p>
             </div>
         </div>
-        {activeGroupId && (
+        {activeGroup && (
             <Button onClick={() => setIsDialogOpen(true)}>
                 <PlusCircle className="mr-2 h-4 w-4"/>
                 Registrar Nueva Actividad
@@ -245,7 +200,7 @@ export default function ActivitiesPage() {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {sortedStudents.map(student => (
+                    {studentsToDisplay.map(student => (
                     <TableRow key={student.id}>
                         <TableCell className="font-medium sticky left-0 bg-card z-10 flex items-center gap-3">
                         <Image
@@ -284,10 +239,10 @@ export default function ActivitiesPage() {
                             <div className="flex flex-col items-center gap-4">
                                 <ClipboardCheck className="h-12 w-12 text-muted-foreground" />
                                 <h3 className="text-lg font-semibold">
-                                    {activeGroupName ? "Este grupo no tiene estudiantes" : "No hay un grupo activo"}
+                                    {activeGroup ? "Este grupo no tiene estudiantes" : "No hay un grupo activo"}
                                 </h3>
                                 <p className="text-sm text-muted-foreground">
-                                    {activeGroupName ? "Agrega estudiantes desde la página del grupo." : "Por favor, ve a la sección 'Grupos' y selecciona uno."}
+                                    {activeGroup ? "Agrega estudiantes desde la página del grupo." : "Por favor, ve a la sección 'Grupos' y selecciona uno."}
                                 </p>
                             </div>
                             </TableCell>
