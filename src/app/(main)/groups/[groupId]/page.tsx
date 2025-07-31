@@ -54,6 +54,7 @@ import { Label } from '@/components/ui/label';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 
 type EvaluationCriteria = {
   id: string;
@@ -109,6 +110,7 @@ export default function GroupDetailsPage() {
   const [bulkTutorPhones, setBulkTutorPhones] = useState('');
 
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   
  const calculateFinalGrade = useCallback((studentId: string, criteria: EvaluationCriteria[], grades: Grades, participations: ParticipationRecord) => {
     if (!grades || !criteria || criteria.length === 0) return 0;
@@ -321,11 +323,46 @@ export default function GroupDetailsPage() {
         description: `${newStudents.length} estudiante(s) han sido añadidos al grupo.`
     });
   };
+
+  const handleSelectStudent = (studentId: string, checked: boolean | 'indeterminate') => {
+    setSelectedStudents(prev => 
+      checked ? [...prev, studentId] : prev.filter(id => id !== studentId)
+    );
+  };
+  
+  const handleSelectAll = (checked: boolean | 'indeterminate') => {
+      if(checked && group) {
+          setSelectedStudents(group.students.map(s => s.id));
+      } else {
+          setSelectedStudents([]);
+      }
+  };
+  
+  const handleDeleteSelectedStudents = () => {
+    if (!group) return;
+    const newGroups = groups.map(g => {
+        if (g.id === group.id) {
+            return { ...g, students: g.students.filter(s => !selectedStudents.includes(s.id)) };
+        }
+        return g;
+    });
+    
+    saveState(newGroups, allStudents);
+    setGroup(newGroups.find(g => g.id === groupId) || null);
+
+    toast({
+        title: "Estudiantes eliminados",
+        description: `${selectedStudents.length} estudiante(s) han sido quitados del grupo.`,
+    });
+    setSelectedStudents([]);
+  };
+
     
   const totalWeight = useMemo(() => {
     return evaluationCriteria.reduce((sum, c) => sum + c.weight, 0);
   }, [evaluationCriteria]);
 
+  const numSelected = selectedStudents.length;
 
   if (isLoading) {
     return (
@@ -405,67 +442,97 @@ export default function GroupDetailsPage() {
                     grupo.
                   </CardDescription>
                 </div>
-                <Dialog open={isAddStudentDialogOpen} onOpenChange={setIsAddStudentDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button size="sm" className="gap-1">
-                      <UserPlus className="h-3.5 w-3.5" />
-                      <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                        Agregar Estudiantes
-                      </span>
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-xl">
-                    <DialogHeader>
-                      <DialogTitle>Agregar Nuevos Estudiantes al Grupo</DialogTitle>
-                      <DialogDescription>
-                        Añade nuevos estudiantes a "{group.subject}". Pega columnas de datos para agregarlos en masa.
-                      </DialogDescription>
-                    </DialogHeader>
-                     <div className="grid gap-4 py-4 max-h-[400px] overflow-y-auto">
-                        <p className="text-sm text-muted-foreground">
-                            Pega una columna de datos en cada campo. Asegúrate de que cada línea corresponda al mismo estudiante.
-                        </p>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="bulkNames">Nombres*</Label>
-                                <Textarea id="bulkNames" placeholder="Laura Jimenez\nCarlos Sanchez" rows={5} value={bulkNames} onChange={(e) => setBulkNames(e.target.value)} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="bulkEmails">Emails</Label>
-                                <Textarea id="bulkEmails" placeholder="laura.j@example.com\ncarlos.s@example.com" rows={5} value={bulkEmails} onChange={(e) => setBulkEmails(e.target.value)} />
-                            </div>
-                              <div className="space-y-2">
-                                <Label htmlFor="bulkPhones">Teléfonos</Label>
-                                <Textarea id="bulkPhones" placeholder="555-3344\n555-6677" rows={5} value={bulkPhones} onChange={(e) => setBulkPhones(e.target.value)} />
-                            </div>
-                              <div className="space-y-2">
-                                <Label htmlFor="bulkTutorNames">Nombres de Tutores</Label>
-                                <Textarea id="bulkTutorNames" placeholder="Ricardo Jimenez\nMaria Sanchez" rows={5} value={bulkTutorNames} onChange={(e) => setBulkTutorNames(e.target.value)} />
-                            </div>
-                              <div className="space-y-2 col-span-2">
-                                <Label htmlFor="bulkTutorPhones">Teléfonos de Tutores</Label>
-                                <Textarea id="bulkTutorPhones" placeholder="555-3355\n555-6688" rows={5} value={bulkTutorPhones} onChange={(e) => setBulkTutorPhones(e.target.value)} />
+                <div className="flex items-center gap-2">
+                    {numSelected > 0 && (
+                      <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                              <Button variant="destructive" size="sm" className="gap-1">
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                  <span>Eliminar ({numSelected})</span>
+                              </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                              <AlertDialogHeader>
+                                  <AlertDialogTitle>¿Eliminar {numSelected} estudiante(s)?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                      Esta acción no se puede deshacer. Se quitarán los estudiantes seleccionados de este grupo, pero no se eliminarán de la lista general de estudiantes.
+                                  </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction onClick={handleDeleteSelectedStudents}>Sí, eliminar del grupo</AlertDialogAction>
+                              </AlertDialogFooter>
+                          </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                    <Dialog open={isAddStudentDialogOpen} onOpenChange={setIsAddStudentDialogOpen}>
+                    <DialogTrigger asChild>
+                        <Button size="sm" className="gap-1">
+                        <UserPlus className="h-3.5 w-3.5" />
+                        <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                            Agregar Estudiantes
+                        </span>
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-xl">
+                        <DialogHeader>
+                        <DialogTitle>Agregar Nuevos Estudiantes al Grupo</DialogTitle>
+                        <DialogDescription>
+                            Añade nuevos estudiantes a "{group.subject}". Pega columnas de datos para agregarlos en masa.
+                        </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4 max-h-[400px] overflow-y-auto">
+                            <p className="text-sm text-muted-foreground">
+                                Pega una columna de datos en cada campo. Asegúrate de que cada línea corresponda al mismo estudiante.
+                            </p>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="bulkNames">Nombres*</Label>
+                                    <Textarea id="bulkNames" placeholder="Laura Jimenez\nCarlos Sanchez" rows={5} value={bulkNames} onChange={(e) => setBulkNames(e.target.value)} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="bulkEmails">Emails</Label>
+                                    <Textarea id="bulkEmails" placeholder="laura.j@example.com\ncarlos.s@example.com" rows={5} value={bulkEmails} onChange={(e) => setBulkEmails(e.target.value)} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="bulkPhones">Teléfonos</Label>
+                                    <Textarea id="bulkPhones" placeholder="555-3344\n555-6677" rows={5} value={bulkPhones} onChange={(e) => setBulkPhones(e.target.value)} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="bulkTutorNames">Nombres de Tutores</Label>
+                                    <Textarea id="bulkTutorNames" placeholder="Ricardo Jimenez\nMaria Sanchez" rows={5} value={bulkTutorNames} onChange={(e) => setBulkTutorNames(e.target.value)} />
+                                </div>
+                                <div className="space-y-2 col-span-2">
+                                    <Label htmlFor="bulkTutorPhones">Teléfonos de Tutores</Label>
+                                    <Textarea id="bulkTutorPhones" placeholder="555-3355\n555-6688" rows={5} value={bulkTutorPhones} onChange={(e) => setBulkTutorPhones(e.target.value)} />
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setIsAddStudentDialogOpen(false)}>Cancelar</Button>
-                      <Button onClick={handleAddStudents} disabled={!bulkNames.trim()}>Agregar Estudiantes</Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
+                        <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsAddStudentDialogOpen(false)}>Cancelar</Button>
+                        <Button onClick={handleAddStudents} disabled={!bulkNames.trim()}>Agregar Estudiantes</Button>
+                        </DialogFooter>
+                    </DialogContent>
+                    </Dialog>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead padding="checkbox">
+                        <Checkbox
+                            checked={group.students.length > 0 && numSelected === group.students.length ? true : (numSelected > 0 ? 'indeterminate' : false)}
+                            onCheckedChange={(checked) => handleSelectAll(checked)}
+                            aria-label="Seleccionar todo"
+                        />
+                    </TableHead>
+                    <TableHead>#</TableHead>
                     <TableHead className="hidden w-[100px] sm:table-cell">
                       <span className="sr-only">Foto</span>
                     </TableHead>
                     <TableHead>Nombre</TableHead>
-                    <TableHead>ID de Estudiante</TableHead>
-                    <TableHead className="hidden md:table-cell">Email</TableHead>
                     <TableHead>Nivel de Riesgo</TableHead>
                     <TableHead>
                       <span className="sr-only">Acciones</span>
@@ -473,11 +540,19 @@ export default function GroupDetailsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {group.students.map((student) => {
+                  {group.students.map((student, index) => {
                     const riskLevel = studentRiskLevels[student.id] || 'low';
                     return (
-                        <TableRow key={student.id}>
-                        <TableCell className="hidden sm:table-cell">
+                        <TableRow key={student.id} data-state={selectedStudents.includes(student.id) && "selected"}>
+                          <TableCell padding="checkbox">
+                              <Checkbox
+                                  checked={selectedStudents.includes(student.id)}
+                                  onCheckedChange={(checked) => handleSelectStudent(student.id, checked)}
+                                  aria-label="Seleccionar fila"
+                              />
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">{index + 1}</TableCell>
+                          <TableCell className="hidden sm:table-cell">
                             <Image
                             alt="Foto del estudiante"
                             className="aspect-square rounded-md object-cover"
@@ -491,10 +566,6 @@ export default function GroupDetailsPage() {
                             <Link href={`/students/${student.id}`} className="hover:underline">
                                 {student.name}
                             </Link>
-                        </TableCell>
-                        <TableCell>{student.id}</TableCell>
-                        <TableCell className="hidden md:table-cell">
-                            {student.email}
                         </TableCell>
                         <TableCell>
                             {riskLevel === 'high' && (
