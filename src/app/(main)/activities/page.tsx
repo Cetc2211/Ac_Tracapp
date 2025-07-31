@@ -29,7 +29,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -63,8 +62,6 @@ export default function ActivitiesPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newActivityName, setNewActivityName] = useState('');
   const [newActivityDueDate, setNewActivityDueDate] = useState<Date | undefined>(new Date());
-
-  const dialogContentRef = useRef<HTMLDivElement>(null);
   
   const { toast } = useToast();
 
@@ -164,7 +161,7 @@ export default function ActivitiesPage() {
   return (
     <div className="flex flex-col gap-6">
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent ref={dialogContentRef} className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md">
             <DialogHeader>
                 <DialogTitle>Registrar Nueva Actividad</DialogTitle>
                 <DialogDescription>Ingresa los detalles de la nueva actividad para el grupo.</DialogDescription>
@@ -175,30 +172,20 @@ export default function ActivitiesPage() {
                     <Input id="activity-name" value={newActivityName} onChange={(e) => setNewActivityName(e.target.value)} placeholder="Ej. Ensayo sobre la Revolución"/>
                 </div>
                 <div className="space-y-2">
-                    <Label>Fecha Entrega</Label>
-                    <Popover modal={false}>
-                        <PopoverTrigger asChild>
-                        <Button
-                            variant={'outline'}
-                            className={cn(
-                            'w-full justify-start text-left font-normal',
-                            !newActivityDueDate && 'text-muted-foreground'
-                            )}
-                        >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {newActivityDueDate ? format(newActivityDueDate, 'PPP', { locale: es }) : <span>Selecciona una fecha</span>}
-                        </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
+                    <Label>Fecha de Entrega</Label>
+                     <p className="text-sm text-muted-foreground">
+                        Seleccionada: {newActivityDueDate ? format(newActivityDueDate, 'PPP', { locale: es }) : 'Ninguna'}
+                     </p>
+                     <div className="flex justify-center">
                         <Calendar
                             mode="single"
                             selected={newActivityDueDate}
                             onSelect={setNewActivityDueDate}
                             initialFocus
                             locale={es}
+                            className="rounded-md border"
                         />
-                        </PopoverContent>
-                    </Popover>
+                     </div>
                 </div>
             </div>
             <DialogFooter>
