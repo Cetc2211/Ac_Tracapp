@@ -74,30 +74,34 @@ export default function GroupGradesPage() {
   const [participationData, setParticipationData] = useState<ParticipationData>({});
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
+  const [activePartial, setActivePartial] = useState('1');
 
   useEffect(() => {
     if (!groupId) return;
     setIsLoading(true);
     try {
+      const storedPartial = localStorage.getItem(`activePartial_${groupId}`) || '1';
+      setActivePartial(storedPartial);
+
       // Load group
       const storedGroups = localStorage.getItem('groups');
       const allGroups = storedGroups ? JSON.parse(storedGroups) : initialGroups;
       const currentGroup = allGroups.find((g: any) => g.id === groupId);
       setGroup(currentGroup || null);
 
-      // Load criteria
-      const storedCriteria = localStorage.getItem(`criteria_${groupId}`);
+      // Load criteria for active partial
+      const storedCriteria = localStorage.getItem(`criteria_${groupId}_${storedPartial}`);
       const localCriteria: EvaluationCriteria[] = storedCriteria ? JSON.parse(storedCriteria) : [];
       
-      // Load grades
-      const storedGrades = localStorage.getItem(`grades_${groupId}`);
+      // Load grades for active partial
+      const storedGrades = localStorage.getItem(`grades_${groupId}_${storedPartial}`);
       setGrades(storedGrades ? JSON.parse(storedGrades) : {});
 
-      // Calculate participation only if a group and a participation criterion exist
+      // Calculate participation for active partial
       if (currentGroup?.students?.length) {
         const participationCriterion = localCriteria.find(c => c.name === 'Participación');
         if (participationCriterion) {
-            const storedParticipations = localStorage.getItem(`participations_${groupId}`);
+            const storedParticipations = localStorage.getItem(`participations_${groupId}_${storedPartial}`);
             const participations: ParticipationRecord = storedParticipations ? JSON.parse(storedParticipations) : {};
             const participationDates = Object.keys(participations);
             const totalClasses = participationDates.length;
@@ -129,7 +133,7 @@ export default function GroupGradesPage() {
   }, [groupId]);
 
   const saveGrades = () => {
-    localStorage.setItem(`grades_${groupId}`, JSON.stringify(grades));
+    localStorage.setItem(`grades_${groupId}_${activePartial}`, JSON.stringify(grades));
     toast({
       title: 'Calificaciones Guardadas',
       description: 'Las calificaciones han sido guardadas exitosamente.',
@@ -253,7 +257,7 @@ export default function GroupGradesPage() {
                 {studentsInGroup.length > 0 && evaluationCriteria.length === 0 && (
                   <TableRow>
                       <TableCell colSpan={2} className="text-center h-24">
-                          No has definido criterios de evaluación. <Link href={`/groups/${groupId}/criteria`} className="text-primary underline">Defínelos aquí.</Link>
+                          No has definido criterios de evaluación para este parcial. <Link href={`/groups/${groupId}/criteria`} className="text-primary underline">Defínelos aquí.</Link>
                       </TableCell>
                   </TableRow>
                 )}
@@ -339,6 +343,3 @@ export default function GroupGradesPage() {
     </div>
   );
 }
-
-
-

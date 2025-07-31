@@ -67,39 +67,51 @@ export default function MainLayoutClient({
   const pathname = usePathname();
   const [settings, setSettings] = useState(defaultSettings);
   const [activeGroupName, setActiveGroupName] = useState<string | null>(null);
+  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
+  const [activePartial, setActivePartial] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
+
+  const getPartialLabel = (partial: string | null) => {
+    if (partial === '1') return 'Primer Parcial';
+    if (partial === '2') return 'Segundo Parcial';
+    if (partial === '3') return 'Tercer Parcial';
+    return '';
+  }
 
   useEffect(() => {
     setIsClient(true);
-    try {
-        const savedSettings = localStorage.getItem('appSettings');
-        if (savedSettings) {
-            const parsed = JSON.parse(savedSettings);
-            setSettings(parsed);
-            document.body.className = parsed.theme || defaultSettings.theme;
-        } else {
-             document.body.className = defaultSettings.theme;
-        }
-
-        const groupName = localStorage.getItem('activeGroupName');
-        setActiveGroupName(groupName);
-
-        const handleStorageChange = () => {
-            const groupName = localStorage.getItem('activeGroupName');
-            setActiveGroupName(groupName);
+    const handleStorageChange = () => {
+        try {
             const savedSettings = localStorage.getItem('appSettings');
-             if (savedSettings) {
+            if (savedSettings) {
                 const parsed = JSON.parse(savedSettings);
                 setSettings(parsed);
                 document.body.className = parsed.theme || defaultSettings.theme;
+            } else {
+                 document.body.className = defaultSettings.theme;
             }
-        }
-        window.addEventListener('storage', handleStorageChange);
-        return () => window.removeEventListener('storage', handleStorageChange);
+            
+            const groupId = localStorage.getItem('activeGroupId');
+            setActiveGroupId(groupId);
+            if (groupId) {
+              const groupName = localStorage.getItem('activeGroupName');
+              setActiveGroupName(groupName);
+              const partial = localStorage.getItem(`activePartial_${groupId}`);
+              setActivePartial(partial);
+            } else {
+              setActiveGroupName(null);
+              setActivePartial(null);
+            }
 
-    } catch(e) {
-        console.error("Could not parse settings from localStorage", e);
+        } catch(e) {
+            console.error("Could not parse settings from localStorage", e);
+        }
     }
+    
+    handleStorageChange(); // Initial load
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+
   }, []);
 
   return (
@@ -127,6 +139,11 @@ export default function MainLayoutClient({
                         <Package className="h-4 w-4"/>
                         {activeGroupName}
                       </p>
+                      {activePartial && (
+                        <p className="text-sm text-sidebar-foreground/80 font-medium">
+                          {getPartialLabel(activePartial)}
+                        </p>
+                      )}
                   </div>
                   <Separator className="my-2" />
                 </>

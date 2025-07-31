@@ -33,7 +33,7 @@ type ParticipationRecord = {
   };
 };
 
-type GlobalAttendanceRecord = {
+type AttendanceRecord = {
   [date: string]: {
     [studentId: string]: boolean;
   };
@@ -43,21 +43,29 @@ type GlobalAttendanceRecord = {
 export default function ParticipationsPage() {
   const [studentsToDisplay, setStudentsToDisplay] = useState<Student[]>([]);
   const [participations, setParticipations] = useState<ParticipationRecord>({});
-  const [attendance, setAttendance] = useState<GlobalAttendanceRecord>({});
+  const [attendance, setAttendance] = useState<AttendanceRecord>({});
   const [participationDates, setParticipationDates] = useState<string[]>([]);
   const [activeGroupName, setActiveGroupName] = useState<string | null>(null);
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
+  const [activePartial, setActivePartial] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     try {
       const storedActiveGroupId = localStorage.getItem('activeGroupId');
+       if (!storedActiveGroupId) {
+          setStudentsToDisplay([]);
+          return;
+      };
+      
       const groupName = localStorage.getItem('activeGroupName');
+      const partial = localStorage.getItem(`activePartial_${storedActiveGroupId}`) || '1';
       const allGroupsJson = localStorage.getItem('groups');
       const allGroups: Group[] = allGroupsJson ? JSON.parse(allGroupsJson) : [];
 
       setActiveGroupName(groupName);
       setActiveGroupId(storedActiveGroupId);
+      setActivePartial(partial);
 
       let relevantStudents: Student[] = [];
       if (storedActiveGroupId) {
@@ -67,23 +75,21 @@ export default function ParticipationsPage() {
       setStudentsToDisplay(relevantStudents);
 
       if (storedActiveGroupId) {
-        const storedParticipations = localStorage.getItem(`participations_${storedActiveGroupId}`);
+        const storedParticipations = localStorage.getItem(`participations_${storedActiveGroupId}_${partial}`);
         if (storedParticipations) {
           const parsedParticipations = JSON.parse(storedParticipations);
           setParticipations(parsedParticipations);
           const dates = Object.keys(parsedParticipations).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
           setParticipationDates(dates);
         }
+         const storedAttendance = localStorage.getItem(`attendance_${storedActiveGroupId}_${partial}`);
+        if (storedAttendance) {
+            setAttendance(JSON.parse(storedAttendance));
+        }
       } else {
         setParticipations({});
         setParticipationDates([]);
       }
-      
-      const storedAttendance = localStorage.getItem('globalAttendance');
-      if (storedAttendance) {
-          setAttendance(JSON.parse(storedAttendance));
-      }
-
     } catch (error) {
       console.error("Failed to parse data from localStorage", error);
     }
@@ -110,7 +116,7 @@ export default function ParticipationsPage() {
   };
   
   const handleParticipationChange = (studentId: string, date: string, hasParticipated: boolean) => {
-    if (!activeGroupId) return;
+    if (!activeGroupId || !activePartial) return;
 
     if (hasParticipated) {
       const studentHasAttendance = attendance[date]?.[studentId] === true;
@@ -130,7 +136,7 @@ export default function ParticipationsPage() {
     }
     newParticipations[date][studentId] = hasParticipated;
     setParticipations(newParticipations);
-    localStorage.setItem(`participations_${activeGroupId}`, JSON.stringify(newParticipations));
+    localStorage.setItem(`participations_${activeGroupId}_${activePartial}`, JSON.stringify(newParticipations));
   };
 
 

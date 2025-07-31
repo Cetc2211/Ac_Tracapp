@@ -55,6 +55,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 type EvaluationCriteria = {
   id: string;
@@ -74,15 +75,11 @@ type Grades = {
   };
 };
 
-type AttendanceStatus = 'present' | 'absent' | 'late';
-
 type AttendanceRecord = {
-  [studentId: string]: AttendanceStatus;
+  [date: string]: {
+    [studentId: string]: boolean;
+  };
 };
-
-type DailyAttendance = {
-    [date: string]: AttendanceRecord;
-}
 
 type ParticipationRecord = {
   [date: string]: {
@@ -112,6 +109,7 @@ export default function GroupDetailsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [activePartial, setActivePartial] = useState('1');
   
  const calculateFinalGrade = useCallback((studentId: string, criteria: EvaluationCriteria[], grades: Grades, participations: ParticipationRecord) => {
     if (!grades || !criteria || criteria.length === 0) return 0;
@@ -143,6 +141,52 @@ export default function GroupDetailsPage() {
     return parseFloat(finalGrade.toFixed(2));
   }, []);
   
+  const loadDataForPartial = useCallback((partial: string) => {
+    if (!group) return;
+    try {
+      const storedCriteria = localStorage.getItem(`criteria_${groupId}_${partial}`);
+      const localCriteria : EvaluationCriteria[] = storedCriteria ? JSON.parse(storedCriteria) : [];
+      setEvaluationCriteria(localCriteria);
+
+      const storedGrades = localStorage.getItem(`grades_${groupId}_${partial}`);
+      const localGrades: Grades = storedGrades ? JSON.parse(storedGrades) : {};
+
+      const storedAttendance = localStorage.getItem(`attendance_${groupId}_${partial}`);
+      const localAttendance: AttendanceRecord = storedAttendance ? JSON.parse(storedAttendance) : {};
+
+      const storedParticipations = localStorage.getItem(`participations_${groupId}_${partial}`);
+      const localParticipations: ParticipationRecord = storedParticipations ? JSON.parse(storedParticipations) : {};
+
+      const riskLevels : {[studentId: string]: 'low' | 'medium' | 'high'} = {};
+      
+      const getStudentRiskLevel = (student: Student, criteria: EvaluationCriteria[], grades: Grades, attendance: AttendanceRecord, participations: ParticipationRecord) => {
+        const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations);
+
+        const totalDays = Object.keys(attendance).length;
+        let absences = 0;
+        if(totalDays > 0) {
+            for(const date in attendance) {
+                if(attendance[date][student.id] !== true) {
+                    absences++;
+                }
+            }
+        }
+        const absencePercentage = totalDays > 0 ? (absences / totalDays) * 100 : 0;
+        
+        if (finalGrade < 70 || absencePercentage > 20) return 'high';
+        if (finalGrade < 8 || absencePercentage > 10) return 'medium';
+        return 'low';
+      };
+
+      group.students.forEach((s: Student) => {
+          riskLevels[s.id] = getStudentRiskLevel(s, localCriteria, localGrades, localAttendance, localParticipations);
+      });
+      setStudentRiskLevels(riskLevels);
+    } catch(e) {
+      console.error(`Failed to load data for partial ${partial}`, e);
+    }
+  }, [group, groupId, calculateFinalGrade]);
+
   useEffect(() => {
     setIsLoading(true);
     try {
@@ -157,12 +201,13 @@ export default function GroupDetailsPage() {
         return;
       }
       setGroup(currentGroup);
-      // Set active group in localStorage
+
+      const storedPartial = localStorage.getItem(`activePartial_${groupId}`) || '1';
+      setActivePartial(storedPartial);
+      
       localStorage.setItem('activeGroupId', groupId);
       localStorage.setItem('activeGroupName', currentGroup.subject);
-       // Dispatch a storage event to notify other tabs/components
       window.dispatchEvent(new Event('storage'));
-
 
       const storedStudents = localStorage.getItem('students');
       if(storedStudents) {
@@ -171,46 +216,6 @@ export default function GroupDetailsPage() {
         setAllStudents(initialStudents);
       }
       
-      const storedCriteria = localStorage.getItem(`criteria_${groupId}`);
-      const localCriteria : EvaluationCriteria[] = storedCriteria ? JSON.parse(storedCriteria) : [];
-      setEvaluationCriteria(localCriteria);
-
-      const storedGrades = localStorage.getItem(`grades_${groupId}`);
-      const localGrades: Grades = storedGrades ? JSON.parse(storedGrades) : {};
-
-      const storedAttendance = localStorage.getItem('globalAttendance');
-      const localAttendance: {[date: string]: {[studentId: string]: boolean}} = storedAttendance ? JSON.parse(storedAttendance) : {};
-
-      const storedParticipations = localStorage.getItem(`participations_${groupId}`);
-      const localParticipations: ParticipationRecord = storedParticipations ? JSON.parse(storedParticipations) : {};
-
-      const riskLevels : {[studentId: string]: 'low' | 'medium' | 'high'} = {};
-      
-      const getStudentRiskLevel = (student: Student, criteria: EvaluationCriteria[], grades: Grades, attendance: {[date: string]: {[studentId: string]: boolean}}, participations: ParticipationRecord) => {
-        const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations);
-
-        const totalDays = Object.keys(attendance).length;
-        let absences = 0;
-        if(totalDays > 0) {
-            for(const date in attendance) {
-                if(attendance[date][student.id] !== true) {
-                    absences++;
-                }
-            }
-        }
-        const absencePercentage = totalDays > 0 ? (absences / totalDays) * 100 : 0;
-        
-        if (finalGrade < 7 || absencePercentage > 20) return 'high';
-        if (finalGrade < 8 || absencePercentage > 10) return 'medium';
-        return 'low';
-      };
-
-      currentGroup.students.forEach((s: Student) => {
-          riskLevels[s.id] = getStudentRiskLevel(s, localCriteria, localGrades, localAttendance, localParticipations);
-      });
-      setStudentRiskLevels(riskLevels);
-
-
     } catch (error) {
         console.error("Failed to parse data from localStorage", error);
         setGroups(initialGroups);
@@ -219,7 +224,21 @@ export default function GroupDetailsPage() {
     } finally {
         setIsLoading(false);
     }
-  }, [groupId, calculateFinalGrade]);
+  }, [groupId]);
+
+  useEffect(() => {
+    if (group) {
+        loadDataForPartial(activePartial);
+    }
+  }, [group, activePartial, loadDataForPartial]);
+
+  const handlePartialChange = (partial: string) => {
+    setActivePartial(partial);
+    localStorage.setItem(`activePartial_${groupId}`, partial);
+    window.dispatchEvent(new Event('storage'));
+    setIsSelectionMode(false);
+    setSelectedStudents([]);
+  }
 
   const saveState = (newGroups: typeof initialGroups, newAllStudents: typeof initialStudents) => {
       setGroups(newGroups);
@@ -238,7 +257,6 @@ export default function GroupDetailsPage() {
         return g;
     });
     
-    // We don't remove the student from the global list, just the group
     saveState(newGroups, allStudents);
     setGroup(newGroups.find(g => g.id === groupId) || null);
     toast({
@@ -251,13 +269,16 @@ export default function GroupDetailsPage() {
     if (!group) return;
     const newGroups = groups.filter(g => g.id !== group.id);
     saveState(newGroups, allStudents);
-    localStorage.removeItem(`criteria_${groupId}`);
-    localStorage.removeItem(`grades_${groupId}`);
-    localStorage.removeItem(`attendance_${groupId}`);
-    localStorage.removeItem(`participations_${groupId}`);
+    // Remove all associated data
+    for (let i = 1; i <= 3; i++) {
+        localStorage.removeItem(`criteria_${groupId}_${i}`);
+        localStorage.removeItem(`grades_${groupId}_${i}`);
+        localStorage.removeItem(`attendance_${groupId}_${i}`);
+        localStorage.removeItem(`participations_${groupId}_${i}`);
+    }
+    localStorage.removeItem(`activePartial_${groupId}`);
     localStorage.removeItem('activeGroupId');
     localStorage.removeItem('activeGroupName');
-     // Dispatch a storage event to notify other tabs/components
     window.dispatchEvent(new Event('storage'));
     toast({
         title: 'Grupo Eliminado',
@@ -387,7 +408,7 @@ export default function GroupDetailsPage() {
   }
   
   return (
-    <div className="flex flex-col gap-6">
+    <Tabs value={activePartial} onValueChange={handlePartialChange} className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
          <div className="flex items-center gap-4">
             <Button asChild variant="outline" size="icon">
@@ -440,6 +461,11 @@ export default function GroupDetailsPage() {
             </AlertDialog>
          </div>
       </div>
+       <TabsList className="grid w-full grid-cols-3">
+        <TabsTrigger value="1">Primer Parcial</TabsTrigger>
+        <TabsTrigger value="2">Segundo Parcial</TabsTrigger>
+        <TabsTrigger value="3">Tercer Parcial</TabsTrigger>
+      </TabsList>
       
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card className="lg:col-span-2">
@@ -649,7 +675,7 @@ export default function GroupDetailsPage() {
             <CardHeader>
                 <CardTitle>Acciones del Grupo</CardTitle>
                 <CardDescription>
-                    Gestiona la asistencia, criterios de evaluación y calificaciones.
+                    Gestiona la asistencia, criterios de evaluación y calificaciones del parcial.
                 </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4">
@@ -711,6 +737,6 @@ export default function GroupDetailsPage() {
         </Card>
       </div>
 
-    </div>
+    </Tabs>
   );
 }

@@ -48,15 +48,11 @@ type Grades = {
   };
 };
 
-type AttendanceStatus = 'present' | 'absent' | 'late';
-
 type AttendanceRecord = {
-  [studentId: string]: AttendanceStatus;
+  [date: string]: {
+    [studentId: string]: boolean;
+  };
 };
-
-type DailyAttendance = {
-    [date: string]: AttendanceRecord;
-}
 
 type GroupStats = {
   average: number;
@@ -108,14 +104,14 @@ export default function GroupsPage() {
     return parseFloat(finalGrade.toFixed(2));
   }, []);
 
-  const getStudentRiskLevel = useCallback((student: Student, criteria: EvaluationCriteria[], grades: Grades, attendance: DailyAttendance) => {
+  const getStudentRiskLevel = useCallback((student: Student, criteria: EvaluationCriteria[], grades: Grades, attendance: AttendanceRecord) => {
     const finalGrade = calculateFinalGrade(student.id, criteria, grades);
 
     const totalDays = Object.keys(attendance).length;
     let absences = 0;
     if(totalDays > 0) {
         for(const date in attendance) {
-            if(attendance[date][student.id] === 'absent') {
+            if(attendance[date][student.id] === false) {
                 absences++;
             }
         }
@@ -144,9 +140,10 @@ export default function GroupsPage() {
         const allStats: {[groupId: string]: GroupStats} = {};
 
         for(const group of loadedGroups) {
-            const criteriaKey = `criteria_${group.id}`;
-            const gradesKey = `grades_${group.id}`;
-            const attendanceKey = `attendance_${group.id}`;
+            const partial = localStorage.getItem(`activePartial_${group.id}`) || '1';
+            const criteriaKey = `criteria_${group.id}_${partial}`;
+            const gradesKey = `grades_${group.id}_${partial}`;
+            const attendanceKey = `attendance_${group.id}_${partial}`;
 
             const storedCriteria = localStorage.getItem(criteriaKey);
             const evaluationCriteria: EvaluationCriteria[] = storedCriteria ? JSON.parse(storedCriteria) : [];
@@ -155,7 +152,7 @@ export default function GroupsPage() {
             const grades: Grades = storedGrades ? JSON.parse(storedGrades) : {};
 
             const storedAttendance = localStorage.getItem(attendanceKey);
-            const attendance: DailyAttendance = storedAttendance ? JSON.parse(storedAttendance) : {};
+            const attendance: AttendanceRecord = storedAttendance ? JSON.parse(storedAttendance) : {};
 
             const groupGrades = group.students.map(s => calculateFinalGrade(s.id, evaluationCriteria, grades));
             const groupAverage = groupGrades.length > 0 ? groupGrades.reduce((a, b) => a + b, 0) / groupGrades.length : 0;

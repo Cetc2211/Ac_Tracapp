@@ -27,7 +27,7 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-type GlobalAttendanceRecord = {
+type AttendanceRecord = {
   [date: string]: {
     [studentId: string]: boolean; 
   };
@@ -35,45 +35,46 @@ type GlobalAttendanceRecord = {
 
 export default function AttendancePage() {
   const [studentsToDisplay, setStudentsToDisplay] = useState<Student[]>([]);
-  const [attendance, setAttendance] = useState<GlobalAttendanceRecord>({});
+  const [attendance, setAttendance] = useState<AttendanceRecord>({});
   const [attendanceDates, setAttendanceDates] = useState<string[]>([]);
   const [activeGroupName, setActiveGroupName] = useState<string | null>(null);
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
+  const [activePartial, setActivePartial] = useState<string | null>(null);
   const router = useRouter();
 
 
   useEffect(() => {
     try {
       const storedActiveGroupId = localStorage.getItem('activeGroupId');
+      if (!storedActiveGroupId) {
+          setStudentsToDisplay([]);
+          return;
+      };
+
       const groupName = localStorage.getItem('activeGroupName');
+      const partial = localStorage.getItem(`activePartial_${storedActiveGroupId}`) || '1';
+
       setActiveGroupName(groupName);
       setActiveGroupId(storedActiveGroupId);
+      setActivePartial(partial);
 
       let relevantStudents: Student[] = [];
       const allGroupsJson = localStorage.getItem('groups');
       const allGroups: Group[] = allGroupsJson ? JSON.parse(allGroupsJson) : [];
-
-      if (storedActiveGroupId) {
-        const activeGroup = allGroups.find(g => g.id === storedActiveGroupId);
-        relevantStudents = activeGroup ? activeGroup.students : [];
-      } else {
-         const allStudentsJson = localStorage.getItem('students');
-         if(allStudentsJson){
-            relevantStudents = JSON.parse(allStudentsJson);
-         } else {
-            const studentsFromGroups = allGroups.flatMap(g => g.students);
-            relevantStudents = Array.from(new Map(studentsFromGroups.map(s => [s.id, s])).values());
-         }
-      }
+      
+      const activeGroup = allGroups.find(g => g.id === storedActiveGroupId);
+      relevantStudents = activeGroup ? activeGroup.students : [];
       setStudentsToDisplay(relevantStudents);
-
-      // Load attendance data
-      const storedAttendance = localStorage.getItem('globalAttendance');
+      
+      const storedAttendance = localStorage.getItem(`attendance_${storedActiveGroupId}_${partial}`);
       if (storedAttendance) {
         const parsedAttendance = JSON.parse(storedAttendance);
         setAttendance(parsedAttendance);
         const dates = Object.keys(parsedAttendance).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
         setAttendanceDates(dates);
+      } else {
+        setAttendance({});
+        setAttendanceDates([]);
       }
     } catch (error) {
       console.error("Failed to parse data from localStorage", error);
@@ -95,6 +96,10 @@ export default function AttendancePage() {
         const newAttendance = { ...prev };
         if (!newAttendance[today]) {
           newAttendance[today] = {};
+           // Set all students to present by default
+          studentsToDisplay.forEach(student => {
+            newAttendance[today][student.id] = true;
+          });
         }
         return newAttendance;
       });
@@ -102,13 +107,14 @@ export default function AttendancePage() {
   };
   
   const handleAttendanceChange = (studentId: string, date: string, isPresent: boolean) => {
+    if (!activeGroupId || !activePartial) return;
     const newAttendance = { ...attendance };
     if (!newAttendance[date]) {
       newAttendance[date] = {};
     }
     newAttendance[date][studentId] = isPresent;
     setAttendance(newAttendance);
-    localStorage.setItem('globalAttendance', JSON.stringify(newAttendance));
+    localStorage.setItem(`attendance_${activeGroupId}_${activePartial}`, JSON.stringify(newAttendance));
   };
 
 
@@ -123,16 +129,16 @@ export default function AttendancePage() {
               </Link>
             </Button>
             <div>
-                <h1 className="text-3xl font-bold">Registro de Asistencia General</h1>
+                <h1 className="text-3xl font-bold">Registro de Asistencia</h1>
                 <p className="text-muted-foreground">
                     {activeGroupName 
                         ? `Mostrando asistencia para el grupo: ${activeGroupName}` 
-                        : 'Marca la asistencia de todos los estudiantes para una fecha específica.'
+                        : 'Marca la asistencia de los estudiantes para una fecha específica.'
                     }
                 </p>
             </div>
         </div>
-        <Button onClick={handleRegisterToday}>Registrar Asistencia de Hoy</Button>
+        {activeGroupId && <Button onClick={handleRegisterToday}>Registrar Asistencia de Hoy</Button>}
       </div>
 
       <Card>
@@ -175,7 +181,7 @@ export default function AttendancePage() {
                  {studentsToDisplay.length === 0 && (
                     <TableRow>
                         <TableCell colSpan={attendanceDates.length + 1} className="text-center h-24">
-                            No hay estudiantes para mostrar.
+                            No hay estudiantes para mostrar. Por favor, selecciona un grupo primero.
                         </TableCell>
                     </TableRow>
                 )}

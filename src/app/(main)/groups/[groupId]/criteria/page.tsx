@@ -57,6 +57,7 @@ export default function GroupCriteriaPage() {
   
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingCriterion, setEditingCriterion] = useState<EvaluationCriteria | null>(null);
+  const [activePartial, setActivePartial] = useState('1');
 
   const { toast } = useToast();
   
@@ -68,8 +69,11 @@ export default function GroupCriteriaPage() {
       const allGroups = storedGroups ? JSON.parse(storedGroups) : initialGroups;
       const currentGroup = allGroups.find((g: any) => g.id === groupId);
       setGroup(currentGroup || null);
+
+      const storedPartial = localStorage.getItem(`activePartial_${groupId}`) || '1';
+      setActivePartial(storedPartial);
       
-      const storedCriteria = localStorage.getItem(`criteria_${groupId}`);
+      const storedCriteria = localStorage.getItem(`criteria_${groupId}_${storedPartial}`);
       if (storedCriteria) {
         setEvaluationCriteria(JSON.parse(storedCriteria));
       }
@@ -90,7 +94,7 @@ export default function GroupCriteriaPage() {
 
   const saveCriteria = (newCriteria: EvaluationCriteria[]) => {
     setEvaluationCriteria(newCriteria);
-    localStorage.setItem(`criteria_${groupId}`, JSON.stringify(newCriteria));
+    localStorage.setItem(`criteria_${groupId}_${activePartial}`, JSON.stringify(newCriteria));
   };
   
   const handleAddCriterion = () => {
@@ -139,7 +143,7 @@ export default function GroupCriteriaPage() {
     const newCriteria = evaluationCriteria.filter(c => c.id !== criterionId);
     saveCriteria(newCriteria);
     // Also remove any grades associated with this criterion
-    const gradesKey = `grades_${groupId}`;
+    const gradesKey = `grades_${groupId}_${activePartial}`;
     const storedGrades = localStorage.getItem(gradesKey);
     if (storedGrades) {
         const grades = JSON.parse(storedGrades);
