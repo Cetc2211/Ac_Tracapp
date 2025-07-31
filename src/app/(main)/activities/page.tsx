@@ -82,14 +82,10 @@ export default function ActivitiesPage() {
       setStudentsToDisplay(activeGroup ? activeGroup.students : []);
 
       const storedActivities = localStorage.getItem(`activities_${storedActiveGroupId}_${partial}`);
-      if (storedActivities) {
-        setActivities(JSON.parse(storedActivities));
-      }
+      setActivities(storedActivities ? JSON.parse(storedActivities) : []);
       
       const storedActivityRecords = localStorage.getItem(`activityRecords_${storedActiveGroupId}_${partial}`);
-      if(storedActivityRecords) {
-        setActivityRecords(JSON.parse(storedActivityRecords));
-      }
+      setActivityRecords(storedActivityRecords ? JSON.parse(storedActivityRecords) : {});
 
     } catch (error) {
       console.error("Failed to parse data from localStorage", error);
@@ -120,7 +116,7 @@ export default function ActivitiesPage() {
 
     const updatedActivities = [...activities, newActivity].sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
     setActivities(updatedActivities);
-    localStorage.setItem(`activities_${activeGroupId}_${partial}`, JSON.stringify(updatedActivities));
+    localStorage.setItem(`activities_${activeGroupId}_${activePartial}`, JSON.stringify(updatedActivities));
 
     toast({
       title: 'Actividad Registrada',
@@ -135,13 +131,15 @@ export default function ActivitiesPage() {
   const handleRecordChange = (studentId: string, activityId: string, isDelivered: boolean) => {
     if (!activeGroupId || !activePartial) return;
 
-    const newRecords = { ...activityRecords };
-    if (!newRecords[studentId]) {
-      newRecords[studentId] = {};
-    }
-    newRecords[studentId][activityId] = isDelivered;
-    setActivityRecords(newRecords);
-    localStorage.setItem(`activityRecords_${activeGroupId}_${partial}`, JSON.stringify(newRecords));
+    setActivityRecords(prev => {
+        const newRecords = { ...prev };
+        if (!newRecords[studentId]) {
+          newRecords[studentId] = {};
+        }
+        newRecords[studentId][activityId] = isDelivered;
+        localStorage.setItem(`activityRecords_${activeGroupId}_${activePartial}`, JSON.stringify(newRecords));
+        return newRecords;
+    });
   };
 
 
@@ -265,7 +263,7 @@ export default function ActivitiesPage() {
                                 <h3 className="text-lg font-semibold">
                                     {activeGroupName ? "Este grupo no tiene estudiantes" : "No hay un grupo activo"}
                                 </h3>
-                                <p className="text-sm">
+                                <p className="text-sm text-muted-foreground">
                                     {activeGroupName ? "Agrega estudiantes desde la página del grupo." : "Por favor, ve a la sección 'Grupos' y selecciona uno."}
                                 </p>
                            </div>
@@ -274,7 +272,7 @@ export default function ActivitiesPage() {
                 )}
                  {activities.length === 0 && studentsToDisplay.length > 0 && (
                     <TableRow>
-                        <TableCell colSpan={1} className="text-center h-24">
+                        <TableCell colSpan={activities.length + 1} className="text-center h-24">
                            Aún no hay actividades registradas para este parcial. <br/> Haz clic en "Registrar Nueva Actividad" para empezar.
                         </TableCell>
                     </TableRow>
