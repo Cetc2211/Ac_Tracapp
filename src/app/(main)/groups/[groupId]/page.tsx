@@ -21,7 +21,7 @@ import { groups as initialGroups, students as initialStudents, Student } from '@
 import { notFound, useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, MoreHorizontal, UserPlus, Trash2, CalendarCheck, FilePen, Edit, Loader2, PenSquare } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, UserPlus, Trash2, CalendarCheck, FilePen, Edit, Loader2, PenSquare, X } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -111,6 +111,7 @@ export default function GroupDetailsPage() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
   
  const calculateFinalGrade = useCallback((studentId: string, criteria: EvaluationCriteria[], grades: Grades, participations: ParticipationRecord) => {
     if (!grades || !criteria || criteria.length === 0) return 0;
@@ -357,6 +358,11 @@ export default function GroupDetailsPage() {
     setSelectedStudents([]);
   };
 
+  const handleCancelSelectionMode = () => {
+    setIsSelectionMode(false);
+    setSelectedStudents([]);
+  }
+
     
   const totalWeight = useMemo(() => {
     return evaluationCriteria.reduce((sum, c) => sum + c.weight, 0);
@@ -443,27 +449,39 @@ export default function GroupDetailsPage() {
                   </CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
-                    {numSelected > 0 && (
-                      <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                              <Button variant="destructive" size="sm" className="gap-1">
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                  <span>Eliminar ({numSelected})</span>
-                              </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                              <AlertDialogHeader>
-                                  <AlertDialogTitle>¿Eliminar {numSelected} estudiante(s)?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                      Esta acción no se puede deshacer. Se quitarán los estudiantes seleccionados de este grupo, pero no se eliminarán de la lista general de estudiantes.
-                                  </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                  <AlertDialogAction onClick={handleDeleteSelectedStudents}>Sí, eliminar del grupo</AlertDialogAction>
-                              </AlertDialogFooter>
-                          </AlertDialogContent>
-                      </AlertDialog>
+                    {isSelectionMode ? (
+                        <>
+                            <Button variant="outline" size="sm" onClick={handleCancelSelectionMode} className="gap-1">
+                                <X className="h-3.5 w-3.5" />
+                                Cancelar
+                            </Button>
+                            {numSelected > 0 && (
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="destructive" size="sm" className="gap-1">
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                            <span>Eliminar ({numSelected})</span>
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>¿Eliminar {numSelected} estudiante(s)?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                Esta acción no se puede deshacer. Se quitarán los estudiantes seleccionados de este grupo, pero no se eliminarán de la lista general de estudiantes.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                            <AlertDialogAction onClick={handleDeleteSelectedStudents}>Sí, eliminar del grupo</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            )}
+                        </>
+                    ) : (
+                       <Button variant="outline" size="sm" onClick={() => setIsSelectionMode(true)}>
+                            Seleccionar Estudiantes
+                        </Button>
                     )}
                     <Dialog open={isAddStudentDialogOpen} onOpenChange={setIsAddStudentDialogOpen}>
                     <DialogTrigger asChild>
@@ -521,13 +539,15 @@ export default function GroupDetailsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead padding="checkbox">
-                        <Checkbox
-                            checked={group.students.length > 0 && numSelected === group.students.length ? true : (numSelected > 0 ? 'indeterminate' : false)}
-                            onCheckedChange={(checked) => handleSelectAll(checked)}
-                            aria-label="Seleccionar todo"
-                        />
-                    </TableHead>
+                    {isSelectionMode && (
+                        <TableHead padding="checkbox">
+                            <Checkbox
+                                checked={group.students.length > 0 && numSelected === group.students.length ? true : (numSelected > 0 ? 'indeterminate' : false)}
+                                onCheckedChange={(checked) => handleSelectAll(checked)}
+                                aria-label="Seleccionar todo"
+                            />
+                        </TableHead>
+                    )}
                     <TableHead>#</TableHead>
                     <TableHead className="hidden w-[100px] sm:table-cell">
                       <span className="sr-only">Foto</span>
@@ -544,13 +564,15 @@ export default function GroupDetailsPage() {
                     const riskLevel = studentRiskLevels[student.id] || 'low';
                     return (
                         <TableRow key={student.id} data-state={selectedStudents.includes(student.id) && "selected"}>
-                          <TableCell padding="checkbox">
-                              <Checkbox
-                                  checked={selectedStudents.includes(student.id)}
-                                  onCheckedChange={(checked) => handleSelectStudent(student.id, checked)}
-                                  aria-label="Seleccionar fila"
-                              />
-                          </TableCell>
+                          {isSelectionMode && (
+                            <TableCell padding="checkbox">
+                                <Checkbox
+                                    checked={selectedStudents.includes(student.id)}
+                                    onCheckedChange={(checked) => handleSelectStudent(student.id, checked)}
+                                    aria-label="Seleccionar fila"
+                                />
+                            </TableCell>
+                          )}
                           <TableCell className="text-muted-foreground">{index + 1}</TableCell>
                           <TableCell className="hidden sm:table-cell">
                             <Image
