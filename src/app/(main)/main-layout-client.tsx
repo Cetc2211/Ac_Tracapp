@@ -16,6 +16,7 @@ import {
   PenSquare,
   FilePen,
   ClipboardCheck,
+  User
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -169,6 +170,14 @@ export default function MainLayoutClient({
         <SidebarFooter className="flex-col !items-start gap-4">
           <Separator className="mx-0" />
           <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={pathname.startsWith('/profile')}>
+                <Link href="/profile">
+                  <User />
+                  <span>Mi Perfil</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={pathname.startsWith('/settings')}>
                 <Link href="/settings">
