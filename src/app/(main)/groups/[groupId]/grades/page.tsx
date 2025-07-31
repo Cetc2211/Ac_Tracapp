@@ -26,6 +26,7 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { useData } from '@/hooks/use-data';
 import type { EvaluationCriteria, Grades } from '@/hooks/use-data';
+import { useMemo } from 'react';
 
 const criterionColors = [
   'bg-chart-1/10',
@@ -52,7 +53,8 @@ export default function GroupGradesPage() {
   const { toast } = useToast();
 
   const handleSaveGrades = () => {
-    setGrades(grades);
+    // The setGrades function from useData already handles saving.
+    // This function can be kept for user feedback.
     toast({
       title: 'Calificaciones Guardadas',
       description: 'Las calificaciones han sido guardadas exitosamente.',
@@ -70,17 +72,19 @@ export default function GroupGradesPage() {
         })
         return;
     }
+    
+    // Create a deep copy to avoid direct state mutation.
+    const newGrades = JSON.parse(JSON.stringify(grades));
 
-    setGrades({
-      ...grades,
-      [studentId]: {
-        ...grades[studentId],
-        [criterionId]: {
-          ...grades[studentId]?.[criterionId],
-          delivered: numericValue,
-        },
-      },
-    });
+    if (!newGrades[studentId]) {
+      newGrades[studentId] = {};
+    }
+    if (!newGrades[studentId][criterionId]) {
+      newGrades[studentId][criterionId] = { delivered: null };
+    }
+    newGrades[studentId][criterionId].delivered = numericValue;
+    
+    setGrades(newGrades);
   };
   
   const finalGrades = useMemo(() => {
@@ -179,45 +183,51 @@ export default function GroupGradesPage() {
                       {student.name}
                     </TableCell>
                     {criteria.map((criterion, index) => {
-                      const isParticipation = criterion.name === 'Participación';
-                      const isAutomatedActivity = criterion.name === 'Actividades' || criterion.name === 'Portafolio';
+                      const isAutomated = criterion.name === 'Participación' || criterion.name === 'Actividades' || criterion.name === 'Portafolio';
                       let earnedPercentage = 0;
-                      let performanceRatio = 0;
+                      let performanceDetail = '';
 
-                      if (isAutomatedActivity) {
-                          const totalActivities = activities.length;
-                          if (totalActivities > 0) {
-                              const studentRecords = activityRecords[student.id] || {};
-                              const deliveredActivities = Object.values(studentRecords).filter(Boolean).length;
-                              performanceRatio = deliveredActivities / totalActivities;
+                      if (isAutomated) {
+                          let performanceRatio = 0;
+                          if (criterion.name === 'Actividades' || criterion.name === 'Portafolio') {
+                              const totalActivities = activities.length;
+                              if (totalActivities > 0) {
+                                  const studentRecords = activityRecords[student.id] || {};
+                                  const deliveredActivities = Object.values(studentRecords).filter(Boolean).length;
+                                  performanceRatio = deliveredActivities / totalActivities;
+                                  performanceDetail = `${deliveredActivities} de ${totalActivities}`;
+                              } else {
+                                  performanceDetail = `0 de 0`;
+                              }
+                          } else if (criterion.name === 'Participación') {
+                            const participationDates = Object.keys(participations);
+                            if (participationDates.length > 0) {
+                              const participatedClasses = participationDates.filter(date => participations[date]?.[student.id]).length;
+                              performanceRatio = participatedClasses / participationDates.length;
+                              performanceDetail = `${participatedClasses} de ${participationDates.length}`;
+                            } else {
+                                performanceDetail = `0 de 0`;
+                            }
                           }
-                      } else if (isParticipation) {
-                        const participationDates = Object.keys(participations);
-                        if (participationDates.length > 0) {
-                          const participatedClasses = participationDates.filter(date => participations[date]?.[student.id]).length;
-                          performanceRatio = participatedClasses / participationDates.length;
-                        }
+                           earnedPercentage = performanceRatio * criterion.weight;
                       } else {
                         const gradeDetail = grades[student.id]?.[criterion.id];
                         const delivered = gradeDetail?.delivered ?? 0;
                         const expected = criterion.expectedValue;
                         if(expected > 0) {
-                          performanceRatio = delivered / expected;
+                          earnedPercentage = (delivered / expected) * criterion.weight;
                         }
                       }
-                      
-                      earnedPercentage = performanceRatio * criterion.weight;
 
                       return (
                       <TableCell key={criterion.id} className={cn("text-center", criterionColors[index % criterionColors.length])}>
-                        {isParticipation || isAutomatedActivity ? (
+                        {isAutomated ? (
                           <div className="flex flex-col items-center justify-center p-1">
                               <Label className='text-xs'>
-                                {isAutomatedActivity ? 'Actividades Entregadas' : 'Participaciones'}
+                                {criterion.name === 'Participación' ? 'Participaciones' : 'Entregas'}
                               </Label>
                               <span className="font-bold">
-                                {isAutomatedActivity ? `${Object.values(activityRecords[student.id] || {}).filter(Boolean).length} de ${activities.length}` : ''}
-                                {isParticipation ? `${Object.values(participations).filter(p => p[student.id]).length} de ${Object.keys(participations).length}` : ''}
+                                {performanceDetail}
                               </span>
                               <Label className='text-xs mt-2'>Porcentaje Ganado</Label>
                                <span className="font-bold text-lg">
