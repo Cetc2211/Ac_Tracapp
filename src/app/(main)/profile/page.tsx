@@ -20,44 +20,62 @@ import { Separator } from '@/components/ui/separator';
 type UserProfile = {
     name: string;
     email: string;
-    avatar: string;
 }
 
-const defaultProfile: UserProfile = {
+const defaultProfileInfo: UserProfile = {
     name: "John Doe",
     email: "john.doe@example.com",
-    avatar: "https://placehold.co/100x100.png",
 };
 
+const defaultAvatar = "https://placehold.co/100x100.png";
+
 export default function ProfilePage() {
-    const [profile, setProfile] = useState<UserProfile>(defaultProfile);
-    const [avatarPreview, setAvatarPreview] = useState(profile.avatar);
+    const [profile, setProfile] = useState<UserProfile>(defaultProfileInfo);
+    const [avatarPreview, setAvatarPreview] = useState(defaultAvatar);
     const { toast } = useToast();
 
     useEffect(() => {
         try {
-            const savedProfile = localStorage.getItem('userProfile');
-            if (savedProfile) {
-                const parsedProfile = JSON.parse(savedProfile);
-                setProfile(parsedProfile);
-                setAvatarPreview(parsedProfile.avatar);
+            const savedProfileInfo = localStorage.getItem('userProfileInfo');
+            if (savedProfileInfo) {
+                setProfile(JSON.parse(savedProfileInfo));
             } else {
-                 localStorage.setItem('userProfile', JSON.stringify(defaultProfile));
+                 localStorage.setItem('userProfileInfo', JSON.stringify(defaultProfileInfo));
+            }
+
+            const savedAvatar = localStorage.getItem('userAvatar');
+            if (savedAvatar) {
+                setAvatarPreview(savedAvatar);
+            } else {
+                localStorage.setItem('userAvatar', defaultAvatar);
             }
         } catch (error) {
             console.error("Failed to load user profile from localStorage", error);
-            setProfile(defaultProfile);
+            setProfile(defaultProfileInfo);
+            setAvatarPreview(defaultAvatar);
         }
     }, []);
 
     const handleSave = () => {
-        const newProfile = { ...profile, avatar: avatarPreview };
-        localStorage.setItem('userProfile', JSON.stringify(newProfile));
-        window.dispatchEvent(new Event('storage')); // Notificar a otros componentes como el UserNav
-        toast({
-            title: 'Perfil Guardado',
-            description: 'Tu información ha sido actualizada.',
-        });
+        try {
+            localStorage.setItem('userProfileInfo', JSON.stringify(profile));
+            localStorage.setItem('userAvatar', avatarPreview);
+            
+            // Dispatch a generic storage event that other components can listen to.
+            window.dispatchEvent(new Event('storage')); 
+            
+            toast({
+                title: 'Perfil Guardado',
+                description: 'Tu información ha sido actualizada.',
+            });
+        } catch(error) {
+            console.error("Failed to save profile:", error);
+            toast({
+                variant: 'destructive',
+                title: 'Error al guardar',
+                description: 'No se pudo guardar el perfil. El almacenamiento podría estar lleno.'
+            });
+        }
     };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {

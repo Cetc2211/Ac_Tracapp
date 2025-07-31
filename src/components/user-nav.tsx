@@ -17,24 +17,28 @@ import { useEffect, useState } from 'react';
 type UserProfile = {
     name: string;
     email: string;
-    avatar: string;
 }
 
 const defaultProfile: UserProfile = {
     name: "John Doe",
     email: "john.doe@example.com",
-    avatar: "https://placehold.co/100x100.png",
 };
 
+const defaultAvatar = "https://placehold.co/100x100.png";
 
 export function UserNav() {
   const [profile, setProfile] = useState<UserProfile>(defaultProfile);
+  const [avatar, setAvatar] = useState(defaultAvatar);
 
   useEffect(() => {
     const handleStorageChange = () => {
-        const savedProfile = localStorage.getItem('userProfile');
+        const savedProfile = localStorage.getItem('userProfileInfo');
         if(savedProfile) {
             setProfile(JSON.parse(savedProfile));
+        }
+        const savedAvatar = localStorage.getItem('userAvatar');
+        if (savedAvatar) {
+            setAvatar(savedAvatar);
         }
     }
     handleStorageChange();
@@ -55,7 +59,7 @@ export function UserNav() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-8 w-8">
-            <AvatarImage src={profile.avatar} alt={profile.name} data-ai-hint="user avatar" />
+            <AvatarImage src={avatar} alt={profile.name} data-ai-hint="user avatar" />
             <AvatarFallback>{getInitials(profile.name)}</AvatarFallback>
           </Avatar>
         </Button>
