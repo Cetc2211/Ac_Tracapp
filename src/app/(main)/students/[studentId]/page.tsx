@@ -31,6 +31,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { WhatsAppDialog } from '@/components/whatsapp-dialog';
+import { Activity, ActivityRecord } from '@/hooks/use-data';
 
 
 type EvaluationCriteria = {
@@ -103,7 +104,7 @@ export default function StudentProfilePage() {
   const [isWhatsAppDialogOpen, setIsWhatsAppDialogOpen] = useState(false);
 
 
-  const calculateFinalGradeDetails = useCallback((studentId: string, criteria: EvaluationCriteria[], grades: Grades, participations: ParticipationRecord): { finalGrade: number; criteriaDetails: { name: string, earned: number, weight: number }[] } => {
+  const calculateFinalGradeDetails = useCallback((studentId: string, criteria: EvaluationCriteria[], grades: Grades, participations: ParticipationRecord, activities: Activity[], activityRecords: ActivityRecord): { finalGrade: number; criteriaDetails: { name: string, earned: number, weight: number }[] } => {
     if (!criteria || criteria.length === 0) return { finalGrade: 0, criteriaDetails: [] };
     
     let finalGrade = 0;
@@ -111,8 +112,15 @@ export default function StudentProfilePage() {
 
     for (const criterion of criteria) {
       let performanceRatio = 0;
-
-      if(criterion.name === 'Participación') {
+      
+      if (criterion.name === 'Actividades' || criterion.name === 'Portafolio') {
+            const totalActivities = activities.length;
+            if (totalActivities > 0) {
+                const studentRecords = activityRecords[studentId] || {};
+                const deliveredActivities = Object.values(studentRecords).filter(Boolean).length;
+                performanceRatio = deliveredActivities / totalActivities;
+            }
+        } else if(criterion.name === 'Participación') {
           const participationDates = Object.keys(participations);
           if (participationDates.length > 0) {
             const participatedClasses = participationDates.filter(date => participations[date]?.[studentId]).length;
@@ -163,16 +171,20 @@ export default function StudentProfilePage() {
         let totalGradeSum = 0;
         
         studentGroups.forEach(group => {
-            const criteria: EvaluationCriteria[] = JSON.parse(localStorage.getItem(`criteria_${group.id}`) || '[]');
-            const grades: Grades = JSON.parse(localStorage.getItem(`grades_${group.id}`) || '{}');
-            const participations: ParticipationRecord = JSON.parse(localStorage.getItem(`participations_${group.id}`) || '{}');
-            const { finalGrade, criteriaDetails } = calculateFinalGradeDetails(studentId, criteria, grades, participations);
+            const activePartial = localStorage.getItem(`activePartial_${group.id}`) || '1';
+            const criteria: EvaluationCriteria[] = JSON.parse(localStorage.getItem(`criteria_${group.id}_${activePartial}`) || '[]');
+            const grades: Grades = JSON.parse(localStorage.getItem(`grades_${group.id}_${activePartial}`) || '{}');
+            const participations: ParticipationRecord = JSON.parse(localStorage.getItem(`participations_${group.id}_${activePartial}`) || '{}');
+            const activities: Activity[] = JSON.parse(localStorage.getItem(`activities_${group.id}_${activePartial}`) || '[]');
+            const activityRecords: ActivityRecord = JSON.parse(localStorage.getItem(`activityRecords_${group.id}_${activePartial}`) || '{}');
+
+            const { finalGrade, criteriaDetails } = calculateFinalGradeDetails(studentId, criteria, grades, participations, activities, activityRecords);
             gradesByGroup.push({ group: group.subject, grade: finalGrade, criteriaDetails });
             totalGradeSum += finalGrade;
         });
 
         const attendanceStats = { p: 0, a: 0, total: 0 };
-        const globalAttendance: GlobalAttendanceRecord = JSON.parse(localStorage.getItem('globalAttendance') || '[]');
+        const globalAttendance: GlobalAttendanceRecord = JSON.parse(localStorage.getItem('globalAttendance') || '{}');
         
         Object.keys(globalAttendance).forEach(date => {
             if (globalAttendance[date]?.[studentId] !== undefined) {
