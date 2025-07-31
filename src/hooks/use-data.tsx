@@ -89,6 +89,7 @@ interface DataContextType {
   students: Student[];
   groups: Group[];
   allStudents: Student[];
+  activeStudentsInGroups: Student[];
   settings: { institutionName: string; logo: string; theme: string };
   
   activeGroup: Group | null;
@@ -322,6 +323,20 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         return Object.values(allObservations).flat();
     }, [allObservations]);
 
+    const activeStudentsInGroups = useMemo(() => {
+        const studentSet = new Set<Student>();
+        const studentIdSet = new Set<string>();
+        groups.forEach(group => {
+            group.students.forEach(student => {
+                if (!studentIdSet.has(student.id)) {
+                    studentSet.add(student);
+                    studentIdSet.add(student.id);
+                }
+            });
+        });
+        return Array.from(studentSet);
+    }, [groups]);
+
     // --- WRAPPERS FOR STATE SETTERS TO PERSIST TO LOCALSTORAGE ---
     const setGroups = (newGroups: Group[]) => {
         setGroupsState(newGroups);
@@ -459,7 +474,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }, []);
 
     const atRiskStudents: StudentWithRisk[] = useMemo(() => {
-        return allStudents.map((s: Student) => {
+        return activeStudentsInGroups.map((s: Student) => {
             const studentGroups = groups.filter((g: Group) => g.students.some(sg => sg.id === s.id));
             if(studentGroups.length === 0) return {...s, calculatedRisk: { level: 'low', reason: 'No está en grupos.'}};
 
@@ -507,7 +522,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             if (a.calculatedRisk.level !== 'high' && b.calculatedRisk.level === 'high') return 1;
             return 0;
         });
-    }, [allStudents, groups, activePartials, allCriteria, allGrades, allParticipations, allAttendances, allActivities, allActivityRecords, calculateFinalGrade]);
+    }, [activeStudentsInGroups, groups, activePartials, allCriteria, allGrades, allParticipations, allAttendances, allActivities, allActivityRecords, calculateFinalGrade]);
     
     const groupStats = useMemo(() => {
         const allStats: {[groupId: string]: GroupStats} = {};
@@ -578,7 +593,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     return (
         <DataContext.Provider value={{
-            students: allStudents, groups, allStudents, settings, activeGroup, activePartial, criteria, grades, attendance, participations, activities, activityRecords, observations,
+            students: allStudents, groups, allStudents, activeStudentsInGroups, settings, activeGroup, activePartial, criteria, grades, attendance, participations, activities, activityRecords, observations,
             groupStats, atRiskStudents, overallAverageParticipation, groupAverages,
             setStudents: setAllStudents, setGroups, setAllStudents, setSettings, setActiveGroupId, setActivePartialForGroup,
             setCriteria: setCriteriaWrapper, setGrades: setGradesWrapper, setAttendance: setAttendanceWrapper, setParticipations: setParticipationsWrapper, setActivities: setActivitiesWrapper, setActivityRecords: setActivityRecordsWrapper, setObservations: setObservationsWrapper,

@@ -36,7 +36,7 @@ import { useData } from '@/hooks/use-data';
 import type { StudentWithRisk } from '@/hooks/use-data';
 
 export default function DashboardPage() {
-  const { allStudents, groups, atRiskStudents, overallAverageParticipation, groupAverages } = useData();
+  const { activeStudentsInGroups, groups, atRiskStudents, overallAverageParticipation, groupAverages } = useData();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [studentSearchQuery, setStudentSearchQuery] = useState('');
@@ -51,10 +51,10 @@ export default function DashboardPage() {
 
   const filteredStudentsForSearch = useMemo(() => {
     if (!studentSearchQuery) return [];
-    return allStudents.filter(student =>
+    return activeStudentsInGroups.filter(student =>
       student.name.toLowerCase().includes(studentSearchQuery.toLowerCase())
     ).slice(0, 5);
-  }, [allStudents, studentSearchQuery]);
+  }, [activeStudentsInGroups, studentSearchQuery]);
 
 
   return (
@@ -68,7 +68,7 @@ export default function DashboardPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{allStudents.length}</div>
+            <div className="text-2xl font-bold">{activeStudentsInGroups.length}</div>
             <p className="text-xs text-muted-foreground">
               Total de estudiantes registrados
             </p>
@@ -326,5 +326,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
