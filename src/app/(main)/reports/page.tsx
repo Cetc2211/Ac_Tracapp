@@ -22,157 +22,72 @@ import {
   BookOpenCheck,
   User,
   Printer,
+  Loader2,
 } from 'lucide-react';
-import { Group, Student, StudentObservation } from '@/lib/placeholder-data';
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Student } from '@/lib/placeholder-data';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
-
-
-type EvaluationCriteria = {
-  id: string;
-  name: string;
-  weight: number;
-  expectedValue: number;
-};
-
-type GradeDetail = {
-  delivered: number | null;
-};
-
-type Grades = {
-  [studentId: string]: {
-    [criterionId: string]: GradeDetail;
-  };
-};
-
-type ParticipationRecord = {
-  [date: string]: {
-    [studentId: string]: boolean;
-  };
-};
-
-type GlobalAttendanceRecord = {
-  [date: string]: {
-    [studentId: string]: boolean;
-  };
-};
-
-type QuickStats = {
-    studentCount: number;
-    groupAverage: number;
-    attendanceRate: number;
-    approvedCount: number;
-    totalAttendanceRecords: number;
-    criteriaCount: number;
-}
+import { useData } from '@/hooks/use-data';
+import type { Activity, EvaluationCriteria, Grades, ParticipationRecord } from '@/hooks/use-data';
 
 
 export default function ReportsPage() {
-  const [activeGroup, setActiveGroup] = useState<Group | null>(null);
-  const [quickStats, setQuickStats] = useState<QuickStats | null>(null);
+  const { 
+    activeGroup, 
+    criteria, 
+    grades, 
+    participations, 
+    attendance, 
+    activities, 
+    activityRecords, 
+    calculateFinalGrade 
+  } = useData();
+
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
-  const calculateFinalGrade = useCallback((studentId: string, criteria: EvaluationCriteria[], grades: Grades, participations: ParticipationRecord) => {
-    if (!criteria || criteria.length === 0) return 0;
-    let finalGrade = 0;
+  const quickStats = useMemo(() => {
+    if (!activeGroup) return null;
+
+    const studentCount = activeGroup.students.length;
     
-    for (const criterion of criteria) {
-      let performanceRatio = 0;
-
-      if(criterion.name === 'Participación') {
-          const participationDates = Object.keys(participations);
-          if (participationDates.length > 0) {
-            const participatedClasses = participationDates.filter(date => participations[date]?.[studentId]).length;
-            performanceRatio = participatedClasses / participationDates.length;
-          }
-      } else {
-          const gradeDetail = grades[studentId]?.[criterion.id];
-          const delivered = gradeDetail?.delivered ?? 0;
-          const expected = criterion.expectedValue;
-          if(expected > 0) {
-            performanceRatio = delivered / expected;
-          }
-      }
-      finalGrade += performanceRatio * criterion.weight;
-    }
-    return finalGrade > 100 ? 100 : finalGrade;
-  }, []);
-
-
-  useEffect(() => {
-    try {
-      setIsLoading(true);
-      const activeGroupId = localStorage.getItem('activeGroupId');
-      if (!activeGroupId) {
-          setIsLoading(false);
-          return;
-      }
-
-      const allGroups: Group[] = JSON.parse(localStorage.getItem('groups') || '[]');
-      const group = allGroups.find(g => g.id === activeGroupId);
-      setActiveGroup(group || null);
-
-      if (group) {
-        setSelectedStudent(group.students.sort((a,b) => a.name.localeCompare(b.name))[0] || null);
-
-        const criteria: EvaluationCriteria[] = JSON.parse(localStorage.getItem(`criteria_${group.id}`) || '[]');
-        const grades: Grades = JSON.parse(localStorage.getItem(`grades_${group.id}`) || '{}');
-        const participations: ParticipationRecord = JSON.parse(localStorage.getItem(`participations_${group.id}`) || '{}');
-        const attendance: GlobalAttendanceRecord = JSON.parse(localStorage.getItem('globalAttendance') || '[]');
-        
-        const allAttendanceDates = Object.keys(attendance);
-        let totalAttendanceRecords = 0;
-        let presentCount = 0;
-        
-        allAttendanceDates.forEach(date => {
-            Object.keys(attendance[date]).forEach(studentId => {
-                if(group.students.some(s => s.id === studentId)) {
-                    totalAttendanceRecords++;
-                    if(attendance[date][studentId] === true) {
-                        presentCount++;
-                    }
-                }
-            })
+    let presentCount = 0;
+    let totalAttendancePossible = 0;
+    
+    activeGroup.students.forEach(student => {
+        Object.keys(attendance).forEach(date => {
+            if (attendance[date]?.[student.id] !== undefined) {
+                totalAttendancePossible++;
+                if(attendance[date][student.id]) presentCount++;
+            }
         });
+    });
 
-        const attendanceRate = totalAttendanceRecords > 0 ? (presentCount / totalAttendanceRecords) * 100 : 100;
+    const attendanceRate = totalAttendancePossible > 0 ? (presentCount / totalAttendancePossible) * 100 : 100;
 
-        let approvedCount = 0;
-        const groupGrades = group.students.map(student => {
-            const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations);
-            if (finalGrade >= 70) approvedCount++;
-            return finalGrade;
-        });
+    let approvedCount = 0;
+    const groupGrades = activeGroup.students.map(student => {
+        const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords);
+        if (finalGrade >= 70) approvedCount++;
+        return finalGrade;
+    });
 
-        const groupAverage = groupGrades.length > 0 ? groupGrades.reduce((a, b) => a + b, 0) / groupGrades.length : 0;
-        
-        setQuickStats({
-            studentCount: group.students.length,
-            groupAverage: parseFloat(groupAverage.toFixed(1)),
-            attendanceRate: parseFloat(attendanceRate.toFixed(1)),
-            approvedCount,
-            totalAttendanceRecords: presentCount,
-            criteriaCount: criteria.length,
-        });
-      }
+    const groupAverage = groupGrades.length > 0 ? groupGrades.reduce((a, b) => a + b, 0) / groupGrades.length : 0;
+    
+    return {
+        studentCount: studentCount,
+        groupAverage: parseFloat(groupAverage.toFixed(1)),
+        attendanceRate: parseFloat(attendanceRate.toFixed(1)),
+        approvedCount,
+        totalAttendanceRecords: presentCount,
+        criteriaCount: criteria.length,
+    };
+  }, [activeGroup, attendance, criteria, grades, participations, activities, activityRecords, calculateFinalGrade]);
 
-    } catch (error) {
-      console.error('Failed to load report data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [calculateFinalGrade]);
 
   const handleDownloadCsv = () => {
     if (!activeGroup) return;
-
-    const criteria: EvaluationCriteria[] = JSON.parse(localStorage.getItem(`criteria_${activeGroup.id}`) || '[]');
-    const grades: Grades = JSON.parse(localStorage.getItem(`grades_${activeGroup.id}`) || '{}');
-    const participations: ParticipationRecord = JSON.parse(localStorage.getItem(`participations_${activeGroup.id}`) || '{}');
 
     let csvContent = "data:text/csv;charset=utf-8,";
     const headers = ["ID Estudiante", "Nombre", ...criteria.map(c => `${c.name} (${c.weight}%)`), "Calificacion Final"];
@@ -180,11 +95,18 @@ export default function ReportsPage() {
 
     activeGroup.students.forEach(student => {
         const row = [student.id, student.name];
-        const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations);
+        const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords);
         
         criteria.forEach(criterion => {
             let performanceRatio = 0;
-            if(criterion.name === 'Participación') {
+            if (criterion.name === 'Actividades' || criterion.name === 'Portafolio') {
+                const totalActivities = activities.length;
+                if (totalActivities > 0) {
+                    const studentRecords = activityRecords[student.id] || {};
+                    const deliveredActivities = Object.values(studentRecords).filter(Boolean).length;
+                    performanceRatio = deliveredActivities / totalActivities;
+                }
+            } else if(criterion.name === 'Participación') {
                  const participationDates = Object.keys(participations);
                 if (participationDates.length > 0) {
                     const studentParticipations = Object.values(participations).filter(p => p[student.id]).length;
@@ -209,7 +131,7 @@ export default function ReportsPage() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `calificaciones_${activeGroup.subject.replace(/\\s+/g, '_')}.csv`);
+    link.setAttribute("download", `calificaciones_${activeGroup.subject.replace(/\s+/g, '_')}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -218,10 +140,6 @@ export default function ReportsPage() {
   const handleStudentChange = (studentId: string) => {
       const student = activeGroup?.students.find(s => s.id === studentId);
       setSelectedStudent(student || null);
-  }
-
-  if (isLoading) {
-      return <div>Cargando...</div>;
   }
   
   if (!activeGroup) {
@@ -260,7 +178,7 @@ export default function ReportsPage() {
                 <CardDescription>{quickStats?.studentCount} estudiantes • {quickStats?.criteriaCount} criterios de evaluación</CardDescription>
               </div>
               <div className="text-right">
-                <p className="text-sm text-muted-foreground">Total de registros de asistencia:</p>
+                <p className="text-sm text-muted-foreground">Total de asistencias del grupo:</p>
                 <p className="text-3xl font-bold text-primary">{quickStats?.totalAttendanceRecords}</p>
               </div>
             </div>
@@ -330,7 +248,7 @@ export default function ReportsPage() {
                       <SelectContent>
                           {activeGroup.students.sort((a,b) => a.name.localeCompare(b.name)).map(student => (
                               <SelectItem key={student.id} value={student.id}>
-                                  {student.name} ({student.email})
+                                  {student.name}
                               </SelectItem>
                           ))}
                       </SelectContent>
@@ -356,3 +274,4 @@ export default function ReportsPage() {
     </div>
   );
 }
+
