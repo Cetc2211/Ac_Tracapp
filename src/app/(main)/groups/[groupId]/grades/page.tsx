@@ -16,46 +16,16 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { groups as initialGroups, Student } from '@/lib/placeholder-data';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, Save } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-
-type EvaluationCriteria = {
-  id: string;
-  name: string;
-  weight: number;
-  expectedValue: number;
-};
-
-type GradeDetail = {
-  delivered: number | null;
-};
-
-type Grades = {
-  [studentId: string]: {
-    [criterionId: string]: GradeDetail;
-  };
-};
-
-type ParticipationRecord = {
-  [date: string]: {
-    [studentId: string]: boolean;
-  };
-};
-
-type ParticipationData = {
-    [studentId: string]: {
-        participated: number;
-        total: number;
-    }
-}
+import { useData } from '@/hooks/use-data';
+import type { EvaluationCriteria, Grades } from '@/hooks/use-data';
 
 const criterionColors = [
   'bg-chart-1/10',
@@ -68,72 +38,21 @@ const criterionColors = [
 export default function GroupGradesPage() {
   const params = useParams();
   const groupId = params.groupId as string;
-  const [group, setGroup] = useState<(typeof initialGroups)[0] | null>(null);
-  const [evaluationCriteria, setEvaluationCriteria] = useState<EvaluationCriteria[]>([]);
-  const [grades, setGrades] = useState<Grades>({});
-  const [participationData, setParticipationData] = useState<ParticipationData>({});
+  const { 
+    activeGroup, 
+    criteria, 
+    grades, 
+    participations, 
+    activities, 
+    activityRecords, 
+    setGrades,
+    calculateFinalGrade
+  } = useData();
+
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(true);
-  const [activePartial, setActivePartial] = useState('1');
 
-  useEffect(() => {
-    if (!groupId) return;
-    setIsLoading(true);
-    try {
-      const storedPartial = localStorage.getItem(`activePartial_${groupId}`) || '1';
-      setActivePartial(storedPartial);
-
-      // Load group
-      const storedGroups = localStorage.getItem('groups');
-      const allGroups = storedGroups ? JSON.parse(storedGroups) : initialGroups;
-      const currentGroup = allGroups.find((g: any) => g.id === groupId);
-      setGroup(currentGroup || null);
-
-      // Load criteria for active partial
-      const storedCriteria = localStorage.getItem(`criteria_${groupId}_${storedPartial}`);
-      const localCriteria: EvaluationCriteria[] = storedCriteria ? JSON.parse(storedCriteria) : [];
-      
-      // Load grades for active partial
-      const storedGrades = localStorage.getItem(`grades_${groupId}_${storedPartial}`);
-      setGrades(storedGrades ? JSON.parse(storedGrades) : {});
-
-      // Calculate participation for active partial
-      if (currentGroup?.students?.length) {
-        const participationCriterion = localCriteria.find(c => c.name === 'Participación');
-        if (participationCriterion) {
-            const storedParticipations = localStorage.getItem(`participations_${groupId}_${storedPartial}`);
-            const participations: ParticipationRecord = storedParticipations ? JSON.parse(storedParticipations) : {};
-            const participationDates = Object.keys(participations);
-            const totalClasses = participationDates.length;
-
-            const newParticipationData: ParticipationData = {};
-            for (const student of currentGroup.students) {
-                const participatedClasses = participationDates.filter(date => participations[date]?.[student.id]).length;
-                newParticipationData[student.id] = { participated: participatedClasses, total: totalClasses };
-            }
-            setParticipationData(newParticipationData);
-            
-            const updatedCriteria = localCriteria.map(c => 
-                c.name === 'Participación' ? { ...c, expectedValue: totalClasses } : c
-            );
-            setEvaluationCriteria(updatedCriteria);
-        } else {
-             setEvaluationCriteria(localCriteria);
-        }
-      } else {
-        setEvaluationCriteria(localCriteria);
-      }
-      
-    } catch (error) {
-      console.error("Failed to parse data from localStorage", error);
-      setGroup(null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [groupId]);
-
-  const saveGrades = () => {
-    localStorage.setItem(`grades_${groupId}_${activePartial}`, JSON.stringify(grades));
+  const handleSaveGrades = () => {
+    setGrades(grades);
     toast({
       title: 'Calificaciones Guardadas',
       description: 'Las calificaciones han sido guardadas exitosamente.',
@@ -152,54 +71,34 @@ export default function GroupGradesPage() {
         return;
     }
 
-    setGrades(prev => ({
-      ...prev,
+    setGrades({
+      ...grades,
       [studentId]: {
-        ...prev[studentId],
+        ...grades[studentId],
         [criterionId]: {
-          ...prev[studentId]?.[criterionId],
+          ...grades[studentId]?.[criterionId],
           delivered: numericValue,
         },
       },
-    }));
+    });
   };
   
-  const calculateFinalGrade = useCallback((studentId: string) => {
-    if (!evaluationCriteria || evaluationCriteria.length === 0) return '0%';
-
-    let finalGrade = 0;
-    
-    for (const criterion of evaluationCriteria) {
-      let performanceRatio = 0;
-
-      if(criterion.name === 'Participación') {
-          const pData = participationData[studentId];
-          if(pData && pData.total > 0) {
-            performanceRatio = pData.participated / pData.total;
-          }
-      } else {
-          const gradeDetail = grades[studentId]?.[criterion.id];
-          const delivered = gradeDetail?.delivered ?? 0;
-          const expected = criterion.expectedValue;
-          if(expected > 0) {
-            performanceRatio = delivered / expected;
-          }
+  const finalGrades = useMemo(() => {
+    const calculatedGrades: {[studentId: string]: number} = {};
+    if (activeGroup) {
+      for (const student of activeGroup.students) {
+        calculatedGrades[student.id] = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords);
       }
-      finalGrade += performanceRatio * criterion.weight;
     }
-    return `${finalGrade.toFixed(0)}%`;
-  }, [grades, evaluationCriteria, participationData]);
-  
+    return calculatedGrades;
+  }, [activeGroup, criteria, grades, participations, activities, activityRecords, calculateFinalGrade]);
+
   const studentsInGroup = useMemo(() => {
-      if (!group || !group.students) return [];
-      return [...group.students].sort((a,b) => a.name.localeCompare(b.name));
-  }, [group]);
+      if (!activeGroup || !activeGroup.students) return [];
+      return [...activeGroup.students].sort((a,b) => a.name.localeCompare(b.name));
+  }, [activeGroup]);
 
-  if (isLoading) {
-    return <div>Cargando...</div>;
-  }
-
-  if (!group) {
+  if (!activeGroup) {
     return notFound();
   }
 
@@ -216,11 +115,11 @@ export default function GroupGradesPage() {
             <div>
             <h1 className="text-3xl font-bold">Registrar Calificaciones</h1>
             <p className="text-muted-foreground">
-                Asigna las notas para el grupo "{group.subject}".
+                Asigna las notas para el grupo "{activeGroup.subject}".
             </p>
             </div>
          </div>
-         <Button onClick={saveGrades}>
+         <Button onClick={handleSaveGrades}>
             <Save className="mr-2 h-4 w-4"/>
             Guardar Calificaciones
          </Button>
@@ -233,11 +132,15 @@ export default function GroupGradesPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[250px] sticky left-0 bg-card z-10">Estudiante</TableHead>
-                  {evaluationCriteria.map((c, index) => (
+                  {criteria.map((c, index) => (
                     <TableHead key={c.id} className={cn("text-center min-w-[250px] align-top", criterionColors[index % criterionColors.length])}>
                       <div className='font-bold'>{c.name}</div>
-                      <div className="font-normal text-muted-foreground">
-                        ({c.weight}%, {c.name === 'Participación' ? `${c.expectedValue} clases` : `${c.expectedValue} esp.`})
+                       <div className="font-normal text-muted-foreground">
+                        ({c.weight}%, {
+                          (c.name === 'Actividades' || c.name === 'Portafolio') ? `${activities.length} acts.`
+                          : c.name === 'Participación' ? `${Object.keys(participations).length} clases`
+                          : `${c.expectedValue} esp.`
+                        })
                       </div>
                     </TableHead>
                   ))}
@@ -249,19 +152,21 @@ export default function GroupGradesPage() {
               <TableBody>
                 {studentsInGroup.length === 0 && (
                   <TableRow>
-                      <TableCell colSpan={evaluationCriteria.length + 2} className="text-center h-24">
+                      <TableCell colSpan={criteria.length + 2} className="text-center h-24">
                           No hay estudiantes en este grupo.
                       </TableCell>
                   </TableRow>
                 )}
-                {studentsInGroup.length > 0 && evaluationCriteria.length === 0 && (
+                {studentsInGroup.length > 0 && criteria.length === 0 && (
                   <TableRow>
                       <TableCell colSpan={2} className="text-center h-24">
                           No has definido criterios de evaluación para este parcial. <Link href={`/groups/${groupId}/criteria`} className="text-primary underline">Defínelos aquí.</Link>
                       </TableCell>
                   </TableRow>
                 )}
-                {studentsInGroup.length > 0 && evaluationCriteria.length > 0 && studentsInGroup.map(student => (
+                {studentsInGroup.length > 0 && criteria.length > 0 && studentsInGroup.map(student => {
+                  
+                  return (
                   <TableRow key={student.id}>
                     <TableCell className="font-medium sticky left-0 bg-card z-10 flex items-center gap-2">
                       <Image 
@@ -273,14 +178,24 @@ export default function GroupGradesPage() {
                       />
                       {student.name}
                     </TableCell>
-                    {evaluationCriteria.map((criterion, index) => {
+                    {criteria.map((criterion, index) => {
                       const isParticipation = criterion.name === 'Participación';
-                      
+                      const isAutomatedActivity = criterion.name === 'Actividades' || criterion.name === 'Portafolio';
+                      let earnedPercentage = 0;
                       let performanceRatio = 0;
-                      if (isParticipation) {
-                        const pData = participationData[student.id];
-                        if (pData && pData.total > 0) {
-                          performanceRatio = pData.participated / pData.total;
+
+                      if (isAutomatedActivity) {
+                          const totalActivities = activities.length;
+                          if (totalActivities > 0) {
+                              const studentRecords = activityRecords[student.id] || {};
+                              const deliveredActivities = Object.values(studentRecords).filter(Boolean).length;
+                              performanceRatio = deliveredActivities / totalActivities;
+                          }
+                      } else if (isParticipation) {
+                        const participationDates = Object.keys(participations);
+                        if (participationDates.length > 0) {
+                          const participatedClasses = participationDates.filter(date => participations[date]?.[student.id]).length;
+                          performanceRatio = participatedClasses / participationDates.length;
                         }
                       } else {
                         const gradeDetail = grades[student.id]?.[criterion.id];
@@ -291,14 +206,19 @@ export default function GroupGradesPage() {
                         }
                       }
                       
-                      const earnedPercentage = performanceRatio * criterion.weight;
+                      earnedPercentage = performanceRatio * criterion.weight;
 
                       return (
                       <TableCell key={criterion.id} className={cn("text-center", criterionColors[index % criterionColors.length])}>
-                        {isParticipation ? (
+                        {isParticipation || isAutomatedActivity ? (
                           <div className="flex flex-col items-center justify-center p-1">
-                              <Label className='text-xs'>Participaciones</Label>
-                              <span className="font-bold">{participationData[student.id]?.participated ?? 0} de {participationData[student.id]?.total ?? 0}</span>
+                              <Label className='text-xs'>
+                                {isAutomatedActivity ? 'Actividades Entregadas' : 'Participaciones'}
+                              </Label>
+                              <span className="font-bold">
+                                {isAutomatedActivity ? `${Object.values(activityRecords[student.id] || {}).filter(Boolean).length} de ${activities.length}` : ''}
+                                {isParticipation ? `${Object.values(participations).filter(p => p[student.id]).length} de ${Object.keys(participations).length}` : ''}
+                              </span>
                               <Label className='text-xs mt-2'>Porcentaje Ganado</Label>
                                <span className="font-bold text-lg">
                                   {earnedPercentage.toFixed(0)}%
@@ -331,10 +251,11 @@ export default function GroupGradesPage() {
                       )
                     })}
                     <TableCell className="text-center font-bold text-lg sticky right-0 bg-card z-10">
-                      {calculateFinalGrade(student.id)}
+                      {`${(finalGrades[student.id] || 0).toFixed(0)}%`}
                     </TableCell>
                   </TableRow>
-                ))}
+                  )
+                })}
               </TableBody>
             </Table>
           </div>

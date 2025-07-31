@@ -128,6 +128,7 @@ interface DataContextType {
   // Functions
   saveStudentObservation: (observation: StudentObservation) => void;
   deleteGroup: (groupId: string) => void;
+  calculateFinalGrade: (studentId: string, criteria: EvaluationCriteria[], grades: Grades, participations: ParticipationRecord, activities: Activity[], activityRecords: ActivityRecord) => number;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -240,6 +241,39 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         const storedActiveGroupId = localStorage.getItem('activeGroupId');
         setActiveGroupId(storedActiveGroupId);
 
+    }, []);
+
+    const calculateFinalGrade = useCallback((studentId: string, criteria: EvaluationCriteria[], grades: Grades, participations: ParticipationRecord, activities: Activity[], activityRecords: ActivityRecord): number => {
+        if (!criteria || criteria.length === 0) return 0;
+        let finalGrade = 0;
+        
+        for (const criterion of criteria) {
+          let performanceRatio = 0;
+    
+          if (criterion.name === 'Actividades' || criterion.name === 'Portafolio') {
+              const totalActivities = activities.length;
+              if (totalActivities > 0) {
+                  const studentRecords = activityRecords[studentId] || {};
+                  const deliveredActivities = Object.values(studentRecords).filter(Boolean).length;
+                  performanceRatio = deliveredActivities / totalActivities;
+              }
+          } else if(criterion.name === 'Participación') {
+              const participationDates = Object.keys(participations);
+              if (participationDates.length > 0) {
+                const participatedClasses = participationDates.filter(date => participations[date]?.[studentId]).length;
+                performanceRatio = participatedClasses / participationDates.length;
+              }
+          } else {
+              const gradeDetail = grades[studentId]?.[criterion.id];
+              const delivered = gradeDetail?.delivered ?? 0;
+              const expected = criterion.expectedValue;
+              if(expected > 0) {
+                performanceRatio = delivered / expected;
+              }
+          }
+          finalGrade += performanceRatio * criterion.weight;
+        }
+        return finalGrade > 100 ? 100 : finalGrade;
     }, []);
 
     // --- DERIVED STATE & MEMOS ---
@@ -402,32 +436,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }
 
     // --- GLOBAL CALCULATIONS ---
-    const calculateFinalGrade = useCallback((studentId: string, criteria: EvaluationCriteria[], grades: Grades, participations: ParticipationRecord) => {
-        if (!criteria || criteria.length === 0) return 0;
-        let finalGrade = 0;
-        
-        for (const criterion of criteria) {
-          let performanceRatio = 0;
-    
-          if(criterion.name === 'Participación') {
-              const participationDates = Object.keys(participations);
-              if (participationDates.length > 0) {
-                const participatedClasses = participationDates.filter(date => participations[date]?.[studentId]).length;
-                performanceRatio = participatedClasses / participationDates.length;
-              }
-          } else {
-              const gradeDetail = grades[studentId]?.[criterion.id];
-              const delivered = gradeDetail?.delivered ?? 0;
-              const expected = criterion.expectedValue;
-              if(expected > 0) {
-                performanceRatio = delivered / expected;
-              }
-          }
-          finalGrade += performanceRatio * criterion.weight;
-        }
-        return finalGrade > 100 ? 100 : finalGrade;
-    }, []);
-
     const getStudentRiskLevel = useCallback((finalGrade: number, attendance: AttendanceRecord, studentId: string): CalculatedRisk => {
         const totalDays = Object.keys(attendance).length;
         let absences = 0;
@@ -464,8 +472,10 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 const grades = allGrades[group.id]?.[partial] || {};
                 const participations = allParticipations[group.id]?.[partial] || {};
                 const attendance = allAttendances[group.id]?.[partial] || {};
+                const activities = allActivities[group.id]?.[partial] || [];
+                const activityRecords = allActivityRecords[group.id]?.[partial] || {};
 
-                const finalGrade = calculateFinalGrade(s.id, criteria, grades, participations);
+                const finalGrade = calculateFinalGrade(s.id, criteria, grades, participations, activities, activityRecords);
                 gradeSum += finalGrade;
                 
                 const totalDays = Object.keys(attendance).length;
@@ -497,7 +507,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             if (a.calculatedRisk.level !== 'high' && b.calculatedRisk.level === 'high') return 1;
             return 0;
         });
-    }, [allStudents, groups, activePartials, allCriteria, allGrades, allParticipations, allAttendances, calculateFinalGrade]);
+    }, [allStudents, groups, activePartials, allCriteria, allGrades, allParticipations, allAttendances, allActivities, allActivityRecords, calculateFinalGrade]);
     
     const groupStats = useMemo(() => {
         const allStats: {[groupId: string]: GroupStats} = {};
@@ -507,11 +517,13 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             const grades = allGrades[group.id]?.[partial] || {};
             const participations = allParticipations[group.id]?.[partial] || {};
             const attendance = allAttendances[group.id]?.[partial] || {};
+            const activities = allActivities[group.id]?.[partial] || [];
+            const activityRecords = allActivityRecords[group.id]?.[partial] || {};
 
-            const groupGrades = group.students.map(s => calculateFinalGrade(s.id, criteria, grades, participations));
+            const groupGrades = group.students.map(s => calculateFinalGrade(s.id, criteria, grades, participations, activities, activityRecords));
             const groupAverage = groupGrades.length > 0 ? groupGrades.reduce((a, b) => a + b, 0) / groupGrades.length : 0;
             const highRiskStudents = group.students.filter(s => {
-                const finalGrade = calculateFinalGrade(s.id, criteria, grades, participations);
+                const finalGrade = calculateFinalGrade(s.id, criteria, grades, participations, activities, activityRecords);
                 const risk = getStudentRiskLevel(finalGrade, attendance, s.id);
                 return risk.level === 'high';
             }).length;
@@ -522,7 +534,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             };
         }
         return allStats;
-    }, [groups, activePartials, allCriteria, allGrades, allParticipations, allAttendances, calculateFinalGrade, getStudentRiskLevel]);
+    }, [groups, activePartials, allCriteria, allGrades, allParticipations, allAttendances, allActivities, allActivityRecords, calculateFinalGrade, getStudentRiskLevel]);
     
     const groupAverages = useMemo(() => {
         const newGroupAverages: {[groupId: string]: number} = {};
@@ -531,12 +543,14 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             const criteria = allCriteria[`criteria_${group.id}_${partial}`] || [];
             const grades = allGrades[group.id]?.[partial] || {};
             const participations = allParticipations[group.id]?.[partial] || {};
-            const groupGrades = group.students.map(s => calculateFinalGrade(s.id, criteria, grades, participations));
+            const activities = allActivities[group.id]?.[partial] || [];
+            const activityRecords = allActivityRecords[group.id]?.[partial] || {};
+            const groupGrades = group.students.map(s => calculateFinalGrade(s.id, criteria, grades, participations, activities, activityRecords));
             const groupAverage = groupGrades.length > 0 ? groupGrades.reduce((a,b) => a + b, 0) / groupGrades.length : 0;
             newGroupAverages[group.id] = groupAverage;
         }
         return newGroupAverages;
-    }, [groups, activePartials, allCriteria, allGrades, allParticipations, calculateFinalGrade]);
+    }, [groups, activePartials, allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, calculateFinalGrade]);
     
     const overallAverageParticipation = useMemo(() => {
         let totalPossibleAttendance = 0;
@@ -568,7 +582,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             groupStats, atRiskStudents, overallAverageParticipation, groupAverages,
             setStudents: setAllStudents, setGroups, setAllStudents, setSettings, setActiveGroupId, setActivePartialForGroup,
             setCriteria: setCriteriaWrapper, setGrades: setGradesWrapper, setAttendance: setAttendanceWrapper, setParticipations: setParticipationsWrapper, setActivities: setActivitiesWrapper, setActivityRecords: setActivityRecordsWrapper, setObservations: setObservationsWrapper,
-            saveStudentObservation, deleteGroup,
+            saveStudentObservation, deleteGroup, calculateFinalGrade,
         }}>
             {children}
         </DataContext.Provider>

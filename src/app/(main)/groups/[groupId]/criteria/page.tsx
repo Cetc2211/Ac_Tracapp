@@ -15,8 +15,7 @@ import { ArrowLeft, PlusCircle, Trash, Edit } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useState, useEffect, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { groups as initialGroups } from '@/lib/placeholder-data';
-import { useParams } from 'next/navigation';
+import { notFound, useParams } from 'next/navigation';
 import {
   Dialog,
   DialogContent,
@@ -32,13 +31,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-
-type EvaluationCriteria = {
-  id: string;
-  name: string;
-  weight: number;
-  expectedValue: number;
-};
+import { useData } from '@/hooks/use-data';
+import type { EvaluationCriteria } from '@/hooks/use-data';
 
 const nameOptions = ["Actividades", "Portafolio", "Participación", "Examen", "Proyecto Integrador", "Otros"];
 const weightOptions = ["10", "20", "30", "40", "50", "60", "70", "80", "90", "100", "Otros"];
@@ -46,8 +40,7 @@ const weightOptions = ["10", "20", "30", "40", "50", "60", "70", "80", "90", "10
 export default function GroupCriteriaPage() {
   const params = useParams();
   const groupId = params.groupId as string;
-  const [group, setGroup] = useState<(typeof initialGroups)[0] | null>(null);
-  const [evaluationCriteria, setEvaluationCriteria] = useState<EvaluationCriteria[]>([]);
+  const { activeGroup, criteria, setCriteria, activePartial } = useData();
 
   const [selectedName, setSelectedName] = useState('');
   const [customName, setCustomName] = useState('');
@@ -57,45 +50,22 @@ export default function GroupCriteriaPage() {
   
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingCriterion, setEditingCriterion] = useState<EvaluationCriteria | null>(null);
-  const [activePartial, setActivePartial] = useState('1');
 
   const { toast } = useToast();
   
-  const isParticipationSelected = useMemo(() => (selectedName === 'Participación'), [selectedName]);
+  const isAutomatedCriterion = useMemo(() => {
+    const name = selectedName === 'Otros' ? customName : selectedName;
+    return name === 'Participación' || name === 'Actividades' || name === 'Portafolio';
+  }, [selectedName, customName]);
 
   useEffect(() => {
-    try {
-      const storedGroups = localStorage.getItem('groups');
-      const allGroups = storedGroups ? JSON.parse(storedGroups) : initialGroups;
-      const currentGroup = allGroups.find((g: any) => g.id === groupId);
-      setGroup(currentGroup || null);
-
-      const storedPartial = localStorage.getItem(`activePartial_${groupId}`) || '1';
-      setActivePartial(storedPartial);
-      
-      const storedCriteria = localStorage.getItem(`criteria_${groupId}_${storedPartial}`);
-      if (storedCriteria) {
-        setEvaluationCriteria(JSON.parse(storedCriteria));
-      }
-    } catch (error) {
-      console.error("Failed to parse data from localStorage", error);
-      setGroup(null);
-    }
-  }, [groupId]);
-
-  useEffect(() => {
-    if(isParticipationSelected) {
+    if(isAutomatedCriterion) {
         setNewCriterionValue('0');
     } else {
         setNewCriterionValue('');
     }
-  }, [isParticipationSelected]);
+  }, [isAutomatedCriterion]);
 
-
-  const saveCriteria = (newCriteria: EvaluationCriteria[]) => {
-    setEvaluationCriteria(newCriteria);
-    localStorage.setItem(`criteria_${groupId}_${activePartial}`, JSON.stringify(newCriteria));
-  };
   
   const handleAddCriterion = () => {
     const finalName = selectedName === 'Otros' ? customName.trim() : selectedName;
@@ -104,7 +74,7 @@ export default function GroupCriteriaPage() {
     const weight = parseFloat(finalWeight);
     const expectedValue = parseInt(newCriterionValue, 10);
 
-    if (!finalName || isNaN(weight) || weight <= 0 || weight > 100 || (isNaN(expectedValue) && !isParticipationSelected) || (!isParticipationSelected && expectedValue < 0) ) {
+    if (!finalName || isNaN(weight) || weight <= 0 || weight > 100 || (isNaN(expectedValue) && !isAutomatedCriterion) || (!isAutomatedCriterion && expectedValue < 0) ) {
         toast({
             variant: 'destructive',
             title: 'Datos inválidos',
@@ -113,7 +83,7 @@ export default function GroupCriteriaPage() {
         return;
     }
 
-    const totalWeight = evaluationCriteria.reduce((sum, c) => sum + c.weight, 0) + weight;
+    const totalWeight = criteria.reduce((sum, c) => sum + c.weight, 0) + weight;
     if (totalWeight > 100) {
         toast({
             variant: 'destructive',
@@ -127,10 +97,10 @@ export default function GroupCriteriaPage() {
         id: `C${Date.now()}`,
         name: finalName,
         weight: weight,
-        expectedValue: isParticipationSelected ? 0 : expectedValue, // For participation, expected value is calculated dynamically
+        expectedValue: isAutomatedCriterion ? 0 : expectedValue,
     };
 
-    saveCriteria([...evaluationCriteria, newCriterion]);
+    setCriteria([...criteria, newCriterion]);
     setSelectedName('');
     setCustomName('');
     setSelectedWeight('');
@@ -140,8 +110,8 @@ export default function GroupCriteriaPage() {
   };
   
   const handleRemoveCriterion = (criterionId: string) => {
-    const newCriteria = evaluationCriteria.filter(c => c.id !== criterionId);
-    saveCriteria(newCriteria);
+    const newCriteria = criteria.filter(c => c.id !== criterionId);
+    setCriteria(newCriteria);
     // Also remove any grades associated with this criterion
     const gradesKey = `grades_${groupId}_${activePartial}`;
     const storedGrades = localStorage.getItem(gradesKey);
@@ -167,9 +137,9 @@ export default function GroupCriteriaPage() {
 
     const weight = editingCriterion.weight;
     const expectedValue = editingCriterion.expectedValue;
-    const isParticipation = editingCriterion.name === 'Participación';
+    const isAutomated = editingCriterion.name === 'Participación' || editingCriterion.name === 'Actividades' || editingCriterion.name === 'Portafolio';
 
-     if (!editingCriterion.name.trim() || isNaN(weight) || weight <= 0 || weight > 100 || (isNaN(expectedValue) && !isParticipation) || (!isParticipation && expectedValue < 0) ) {
+     if (!editingCriterion.name.trim() || isNaN(weight) || weight <= 0 || weight > 100 || (isNaN(expectedValue) && !isAutomated) || (!isAutomated && expectedValue < 0) ) {
         toast({
             variant: 'destructive',
             title: 'Datos inválidos',
@@ -178,7 +148,7 @@ export default function GroupCriteriaPage() {
         return;
     }
 
-    const otherCriteriaWeight = evaluationCriteria
+    const otherCriteriaWeight = criteria
       .filter(c => c.id !== editingCriterion.id)
       .reduce((sum, c) => sum + c.weight, 0);
 
@@ -192,8 +162,8 @@ export default function GroupCriteriaPage() {
         return;
     }
     
-    const updatedCriteria = evaluationCriteria.map(c => c.id === editingCriterion.id ? editingCriterion : c);
-    saveCriteria(updatedCriteria);
+    const updatedCriteria = criteria.map(c => c.id === editingCriterion.id ? editingCriterion : c);
+    setCriteria(updatedCriteria);
 
     setIsEditDialogOpen(false);
     setEditingCriterion(null);
@@ -202,20 +172,16 @@ export default function GroupCriteriaPage() {
 
 
   const totalWeight = useMemo(() => {
-    return evaluationCriteria.reduce((sum, c) => sum + c.weight, 0);
-  }, [evaluationCriteria]);
+    return criteria.reduce((sum, c) => sum + c.weight, 0);
+  }, [criteria]);
 
-  if (!group) {
-    return (
-        <div className="flex flex-col items-center justify-center h-full">
-            <p>Cargando grupo...</p>
-        </div>
-    )
+  if (!activeGroup) {
+    return notFound();
   }
   
   const finalNameForCheck = selectedName === 'Otros' ? customName.trim() : selectedName;
   const finalWeightForCheck = selectedWeight === 'Otros' ? customWeight : selectedWeight;
-  const isAddButtonDisabled = !finalNameForCheck || !finalWeightForCheck || (!newCriterionValue && !isParticipationSelected);
+  const isAddButtonDisabled = !finalNameForCheck || !finalWeightForCheck || (!newCriterionValue && !isAutomatedCriterion);
 
 
   return (
@@ -230,7 +196,7 @@ export default function GroupCriteriaPage() {
         <div>
           <h1 className="text-3xl font-bold">Criterios de Evaluación</h1>
           <p className="text-muted-foreground">
-            Gestiona los rubros para la calificación del grupo "{group.subject}".
+            Gestiona los rubros para la calificación del grupo "{activeGroup.subject}".
           </p>
         </div>
       </div>
@@ -295,11 +261,11 @@ export default function GroupCriteriaPage() {
                 <Input 
                     id="criterion-value"
                     type="number" 
-                    placeholder={isParticipationSelected ? "Automático por participación" : "Valor Esperado"}
+                    placeholder={isAutomatedCriterion ? "Cálculo automático" : "Valor Esperado"}
                     className="w-[180px]"
                     value={newCriterionValue}
                     onChange={(e) => setNewCriterionValue(e.target.value)}
-                    disabled={isParticipationSelected}
+                    disabled={isAutomatedCriterion}
                 />
              </div>
             <Button size="icon" onClick={handleAddCriterion} disabled={isAddButtonDisabled} className="self-end">
@@ -310,13 +276,13 @@ export default function GroupCriteriaPage() {
           
           <h3 className="text-lg font-medium mb-2">Lista de Criterios</h3>
           <div className="space-y-2">
-            {evaluationCriteria.map(criterion => (
+            {criteria.map(criterion => (
                 <div key={criterion.id} className="flex items-center justify-between p-3 bg-muted rounded-md">
                     <div>
                         <span className="font-medium">{criterion.name}</span>
                         <p className="text-xs text-muted-foreground">
-                          {criterion.name === 'Participación' 
-                            ? 'Calculado automáticamente por participación' 
+                          {criterion.name === 'Participación' || criterion.name === 'Actividades' || criterion.name === 'Portafolio'
+                            ? 'Calculado automáticamente' 
                             : `${criterion.expectedValue} es el valor esperado`
                           }
                         </p>
@@ -334,13 +300,13 @@ export default function GroupCriteriaPage() {
                     </div>
                 </div>
             ))}
-            {evaluationCriteria.length === 0 && (
+            {criteria.length === 0 && (
                 <p className="text-sm text-center text-muted-foreground py-8">No has agregado criterios de evaluación.</p>
             )}
           </div>
         </CardContent>
 
-        {(totalWeight > 0 || evaluationCriteria.length > 0) && (
+        {(totalWeight > 0 || criteria.length > 0) && (
             <CardHeader className="border-t pt-4 mt-4">
                 <div className="flex justify-end">
                     {totalWeight > 0 && (
@@ -372,7 +338,7 @@ export default function GroupCriteriaPage() {
                   value={editingCriterion.name}
                   onChange={(e) => setEditingCriterion({ ...editingCriterion, name: e.target.value })}
                   className="col-span-3"
-                  disabled={editingCriterion.name === 'Participación'}
+                  disabled={editingCriterion.name === 'Participación' || editingCriterion.name === 'Actividades' || editingCriterion.name === 'Portafolio'}
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
@@ -397,7 +363,7 @@ export default function GroupCriteriaPage() {
                   value={editingCriterion.expectedValue}
                   onChange={(e) => setEditingCriterion({ ...editingCriterion, expectedValue: parseInt(e.target.value, 10) || 0 })}
                   className="col-span-3"
-                  disabled={editingCriterion.name === 'Participación'}
+                  disabled={editingCriterion.name === 'Participación' || editingCriterion.name === 'Actividades' || editingCriterion.name === 'Portafolio'}
                   placeholder={editingCriterion.name === 'Participación' ? 'Automático por participación' : ''}
                 />
               </div>
