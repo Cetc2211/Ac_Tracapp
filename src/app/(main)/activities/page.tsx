@@ -164,24 +164,24 @@ export default function ActivitiesPage() {
   return (
     <div className="flex flex-col gap-6">
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent ref={dialogContentRef}>
+        <DialogContent ref={dialogContentRef} className="sm:max-w-md">
             <DialogHeader>
                 <DialogTitle>Registrar Nueva Actividad</DialogTitle>
                 <DialogDescription>Ingresa los detalles de la nueva actividad para el grupo.</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="activity-name" className="text-right">Nombre</Label>
-                    <Input id="activity-name" value={newActivityName} onChange={(e) => setNewActivityName(e.target.value)} className="col-span-3" placeholder="Ej. Ensayo sobre la Revolución"/>
+                <div className="space-y-2">
+                    <Label htmlFor="activity-name">Nombre</Label>
+                    <Input id="activity-name" value={newActivityName} onChange={(e) => setNewActivityName(e.target.value)} placeholder="Ej. Ensayo sobre la Revolución"/>
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                    <Label className="text-right">Fecha Entrega</Label>
-                    <Popover>
+                <div className="space-y-2">
+                    <Label>Fecha Entrega</Label>
+                    <Popover modal={false}>
                         <PopoverTrigger asChild>
                         <Button
                             variant={'outline'}
                             className={cn(
-                            'col-span-3 justify-start text-left font-normal',
+                            'w-full justify-start text-left font-normal',
                             !newActivityDueDate && 'text-muted-foreground'
                             )}
                         >
@@ -189,7 +189,7 @@ export default function ActivitiesPage() {
                             {newActivityDueDate ? format(newActivityDueDate, 'PPP', { locale: es }) : <span>Selecciona una fecha</span>}
                         </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" container={dialogContentRef.current}>
+                        <PopoverContent className="w-auto p-0">
                         <Calendar
                             mode="single"
                             selected={newActivityDueDate}
@@ -322,5 +322,3 @@ export default function ActivitiesPage() {
     </div>
   );
 }
-
-    
