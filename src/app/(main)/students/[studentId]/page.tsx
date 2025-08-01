@@ -141,9 +141,9 @@ export default function StudentProfilePage() {
     
     studentObservations.forEach(obs => {
         if (obs.type === 'Mérito') {
-            finalGrade += 1;
+            finalGrade += 10;
         } else if (obs.type === 'Demérito') {
-            finalGrade -= 1;
+            finalGrade -= 10;
         }
     });
 
