@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Student, Group } from '@/lib/placeholder-data';
+import { Student, Group, StudentObservation } from '@/lib/placeholder-data';
 import { notFound, useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -108,7 +108,8 @@ export default function GroupDetailsPage() {
       const activityRecords = JSON.parse(localStorage.getItem(`activityRecords_${groupId}_${partial}`) || '{}');
       
       activeGroup.students.forEach((s: Student) => {
-          const finalGrade = calculateFinalGrade(s.id, criteria, grades, participations, activities, activityRecords);
+          const studentObservations: StudentObservation[] = JSON.parse(localStorage.getItem(`observations_${s.id}`) || '[]');
+          const finalGrade = calculateFinalGrade(s.id, criteria, grades, participations, activities, activityRecords, studentObservations);
           riskLevels[s.id] = getStudentRiskLevel(finalGrade, attendance, s.id);
       });
       setStudentRiskLevels(riskLevels);
@@ -693,6 +694,8 @@ export default function GroupDetailsPage() {
     </>
   );
 }
+
+    
 
     
 
