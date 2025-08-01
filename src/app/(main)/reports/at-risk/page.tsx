@@ -124,19 +124,21 @@ const AtRiskStudentCard = ({ studentData }: { studentData: StudentReportData }) 
                             className="rounded-full border-4"
                             style={{borderColor: studentData.riskLevel === 'high' ? 'hsl(var(--destructive))' : 'hsl(var(--chart-4))'}}
                         />
-                        <div className="pt-2">
+                        <div className="pt-2 flex-grow">
                             <CardTitle className="text-2xl">{studentData.name}</CardTitle>
-                            <CardDescription className="flex items-center gap-2 mt-1">
-                                {studentData.riskLevel === 'high' 
-                                    ? <Badge variant="destructive">Riesgo Alto</Badge> 
-                                    : <Badge className="bg-amber-500">Riesgo Medio</Badge>
-                                }
-                                <span className="text-xs">{studentData.riskReason}</span>
-                            </CardDescription>
-                             <div className="text-sm text-muted-foreground mt-2 space-y-1">
-                                <p className="flex items-center gap-2"><Mail className="h-4 w-4"/> {studentData.email || 'No registrado'}</p>
-                                <p className="flex items-center gap-2"><User className="h-4 w-4"/> Tutor: {studentData.tutorName || 'No registrado'}</p>
-                                <p className="flex items-center gap-2"><Phone className="h-4 w-4"/> Tel. Tutor: {studentData.tutorPhone || 'No registrado'}</p>
+                            <div className="flex flex-col items-start mt-1 space-y-1">
+                                <CardDescription className="flex items-center gap-2">
+                                    {studentData.riskLevel === 'high' 
+                                        ? <Badge variant="destructive">Riesgo Alto</Badge> 
+                                        : <Badge className="bg-amber-500">Riesgo Medio</Badge>
+                                    }
+                                    <span className="text-xs">{studentData.riskReason}</span>
+                                </CardDescription>
+                                <div className="text-sm text-muted-foreground mt-2 space-y-1">
+                                    <p className="flex items-center gap-2"><Mail className="h-4 w-4"/> {studentData.email || 'No registrado'}</p>
+                                    <p className="flex items-center gap-2"><User className="h-4 w-4"/> Tutor: {studentData.tutorName || 'No registrado'}</p>
+                                    <p className="flex items-center gap-2"><Phone className="h-4 w-4"/> Tel. Tutor: {studentData.tutorPhone || 'No registrado'}</p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -195,7 +197,7 @@ const AtRiskStudentCard = ({ studentData }: { studentData: StudentReportData }) 
 
                     {aiResponse && (
                         <div className="mt-6 space-y-4">
-                             <h4 className="font-semibold flex items-center gap-2 text-primary"><BadgeInfo />Análisis y Recomendaciones de IA</h4>
+                             <h4 className="font-semibold flex items-center gap-2 text-primary"><BadgeInfo />Análisis y Recomendaciones</h4>
                               <div className="p-3 border-l-4 border-primary bg-primary/10 rounded-r-md text-sm space-y-4">
                                 <div>
                                     <h5 className="font-bold">Análisis de la Situación:</h5>
