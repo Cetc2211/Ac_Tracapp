@@ -18,7 +18,7 @@ import {
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, Download, FileText, Loader2, Wand2, User, Mail, Phone, Check, X, AlertTriangle, ListChecks, MessageSquare, BadgeInfo } from 'lucide-react';
+import { ArrowLeft, Download, FileText, Loader2, Wand2, User, Mail, Phone, Check, X, AlertTriangle, ListChecks, MessageSquare, BadgeInfo, Edit, Save } from 'lucide-react';
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { StudentObservation } from '@/lib/placeholder-data';
 import { format } from 'date-fns';
@@ -31,6 +31,8 @@ import { generateAtRiskStudentRecommendation } from '@/ai/flows/at-risk-student-
 import type { AtRiskStudentOutput, AtRiskStudentInput } from '@/ai/flows/at-risk-student-recommendation';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 
 type StudentReportData = {
     id: string;
@@ -57,6 +59,9 @@ const AtRiskStudentCard = ({ studentData }: { studentData: StudentReportData }) 
     const { toast } = useToast();
     const [isGenerating, setIsGenerating] = useState(false);
     const [aiResponse, setAiResponse] = useState<AtRiskStudentOutput | null>(null);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editedAnalysis, setEditedAnalysis] = useState('');
+    const [editedRecommendations, setEditedRecommendations] = useState('');
 
     const handleDownloadPdf = () => {
         const input = reportRef.current;
@@ -83,6 +88,7 @@ const AtRiskStudentCard = ({ studentData }: { studentData: StudentReportData }) 
     const handleGenerateRecommendation = async () => {
         setIsGenerating(true);
         setAiResponse(null);
+        setIsEditing(false);
         try {
             const input: AtRiskStudentInput = {
                 studentName: studentData.name,
@@ -108,6 +114,29 @@ const AtRiskStudentCard = ({ studentData }: { studentData: StudentReportData }) 
             setIsGenerating(false);
         }
     }
+    
+    const handleEdit = () => {
+        if(aiResponse) {
+            setEditedAnalysis(aiResponse.analysis);
+            setEditedRecommendations(aiResponse.recommendations.join('\n'));
+            setIsEditing(true);
+        }
+    }
+    
+    const handleSaveEdit = () => {
+        if (aiResponse) {
+            setAiResponse({
+                analysis: editedAnalysis,
+                recommendations: editedRecommendations.split('\n').filter(r => r.trim() !== '')
+            });
+            setIsEditing(false);
+            toast({ title: 'Cambios guardados', description: 'El informe ha sido actualizado.'});
+        }
+    }
+
+    const handleCancelEdit = () => {
+        setIsEditing(false);
+    }
 
     const attendanceRate = studentData.attendance.total > 0 ? (studentData.attendance.p / studentData.attendance.total) * 100 : 0;
 
@@ -125,20 +154,20 @@ const AtRiskStudentCard = ({ studentData }: { studentData: StudentReportData }) 
                             style={{borderColor: studentData.riskLevel === 'high' ? 'hsl(var(--destructive))' : 'hsl(var(--chart-4))'}}
                         />
                         <div className="pt-2 flex-grow">
-                            <CardTitle className="text-2xl">{studentData.name}</CardTitle>
-                            <div className="flex flex-col items-start mt-1 space-y-1">
-                                <CardDescription className="flex items-center gap-2">
+                             <div className="flex flex-col items-start mt-1 space-y-1">
+                                <CardTitle className="text-2xl">{studentData.name}</CardTitle>
+                                 <CardDescription className="flex items-center gap-2">
                                     {studentData.riskLevel === 'high' 
                                         ? <Badge variant="destructive">Riesgo Alto</Badge> 
                                         : <Badge className="bg-amber-500">Riesgo Medio</Badge>
                                     }
                                     <span className="text-xs">{studentData.riskReason}</span>
                                 </CardDescription>
-                                <div className="text-sm text-muted-foreground mt-2 space-y-1">
-                                    <p className="flex items-center gap-2"><Mail className="h-4 w-4"/> {studentData.email || 'No registrado'}</p>
-                                    <p className="flex items-center gap-2"><User className="h-4 w-4"/> Tutor: {studentData.tutorName || 'No registrado'}</p>
-                                    <p className="flex items-center gap-2"><Phone className="h-4 w-4"/> Tel. Tutor: {studentData.tutorPhone || 'No registrado'}</p>
-                                </div>
+                            </div>
+                            <div className="text-sm text-muted-foreground mt-2 space-y-1">
+                                <p className="flex items-center gap-2"><Mail className="h-4 w-4"/> {studentData.email || 'No registrado'}</p>
+                                <p className="flex items-center gap-2"><User className="h-4 w-4"/> Tutor: {studentData.tutorName || 'No registrado'}</p>
+                                <p className="flex items-center gap-2"><Phone className="h-4 w-4"/> Tel. Tutor: {studentData.tutorPhone || 'No registrado'}</p>
                             </div>
                         </div>
                     </div>
@@ -199,18 +228,33 @@ const AtRiskStudentCard = ({ studentData }: { studentData: StudentReportData }) 
                         <div className="mt-6 space-y-4">
                              <h4 className="font-semibold flex items-center gap-2 text-primary"><BadgeInfo />Análisis y Recomendaciones</h4>
                               <div className="p-3 border-l-4 border-primary bg-primary/10 rounded-r-md text-sm space-y-4">
-                                <div>
-                                    <h5 className="font-bold">Análisis de la Situación:</h5>
-                                    <p className="mt-1">{aiResponse.analysis}</p>
-                                </div>
-                                 <div>
-                                    <h5 className="font-bold">Plan de Acción Recomendado:</h5>
-                                    <ul className="list-disc pl-5 mt-2 space-y-1">
-                                        {aiResponse.recommendations.map((rec, i) => (
-                                            <li key={i}>{rec}</li>
-                                        ))}
-                                    </ul>
-                                </div>
+                                {isEditing ? (
+                                    <div className="space-y-4">
+                                        <div>
+                                            <Label htmlFor="edited-analysis" className="font-bold">Análisis de la Situación:</Label>
+                                            <Textarea id="edited-analysis" value={editedAnalysis} onChange={(e) => setEditedAnalysis(e.target.value)} rows={4} />
+                                        </div>
+                                        <div>
+                                            <Label htmlFor="edited-recommendations" className="font-bold">Plan de Acción Recomendado:</Label>
+                                            <Textarea id="edited-recommendations" value={editedRecommendations} onChange={(e) => setEditedRecommendations(e.target.value)} rows={5} placeholder="Una recomendación por línea"/>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div>
+                                            <h5 className="font-bold">Análisis de la Situación:</h5>
+                                            <p className="mt-1 whitespace-pre-wrap">{aiResponse.analysis}</p>
+                                        </div>
+                                        <div>
+                                            <h5 className="font-bold">Plan de Acción Recomendado:</h5>
+                                            <ul className="list-disc pl-5 mt-2 space-y-1">
+                                                {aiResponse.recommendations.map((rec, i) => (
+                                                    <li key={i}>{rec}</li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </div>
                     )}
@@ -218,10 +262,20 @@ const AtRiskStudentCard = ({ studentData }: { studentData: StudentReportData }) 
             </div>
 
             <CardFooter className="bg-muted/50 p-3 flex justify-end gap-2">
-                 <Button onClick={handleGenerateRecommendation} disabled={isGenerating}>
+                 <Button onClick={handleGenerateRecommendation} disabled={isGenerating || isEditing}>
                     {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Wand2 className="mr-2 h-4 w-4" />}
-                    {isGenerating ? 'Analizando...' : 'Generar Análisis con IA'}
+                    {isGenerating ? 'Analizando...' : 'Generar Análisis'}
                 </Button>
+                {aiResponse && (
+                    isEditing ? (
+                        <>
+                            <Button onClick={handleSaveEdit}><Save className="mr-2 h-4 w-4" /> Guardar</Button>
+                            <Button variant="outline" onClick={handleCancelEdit}>Cancelar</Button>
+                        </>
+                    ) : (
+                        <Button variant="secondary" onClick={handleEdit}><Edit className="mr-2 h-4 w-4" /> Editar</Button>
+                    )
+                )}
                 <Button variant="outline" onClick={handleDownloadPdf}>
                     <Download className="mr-2 h-4 w-4"/> PDF
                 </Button>
