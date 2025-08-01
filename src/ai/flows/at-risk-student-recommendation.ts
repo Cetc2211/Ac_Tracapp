@@ -90,13 +90,13 @@ const prompt = ai.definePrompt({
 
     **Task Instructions (Output in Spanish):**
 
-    1.  **Analysis (`analysis` field):**
+    1.  **Analysis ('analysis' field):**
         - Write a concise paragraph explaining the **root causes** of the student's situation.
         - Synthesize information from all data points. Do not just list the data.
         - **Connect the dots:** For example, link poor grades in a specific subject to negative observations or low performance in a specific criterion (e.g., "El bajo rendimiento en Matemáticas ({{gradesByGroup.[0].grade}}%) parece estar directamente relacionado con su dificultad en el criterio 'Examen', donde solo obtuvo un {{gradesByGroup.[0].criteriaDetails.[0].earned}}% de {{gradesByGroup.[0].criteriaDetails.[0].weight}}%. Esto, sumado a las observaciones sobre 'Problema de conducta', sugiere una posible frustración o desinterés en la materia.")
         - Mention attendance if it's a contributing factor.
 
-    2.  **Recommendations (`recommendations` field):**
+    2.  **Recommendations ('recommendations' field):**
         - Provide a list of 3 to 5 concrete, actionable steps the teacher can take.
         - The recommendations should be diverse and address the identified root causes.
         - **Examples of good recommendations:**
@@ -105,7 +105,7 @@ const prompt = ai.definePrompt({
           - "Contactar al tutor legal para discutir el patrón de ausentismo y establecer un plan de acción conjunto."
           - "Asignar un proyecto práctico en 'Proyecto Integrador' que se alinee con los intereses del estudiante para fomentar el engagement."
 
-    Ensure the final output strictly follows the JSON schema with `analysis` and `recommendations` fields.
+    Ensure the final output strictly follows the JSON schema with 'analysis' and 'recommendations' fields.
   `,
 });
 
