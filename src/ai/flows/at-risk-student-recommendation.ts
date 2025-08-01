@@ -35,7 +35,7 @@ const ObservationSchema = z.object({
   details: z.string().describe('The details of the observation.'),
 });
 
-export const AtRiskStudentInputSchema = z.object({
+const AtRiskStudentInputSchema = z.object({
   studentName: z.string().describe('The name of the student.'),
   riskReason: z.string().describe('A brief, pre-calculated reason why the student is considered at risk.'),
   gradesByGroup: z.array(GroupGradeSchema).describe('A list of final grades for each subject, with a detailed breakdown.'),
@@ -44,7 +44,7 @@ export const AtRiskStudentInputSchema = z.object({
 });
 export type AtRiskStudentInput = z.infer<typeof AtRiskStudentInputSchema>;
 
-export const AtRiskStudentOutputSchema = z.object({
+const AtRiskStudentOutputSchema = z.object({
   analysis: z.string().describe('A detailed analysis in Spanish explaining the root causes of the student\'s at-risk status, based on the provided data.'),
   recommendations: z.array(z.string()).describe('A list of 3-5 concrete, actionable recommendations in Spanish for the teacher to implement.'),
 });
