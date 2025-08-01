@@ -23,6 +23,7 @@ import {
   User,
   Printer,
   Loader2,
+  AlertTriangle,
 } from 'lucide-react';
 import { Student } from '@/lib/placeholder-data';
 import { useState, useMemo } from 'react';
@@ -188,10 +189,10 @@ export default function ReportsPage() {
           </CardHeader>
         </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <Card>
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><FileText /> Reporte Académico Completo</CardTitle>
+                    <CardTitle className="flex items-center gap-2"><FileText /> Reporte General del Grupo</CardTitle>
                     <CardDescription>Reporte integral con calificaciones, asistencia y estadísticas del grupo.</CardDescription>
                 </CardHeader>
                 <CardFooter>
@@ -202,10 +203,23 @@ export default function ReportsPage() {
                     </Button>
                 </CardFooter>
             </Card>
+             <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><AlertTriangle className="text-destructive" /> Reporte de Riesgo</CardTitle>
+                    <CardDescription>Análisis detallado de estudiantes en riesgo, con recomendaciones de IA.</CardDescription>
+                </CardHeader>
+                <CardFooter>
+                    <Button className="w-full" variant="destructive" asChild>
+                        <Link href={`/reports/at-risk`}>
+                            <Eye className="mr-2 h-4 w-4" /> Ver Informe de Riesgo
+                        </Link>
+                    </Button>
+                </CardFooter>
+            </Card>
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><Download /> Exportar Calificaciones (CSV)</CardTitle>
-                    <CardDescription>Descarga los datos de calificaciones en formato CSV para usar en Excel u otras herramientas.</CardDescription>
+                    <CardDescription>Descarga los datos de calificaciones en formato CSV para usar en Excel.</CardDescription>
                 </CardHeader>
                 <CardFooter>
                     <Button variant="secondary" className="w-full" onClick={handleDownloadCsv}>
@@ -277,4 +291,3 @@ export default function ReportsPage() {
     </div>
   );
 }
-

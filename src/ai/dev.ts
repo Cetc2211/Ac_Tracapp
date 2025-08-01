@@ -3,3 +3,4 @@ config();
 
 import '@/ai/flows/attendance-randomizer.ts';
 import '@/ai/flows/student-feedback.ts';
+import '@/ai/flows/at-risk-student-recommendation.ts';
