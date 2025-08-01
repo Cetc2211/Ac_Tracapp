@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Student, Group, StudentObservation } from '@/lib/placeholder-data';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
-import { Mail, User, Contact, ArrowLeft, Download, FileText, Loader2, Phone, Wand2 } from 'lucide-react';
+import { Mail, User, Contact, ArrowLeft, Download, FileText, Loader2, Phone, Wand2, ListChecks } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { WhatsAppDialog } from '@/components/whatsapp-dialog';
 import { Activity, ActivityRecord } from '@/hooks/use-data';
+import { Separator } from '@/components/ui/separator';
 
 
 type EvaluationCriteria = {
@@ -99,7 +100,7 @@ export default function StudentProfilePage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
-  const [generatedFeedback, setGeneratedFeedback] = useState('');
+  const [generatedFeedback, setGeneratedFeedback] = useState<{ feedback: string, recommendations: string[] } | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
   const [isWhatsAppDialogOpen, setIsWhatsAppDialogOpen] = useState(false);
 
@@ -233,7 +234,7 @@ export default function StudentProfilePage() {
         return;
     };
     setIsGeneratingFeedback(true);
-    setGeneratedFeedback('');
+    setGeneratedFeedback(null);
     try {
       const input = {
         studentName: student.name,
@@ -242,7 +243,7 @@ export default function StudentProfilePage() {
         observations: observations.map(o => ({ type: o.type, details: o.details })),
       };
       const result = await generateStudentFeedback(input);
-      setGeneratedFeedback(result.feedback);
+      setGeneratedFeedback(result);
       toast({
         title: 'Retroalimentación Generada',
         description: 'Las recomendaciones se han copiado al informe del estudiante.',
@@ -535,11 +536,23 @@ export default function StudentProfilePage() {
         {generatedFeedback && (
             <Card>
                 <CardHeader>
-                    <CardTitle>Recomendaciones</CardTitle>
+                    <CardTitle>Retroalimentación y Plan de Acción</CardTitle>
                 </CardHeader>
-                <CardContent>
-                    <div className="p-4 bg-muted/50 rounded-md border whitespace-pre-wrap text-sm">
-                        {generatedFeedback}
+                <CardContent className="space-y-4">
+                    <div className="p-4 bg-muted/50 rounded-md border space-y-4">
+                        <div>
+                            <h4 className="font-bold">Análisis General:</h4>
+                            <p className="text-sm whitespace-pre-wrap">{generatedFeedback.feedback}</p>
+                        </div>
+                        <Separator/>
+                        <div>
+                             <h4 className="font-bold flex items-center gap-2"><ListChecks /> Recomendaciones:</h4>
+                             <ul className="list-disc pl-5 mt-2 space-y-1 text-sm">
+                                {generatedFeedback.recommendations.map((rec, i) => (
+                                    <li key={i}>{rec}</li>
+                                ))}
+                            </ul>
+                        </div>
                     </div>
                 </CardContent>
             </Card>

@@ -34,10 +34,11 @@ const StudentFeedbackInputSchema = z.object({
   attendance: AttendanceSchema.describe('The student\'s attendance record.'),
   observations: z.array(ObservationSchema).optional().describe('A list of observations made by the teacher.'),
 });
-type StudentFeedbackInput = z.infer<typeof StudentFeedbackInputSchema>;
+export type StudentFeedbackInput = z.infer<typeof StudentFeedbackInputSchema>;
 
 const StudentFeedbackOutputSchema = z.object({
-  feedback: z.string().describe('A comprehensive feedback text for the student, written in Spanish.'),
+  feedback: z.string().describe('A comprehensive, encouraging feedback text for the student, written in Spanish. This should highlight strengths and areas of opportunity in a positive tone.'),
+  recommendations: z.array(z.string()).describe('A list of 2-3 concrete, actionable recommendations in Spanish for the student to implement.'),
 });
 export type StudentFeedbackOutput = z.infer<typeof StudentFeedbackOutputSchema>;
 
@@ -50,8 +51,8 @@ const prompt = ai.definePrompt({
   input: { schema: StudentFeedbackInputSchema },
   output: { schema: StudentFeedbackOutputSchema },
   prompt: `
-    You are an expert educational psychologist. Generate a brief, constructive, and personalized feedback for a student in Spanish.
-    The feedback must start with a "Recomendaciones:" section, followed by a positive reinforcement paragraph without a title.
+    You are an expert educational psychologist. Generate brief, constructive, and personalized feedback for a student in Spanish.
+    The output must be a JSON object with two fields: 'feedback' and 'recommendations'.
 
     **Data for {{{studentName}}}:**
 
@@ -73,18 +74,26 @@ const prompt = ai.definePrompt({
     {{/if}}
 
     **Output Instructions:**
-    1.  **Start with "Recomendaciones:":**
-        - Be direct and concise.
-        - Identify the most critical areas for improvement (low grades, high absences, negative observations like 'Problema de conducta' or 'Problema de lectura').
-        - Provide one or two concrete, actionable recommendations. For example: "Recomendaciones:\\nSe observa que tu desempeño en [Subject] necesita mejorar. Te recomendamos solicitar asesorías o formar grupos de estudio para reforzar los temas."
-    
-    2.  **Follow with a Positive Reinforcement Paragraph (No Title):**
-        - After the recommendations, write a new paragraph.
-        - Be encouraging and motivational.
-        - Highlight one or two key strengths (high grades, perfect attendance, positive observations like 'Mérito').
-        - End on a positive note, expressing confidence in the student's ability to succeed. For example: "¡Felicidades por tu excelente asistencia! Ese compromiso es tu mayor fortaleza y te ayudará a alcanzar tus metas."
 
-    Combine both parts into a single, coherent text under the "feedback" field.
+    1.  **'feedback' field (string):**
+        - Write a comprehensive and encouraging paragraph.
+        - Start by acknowledging the student's effort.
+        - Highlight one or two key strengths (e.g., high grades in a specific subject, excellent attendance, positive observations like 'Mérito').
+        - Gently introduce areas of opportunity based on the data (low grades, absences, negative observations). Frame them constructively.
+        - End on a positive and motivational note, expressing confidence in the student's ability to succeed.
+        - Example: "Hola {{{studentName}}}, hemos revisado tu progreso y queremos felicitarte por tu excelente calificación en 'Historia del Arte' ({{gradesByGroup.[1].grade}}), ¡es un gran logro! Notamos que el área de 'Matemáticas' presenta un desafío, pero con tu dedicación, estamos seguros de que puedes mejorar. Tu constancia, reflejada en tu buena asistencia, es clave para alcanzar todas tus metas. ¡Sigue así!"
+
+    2.  **'recommendations' field (array of strings):**
+        - Provide a list of 2 to 3 concise, concrete, and actionable recommendations.
+        - Each recommendation should be a separate string in the array.
+        - The recommendations should directly address the identified areas for improvement.
+        - Examples:
+          - "Dedicar 30 minutos adicionales al día para repasar los temas de Matemáticas."
+          - "Formar un grupo de estudio con compañeros para prepararse para el próximo examen."
+          - "Acercarse al profesor después de clase para aclarar dudas sobre el 'Proyecto Integrador'."
+          - "Establecer una meta personal para reducir el número de ausencias en el próximo parcial."
+
+    Ensure the final output strictly follows the JSON schema.
   `,
 });
 
