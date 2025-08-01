@@ -19,7 +19,7 @@ import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, Download, FileText, Loader2, Wand2, User, Mail, Phone, Check, X, AlertTriangle, ListChecks, MessageSquare, BadgeInfo } from 'lucide-react';
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { StudentObservation } from '@/lib/placeholder-data';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
