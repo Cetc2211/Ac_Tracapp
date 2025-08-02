@@ -73,7 +73,8 @@ export default function GroupDetailsPage() {
     setActivePartialForGroup,
     criteria,
     calculateFinalGrade,
-    getStudentRiskLevel
+    getStudentRiskLevel,
+    observations
   } = useData();
 
   const router = useRouter();
@@ -98,14 +99,13 @@ export default function GroupDetailsPage() {
 
   useEffect(() => {
     setIsLoading(true);
-    if (activeGroup) {
+    if (activeGroup && activePartial) {
       const riskLevels: {[studentId: string]: ReturnType<typeof getStudentRiskLevel>} = {};
-      const partial = activePartial || '1';
-      const grades = JSON.parse(localStorage.getItem(`grades_${groupId}_${partial}`) || '{}');
-      const participations = JSON.parse(localStorage.getItem(`participations_${groupId}_${partial}`) || '{}');
-      const attendance = JSON.parse(localStorage.getItem(`attendance_${groupId}_${partial}`) || '{}');
-      const activities = JSON.parse(localStorage.getItem(`activities_${groupId}_${partial}`) || '[]');
-      const activityRecords = JSON.parse(localStorage.getItem(`activityRecords_${groupId}_${partial}`) || '{}');
+      const grades = JSON.parse(localStorage.getItem(`grades_${groupId}_${activePartial}`) || '{}');
+      const participations = JSON.parse(localStorage.getItem(`participations_${groupId}_${activePartial}`) || '{}');
+      const attendance = JSON.parse(localStorage.getItem(`attendance_${groupId}_${activePartial}`) || '{}');
+      const activities = JSON.parse(localStorage.getItem(`activities_${groupId}_${activePartial}`) || '[]');
+      const activityRecords = JSON.parse(localStorage.getItem(`activityRecords_${groupId}_${activePartial}`) || '{}');
       
       activeGroup.students.forEach((s: Student) => {
           const studentObservations: StudentObservation[] = JSON.parse(localStorage.getItem(`observations_${s.id}`) || '[]');
@@ -115,7 +115,7 @@ export default function GroupDetailsPage() {
       setStudentRiskLevels(riskLevels);
     }
     setIsLoading(false);
-  }, [activeGroup, activePartial, criteria, calculateFinalGrade, getStudentRiskLevel, groupId]);
+  }, [activeGroup, activePartial, criteria, calculateFinalGrade, getStudentRiskLevel, groupId, observations]);
 
 
   const handlePartialChange = (partial: string) => {
@@ -694,9 +694,5 @@ export default function GroupDetailsPage() {
     </>
   );
 }
-
-    
-
-    
 
     

@@ -14,7 +14,7 @@ import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, Download, CheckCircle, XCircle, TrendingUp, BarChart, Users, Eye, AlertTriangle, Loader2 } from 'lucide-react';
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { StudentObservation } from '@/lib/placeholder-data';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -22,6 +22,7 @@ import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useData } from '@/hooks/use-data';
+import type { Activity, ActivityRecord, EvaluationCriteria, Grades, ParticipationRecord } from '@/hooks/use-data';
 
 type ReportSummary = {
     totalStudents: number;
@@ -44,7 +45,6 @@ export default function GroupReportPage() {
   const groupId = params.groupId as string;
   const { 
       groups,
-      allStudents,
       calculateFinalGrade,
       getStudentRiskLevel,
   } = useData();
@@ -66,15 +66,14 @@ export default function GroupReportPage() {
 
     setIsLoading(true);
     try {
-      // Data is loaded from localStorage within useData, but we calculate summary here.
       const activePartial = localStorage.getItem(`activePartial_${groupId}`) || '1';
       
-      const criteria = JSON.parse(localStorage.getItem(`criteria_${groupId}_${activePartial}`) || '[]');
-      const grades = JSON.parse(localStorage.getItem(`grades_${groupId}_${activePartial}`) || '{}');
-      const participations = JSON.parse(localStorage.getItem(`participations_${groupId}_${activePartial}`) || '{}');
-      const attendance = JSON.parse(localStorage.getItem(`attendance_${groupId}_${activePartial}`) || '{}');
-      const activities = JSON.parse(localStorage.getItem(`activities_${groupId}_${activePartial}`) || '[]');
-      const activityRecords = JSON.parse(localStorage.getItem(`activityRecords_${groupId}_${activePartial}`) || '{}');
+      const criteria: EvaluationCriteria[] = JSON.parse(localStorage.getItem(`criteria_${groupId}_${activePartial}`) || '[]');
+      const grades: Grades = JSON.parse(localStorage.getItem(`grades_${groupId}_${activePartial}`) || '{}');
+      const participations: ParticipationRecord = JSON.parse(localStorage.getItem(`participations_${groupId}_${activePartial}`) || '{}');
+      const attendance: ParticipationRecord = JSON.parse(localStorage.getItem(`attendance_${groupId}_${activePartial}`) || '{}');
+      const activities: Activity[] = JSON.parse(localStorage.getItem(`activities_${groupId}_${activePartial}`) || '[]');
+      const activityRecords: ActivityRecord = JSON.parse(localStorage.getItem(`activityRecords_${groupId}_${activePartial}`) || '{}');
 
       let approved = 0;
       let studentsWithObservations = 0;
@@ -327,3 +326,4 @@ export default function GroupReportPage() {
   );
 }
 
+    

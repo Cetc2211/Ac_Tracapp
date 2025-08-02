@@ -26,7 +26,7 @@ import { Student, Group } from '@/lib/placeholder-data';
 import { Users, ClipboardList, PlusCircle, BookCopy, Settings, AlertTriangle } from 'lucide-react';
 import { AttendanceRandomizer } from '@/components/attendance-randomizer';
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useData } from '@/hooks/use-data';
@@ -224,3 +224,5 @@ export default function GroupsPage() {
     </div>
   );
 }
+
+    

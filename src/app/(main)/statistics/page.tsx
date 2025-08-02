@@ -15,14 +15,13 @@ import {
   ChartLegend,
   ChartLegendContent
 } from "@/components/ui/chart"
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Pie, PieChart, Cell, Tooltip, Legend } from "recharts"
-import { Badge } from '@/components/ui/badge';
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Pie, PieChart, Cell } from "recharts"
 import { useState, useEffect, useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useData } from '@/hooks/use-data';
-import type { Student, Group, StudentObservation, EvaluationCriteria, Grades, ParticipationRecord, Activity, ActivityRecord } from '@/hooks/use-data';
+import type { Student, StudentObservation, EvaluationCriteria, Grades, ParticipationRecord, Activity, ActivityRecord } from '@/hooks/use-data';
 
 
 type GroupStats = {
@@ -76,13 +75,13 @@ export default function StatisticsPage() {
 
     const groupCalculations = useMemo(() => {
         return groups.map(group => {
-            const partial = '1'; // Assuming partial 1 for now, this could be made dynamic
-            const groupCriteria = JSON.parse(localStorage.getItem(`criteria_${group.id}_${partial}`) || '[]');
-            const groupGrades = JSON.parse(localStorage.getItem(`grades_${group.id}_${partial}`) || '{}');
-            const groupParticipations = JSON.parse(localStorage.getItem(`participations_${group.id}_${partial}`) || '{}');
-            const groupAttendance = JSON.parse(localStorage.getItem(`attendance_${group.id}_${partial}`) || '{}');
-            const groupActivities = JSON.parse(localStorage.getItem(`activities_${group.id}_${partial}`) || '[]');
-            const groupActivityRecords = JSON.parse(localStorage.getItem(`activityRecords_${group.id}_${partial}`) || '{}');
+            const partial = localStorage.getItem(`activePartial_${group.id}`) || '1';
+            const groupCriteria = JSON.parse(localStorage.getItem(`criteria_${group.id}_${partial}`) || '[]') as EvaluationCriteria[];
+            const groupGrades = JSON.parse(localStorage.getItem(`grades_${group.id}_${partial}`) || '{}') as Grades;
+            const groupParticipations = JSON.parse(localStorage.getItem(`participations_${group.id}_${partial}`) || '{}') as ParticipationRecord;
+            const groupAttendance = JSON.parse(localStorage.getItem(`attendance_${group.id}_${partial}`) || '{}') as ParticipationRecord;
+            const groupActivities = JSON.parse(localStorage.getItem(`activities_${group.id}_${partial}`) || '[]') as Activity[];
+            const groupActivityRecords = JSON.parse(localStorage.getItem(`activityRecords_${group.id}_${partial}`) || '{}') as ActivityRecord;
 
             const finalGrades = group.students.map(s => {
                 const studentObservations = observations.filter(o => o.studentId === s.id);
@@ -278,7 +277,7 @@ export default function StatisticsPage() {
                                         domain={[0, 100]}
                                         tickFormatter={(value) => `${value}%`}
                                     />
-                                    <Tooltip content={<ChartTooltipContent />} />
+                                    <ChartTooltip content={<ChartTooltipContent />} />
                                     <ChartLegend content={<ChartLegendContent />} />
                                     <Bar dataKey="averageGrade" name="Promedio Gral." fill="hsl(var(--chart-2))" radius={4} />
                                     <Bar dataKey="attendanceRate" name="Asistencia" fill="hsl(var(--chart-4))" radius={4} />
@@ -304,7 +303,7 @@ export default function StatisticsPage() {
                                         tickFormatter={(value) => value.slice(0,15)}
                                     />
                                     <XAxis type="number" hide={true} />
-                                    <Tooltip content={<ChartTooltipContent />} />
+                                    <ChartTooltip content={<ChartTooltipContent />} />
                                     <ChartLegend content={<ChartLegendContent />} />
                                     <Bar dataKey="riskLevels.low" name="Bajo" stackId="a" fill={PIE_CHART_COLORS.low} radius={[4, 0, 0, 4]}/>
                                     <Bar dataKey="riskLevels.medium" name="Medio" stackId="a" fill={PIE_CHART_COLORS.medium} />
@@ -327,7 +326,7 @@ export default function StatisticsPage() {
                             <CardContent>
                                 <ChartContainer config={{}} className="min-h-[250px] w-full">
                                      <PieChart>
-                                        <Tooltip content={<ChartTooltipContent nameKey="name" hideLabel />} />
+                                        <ChartTooltip content={<ChartTooltipContent nameKey="name" hideLabel />} />
                                         <Pie data={riskData} dataKey="value" nameKey="name" innerRadius={50} outerRadius={70} paddingAngle={5}>
                                             {riskData.map((entry) => ( <Cell key={entry.name} fill={entry.fill} /> ))}
                                         </Pie>
@@ -343,7 +342,7 @@ export default function StatisticsPage() {
                             <CardContent>
                                 <ChartContainer config={{}} className="min-h-[250px] w-full">
                                      <PieChart>
-                                        <Tooltip content={<ChartTooltipContent nameKey="name" hideLabel />} />
+                                        <ChartTooltip content={<ChartTooltipContent nameKey="name" hideLabel />} />
                                         <Pie data={approvalData} dataKey="value" nameKey="name" innerRadius={50} outerRadius={70} paddingAngle={5}>
                                             {approvalData.map((entry) => ( <Cell key={entry.name} fill={entry.fill} /> ))}
                                         </Pie>
@@ -359,7 +358,7 @@ export default function StatisticsPage() {
                             <CardContent>
                                  <ChartContainer config={{}} className="min-h-[250px] w-full">
                                      <PieChart>
-                                        <Tooltip content={<ChartTooltipContent nameKey="name" hideLabel />} />
+                                        <ChartTooltip content={<ChartTooltipContent nameKey="name" hideLabel />} />
                                         <Pie data={attendanceData} dataKey="value" nameKey="name" innerRadius={50} outerRadius={70} paddingAngle={5}>
                                             {attendanceData.map((entry) => ( <Cell key={entry.name} fill={entry.fill} /> ))}
                                         </Pie>
@@ -382,7 +381,7 @@ export default function StatisticsPage() {
                                         <CartesianGrid horizontal={false} />
                                         <YAxis dataKey="name" type="category" tickLine={false} tickMargin={10} axisLine={false} />
                                         <XAxis dataKey="total" type="number" />
-                                        <Tooltip content={<ChartTooltipContent />} />
+                                        <ChartTooltip content={<ChartTooltipContent />} />
                                         <Bar dataKey="total" name="Total" radius={4} />
                                     </BarChart>
                                 </ChartContainer>
@@ -399,7 +398,7 @@ export default function StatisticsPage() {
                                         <CartesianGrid vertical={false} />
                                         <XAxis dataKey="name" tickLine={false} tickMargin={10} axisLine={false} />
                                         <YAxis dataKey="grade" domain={[0,100]} />
-                                        <Tooltip content={<ChartTooltipContent />} />
+                                        <ChartTooltip content={<ChartTooltipContent />} />
                                         <Bar dataKey="grade" name="Calificación" fill="hsl(var(--chart-2))" radius={4} />
                                     </BarChart>
                                 </ChartContainer>
@@ -418,7 +417,7 @@ export default function StatisticsPage() {
                                     <CartesianGrid vertical={false} />
                                     <XAxis dataKey="name" tickLine={false} tickMargin={10} axisLine={false} />
                                     <YAxis dataKey="students" allowDecimals={false} />
-                                    <Tooltip content={<ChartTooltipContent />} />
+                                    <ChartTooltip content={<ChartTooltipContent />} />
                                     <Bar dataKey="students" name="Estudiantes" fill="hsl(var(--primary))" radius={4} />
                                 </BarChart>
                             </ChartContainer>
@@ -440,3 +439,5 @@ export default function StatisticsPage() {
     </div>
   );
 }
+
+    

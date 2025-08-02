@@ -33,6 +33,8 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import type { EvaluationCriteria, Grades, Activity, ActivityRecord, ParticipationRecord } from '@/hooks/use-data';
+
 
 type StudentReportData = {
     id: string;
@@ -49,7 +51,7 @@ type StudentReportData = {
         a: number;
         total: number;
     };
-    criteriaDetails: AtRiskStudentInput['gradesByGroup'][0]['criteriaDetails'];
+    criteriaDetails: { name: string; earned: number; weight: number; }[];
     observations: StudentObservation[];
 };
 
@@ -154,7 +156,7 @@ const AtRiskStudentCard = ({ studentData }: { studentData: StudentReportData }) 
                             style={{borderColor: studentData.riskLevel === 'high' ? 'hsl(var(--destructive))' : 'hsl(var(--chart-4))'}}
                         />
                         <div className="pt-2 flex-grow">
-                             <div className="flex flex-col items-start mt-1 space-y-1">
+                            <div className="flex flex-col items-start mt-1 space-y-1">
                                 <CardTitle className="text-2xl">{studentData.name}</CardTitle>
                                  <CardDescription className="flex items-center gap-2">
                                     {studentData.riskLevel === 'high' 
@@ -294,20 +296,19 @@ export default function AtRiskReportPage() {
         if (!activeGroup) return null;
         
         const partial = localStorage.getItem(`activePartial_${activeGroup.id}`) || '1';
-        const criteria = JSON.parse(localStorage.getItem(`criteria_${activeGroup.id}_${partial}`) || '[]');
-        const grades = JSON.parse(localStorage.getItem(`grades_${activeGroup.id}_${partial}`) || '{}');
-        const participations = JSON.parse(localStorage.getItem(`participations_${activeGroup.id}_${partial}`) || '{}');
-        const activities = JSON.parse(localStorage.getItem(`activities_${activeGroup.id}_${partial}`) || '[]');
-        const activityRecords = JSON.parse(localStorage.getItem(`activityRecords_${activeGroup.id}_${partial}`) || '{}');
-        const attendance = JSON.parse(localStorage.getItem(`attendance_${activeGroup.id}_${partial}`) || '{}');
+        const criteria = JSON.parse(localStorage.getItem(`criteria_${activeGroup.id}_${partial}`) || '[]') as EvaluationCriteria[];
+        const grades = JSON.parse(localStorage.getItem(`grades_${activeGroup.id}_${partial}`) || '{}') as Grades;
+        const participations = JSON.parse(localStorage.getItem(`participations_${activeGroup.id}_${partial}`) || '{}') as ParticipationRecord;
+        const activities = JSON.parse(localStorage.getItem(`activities_${activeGroup.id}_${partial}`) || '[]') as Activity[];
+        const activityRecords = JSON.parse(localStorage.getItem(`activityRecords_${activeGroup.id}_${partial}`) || '{}') as ActivityRecord;
+        const attendance = JSON.parse(localStorage.getItem(`attendance_${activeGroup.id}_${partial}`) || '{}') as ParticipationRecord;
         
         const studentObservations = observations.filter(o => o.studentId === studentId);
 
-        let finalGrade = 0;
-        const criteriaDetails: StudentReportData['criteriaDetails'] = [];
+        const finalGrade = calculateFinalGrade(studentId, criteria, grades, participations, activities, activityRecords, studentObservations);
 
-        for (const criterion of criteria) {
-            let performanceRatio = 0;
+        const criteriaDetails: StudentReportData['criteriaDetails'] = criteria.map(criterion => {
+             let performanceRatio = 0;
             if (criterion.name === 'Actividades' || criterion.name === 'Portafolio') {
                 performanceRatio = (activities.length > 0) ? (Object.values(activityRecords[studentId] || {}).filter(Boolean).length / activities.length) : 0;
             } else if (criterion.name === 'Participación') {
@@ -316,16 +317,8 @@ export default function AtRiskReportPage() {
                 performanceRatio = (criterion.expectedValue > 0) ? ((grades[studentId]?.[criterion.id]?.delivered ?? 0) / criterion.expectedValue) : 0;
             }
             const earned = performanceRatio * criterion.weight;
-            finalGrade += earned;
-            criteriaDetails.push({ name: criterion.name, earned, weight: criterion.weight });
-        }
-        
-        studentObservations.forEach(obs => {
-            if (obs.type === 'Mérito') finalGrade += 10;
-            else if (obs.type === 'Demérito') finalGrade -= 10;
+            return { name: criterion.name, earned, weight: criterion.weight };
         });
-        if (finalGrade > 100) finalGrade = 100;
-        if (finalGrade < 0) finalGrade = 0;
 
         const attendanceStats = { p: 0, a: 0, total: 0 };
         Object.keys(attendance).forEach(date => {
@@ -337,7 +330,7 @@ export default function AtRiskReportPage() {
         
         return { finalGrade, attendance: attendanceStats, criteriaDetails, observations: studentObservations };
 
-  }, [activeGroup, observations]);
+  }, [activeGroup, observations, calculateFinalGrade]);
 
 
   useEffect(() => {
@@ -438,3 +431,5 @@ export default function AtRiskReportPage() {
     </div>
   );
 }
+
+    
