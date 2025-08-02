@@ -104,7 +104,7 @@ export default function GroupDetailsPage() {
 
   useEffect(() => {
     setIsLoading(true);
-    if (activeGroup && activePartial) {
+    if (activeGroup && activeGroup.students && activePartial) {
       const riskLevels: {[studentId: string]: ReturnType<typeof getStudentRiskLevel>} = {};
       
       activeGroup.students.forEach((s: Student) => {
@@ -694,5 +694,3 @@ export default function GroupDetailsPage() {
     </>
   );
 }
-
-    
