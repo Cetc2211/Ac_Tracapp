@@ -1,4 +1,5 @@
 
+
 'use client';
 import {
   Card,
@@ -104,7 +105,7 @@ export default function GroupDetailsPage() {
 
   useEffect(() => {
     setIsLoading(true);
-    if (activeGroup && activeGroup.students && activePartial) {
+    if (activeGroup && activeGroup.students && activePartial && allObservations) {
       const riskLevels: {[studentId: string]: ReturnType<typeof getStudentRiskLevel>} = {};
       
       activeGroup.students.forEach((s: Student) => {

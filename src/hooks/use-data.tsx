@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
@@ -108,6 +109,14 @@ interface DataContextType {
   overallAverageParticipation: number;
   groupAverages: {[groupId: string]: number};
 
+  allObservations: { [studentId: string]: StudentObservation[] };
+  allCriteria: { [key: string]: EvaluationCriteria[] };
+  allGrades: { [key: string]: AllGrades };
+  allParticipations: { [key: string]: AllParticipations };
+  allActivities: { [key: string]: AllActivities };
+  allActivityRecords: { [key: string]: AllActivityRecords };
+  allAttendances: { [key: string]: AllAttendances };
+  activePartials: { [groupId: string]: string };
 
   // Setters
   setStudents: (students: Student[]) => void;
@@ -608,6 +617,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         <DataContext.Provider value={{
             students: allStudents, groups, allStudents, activeStudentsInGroups, settings, activeGroup, activePartial, criteria, grades, attendance, participations, activities, activityRecords, observations,
             groupStats, atRiskStudents, overallAverageParticipation, groupAverages,
+            allObservations, allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, allAttendances, activePartials,
             setStudents: setAllStudents, setGroups, setAllStudents, setSettings, setActiveGroupId, setActivePartialForGroup,
             setCriteria: setCriteriaWrapper, setGrades: setGradesWrapper, setAttendance: setAttendanceWrapper, setParticipations: setParticipationsWrapper, setActivities: setActivitiesWrapper, setActivityRecords: setActivityRecordsWrapper, setObservations: setObservationsWrapper,
             saveStudentObservation, deleteGroup, calculateFinalGrade, getStudentRiskLevel,
