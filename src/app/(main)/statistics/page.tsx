@@ -66,7 +66,14 @@ export default function StatisticsPage() {
         attendance,
         activities,
         activityRecords,
-        observations
+        allObservations,
+        allAttendances,
+        activePartials,
+        allCriteria,
+        allGrades,
+        allParticipations,
+        allActivities,
+        allActivityRecords,
     } = useData();
 
     const [stats, setStats] = useState<GroupStats[]>([]);
@@ -75,16 +82,16 @@ export default function StatisticsPage() {
 
     const groupCalculations = useMemo(() => {
         return groups.map(group => {
-            const partial = localStorage.getItem(`activePartial_${group.id}`) || '1';
-            const groupCriteria = JSON.parse(localStorage.getItem(`criteria_${group.id}_${partial}`) || '[]') as EvaluationCriteria[];
-            const groupGrades = JSON.parse(localStorage.getItem(`grades_${group.id}_${partial}`) || '{}') as Grades;
-            const groupParticipations = JSON.parse(localStorage.getItem(`participations_${group.id}_${partial}`) || '{}') as ParticipationRecord;
-            const groupAttendance = JSON.parse(localStorage.getItem(`attendance_${group.id}_${partial}`) || '{}') as ParticipationRecord;
-            const groupActivities = JSON.parse(localStorage.getItem(`activities_${group.id}_${partial}`) || '[]') as Activity[];
-            const groupActivityRecords = JSON.parse(localStorage.getItem(`activityRecords_${group.id}_${partial}`) || '{}') as ActivityRecord;
+            const partial = activePartials[group.id] || '1';
+            const groupCriteria = allCriteria[`criteria_${group.id}_${partial}`] || [];
+            const groupGrades = allGrades[group.id]?.[partial] || {};
+            const groupParticipations = allParticipations[group.id]?.[partial] || {};
+            const groupAttendance = allAttendances[group.id]?.[partial] || {};
+            const groupActivities = allActivities[group.id]?.[partial] || [];
+            const groupActivityRecords = allActivityRecords[group.id]?.[partial] || {};
 
             const finalGrades = group.students.map(s => {
-                const studentObservations = observations.filter(o => o.studentId === s.id);
+                const studentObservations = allObservations[s.id] || [];
                 return calculateFinalGrade(s.id, groupCriteria, groupGrades, groupParticipations, groupActivities, groupActivityRecords, studentObservations);
             });
             const averageGrade = finalGrades.length > 0 ? finalGrades.reduce((a, b) => a + b, 0) / finalGrades.length : 0;
@@ -94,7 +101,7 @@ export default function StatisticsPage() {
             const riskLevels = { low: 0, medium: 0, high: 0 };
             
             group.students.forEach(student => {
-                const studentObservations = observations.filter(o => o.studentId === student.id);
+                const studentObservations = allObservations[student.id] || [];
                 const studentFinalGrade = calculateFinalGrade(student.id, groupCriteria, groupGrades, groupParticipations, groupActivities, groupActivityRecords, studentObservations);
                 const risk = getStudentRiskLevel(studentFinalGrade, groupAttendance, student.id);
                 riskLevels[risk.level]++;
@@ -121,7 +128,7 @@ export default function StatisticsPage() {
             };
         });
 
-    }, [groups, calculateFinalGrade, getStudentRiskLevel, observations]);
+    }, [groups, calculateFinalGrade, getStudentRiskLevel, allObservations, activePartials, allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, allAttendances]);
     
     useEffect(() => {
         setIsLoading(true);
@@ -138,7 +145,7 @@ export default function StatisticsPage() {
             ];
 
             for(const student of activeGroup.students) {
-                const studentObservations = observations.filter(o => o.studentId === student.id);
+                const studentObservations = allObservations[student.id] || [];
                 const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords, studentObservations);
                 studentGrades.push({student, grade: finalGrade});
                 if(finalGrade >= 70) approved++; else failed++;
@@ -159,9 +166,8 @@ export default function StatisticsPage() {
                     else if (participationRate <= 60) participationDistribution[2].students++;
                     else if (participationRate <= 80) participationDistribution[3].students++;
                     else participationDistribution[4].students++;
-                } else {
-                    // if no participation classes, all students are in the 0-20% bucket
-                    participationDistribution[0].students++;
+                } else if(activeGroup.students.length > 0) {
+                    participationDistribution[0].students = activeGroup.students.length;
                 }
             }
              Object.values(attendance).forEach(dailyRecord => {
@@ -174,7 +180,7 @@ export default function StatisticsPage() {
 
             setActiveGroupStats({
                 approvalRate: { approved, failed },
-                attendanceTotals: { present, absent, late: 0 }, // 'late' status is not used in the new structure
+                attendanceTotals: { present, absent, late: 0 },
                 observationStats: { observations: observationCount, canalizations: canalizationCount, followUps: followUpCount },
                 riskDistribution,
                 topStudents: studentGrades.slice(0,5).map(s => ({name: s.student.name, grade: parseFloat(s.grade.toFixed(1))})),
@@ -184,7 +190,7 @@ export default function StatisticsPage() {
             setActiveGroupStats(null);
         }
         setIsLoading(false);
-    }, [activeGroup, groups, criteria, grades, participations, attendance, activities, activityRecords, observations, calculateFinalGrade, getStudentRiskLevel, groupCalculations]);
+    }, [activeGroup, groups, criteria, grades, participations, attendance, activities, activityRecords, allObservations, calculateFinalGrade, getStudentRiskLevel, groupCalculations]);
 
     const approvalData = useMemo(() => {
         if (!activeGroupStats) return [];
@@ -380,7 +386,7 @@ export default function StatisticsPage() {
                                     <BarChart data={observationData} accessibilityLayer layout="vertical">
                                         <CartesianGrid horizontal={false} />
                                         <YAxis dataKey="name" type="category" tickLine={false} tickMargin={10} axisLine={false} />
-                                        <XAxis dataKey="total" type="number" />
+                                        <XAxis dataKey="total" type="number" allowDecimals={false}/>
                                         <ChartTooltip content={<ChartTooltipContent />} />
                                         <Bar dataKey="total" name="Total" radius={4} />
                                     </BarChart>

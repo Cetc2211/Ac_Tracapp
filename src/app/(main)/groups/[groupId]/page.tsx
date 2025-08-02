@@ -57,7 +57,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useData } from '@/hooks/use-data';
-import type { EvaluationCriteria, Grades, ParticipationRecord, Activity, ActivityRecord } from '@/hooks/use-data';
+import type { EvaluationCriteria, Grades, ParticipationRecord, Activity, ActivityRecord, CalculatedRisk } from '@/hooks/use-data';
 import { Input } from '@/components/ui/input';
 
 export default function GroupDetailsPage() {
@@ -72,15 +72,20 @@ export default function GroupDetailsPage() {
     activePartial,
     setActivePartialForGroup,
     criteria,
+    grades,
+    participations,
+    activities,
+    activityRecords,
+    attendance,
     calculateFinalGrade,
     getStudentRiskLevel,
-    observations
+    allObservations
   } = useData();
 
   const router = useRouter();
   const { toast } = useToast();
   
-  const [studentRiskLevels, setStudentRiskLevels] = useState<{[studentId: string]: ReturnType<typeof getStudentRiskLevel>}>({});
+  const [studentRiskLevels, setStudentRiskLevels] = useState<{[studentId: string]: CalculatedRisk}>({});
   const [isAddStudentDialogOpen, setIsAddStudentDialogOpen] = useState(false);
   
   const [bulkNames, setBulkNames] = useState('');
@@ -101,21 +106,16 @@ export default function GroupDetailsPage() {
     setIsLoading(true);
     if (activeGroup && activePartial) {
       const riskLevels: {[studentId: string]: ReturnType<typeof getStudentRiskLevel>} = {};
-      const grades = JSON.parse(localStorage.getItem(`grades_${groupId}_${activePartial}`) || '{}');
-      const participations = JSON.parse(localStorage.getItem(`participations_${groupId}_${activePartial}`) || '{}');
-      const attendance = JSON.parse(localStorage.getItem(`attendance_${groupId}_${activePartial}`) || '{}');
-      const activities = JSON.parse(localStorage.getItem(`activities_${groupId}_${activePartial}`) || '[]');
-      const activityRecords = JSON.parse(localStorage.getItem(`activityRecords_${groupId}_${activePartial}`) || '{}');
       
       activeGroup.students.forEach((s: Student) => {
-          const studentObservations: StudentObservation[] = JSON.parse(localStorage.getItem(`observations_${s.id}`) || '[]');
+          const studentObservations: StudentObservation[] = allObservations[s.id] || [];
           const finalGrade = calculateFinalGrade(s.id, criteria, grades, participations, activities, activityRecords, studentObservations);
           riskLevels[s.id] = getStudentRiskLevel(finalGrade, attendance, s.id);
       });
       setStudentRiskLevels(riskLevels);
     }
     setIsLoading(false);
-  }, [activeGroup, activePartial, criteria, calculateFinalGrade, getStudentRiskLevel, groupId, observations]);
+  }, [activeGroup, activePartial, criteria, grades, participations, activities, activityRecords, attendance, allObservations, calculateFinalGrade, getStudentRiskLevel]);
 
 
   const handlePartialChange = (partial: string) => {

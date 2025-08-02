@@ -9,56 +9,20 @@ import {
   CardTitle,
   CardFooter,
 } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, Download, CheckCircle, XCircle, TrendingUp, BarChart, Users, Eye, AlertTriangle } from 'lucide-react';
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Group, Student, StudentObservation } from '@/lib/placeholder-data';
+import { ArrowLeft, Download, CheckCircle, XCircle, TrendingUp, BarChart, Users, Eye, AlertTriangle, Loader2 } from 'lucide-react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { StudentObservation } from '@/lib/placeholder-data';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-
-
-type EvaluationCriteria = {
-  id: string;
-  name: string;
-  weight: number;
-  expectedValue: number;
-};
-
-type GradeDetail = {
-  delivered: number | null;
-};
-
-type Grades = {
-  [studentId: string]: {
-    [criterionId: string]: GradeDetail;
-  };
-};
-
-type ParticipationRecord = {
-  [date: string]: {
-    [studentId: string]: boolean;
-  };
-};
-
-type GlobalAttendanceRecord = {
-  [date: string]: {
-    [studentId: string]: boolean;
-  };
-};
+import { useData } from '@/hooks/use-data';
+import type { Activity, ActivityRecord, EvaluationCriteria, Grades, ParticipationRecord } from '@/hooks/use-data';
 
 type ReportSummary = {
     totalStudents: number;
@@ -79,7 +43,20 @@ type ReportSummary = {
 export default function GroupReportPage() {
   const params = useParams();
   const groupId = params.groupId as string;
-  const [group, setGroup] = useState<Group | null>(null);
+  const { 
+      groups,
+      activePartial,
+      allObservations,
+      allAttendances,
+      allParticipations,
+      allGrades,
+      allCriteria,
+      allActivities,
+      allActivityRecords,
+      calculateFinalGrade,
+      getStudentRiskLevel,
+  } = useData();
+  
   const [summary, setSummary] = useState<ReportSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [institutionName, setInstitutionName] = useState('Academic Tracker');
@@ -87,131 +64,94 @@ export default function GroupReportPage() {
   const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  const calculateFinalGrade = useCallback((studentId: string, criteria: EvaluationCriteria[], grades: Grades, participations: ParticipationRecord) => {
-    if (!criteria || criteria.length === 0) return 0;
-    let finalGrade = 0;
-    
-    for (const criterion of criteria) {
-      let performanceRatio = 0;
-
-      if(criterion.name === 'Participación') {
-          const participationDates = Object.keys(participations);
-          if (participationDates.length > 0) {
-            const participatedClasses = participationDates.filter(date => participations[date]?.[studentId]).length;
-            performanceRatio = participatedClasses / participationDates.length;
-          }
-      } else {
-          const gradeDetail = grades[studentId]?.[criterion.id];
-          const delivered = gradeDetail?.delivered ?? 0;
-          const expected = criterion.expectedValue;
-          if(expected > 0) {
-            performanceRatio = delivered / expected;
-          }
-      }
-      finalGrade += performanceRatio * criterion.weight;
-    }
-    return finalGrade > 100 ? 100 : finalGrade;
-  }, []);
-
-  const getStudentRiskLevel = useCallback((finalGrade: number, attendance: GlobalAttendanceRecord, studentId: string) => {
-      const studentAttendanceDates = Object.keys(attendance).filter(date => attendance[date]?.[studentId] !== undefined);
-      const totalDays = studentAttendanceDates.length;
-      let absences = 0;
-      if (totalDays > 0) {
-          absences = studentAttendanceDates.filter(date => attendance[date]?.[studentId] === false).length;
-      }
-      const absencePercentage = totalDays > 0 ? (absences / totalDays) * 100 : 0;
-      
-      if (finalGrade < 70 || absencePercentage > 20) return 'high';
-      if (finalGrade < 80 || absencePercentage > 10) return 'medium';
-      return 'low';
-  }, []);
+  const group = useMemo(() => groups.find(g => g.id === groupId), [groups, groupId]);
+  const partial = useMemo(() => activePartial || '1', [activePartial]);
 
   useEffect(() => {
-    if (!groupId) return;
+    if (!group) {
+        setIsLoading(false);
+        return
+    };
+
     setIsLoading(true);
     try {
-      const storedGroups: Group[] = JSON.parse(localStorage.getItem('groups') || '[]');
-      const currentGroup = storedGroups.find(g => g.id === groupId);
-      setGroup(currentGroup || null);
+      const criteria: EvaluationCriteria[] = allCriteria[`criteria_${group.id}_${partial}`] || [];
+      const grades: Grades = allGrades[group.id]?.[partial] || {};
+      const participations: ParticipationRecord = allParticipations[group.id]?.[partial] || {};
+      const attendance: ParticipationRecord = allAttendances[group.id]?.[partial] || {};
+      const activities: Activity[] = allActivities[group.id]?.[partial] || [];
+      const activityRecords: ActivityRecord = allActivityRecords[group.id]?.[partial] || {};
+      const observations = allObservations;
 
-      if (currentGroup) {
-        const criteria: EvaluationCriteria[] = JSON.parse(localStorage.getItem(`criteria_${groupId}`) || '[]');
-        const grades: Grades = JSON.parse(localStorage.getItem(`grades_${groupId}`) || '{}');
-        const participations: ParticipationRecord = JSON.parse(localStorage.getItem(`participations_${groupId}`) || '{}');
-        const attendance: GlobalAttendanceRecord = JSON.parse(localStorage.getItem('globalAttendance') || '{}');
+      let approved = 0;
+      let studentsWithObservations = 0;
+      let canalizedStudents = 0;
+      let followUpStudents = 0;
+      let improvedStudents = 0;
+      let stillInObservationStudents = 0;
+      let totalGroupGrade = 0;
+      let totalPossibleAttendance = 0;
+      let totalPresent = 0;
+      let totalParticipations = 0;
+      let totalParticipationOpportunities = 0;
+      let highRiskStudents = 0;
+      let mediumRiskStudents = 0;
 
-        // Calculations
-        let approved = 0;
-        let studentsWithObservations = 0;
-        let canalizedStudents = 0;
-        let followUpStudents = 0;
-        let improvedStudents = 0;
-        let stillInObservationStudents = 0;
-        let totalGroupGrade = 0;
-        let totalPossibleAttendance = 0;
-        let totalPresent = 0;
-        let totalParticipations = 0;
-        let totalParticipationOpportunities = 0;
-        let highRiskStudents = 0;
-        let mediumRiskStudents = 0;
+      group.students.forEach(student => {
+        const studentObservations: StudentObservation[] = observations[student.id] || [];
+        const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords, studentObservations);
+        totalGroupGrade += finalGrade;
+        if (finalGrade >= 70) approved++;
 
-        currentGroup.students.forEach(student => {
-          const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations);
-          totalGroupGrade += finalGrade;
-          if (finalGrade >= 70) approved++;
-
-          const riskLevel = getStudentRiskLevel(finalGrade, attendance, student.id);
-          if (riskLevel === 'high') highRiskStudents++;
-          if (riskLevel === 'medium') mediumRiskStudents++;
-          
-          const studentObservations: StudentObservation[] = JSON.parse(localStorage.getItem(`observations_${student.id}`) || '[]');
-          if(studentObservations.length > 0) {
-              studentsWithObservations++;
-              if(studentObservations.some(o => o.requiresCanalization)) canalizedStudents++;
-              if(studentObservations.some(o => o.requiresFollowUp)) {
-                  followUpStudents++;
-                  const followUpCases = studentObservations.filter(o => o.requiresFollowUp);
-                  if (followUpCases.some(c => c.isClosed)) {
-                      improvedStudents++;
-                  } else {
-                      stillInObservationStudents++;
-                  }
-              }
-          }
-          
-          Object.keys(attendance).forEach(date => {
-              if (attendance[date]?.[student.id] !== undefined) {
-                  totalPossibleAttendance++;
-                  if(attendance[date][student.id]) totalPresent++;
-              }
-          });
-          
-          Object.keys(participations).forEach(date => {
-              if (Object.prototype.hasOwnProperty.call(participations[date], student.id)) {
-                  totalParticipationOpportunities++;
-                  if (participations[date]?.[student.id]) totalParticipations++;
-              }
-          })
+        const riskLevel = getStudentRiskLevel(finalGrade, attendance, student.id);
+        if (riskLevel.level === 'high') highRiskStudents++;
+        if (riskLevel.level === 'medium') mediumRiskStudents++;
+        
+        if(studentObservations.length > 0) {
+            studentsWithObservations++;
+            if(studentObservations.some(o => o.requiresCanalization)) canalizedStudents++;
+            if(studentObservations.some(o => o.requiresFollowUp)) {
+                followUpStudents++;
+                const followUpCases = studentObservations.filter(o => o.requiresFollowUp);
+                if (followUpCases.some(c => c.isClosed)) {
+                    improvedStudents++;
+                } else {
+                    stillInObservationStudents++;
+                }
+            }
+        }
+        
+        Object.keys(attendance).forEach(date => {
+            if (attendance[date]?.[student.id] !== undefined) {
+                totalPossibleAttendance++;
+                if(attendance[date][student.id]) totalPresent++;
+            }
         });
         
-        const studentCount = currentGroup.students.length;
-        setSummary({
-            totalStudents: studentCount,
-            approvedCount: approved,
-            failedCount: studentCount - approved,
-            groupAverage: studentCount > 0 ? totalGroupGrade / studentCount : 0,
-            attendanceRate: totalPossibleAttendance > 0 ? (totalPresent / totalPossibleAttendance) * 100 : 0,
-            participationRate: totalParticipationOpportunities > 0 ? (totalParticipations / totalParticipationOpportunities) * 100 : 0,
-            studentsWithObservations: studentsWithObservations,
-            canalizedCount: canalizedStudents,
-            followUpCount: followUpStudents,
-            improvedCount: improvedStudents,
-            stillInObservationCount: stillInObservationStudents,
-            highRiskCount: highRiskStudents,
-            mediumRiskCount: mediumRiskStudents,
-        });
-      }
+        Object.keys(participations).forEach(date => {
+            if (Object.prototype.hasOwnProperty.call(participations[date], student.id)) {
+                totalParticipationOpportunities++;
+                if (participations[date]?.[student.id]) totalParticipations++;
+            }
+        })
+      });
+      
+      const studentCount = group.students.length;
+      setSummary({
+          totalStudents: studentCount,
+          approvedCount: approved,
+          failedCount: studentCount - approved,
+          groupAverage: studentCount > 0 ? totalGroupGrade / studentCount : 0,
+          attendanceRate: totalPossibleAttendance > 0 ? (totalPresent / totalPossibleAttendance) * 100 : 0,
+          participationRate: totalParticipationOpportunities > 0 ? (totalParticipations / totalParticipationOpportunities) * 100 : 0,
+          studentsWithObservations: studentsWithObservations,
+          canalizedCount: canalizedStudents,
+          followUpCount: followUpStudents,
+          improvedCount: improvedStudents,
+          stillInObservationCount: stillInObservationStudents,
+          highRiskCount: highRiskStudents,
+          mediumRiskCount: mediumRiskStudents,
+      });
       
       const appSettings = JSON.parse(localStorage.getItem('appSettings') || '{}');
       setInstitutionName(appSettings.institutionName || 'Academic Tracker');
@@ -222,7 +162,7 @@ export default function GroupReportPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [groupId, calculateFinalGrade, getStudentRiskLevel]);
+  }, [group, partial, calculateFinalGrade, getStudentRiskLevel, allCriteria, allGrades, allParticipations, allAttendances, allActivities, allActivityRecords, allObservations]);
 
   const handleDownloadPdf = () => {
     const input = reportRef.current;
@@ -256,7 +196,7 @@ export default function GroupReportPage() {
   };
   
   if (isLoading) {
-    return <div>Generando informe...</div>;
+    return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /> <span className="ml-2">Generando informe...</span></div>;
   }
 
   if (!group || !summary) {
@@ -393,3 +333,5 @@ export default function GroupReportPage() {
     </div>
   );
 }
+
+    

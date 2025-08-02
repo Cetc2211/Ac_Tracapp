@@ -146,7 +146,7 @@ const AtRiskStudentCard = ({ studentData }: { studentData: StudentReportData }) 
         <Card className="overflow-hidden">
             <div ref={reportRef} className="bg-background">
                 <CardHeader className="bg-muted/30">
-                    <div className="flex flex-col sm:flex-row sm:items-start sm:gap-6">
+                     <div className="flex flex-col sm:flex-row sm:items-start sm:gap-6">
                         <Image
                             src={studentData.photo}
                             alt={studentData.name}
@@ -156,15 +156,15 @@ const AtRiskStudentCard = ({ studentData }: { studentData: StudentReportData }) 
                             style={{borderColor: studentData.riskLevel === 'high' ? 'hsl(var(--destructive))' : 'hsl(var(--chart-4))'}}
                         />
                         <div className="pt-2 flex-grow">
+                            <CardTitle className="text-2xl">{studentData.name}</CardTitle>
                             <div className="flex flex-col items-start mt-1 space-y-1">
-                                <CardTitle className="text-2xl">{studentData.name}</CardTitle>
                                  <CardDescription className="flex items-center gap-2">
                                     {studentData.riskLevel === 'high' 
                                         ? <Badge variant="destructive">Riesgo Alto</Badge> 
                                         : <Badge className="bg-amber-500">Riesgo Medio</Badge>
                                     }
-                                    <span className="text-xs">{studentData.riskReason}</span>
                                 </CardDescription>
+                                <span className="text-xs text-muted-foreground">{studentData.riskReason}</span>
                             </div>
                             <div className="text-sm text-muted-foreground mt-2 space-y-1">
                                 <p className="flex items-center gap-2"><Mail className="h-4 w-4"/> {studentData.email || 'No registrado'}</p>
@@ -288,7 +288,18 @@ const AtRiskStudentCard = ({ studentData }: { studentData: StudentReportData }) 
 
 
 export default function AtRiskReportPage() {
-  const { atRiskStudents, activeGroup, calculateFinalGrade, observations } = useData();
+  const { 
+      activeGroup, 
+      atRiskStudents, 
+      calculateFinalGrade, 
+      allObservations, 
+      allCriteria, 
+      allGrades,
+      allParticipations,
+      allActivities,
+      allActivityRecords,
+      allAttendances
+  } = useData();
   const [reportData, setReportData] = useState<StudentReportData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -296,23 +307,31 @@ export default function AtRiskReportPage() {
         if (!activeGroup) return null;
         
         const partial = localStorage.getItem(`activePartial_${activeGroup.id}`) || '1';
-        const criteria = JSON.parse(localStorage.getItem(`criteria_${activeGroup.id}_${partial}`) || '[]') as EvaluationCriteria[];
-        const grades = JSON.parse(localStorage.getItem(`grades_${activeGroup.id}_${partial}`) || '{}') as Grades;
-        const participations = JSON.parse(localStorage.getItem(`participations_${activeGroup.id}_${partial}`) || '{}') as ParticipationRecord;
-        const activities = JSON.parse(localStorage.getItem(`activities_${activeGroup.id}_${partial}`) || '[]') as Activity[];
-        const activityRecords = JSON.parse(localStorage.getItem(`activityRecords_${activeGroup.id}_${partial}`) || '{}') as ActivityRecord;
-        const attendance = JSON.parse(localStorage.getItem(`attendance_${activeGroup.id}_${partial}`) || '{}') as ParticipationRecord;
+        const criteria = allCriteria[`criteria_${activeGroup.id}_${partial}`] || [];
+        const grades = allGrades[activeGroup.id]?.[partial] || {};
+        const participations = allParticipations[activeGroup.id]?.[partial] || {};
+        const activities = allActivities[activeGroup.id]?.[partial] || [];
+        const activityRecords = allActivityRecords[activeGroup.id]?.[partial] || {};
+        const attendance = allAttendances[activeGroup.id]?.[partial] || {};
         
-        const studentObservations = observations.filter(o => o.studentId === studentId);
+        const studentObservations = allObservations[studentId] || [];
 
         const finalGrade = calculateFinalGrade(studentId, criteria, grades, participations, activities, activityRecords, studentObservations);
 
         const criteriaDetails: StudentReportData['criteriaDetails'] = criteria.map(criterion => {
              let performanceRatio = 0;
             if (criterion.name === 'Actividades' || criterion.name === 'Portafolio') {
-                performanceRatio = (activities.length > 0) ? (Object.values(activityRecords[studentId] || {}).filter(Boolean).length / activities.length) : 0;
+                const totalActivities = activities.length;
+                if(totalActivities > 0) {
+                    const deliveredActivities = Object.values(activityRecords[studentId] || {}).filter(Boolean).length;
+                    performanceRatio = deliveredActivities / totalActivities;
+                }
             } else if (criterion.name === 'Participación') {
-                performanceRatio = (Object.keys(participations).length > 0) ? (Object.values(participations).filter(p => p[studentId]).length / Object.keys(participations).length) : 0;
+                const totalParticipations = Object.keys(participations).length;
+                if(totalParticipations > 0) {
+                    const studentParticipations = Object.values(participations).filter(p => p[studentId]).length;
+                    performanceRatio = studentParticipations / totalParticipations;
+                }
             } else {
                 performanceRatio = (criterion.expectedValue > 0) ? ((grades[studentId]?.[criterion.id]?.delivered ?? 0) / criterion.expectedValue) : 0;
             }
@@ -330,7 +349,7 @@ export default function AtRiskReportPage() {
         
         return { finalGrade, attendance: attendanceStats, criteriaDetails, observations: studentObservations };
 
-  }, [activeGroup, observations, calculateFinalGrade]);
+  }, [activeGroup, allObservations, calculateFinalGrade, allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, allAttendances]);
 
 
   useEffect(() => {
