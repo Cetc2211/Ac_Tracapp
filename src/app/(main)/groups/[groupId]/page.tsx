@@ -52,14 +52,15 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useData } from '@/hooks/use-data';
-import type { EvaluationCriteria, Grades, ParticipationRecord, Activity, ActivityRecord, CalculatedRisk } from '@/hooks/use-data';
 import { Input } from '@/components/ui/input';
+import type { CalculatedRisk } from '@/hooks/use-data';
+
 
 export default function GroupDetailsPage() {
   const params = useParams();
@@ -73,20 +74,12 @@ export default function GroupDetailsPage() {
     activePartial,
     setActivePartialForGroup,
     criteria,
-    grades,
-    participations,
-    activities,
-    activityRecords,
-    attendance,
-    calculateFinalGrade,
-    getStudentRiskLevel,
-    allObservations
+    atRiskStudents,
   } = useData();
 
   const router = useRouter();
   const { toast } = useToast();
   
-  const [studentRiskLevels, setStudentRiskLevels] = useState<{[studentId: string]: CalculatedRisk}>({});
   const [isAddStudentDialogOpen, setIsAddStudentDialogOpen] = useState(false);
   
   const [bulkNames, setBulkNames] = useState('');
@@ -95,7 +88,7 @@ export default function GroupDetailsPage() {
   const [bulkTutorNames, setBulkTutorNames] = useState('');
   const [bulkTutorPhones, setBulkTutorPhones] = useState('');
 
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [isPhotoDialogOpen, setIsPhotoDialogOpen] = useState(false);
@@ -103,20 +96,17 @@ export default function GroupDetailsPage() {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   
 
-  useEffect(() => {
-    setIsLoading(true);
-    if (activeGroup && activeGroup.students && activePartial && allObservations) {
-      const riskLevels: {[studentId: string]: ReturnType<typeof getStudentRiskLevel>} = {};
-      
-      activeGroup.students.forEach((s: Student) => {
-          const studentObservations: StudentObservation[] = allObservations[s.id] || [];
-          const finalGrade = calculateFinalGrade(s.id, criteria, grades, participations, activities, activityRecords, studentObservations);
-          riskLevels[s.id] = getStudentRiskLevel(finalGrade, attendance, s.id);
-      });
-      setStudentRiskLevels(riskLevels);
-    }
-    setIsLoading(false);
-  }, [activeGroup, activePartial, criteria, grades, participations, activities, activityRecords, attendance, allObservations, calculateFinalGrade, getStudentRiskLevel]);
+  const studentRiskLevels = useMemo(() => {
+    if (!activeGroup) return {};
+    const riskMap: {[studentId: string]: CalculatedRisk} = {};
+    activeGroup.students.forEach(s => {
+      const atRiskInfo = atRiskStudents.find(riskStudent => riskStudent.id === s.id);
+      riskMap[s.id] = atRiskInfo 
+        ? atRiskInfo.calculatedRisk 
+        : { level: 'low', reason: 'Sin riesgo detectado' };
+    });
+    return riskMap;
+  }, [activeGroup, atRiskStudents]);
 
 
   const handlePartialChange = (partial: string) => {
@@ -326,7 +316,7 @@ export default function GroupDetailsPage() {
   }
 
   if (!activeGroup) {
-    notFound();
+    return null;
   }
   
   return (

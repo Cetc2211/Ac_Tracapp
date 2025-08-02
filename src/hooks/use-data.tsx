@@ -194,8 +194,10 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     
     // --- INITIAL DATA LOADING ---
     useEffect(() => {
-        setAllStudentsState(loadFromLocalStorage('students', initialStudents));
+        const loadedStudents = loadFromLocalStorage('students', initialStudents);
         const loadedGroups = loadFromLocalStorage('groups', initialGroups);
+
+        setAllStudentsState(loadedStudents);
         setGroupsState(loadedGroups);
         setSettings(loadFromLocalStorage('appSettings', defaultSettings));
         setActivePartials(loadFromLocalStorage('activePartials', {}));
@@ -207,6 +209,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         const participationsStore: {[key: string]: AllParticipations} = {};
         const activitiesStore: {[key: string]: AllActivities} = {};
         const activityRecordsStore: {[key: string]: AllActivityRecords} = {};
+        const observationsStore: {[studentId: string]: StudentObservation[]} = {};
 
         for (const group of loadedGroups) {
             for (let i = 1; i <= 3; i++) {
@@ -241,11 +244,9 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         setAllParticipations(participationsStore);
         setAllActivities(activitiesStore);
         setAllActivityRecords(activityRecordsStore);
-
-        const studentIds = loadFromLocalStorage<Student[]>('students', []).map(s => s.id);
-        const observationsStore: {[studentId: string]: StudentObservation[]} = {};
-        for (const id of studentIds) {
-            observationsStore[id] = loadFromLocalStorage(`observations_${id}`, []);
+        
+        for (const student of loadedStudents) {
+            observationsStore[student.id] = loadFromLocalStorage(`observations_${student.id}`, []);
         }
         setAllObservations(observationsStore);
 
