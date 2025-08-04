@@ -15,7 +15,7 @@ import { Student, Group, StudentObservation } from '@/lib/placeholder-data';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import { Mail, User, Contact, ArrowLeft, Download, FileText, Loader2, Phone, Wand2, ListChecks } from 'lucide-react';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -94,7 +94,7 @@ export default function StudentProfilePage() {
             const activities: Activity[] = allActivities[group.id]?.[activePartialForGroup] || [];
             const activityRecords: ActivityRecord = allActivityRecords[group.id]?.[activePartialForGroup] || {};
             
-            const finalGrade = calculateFinalGrade(studentId, criteria, grades, participations, activities, activityRecords, studentObservations);
+            const finalGrade = calculateFinalGrade(studentId, activePartialForGroup, group.id);
             const criteriaDetails = criteria.map(c => {
                 let performanceRatio = 0;
                 if (c.isAutomated) {
