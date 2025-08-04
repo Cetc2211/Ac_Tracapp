@@ -25,7 +25,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { useData } from '@/hooks/use-data';
-import type { EvaluationCriteria, Grades, StudentObservation, Activity, ActivityRecord, ParticipationRecord } from '@/hooks/use-data';
 import { useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { getPartialLabel } from '@/lib/utils';
@@ -49,7 +48,8 @@ export default function GroupGradesPage() {
     participations, 
     activities, 
     activityRecords,
-    allObservations, 
+    allObservations,
+    attendance,
     setGrades,
     calculateFinalGrade
   } = useData();
@@ -80,35 +80,79 @@ export default function GroupGradesPage() {
       if (!newGrades[studentId]) {
         newGrades[studentId] = {};
       }
-      if (!newGrades[studentId][criterionId]) {
-        newGrades[studentId][criterionId] = { delivered: null };
-      }
-      newGrades[studentId][criterionId].delivered = numericValue;
+      newGrades[studentId][criterionId] = { delivered: numericValue };
       return newGrades;
     });
   };
   
   const finalGrades = useMemo(() => {
     const calculatedGrades: {[studentId: string]: number} = {};
-    if (activeGroup) {
+    if (activeGroup && activePartial) {
       for (const student of activeGroup.students) {
-         const studentObservations = allObservations[student.id] || [];
-        calculatedGrades[student.id] = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords, studentObservations);
+        calculatedGrades[student.id] = calculateFinalGrade(student.id, activePartial, activeGroup.id);
       }
     }
     return calculatedGrades;
-  }, [activeGroup, criteria, grades, participations, activities, activityRecords, calculateFinalGrade, allObservations]);
+  }, [activeGroup, activePartial, calculateFinalGrade]);
 
   const studentsInGroup = useMemo(() => {
       if (!activeGroup || !activeGroup.students) return [];
       return [...activeGroup.students].sort((a,b) => a.name.localeCompare(b.name));
   }, [activeGroup]);
 
-  if (!activeGroup) {
+  if (!activeGroup || !activePartial) {
     return notFound();
   }
 
   const partialLabel = getPartialLabel(activePartial);
+
+  const getPerformanceDetail = (studentId: string, criterion: (typeof criteria)[0]) => {
+    if (criterion.name === 'Actividades') {
+        const total = activities.length;
+        const delivered = Object.values(activityRecords[studentId] || {}).filter(Boolean).length;
+        return `${delivered} de ${total}`;
+    }
+    if (criterion.name === 'Portafolio') {
+        const total = activities.length;
+        return `de ${total} programadas`;
+    }
+    if (criterion.name === 'Participación') {
+        const total = Object.keys(attendance).length;
+        const participated = Object.values(participations).filter(day => day[studentId]).length;
+        return `${participated} de ${total}`;
+    }
+    return `${criterion.expectedValue} esp.`;
+  }
+
+  const getEarnedPercentage = (studentId: string, criterion: (typeof criteria)[0]) => {
+    let performanceRatio = 0;
+    if (criterion.name === 'Actividades') {
+        const total = activities.length;
+        if (total > 0) {
+            const delivered = Object.values(activityRecords[studentId] || {}).filter(Boolean).length;
+            performanceRatio = delivered / total;
+        }
+    } else if (criterion.name === 'Portafolio') {
+        const total = activities.length;
+        if (total > 0) {
+            const delivered = grades[studentId]?.[criterion.id]?.delivered ?? 0;
+            performanceRatio = delivered / total;
+        }
+    } else if (criterion.name === 'Participación') {
+        const total = Object.keys(attendance).length;
+        if (total > 0) {
+            const participated = Object.values(participations).filter(day => day[studentId]).length;
+            performanceRatio = participated / total;
+        }
+    } else {
+        const delivered = grades[studentId]?.[criterion.id]?.delivered ?? 0;
+        const expected = criterion.expectedValue;
+        if (expected > 0) {
+            performanceRatio = delivered / expected;
+        }
+    }
+    return performanceRatio * criterion.weight;
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -144,11 +188,7 @@ export default function GroupGradesPage() {
                     <TableHead key={c.id} className={cn("text-center min-w-[250px] align-top", criterionColors[index % criterionColors.length])}>
                       <div className='font-bold'>{c.name}</div>
                        <div className="font-normal text-muted-foreground">
-                        ({c.weight}%, {
-                          c.isAutomated
-                            ? (c.name === 'Participación' ? `${Object.keys(participations).length} clases` : `${activities.length} acts.`)
-                            : `${c.expectedValue} esp.`
-                        })
+                        ({c.weight}%, {getPerformanceDetail('none', c)})
                       </div>
                     </TableHead>
                   ))}
@@ -190,50 +230,18 @@ export default function GroupGradesPage() {
                       {student.name}
                     </TableCell>
                     {criteria.map((criterion, index) => {
-                      let earnedPercentage = 0;
-                      let performanceDetail = '';
-
-                      if (criterion.isAutomated) {
-                          let performanceRatio = 0;
-                          if (criterion.name === 'Actividades' || (criterion.name === 'Portafolio' && criterion.isAutomated)) {
-                              const totalActivities = activities.length;
-                              if (totalActivities > 0) {
-                                  const studentRecords = activityRecords[student.id] || {};
-                                  const deliveredActivities = Object.values(studentRecords).filter(Boolean).length;
-                                  performanceRatio = deliveredActivities / totalActivities;
-                                  performanceDetail = `${deliveredActivities} de ${totalActivities}`;
-                              } else {
-                                  performanceDetail = `0 de 0`;
-                              }
-                          } else if (criterion.name === 'Participación') {
-                            const participationDates = Object.keys(participations);
-                            if (participationDates.length > 0) {
-                              const participatedClasses = participationDates.filter(date => participations[date]?.[student.id]).length;
-                              performanceRatio = participatedClasses / participationDates.length;
-                              performanceDetail = `${participatedClasses} de ${participationDates.length}`;
-                            } else {
-                                performanceDetail = `0 de 0`;
-                            }
-                          }
-                           earnedPercentage = performanceRatio * criterion.weight;
-                      } else {
-                        const gradeDetail = grades[student.id]?.[criterion.id];
-                        const delivered = gradeDetail?.delivered ?? 0;
-                        const expected = criterion.expectedValue;
-                        if(expected > 0) {
-                          earnedPercentage = (delivered / expected) * criterion.weight;
-                        }
-                      }
+                      const isFullyAutomatic = criterion.name === 'Actividades' || criterion.name === 'Participación';
+                      const earnedPercentage = getEarnedPercentage(student.id, criterion);
 
                       return (
                       <TableCell key={criterion.id} className={cn("text-center", criterionColors[index % criterionColors.length])}>
-                        {criterion.isAutomated ? (
+                        {isFullyAutomatic ? (
                           <div className="flex flex-col items-center justify-center p-1">
                               <Label className='text-xs'>
                                 {criterion.name === 'Participación' ? 'Participaciones' : 'Entregas'}
                               </Label>
                               <span className="font-bold">
-                                {performanceDetail}
+                                {getPerformanceDetail(student.id, criterion)}
                               </span>
                               <Label className='text-xs mt-2'>Porcentaje Ganado</Label>
                                <span className="font-bold text-lg">
@@ -250,7 +258,6 @@ export default function GroupGradesPage() {
                                     className="h-8 text-center"
                                     placeholder="Ent."
                                     min={0}
-                                    max={criterion.expectedValue}
                                     value={grades[student.id]?.[criterion.id]?.delivered ?? ''}
                                     onChange={e => handleGradeChange(student.id, criterion.id, e.target.value)}
                                 />
@@ -286,4 +293,3 @@ export default function GroupGradesPage() {
     </div>
   );
 }
-

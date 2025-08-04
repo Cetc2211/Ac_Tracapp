@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
@@ -157,7 +156,11 @@ interface DataContextType {
   // Functions
   saveStudentObservation: (observation: StudentObservation) => void;
   deleteGroup: (groupId: string) => void;
-  calculateFinalGrade: (studentId: string, criteria: EvaluationCriteria[], grades: Grades, participations: ParticipationRecord, activities: Activity[], activityRecords: ActivityRecord, studentObservations: StudentObservation[]) => number;
+  calculateFinalGrade: (
+    studentId: string, 
+    partial: string, 
+    groupId: string
+  ) => number;
   getStudentRiskLevel: (finalGrade: number, attendance: AttendanceRecord, studentId: string) => CalculatedRisk;
 }
 
@@ -275,53 +278,57 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     }, []);
 
-    const calculateFinalGrade = useCallback((studentId: string, criteria: EvaluationCriteria[], grades: Grades, participations: ParticipationRecord, activities: Activity[], activityRecords: ActivityRecord, studentObservations: StudentObservation[]): number => {
+    const calculateFinalGrade = useCallback((studentId: string, partial: string, groupId: string): number => {
+        const criteria = allCriteria[`criteria_${groupId}_${partial}`] || [];
+        const grades = allGrades[groupId]?.[partial] || {};
+        const participations = allParticipations[groupId]?.[partial] || {};
+        const activities = allActivities[groupId]?.[partial] || [];
+        const activityRecords = allActivityRecords[groupId]?.[partial] || {};
+        const attendance = allAttendances[groupId]?.[partial] || {};
+        const studentObservations = allObservations[studentId] || [];
+
         let finalGrade = 0;
-        
-        if (criteria && criteria.length > 0) {
+
+        if (criteria.length > 0) {
             for (const criterion of criteria) {
                 let performanceRatio = 0;
-        
-                if (criterion.isAutomated) {
-                    if (criterion.name === 'Portafolio' || criterion.name === 'Actividades') {
-                        const totalActivities = activities.length;
-                        if (totalActivities > 0) {
-                            const studentRecords = activityRecords[studentId] || {};
-                            const deliveredActivities = Object.values(studentRecords).filter(Boolean).length;
-                            performanceRatio = deliveredActivities / totalActivities;
-                        }
-                    } else if (criterion.name === 'Participación') {
-                        const participationDates = Object.keys(participations);
-                        if (participationDates.length > 0) {
-                            const participatedClasses = participationDates.filter(date => participations[date]?.[studentId]).length;
-                            performanceRatio = participatedClasses / participationDates.length;
-                        }
+
+                if (criterion.name === 'Actividades') {
+                    const totalActivities = activities.length;
+                    if (totalActivities > 0) {
+                        const deliveredActivities = Object.values(activityRecords[studentId] || {}).filter(Boolean).length;
+                        performanceRatio = deliveredActivities / totalActivities;
+                    }
+                } else if (criterion.name === 'Portafolio') {
+                    const totalActivities = activities.length;
+                    if (totalActivities > 0) {
+                        const delivered = grades[studentId]?.[criterion.id]?.delivered ?? 0;
+                        performanceRatio = delivered / totalActivities;
+                    }
+                } else if (criterion.name === 'Participación') {
+                    const totalAttendanceDays = Object.keys(attendance).length;
+                    if (totalAttendanceDays > 0) {
+                        const studentParticipations = Object.values(participations).filter(day => day[studentId]).length;
+                        performanceRatio = studentParticipations / totalAttendanceDays;
                     }
                 } else { // Manual criteria
-                    const gradeDetail = grades[studentId]?.[criterion.id];
-                    const delivered = gradeDetail?.delivered ?? 0;
+                    const delivered = grades[studentId]?.[criterion.id]?.delivered ?? 0;
                     const expected = criterion.expectedValue;
-                    if(expected > 0) {
+                    if (expected > 0) {
                         performanceRatio = delivered / expected;
                     }
                 }
-                finalGrade += performanceRatio * criterion.weight;
+                finalGrade += (performanceRatio * criterion.weight);
             }
         }
 
         studentObservations.forEach(obs => {
-            if (obs.type === 'Mérito') {
-                finalGrade += 10;
-            } else if (obs.type === 'Demérito') {
-                finalGrade -= 10;
-            }
+            if (obs.type === 'Mérito') finalGrade += 10;
+            else if (obs.type === 'Demérito') finalGrade -= 10;
         });
 
-        if (finalGrade > 100) finalGrade = 100;
-        if (finalGrade < 0) finalGrade = 0;
-
-        return finalGrade;
-    }, []);
+        return Math.max(0, Math.min(100, finalGrade));
+    }, [allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, allAttendances, allObservations]);
 
     // --- DERIVED STATE & MEMOS ---
     const activePartial = useMemo(() => {
@@ -539,18 +546,12 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         const checkedStudentIds = new Set<string>();
         groups.forEach(group => {
             const partial = activePartials[group.id] || '1';
-            const criteriaForPartial = allCriteria[`criteria_${group.id}_${partial}`] || [];
-            const gradesForPartial = allGrades[group.id]?.[partial] || {};
             const attendanceForPartial = allAttendances[group.id]?.[partial] || {};
-            const participationsForPartial = allParticipations[group.id]?.[partial] || {};
-            const activitiesForPartial = allActivities[group.id]?.[partial] || [];
-            const activityRecordsForPartial = allActivityRecords[group.id]?.[partial] || {};
 
             group.students.forEach(student => {
                 if(checkedStudentIds.has(student.id)) return;
 
-                const studentObservations = allObservations[student.id] || [];
-                const finalGrade = calculateFinalGrade(student.id, criteriaForPartial, gradesForPartial, participationsForPartial, activitiesForPartial, activityRecordsForPartial, studentObservations);
+                const finalGrade = calculateFinalGrade(student.id, partial, group.id);
                 const risk = getStudentRiskLevel(finalGrade, attendanceForPartial, student.id);
                 if (risk.level === 'high' || risk.level === 'medium') {
                     students.push({ ...student, calculatedRisk: risk });
@@ -563,29 +564,19 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             if (a.calculatedRisk.level !== 'high' && b.calculatedRisk.level === 'high') return 1;
             return 0;
         });
-    }, [groups, activePartials, allCriteria, allGrades, allAttendances, allParticipations, allActivities, allActivityRecords, allObservations, calculateFinalGrade, getStudentRiskLevel]);
+    }, [groups, activePartials, allAttendances, calculateFinalGrade, getStudentRiskLevel]);
     
     const groupStats = useMemo(() => {
         const allStats: {[groupId: string]: GroupStats} = {};
         for(const group of groups) {
             const partial = activePartials[group.id] || '1';
-            const criteria = allCriteria[`criteria_${group.id}_${partial}`] || [];
-            const grades = allGrades[group.id]?.[partial] || {};
-            const participations = allParticipations[group.id]?.[partial] || {};
             const attendance = allAttendances[group.id]?.[partial] || {};
-            const activities = allActivities[group.id]?.[partial] || [];
-            const activityRecords = allActivityRecords[group.id]?.[partial] || {};
 
-            const groupGrades = group.students.map(s => {
-                const studentObservations = allObservations[s.id] || [];
-                return calculateFinalGrade(s.id, criteria, grades, participations, activities, activityRecords, studentObservations);
-            });
-
+            const groupGrades = group.students.map(s => calculateFinalGrade(s.id, partial, group.id));
             const groupAverage = groupGrades.length > 0 ? groupGrades.reduce((a, b) => a + b, 0) / groupGrades.length : 0;
             
             const highRiskStudents = group.students.filter(s => {
-                const studentObservations = allObservations[s.id] || [];
-                const finalGrade = calculateFinalGrade(s.id, criteria, grades, participations, activities, activityRecords, studentObservations);
+                const finalGrade = calculateFinalGrade(s.id, partial, group.id);
                 const risk = getStudentRiskLevel(finalGrade, attendance, s.id);
                 return risk.level === 'high';
             }).length;
@@ -596,27 +587,18 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             };
         }
         return allStats;
-    }, [groups, activePartials, allCriteria, allGrades, allParticipations, allAttendances, allActivities, allActivityRecords, allObservations, calculateFinalGrade, getStudentRiskLevel]);
+    }, [groups, activePartials, allAttendances, calculateFinalGrade, getStudentRiskLevel]);
     
     const groupAverages = useMemo(() => {
         const newGroupAverages: {[groupId: string]: number} = {};
         for(const group of groups) {
             const partial = activePartials[group.id] || '1';
-            const criteria = allCriteria[`criteria_${group.id}_${partial}`] || [];
-            const grades = allGrades[group.id]?.[partial] || {};
-            const participations = allParticipations[group.id]?.[partial] || {};
-            const activities = allActivities[group.id]?.[partial] || [];
-            const activityRecords = allActivityRecords[group.id]?.[partial] || {};
-
-            const groupGrades = group.students.map(s => {
-                 const studentObservations = allObservations[s.id] || [];
-                return calculateFinalGrade(s.id, criteria, grades, participations, activities, activityRecords, studentObservations);
-            });
+            const groupGrades = group.students.map(s => calculateFinalGrade(s.id, partial, group.id));
             const groupAverage = groupGrades.length > 0 ? groupGrades.reduce((a,b) => a + b, 0) / groupGrades.length : 0;
             newGroupAverages[group.id] = groupAverage;
         }
         return newGroupAverages;
-    }, [groups, activePartials, allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, allObservations, calculateFinalGrade]);
+    }, [groups, activePartials, calculateFinalGrade]);
     
     const overallAverageParticipation = useMemo(() => {
         let totalPossibleAttendance = 0;
@@ -666,6 +648,3 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
-
-
-    
