@@ -88,13 +88,15 @@ export default function StudentProfilePage() {
         
         studentGroups.forEach(group => {
             const activePartialForGroup = activePartials[group.id] || '1';
+            
+            const finalGrade = calculateFinalGrade(studentId, activePartialForGroup, group.id);
+
             const criteria: EvaluationCriteria[] = allCriteria[`criteria_${group.id}_${activePartialForGroup}`] || [];
             const grades: Grades = allGrades[group.id]?.[activePartialForGroup] || {};
             const participations: ParticipationRecord = allParticipations[group.id]?.[activePartialForGroup] || {};
-            const activities: Activity[] = allActivities[group.id]?.[activePartialForGroup] || [];
+            const activities: Activity[] = allActivities[group.id]?.[activePartialForGroup] || {};
             const activityRecords: ActivityRecord = allActivityRecords[group.id]?.[activePartialForGroup] || {};
-            
-            const finalGrade = calculateFinalGrade(studentId, activePartialForGroup, group.id);
+
             const criteriaDetails = criteria.map(c => {
                 let performanceRatio = 0;
                 if (c.isAutomated) {
@@ -141,7 +143,7 @@ export default function StudentProfilePage() {
     } finally {
         setIsLoading(false);
     }
-  }, [student, allGroups, allObservations, allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, calculateFinalGrade, activePartials, studentId, toast, allAttendances]);
+  }, [student, allGroups, allObservations, allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, activePartials, studentId, toast, allAttendances, calculateFinalGrade]);
   
    const handleGenerateFeedback = async () => {
     if (!student || !studentStats) {

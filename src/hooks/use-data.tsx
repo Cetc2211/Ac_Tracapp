@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { Student, Group, StudentObservation, students as initialStudents, groups as initialGroups } from '@/lib/placeholder-data';
-import { parseISO, startOfDay, isWithinInterval, startOfMonth, endOfMonth, getMonth } from 'date-fns';
+import { parseISO, startOfDay, isWithinInterval, getMonth } from 'date-fns';
 
 
 // TYPE DEFINITIONS
@@ -295,11 +295,9 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         const uniqueMonths = [...new Set(months)].sort((a,b) => a-b);
         
         if (uniqueMonths.length < 3) {
-            // Not enough data to split into 3, treat as one block
              return { '1': { start: sortedDates[0], end: sortedDates[sortedDates.length - 1] } };
         }
         
-        // Simple split for now, can be made more robust
         const firstMonth = uniqueMonths[0];
         const secondMonth = uniqueMonths[uniqueMonths.length > 1 ? 1 : 0];
         const thirdMonth = uniqueMonths[uniqueMonths.length > 2 ? 2 : 1];
@@ -309,7 +307,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         const partial3Dates = sortedDates.filter(d => getMonth(d) > secondMonth);
 
         return {
-            '1': { start: partial1Dates[0], end: partial1Dates[partial1Dates.length - 1] },
+            '1': partial1Dates.length > 0 ? { start: partial1Dates[0], end: partial1Dates[partial1Dates.length - 1] } : undefined,
             '2': partial2Dates.length > 0 ? { start: partial2Dates[0], end: partial2Dates[partial2Dates.length-1] } : undefined,
             '3': partial3Dates.length > 0 ? { start: partial3Dates[0], end: partial3Dates[partial3Dates.length - 1] } : undefined,
         };
