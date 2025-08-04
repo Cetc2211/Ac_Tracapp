@@ -47,7 +47,7 @@ export default function GroupGradesPage() {
     criteria, 
     grades, 
     participations, 
-    activities, 
+    allActivities,
     activityRecords,
     allObservations,
     attendance,
@@ -94,7 +94,7 @@ export default function GroupGradesPage() {
       }
     }
     return calculatedGrades;
-  }, [activeGroup, activePartial, calculateFinalGrade, criteria, grades, participations, activities, activityRecords, allObservations, attendance]);
+  }, [activeGroup, activePartial, calculateFinalGrade, criteria, grades, participations, allActivities, activityRecords, allObservations, attendance]);
 
   const studentsInGroup = useMemo(() => {
       if (!activeGroup || !activeGroup.students) return [];
@@ -108,13 +108,14 @@ export default function GroupGradesPage() {
   const partialLabel = getPartialLabel(activePartial);
 
   const getPerformanceDetail = (studentId: string, criterion: EvaluationCriteria) => {
+    const activitiesForPartial = allActivities[activeGroup.id]?.[activePartial] || [];
     if (criterion.name === 'Actividades') {
-        const total = activities.length;
+        const total = activitiesForPartial.length;
         const delivered = Object.values(activityRecords[studentId] || {}).filter(Boolean).length;
         return `${delivered} de ${total}`;
     }
     if (criterion.name === 'Portafolio') {
-        const total = activities.length;
+        const total = activitiesForPartial.length;
         return `de ${total} programadas`;
     }
     if (criterion.name === 'Participación') {
@@ -127,14 +128,16 @@ export default function GroupGradesPage() {
 
   const getEarnedPercentage = (studentId: string, criterion: EvaluationCriteria) => {
     let performanceRatio = 0;
+    const activitiesForPartial = allActivities[activeGroup.id]?.[activePartial] || [];
+
     if (criterion.name === 'Actividades') {
-        const total = activities.length;
+        const total = activitiesForPartial.length;
         if (total > 0) {
             const delivered = Object.values(activityRecords[studentId] || {}).filter(Boolean).length;
             performanceRatio = delivered / total;
         }
     } else if (criterion.name === 'Portafolio') {
-        const total = activities.length;
+        const total = activitiesForPartial.length;
         if (total > 0) {
             const delivered = grades[studentId]?.[criterion.id]?.delivered ?? 0;
             performanceRatio = delivered / total;
