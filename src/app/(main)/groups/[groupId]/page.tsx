@@ -406,9 +406,9 @@ export default function GroupDetailsPage() {
       </div>
       <Tabs value={activePartial || '1'} onValueChange={handlePartialChange} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="1" className={cn("text-partial-1-foreground", activePartial === '1' ? 'bg-partial-1' : 'bg-partial-1-bg border border-partial-1-border')}>Primer Parcial</TabsTrigger>
-            <TabsTrigger value="2" className={cn("text-partial-2-foreground", activePartial === '2' ? 'bg-partial-2' : 'bg-partial-2-bg border border-partial-2-border')}>Segundo Parcial</TabsTrigger>
-            <TabsTrigger value="3" className={cn("text-partial-3-foreground", activePartial === '3' ? 'bg-partial-3' : 'bg-partial-3-bg border border-partial-3-border')}>Tercer Parcial</TabsTrigger>
+            <TabsTrigger value="1" className={cn("text-partial-1-foreground border-partial-1-border data-[state=inactive]:bg-partial-1-bg data-[state=active]:bg-partial-1")}>Primer Parcial</TabsTrigger>
+            <TabsTrigger value="2" className={cn("text-partial-2-foreground border-partial-2-border data-[state=inactive]:bg-partial-2-bg data-[state=active]:bg-partial-2")}>Segundo Parcial</TabsTrigger>
+            <TabsTrigger value="3" className={cn("text-partial-3-foreground border-partial-3-border data-[state=inactive]:bg-partial-3-bg data-[state=active]:bg-partial-3")}>Tercer Parcial</TabsTrigger>
         </TabsList>
       
         <TabsContent value={activePartial || '1'} className={cn(
