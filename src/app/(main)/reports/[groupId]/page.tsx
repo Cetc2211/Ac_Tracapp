@@ -23,6 +23,7 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useData } from '@/hooks/use-data';
 import type { Activity, ActivityRecord, EvaluationCriteria, Grades, ParticipationRecord } from '@/hooks/use-data';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type ReportSummary = {
     totalStudents: number;
@@ -60,11 +61,19 @@ export default function GroupReportPage() {
   
   const [summary, setSummary] = useState<ReportSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isClient, setIsClient] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   const group = useMemo(() => groups.find(g => g.id === groupId), [groups, groupId]);
-  const partial = useMemo(() => activePartial || '1', [activePartial]);
+  const partial = useMemo(() => {
+    if (!group || !activePartial) return '1';
+    return activePartial;
+  }, [group, activePartial]);
 
   useEffect(() => {
     if (!group) {
@@ -98,7 +107,7 @@ export default function GroupReportPage() {
 
       group.students.forEach(student => {
         const studentObservations: StudentObservation[] = observations[student.id] || [];
-        const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords, studentObservations);
+        const finalGrade = calculateFinalGrade(student.id, partial, group.id);
         totalGroupGrade += finalGrade;
         if (finalGrade >= 70) approved++;
 
@@ -228,7 +237,7 @@ export default function GroupReportPage() {
                     <h1 className="text-2xl font-bold">{settings.institutionName}</h1>
                     <p className="text-lg text-muted-foreground">Informe de Rendimiento Académico Grupal</p>
                 </div>
-                 {settings.logo && (
+                 {isClient && settings.logo ? (
                     <Image
                         src={settings.logo}
                         alt="Logo de la Institución"
@@ -236,7 +245,7 @@ export default function GroupReportPage() {
                         height={80}
                         className="object-contain"
                     />
-                 )}
+                 ): <Skeleton className="w-[80px] h-[80px]" /> }
            </div>
            <div className="pt-4 flex justify-between text-sm text-muted-foreground">
                 <div>

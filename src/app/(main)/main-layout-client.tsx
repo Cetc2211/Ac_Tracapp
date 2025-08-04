@@ -106,7 +106,7 @@ export default function MainLayoutClient({
           )}
         </SidebarHeader>
         <SidebarContent>
-           {isClient && activeGroup && (
+           {isClient && activeGroup ? (
                 <>
                   <div className="px-4 py-2">
                       <p className="text-xs font-semibold text-sidebar-foreground/70 tracking-wider uppercase">Grupo Activo</p>
@@ -122,7 +122,17 @@ export default function MainLayoutClient({
                   </div>
                   <Separator className="my-2" />
                 </>
-            )}
+            ) : isClient ? null : (
+                <>
+                  <div className="px-4 py-2">
+                     <Skeleton className="h-3 w-20 mb-2" />
+                     <Skeleton className="h-4 w-32 mb-1" />
+                     <Skeleton className="h-4 w-24" />
+                  </div>
+                  <Separator className="my-2" />
+                </>
+            )
+          }
           <SidebarMenu>
             {navItems.map((item) => (
               <SidebarMenuItem key={item.href}>
