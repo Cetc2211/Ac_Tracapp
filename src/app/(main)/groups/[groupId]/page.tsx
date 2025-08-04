@@ -307,6 +307,13 @@ export default function GroupDetailsPage() {
 
   const numSelected = selectedStudents.length;
 
+  const getPartialLabel = (partial: string | null) => {
+    if (partial === '1') return 'Primer Parcial';
+    if (partial === '2') return 'Segundo Parcial';
+    if (partial === '3') return 'Tercer Parcial';
+    return '';
+  }
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-full">
@@ -359,7 +366,7 @@ export default function GroupDetailsPage() {
             <div>
             <h1 className="text-3xl font-bold">{activeGroup.subject}</h1>
             <p className="text-muted-foreground">
-                Detalles del grupo y lista de estudiantes.
+                {getPartialLabel(activePartial)} - Detalles del grupo y lista de estudiantes.
             </p>
             </div>
          </div>
@@ -659,8 +666,8 @@ export default function GroupDetailsPage() {
                             <div>
                                 <span className="font-medium">{criterion.name}</span>
                                 <p className="text-xs text-muted-foreground">
-                                  {criterion.name === 'Participación' || criterion.name === 'Actividades' || criterion.name === 'Portafolio'
-                                    ? 'Cálculo automático'
+                                  {criterion.name === 'Portafolio' && criterion.isAutomated ? 'Cálculo Automático' 
+                                    : (criterion.name === 'Participación' || criterion.name === 'Actividades') ? 'Cálculo Automático'
                                     : `${criterion.expectedValue} es el valor esperado`
                                   }
                                 </p>

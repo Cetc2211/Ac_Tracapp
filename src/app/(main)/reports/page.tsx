@@ -44,7 +44,9 @@ export default function ReportsPage() {
     activities, 
     activityRecords,
     observations,
-    calculateFinalGrade 
+    calculateFinalGrade,
+    groupAverages,
+    atRiskStudents
   } = useData();
 
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -76,7 +78,7 @@ export default function ReportsPage() {
         return finalGrade;
     });
 
-    const groupAverage = groupGrades.length > 0 ? groupGrades.reduce((a, b) => a + b, 0) / groupGrades.length : 0;
+    const groupAverage = groupAverages[activeGroup.id] || 0;
     
     return {
         studentCount: studentCount,
@@ -86,7 +88,7 @@ export default function ReportsPage() {
         totalAttendanceRecords: presentCount,
         criteriaCount: criteria.length,
     };
-  }, [activeGroup, attendance, criteria, grades, participations, activities, activityRecords, calculateFinalGrade, observations]);
+  }, [activeGroup, attendance, criteria, grades, participations, activities, activityRecords, calculateFinalGrade, observations, groupAverages]);
 
 
   const handleDownloadCsv = () => {
@@ -103,11 +105,22 @@ export default function ReportsPage() {
         
         criteria.forEach(criterion => {
             let performanceRatio = 0;
-            if (criterion.name === 'Actividades' || criterion.name === 'Portafolio') {
+             if (criterion.name === 'Portafolio') {
+                if (criterion.isAutomated) {
+                    const totalActivities = activities.length;
+                    if (totalActivities > 0) {
+                        const deliveredActivities = Object.values(activityRecords[student.id] || {}).filter(Boolean).length;
+                        performanceRatio = deliveredActivities / totalActivities;
+                    }
+                } else {
+                    const gradeDetail = grades[student.id]?.[criterion.id];
+                    const delivered = gradeDetail?.delivered ?? 0;
+                    performanceRatio = (criterion.expectedValue > 0) ? (delivered / criterion.expectedValue) : 0;
+                }
+            } else if (criterion.name === 'Actividades') {
                 const totalActivities = activities.length;
                 if (totalActivities > 0) {
-                    const studentRecords = activityRecords[student.id] || {};
-                    const deliveredActivities = Object.values(studentRecords).filter(Boolean).length;
+                    const deliveredActivities = Object.values(activityRecords[student.id] || {}).filter(Boolean).length;
                     performanceRatio = deliveredActivities / totalActivities;
                 }
             } else if(criterion.name === 'Participación') {
@@ -230,7 +243,7 @@ export default function ReportsPage() {
         </div>
          <Card>
             <CardHeader>
-                <CardTitle>Estadísticas Rápidas</CardTitle>
+                <CardTitle>Estadísticas Rápidas del Parcial</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
                 <div className="flex flex-col items-center gap-1">

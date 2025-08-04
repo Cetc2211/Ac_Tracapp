@@ -11,6 +11,7 @@ export type EvaluationCriteria = {
   name: string;
   weight: number;
   expectedValue: number;
+  isAutomated?: boolean;
 };
 
 export type GradeDetail = {
@@ -262,11 +263,22 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             for (const criterion of criteria) {
                 let performanceRatio = 0;
         
-                if (criterion.name === 'Actividades' || criterion.name === 'Portafolio') {
+                if (criterion.name === 'Portafolio') {
+                    if (criterion.isAutomated) {
+                        const totalActivities = activities.length;
+                        if (totalActivities > 0) {
+                            const deliveredActivities = Object.values(activityRecords[studentId] || {}).filter(Boolean).length;
+                            performanceRatio = deliveredActivities / totalActivities;
+                        }
+                    } else {
+                        const gradeDetail = grades[studentId]?.[criterion.id];
+                        const delivered = gradeDetail?.delivered ?? 0;
+                        performanceRatio = (criterion.expectedValue > 0) ? (delivered / criterion.expectedValue) : 0;
+                    }
+                } else if (criterion.name === 'Actividades') {
                     const totalActivities = activities.length;
                     if (totalActivities > 0) {
-                        const studentRecords = activityRecords[studentId] || {};
-                        const deliveredActivities = Object.values(studentRecords).filter(Boolean).length;
+                        const deliveredActivities = Object.values(activityRecords[studentId] || {}).filter(Boolean).length;
                         performanceRatio = deliveredActivities / totalActivities;
                     }
                 } else if(criterion.name === 'Participación') {
@@ -512,28 +524,31 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }, []);
 
     const atRiskStudents: StudentWithRisk[] = useMemo(() => {
-        if (!activeGroup || !activePartial) return [];
+        const students: StudentWithRisk[] = [];
+        groups.forEach(group => {
+            const partial = activePartials[group.id] || '1';
+            const criteria = allCriteria[`criteria_${group.id}_${partial}`] || [];
+            const grades = allGrades[group.id]?.[partial] || {};
+            const attendance = allAttendances[group.id]?.[partial] || {};
+            const participations = allParticipations[group.id]?.[partial] || {};
+            const activities = allActivities[group.id]?.[partial] || [];
+            const activityRecords = allActivityRecords[group.id]?.[partial] || {};
 
-        const grades = allGrades[activeGroup.id]?.[activePartial] || {};
-        const attendance = allAttendances[activeGroup.id]?.[activePartial] || {};
-        const participations = allParticipations[activeGroup.id]?.[activePartial] || {};
-        const activities = allActivities[activeGroup.id]?.[activePartial] || [];
-        const activityRecords = allActivityRecords[activeGroup.id]?.[activePartial] || {};
-        const criteria = allCriteria[`criteria_${activeGroup.id}_${activePartial}`] || [];
-
-        return activeGroup.students.map((s: Student) => {
-            const studentObservations = allObservations[s.id] || [];
-            const finalGrade = calculateFinalGrade(s.id, criteria, grades, participations, activities, activityRecords, studentObservations);
-            const risk = getStudentRiskLevel(finalGrade, attendance, s.id);
-            return { ...s, calculatedRisk: risk }
-        })
-        .filter((s: StudentWithRisk) => s.calculatedRisk.level === 'high' || s.calculatedRisk.level === 'medium')
-        .sort((a: StudentWithRisk, b: StudentWithRisk) => {
+            group.students.forEach(student => {
+                const studentObservations = allObservations[student.id] || [];
+                const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords, studentObservations);
+                const risk = getStudentRiskLevel(finalGrade, attendance, student.id);
+                if (risk.level === 'high' || risk.level === 'medium') {
+                    students.push({ ...student, calculatedRisk: risk });
+                }
+            });
+        });
+        return students.sort((a, b) => {
             if (a.calculatedRisk.level === 'high' && b.calculatedRisk.level !== 'high') return -1;
             if (a.calculatedRisk.level !== 'high' && b.calculatedRisk.level === 'high') return 1;
             return 0;
         });
-    }, [activeGroup, activePartial, allGrades, allAttendances, allParticipations, allActivities, allActivityRecords, allCriteria, allObservations, calculateFinalGrade, getStudentRiskLevel]);
+    }, [groups, activePartials, allCriteria, allGrades, allAttendances, allParticipations, allActivities, allActivityRecords, allObservations, calculateFinalGrade, getStudentRiskLevel]);
     
     const groupStats = useMemo(() => {
         const allStats: {[groupId: string]: GroupStats} = {};
@@ -635,5 +650,3 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
-
-    

@@ -242,7 +242,7 @@ export default function StatisticsPage() {
         <div>
           <h1 className="text-3xl font-bold">Estadísticas</h1>
           <p className="text-muted-foreground">
-            Analiza el rendimiento de tus grupos y estudiantes.
+            Analiza el rendimiento de tus grupos y estudiantes en el parcial activo.
           </p>
         </div>
       </div>
@@ -266,7 +266,7 @@ export default function StatisticsPage() {
                      <Card>
                         <CardHeader>
                         <CardTitle>Rendimiento por Grupo</CardTitle>
-                        <CardDescription>Comparativa de la calificación promedio final y la tasa de asistencia entre grupos.</CardDescription>
+                        <CardDescription>Comparativa de la calificación promedio final y la tasa de asistencia entre grupos (del parcial activo de cada uno).</CardDescription>
                         </CardHeader>
                         <CardContent>
                         <ChartContainer config={{}} className="min-h-[300px] w-full">
@@ -294,7 +294,7 @@ export default function StatisticsPage() {
                     <Card>
                         <CardHeader>
                         <CardTitle>Distribución de Riesgo por Grupo</CardTitle>
-                        <CardDescription>Comparativa del número de estudiantes en cada nivel de riesgo por grupo.</CardDescription>
+                        <CardDescription>Comparativa del número de estudiantes en cada nivel de riesgo por grupo (del parcial activo de cada uno).</CardDescription>
                         </CardHeader>
                         <CardContent>
                            <ChartContainer config={{}} className="min-h-[300px] w-full">
@@ -445,5 +445,3 @@ export default function StatisticsPage() {
     </div>
   );
 }
-
-    

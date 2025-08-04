@@ -98,7 +98,7 @@ export default function DashboardPage() {
               {atRiskStudents.length}
             </div>
             <p className="text-xs text-muted-foreground">
-              Requieren atención especial
+              Requieren atención especial (todos los grupos)
             </p>
           </CardContent>
         </Card>
@@ -112,7 +112,7 @@ export default function DashboardPage() {
           <CardContent>
             <div className="text-2xl font-bold">{overallAverageParticipation}%</div>
             <p className="text-xs text-muted-foreground">
-              Promedio en todas las clases
+              Promedio en todas las clases y parciales
             </p>
           </CardContent>
         </Card>
@@ -172,7 +172,7 @@ export default function DashboardPage() {
             <div className="grid gap-2">
               <CardTitle>Grupos Recientes</CardTitle>
               <CardDescription>
-                Resumen de los grupos y su rendimiento.
+                Resumen de los grupos y su rendimiento en el parcial activo.
               </CardDescription>
             </div>
             <Button asChild size="sm" className="ml-auto gap-1">
@@ -213,7 +213,7 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle>Estudiantes con Alertas</CardTitle>
             <CardDescription>
-              Estudiantes que requieren seguimiento por rendimiento o ausencias.
+              Estudiantes que requieren seguimiento (basado en el parcial activo de cada grupo).
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-6 flex-grow">

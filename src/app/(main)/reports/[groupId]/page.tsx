@@ -45,6 +45,14 @@ export default function GroupReportPage() {
   const groupId = params.groupId as string;
   const { 
       groups,
+      activePartial,
+      allObservations,
+      allAttendances,
+      allParticipations,
+      allGrades,
+      allCriteria,
+      allActivities,
+      allActivityRecords,
       calculateFinalGrade,
       getStudentRiskLevel,
   } = useData();
@@ -57,6 +65,7 @@ export default function GroupReportPage() {
   const { toast } = useToast();
 
   const group = useMemo(() => groups.find(g => g.id === groupId), [groups, groupId]);
+  const partial = useMemo(() => activePartial || '1', [activePartial]);
 
   useEffect(() => {
     if (!group) {
@@ -66,14 +75,13 @@ export default function GroupReportPage() {
 
     setIsLoading(true);
     try {
-      const activePartial = localStorage.getItem(`activePartial_${groupId}`) || '1';
-      
-      const criteria: EvaluationCriteria[] = JSON.parse(localStorage.getItem(`criteria_${groupId}_${activePartial}`) || '[]');
-      const grades: Grades = JSON.parse(localStorage.getItem(`grades_${groupId}_${activePartial}`) || '{}');
-      const participations: ParticipationRecord = JSON.parse(localStorage.getItem(`participations_${groupId}_${activePartial}`) || '{}');
-      const attendance: ParticipationRecord = JSON.parse(localStorage.getItem(`attendance_${groupId}_${activePartial}`) || '{}');
-      const activities: Activity[] = JSON.parse(localStorage.getItem(`activities_${groupId}_${activePartial}`) || '[]');
-      const activityRecords: ActivityRecord = JSON.parse(localStorage.getItem(`activityRecords_${groupId}_${activePartial}`) || '{}');
+      const criteria: EvaluationCriteria[] = allCriteria[`criteria_${group.id}_${partial}`] || [];
+      const grades: Grades = allGrades[group.id]?.[partial] || {};
+      const participations: ParticipationRecord = allParticipations[group.id]?.[partial] || {};
+      const attendance: ParticipationRecord = allAttendances[group.id]?.[partial] || {};
+      const activities: Activity[] = allActivities[group.id]?.[partial] || [];
+      const activityRecords: ActivityRecord = allActivityRecords[group.id]?.[partial] || {};
+      const observations = allObservations;
 
       let approved = 0;
       let studentsWithObservations = 0;
@@ -90,7 +98,7 @@ export default function GroupReportPage() {
       let mediumRiskStudents = 0;
 
       group.students.forEach(student => {
-        const studentObservations: StudentObservation[] = JSON.parse(localStorage.getItem(`observations_${student.id}`) || '[]');
+        const studentObservations: StudentObservation[] = observations[student.id] || [];
         const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords, studentObservations);
         totalGroupGrade += finalGrade;
         if (finalGrade >= 70) approved++;
@@ -154,7 +162,7 @@ export default function GroupReportPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [group, groupId, calculateFinalGrade, getStudentRiskLevel]);
+  }, [group, partial, calculateFinalGrade, getStudentRiskLevel, allCriteria, allGrades, allParticipations, allAttendances, allActivities, allActivityRecords, allObservations]);
 
   const handleDownloadPdf = () => {
     const input = reportRef.current;
@@ -325,5 +333,3 @@ export default function GroupReportPage() {
     </div>
   );
 }
-
-    
