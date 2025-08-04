@@ -60,6 +60,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useData } from '@/hooks/use-data';
 import { Input } from '@/components/ui/input';
 import type { CalculatedRisk } from '@/hooks/use-data';
+import { cn } from '@/lib/utils';
+import { getPartialLabel } from '@/lib/utils';
 
 
 export default function GroupDetailsPage() {
@@ -307,12 +309,7 @@ export default function GroupDetailsPage() {
 
   const numSelected = selectedStudents.length;
 
-  const getPartialLabel = (partial: string | null) => {
-    if (partial === '1') return 'Primer Parcial';
-    if (partial === '2') return 'Segundo Parcial';
-    if (partial === '3') return 'Tercer Parcial';
-    return '';
-  }
+  const partialLabel = getPartialLabel(activePartial);
 
   if (isLoading) {
     return (
@@ -325,6 +322,18 @@ export default function GroupDetailsPage() {
   if (!activeGroup) {
     return null;
   }
+
+  const TabsValueContent = ({ value, children }: { value: string, children: React.ReactNode }) => (
+    <TabsContent value={value} className={cn(
+        "mt-6 rounded-lg border-2",
+        value === '1' && "border-partial-1",
+        value === '2' && "border-partial-2",
+        value === '3' && "border-partial-3"
+    )}>
+        <div className="p-0">{children}</div>
+    </TabsContent>
+);
+
   
   return (
     <>
@@ -354,7 +363,7 @@ export default function GroupDetailsPage() {
         </DialogContent>
       </Dialog>
     )}
-    <Tabs value={activePartial || '1'} onValueChange={handlePartialChange} className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
          <div className="flex items-center gap-4">
             <Button asChild variant="outline" size="icon">
@@ -366,7 +375,7 @@ export default function GroupDetailsPage() {
             <div>
             <h1 className="text-3xl font-bold">{activeGroup.subject}</h1>
             <p className="text-muted-foreground">
-                {getPartialLabel(activePartial)} - Detalles del grupo y lista de estudiantes.
+                {partialLabel} - Detalles del grupo y lista de estudiantes.
             </p>
             </div>
          </div>
@@ -407,288 +416,291 @@ export default function GroupDetailsPage() {
             </AlertDialog>
          </div>
       </div>
-       <TabsList className="grid w-full grid-cols-3">
-        <TabsTrigger value="1">Primer Parcial</TabsTrigger>
-        <TabsTrigger value="2">Segundo Parcial</TabsTrigger>
-        <TabsTrigger value="3">Tercer Parcial</TabsTrigger>
-      </TabsList>
+      <Tabs value={activePartial || '1'} onValueChange={handlePartialChange} className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="1" className="data-[state=active]:bg-partial-1 data-[state=active]:text-partial-1-foreground">Primer Parcial</TabsTrigger>
+          <TabsTrigger value="2" className="data-[state=active]:bg-partial-2 data-[state=active]:text-partial-2-foreground">Segundo Parcial</TabsTrigger>
+          <TabsTrigger value="3" className="data-[state=active]:bg-partial-3 data-[state=active]:text-partial-3-foreground">Tercer Parcial</TabsTrigger>
+        </TabsList>
       
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Estudiantes en el Grupo</CardTitle>
-                  <CardDescription>
-                    Actualmente hay {activeGroup.students.length} estudiantes en este
-                    grupo.
-                  </CardDescription>
-                </div>
-                <div className="flex items-center gap-2">
-                    {isSelectionMode ? (
-                        <>
-                            <Button variant="outline" size="sm" onClick={handleCancelSelectionMode} className="gap-1">
-                                <X className="h-3.5 w-3.5" />
-                                Cancelar
+        <TabsValueContent value={activePartial || '1'}>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <Card className="lg:col-span-2">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Estudiantes en el Grupo</CardTitle>
+                      <CardDescription>
+                        Actualmente hay {activeGroup.students.length} estudiantes en este
+                        grupo.
+                      </CardDescription>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        {isSelectionMode ? (
+                            <>
+                                <Button variant="outline" size="sm" onClick={handleCancelSelectionMode} className="gap-1">
+                                    <X className="h-3.5 w-3.5" />
+                                    Cancelar
+                                </Button>
+                                {numSelected > 0 && (
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="destructive" size="sm" className="gap-1">
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                                <span>Eliminar ({numSelected})</span>
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>¿Eliminar {numSelected} estudiante(s)?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    Esta acción no se puede deshacer. Se quitarán los estudiantes seleccionados de este grupo, pero no se eliminarán de la lista general de estudiantes.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                <AlertDialogAction onClick={handleDeleteSelectedStudents}>Sí, eliminar del grupo</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                )}
+                            </>
+                        ) : (
+                          <Button variant="outline" size="sm" onClick={() => setIsSelectionMode(true)}>
+                                Seleccionar Estudiantes
                             </Button>
-                            {numSelected > 0 && (
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="destructive" size="sm" className="gap-1">
-                                            <Trash2 className="h-3.5 w-3.5" />
-                                            <span>Eliminar ({numSelected})</span>
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>¿Eliminar {numSelected} estudiante(s)?</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                Esta acción no se puede deshacer. Se quitarán los estudiantes seleccionados de este grupo, pero no se eliminarán de la lista general de estudiantes.
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                            <AlertDialogAction onClick={handleDeleteSelectedStudents}>Sí, eliminar del grupo</AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                            )}
-                        </>
-                    ) : (
-                       <Button variant="outline" size="sm" onClick={() => setIsSelectionMode(true)}>
-                            Seleccionar Estudiantes
-                        </Button>
-                    )}
-                    <Dialog open={isAddStudentDialogOpen} onOpenChange={setIsAddStudentDialogOpen}>
-                    <DialogTrigger asChild>
-                        <Button size="sm" className="gap-1">
-                        <UserPlus className="h-3.5 w-3.5" />
-                        <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                            Agregar Estudiantes
-                        </span>
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-xl">
-                        <DialogHeader>
-                        <DialogTitle>Agregar Nuevos Estudiantes al Grupo</DialogTitle>
-                        <DialogDescription>
-                            Añade nuevos estudiantes a "{activeGroup.subject}". Pega columnas de datos para agregarlos en masa.
-                        </DialogDescription>
-                        </DialogHeader>
-                        <div className="grid gap-4 py-4 max-h-[400px] overflow-y-auto">
-                            <p className="text-sm text-muted-foreground">
-                                Pega una columna de datos en cada campo. Asegúrate de que cada línea corresponda al mismo estudiante.
-                            </p>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="bulkNames">Nombres*</Label>
-                                    <Textarea id="bulkNames" placeholder="Laura Jimenez\nCarlos Sanchez" rows={5} value={bulkNames} onChange={(e) => setBulkNames(e.target.value)} />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="bulkEmails">Emails</Label>
-                                    <Textarea id="bulkEmails" placeholder="laura.j@example.com\ncarlos.s@example.com" rows={5} value={bulkEmails} onChange={(e) => setBulkEmails(e.target.value)} />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="bulkPhones">Teléfonos</Label>
-                                    <Textarea id="bulkPhones" placeholder="555-3344\n555-6677" rows={5} value={bulkPhones} onChange={(e) => setBulkPhones(e.target.value)} />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="bulkTutorNames">Nombres de Tutores</Label>
-                                    <Textarea id="bulkTutorNames" placeholder="Ricardo Jimenez\nMaria Sanchez" rows={5} value={bulkTutorNames} onChange={(e) => setBulkTutorNames(e.target.value)} />
-                                </div>
-                                <div className="space-y-2 col-span-2">
-                                    <Label htmlFor="bulkTutorPhones">Teléfonos de Tutores</Label>
-                                    <Textarea id="bulkTutorPhones" placeholder="555-3355\n555-6688" rows={5} value={bulkTutorPhones} onChange={(e) => setBulkTutorPhones(e.target.value)} />
+                        )}
+                        <Dialog open={isAddStudentDialogOpen} onOpenChange={setIsAddStudentDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button size="sm" className="gap-1">
+                            <UserPlus className="h-3.5 w-3.5" />
+                            <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                                Agregar Estudiantes
+                            </span>
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-xl">
+                            <DialogHeader>
+                            <DialogTitle>Agregar Nuevos Estudiantes al Grupo</DialogTitle>
+                            <DialogDescription>
+                                Añade nuevos estudiantes a "{activeGroup.subject}". Pega columnas de datos para agregarlos en masa.
+                            </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4 max-h-[400px] overflow-y-auto">
+                                <p className="text-sm text-muted-foreground">
+                                    Pega una columna de datos en cada campo. Asegúrate de que cada línea corresponda al mismo estudiante.
+                                </p>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="bulkNames">Nombres*</Label>
+                                        <Textarea id="bulkNames" placeholder="Laura Jimenez\nCarlos Sanchez" rows={5} value={bulkNames} onChange={(e) => setBulkNames(e.target.value)} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="bulkEmails">Emails</Label>
+                                        <Textarea id="bulkEmails" placeholder="laura.j@example.com\ncarlos.s@example.com" rows={5} value={bulkEmails} onChange={(e) => setBulkEmails(e.target.value)} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="bulkPhones">Teléfonos</Label>
+                                        <Textarea id="bulkPhones" placeholder="555-3344\n555-6677" rows={5} value={bulkPhones} onChange={(e) => setBulkPhones(e.target.value)} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="bulkTutorNames">Nombres de Tutores</Label>
+                                        <Textarea id="bulkTutorNames" placeholder="Ricardo Jimenez\nMaria Sanchez" rows={5} value={bulkTutorNames} onChange={(e) => setBulkTutorNames(e.target.value)} />
+                                    </div>
+                                    <div className="space-y-2 col-span-2">
+                                        <Label htmlFor="bulkTutorPhones">Teléfonos de Tutores</Label>
+                                        <Textarea id="bulkTutorPhones" placeholder="555-3355\n555-6688" rows={5} value={bulkTutorPhones} onChange={(e) => setBulkTutorPhones(e.target.value)} />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsAddStudentDialogOpen(false)}>Cancelar</Button>
-                        <Button onClick={handleAddStudents} disabled={!bulkNames.trim()}>Agregar Estudiantes</Button>
-                        </DialogFooter>
-                    </DialogContent>
-                    </Dialog>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    {isSelectionMode && (
-                        <TableHead padding="checkbox">
-                            <Checkbox
-                                checked={activeGroup.students.length > 0 && numSelected === activeGroup.students.length ? true : (numSelected > 0 ? 'indeterminate' : false)}
-                                onCheckedChange={(checked) => handleSelectAll(checked)}
-                                aria-label="Seleccionar todo"
-                            />
-                        </TableHead>
-                    )}
-                    <TableHead>#</TableHead>
-                    <TableHead className="hidden w-[100px] sm:table-cell">
-                      <span className="sr-only">Foto</span>
-                    </TableHead>
-                    <TableHead>Nombre</TableHead>
-                    <TableHead>Nivel de Riesgo</TableHead>
-                    <TableHead>
-                      <span className="sr-only">Acciones</span>
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {activeGroup.students.map((student, index) => {
-                    const risk = studentRiskLevels[student.id] || {level: 'low', reason: ''};
-                    return (
-                        <TableRow key={student.id} data-state={selectedStudents.includes(student.id) && "selected"}>
-                          {isSelectionMode && (
-                            <TableCell padding="checkbox">
+                            <DialogFooter>
+                            <Button variant="outline" onClick={() => setIsAddStudentDialogOpen(false)}>Cancelar</Button>
+                            <Button onClick={handleAddStudents} disabled={!bulkNames.trim()}>Agregar Estudiantes</Button>
+                            </DialogFooter>
+                        </DialogContent>
+                        </Dialog>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        {isSelectionMode && (
+                            <TableHead padding="checkbox">
                                 <Checkbox
-                                    checked={selectedStudents.includes(student.id)}
-                                    onCheckedChange={() => handleSelectStudent(student.id)}
-                                    aria-label="Seleccionar fila"
+                                    checked={activeGroup.students.length > 0 && numSelected === activeGroup.students.length ? true : (numSelected > 0 ? 'indeterminate' : false)}
+                                    onCheckedChange={(checked) => handleSelectAll(checked)}
+                                    aria-label="Seleccionar todo"
+                                />
+                            </TableHead>
+                        )}
+                        <TableHead>#</TableHead>
+                        <TableHead className="hidden w-[100px] sm:table-cell">
+                          <span className="sr-only">Foto</span>
+                        </TableHead>
+                        <TableHead>Nombre</TableHead>
+                        <TableHead>Nivel de Riesgo</TableHead>
+                        <TableHead>
+                          <span className="sr-only">Acciones</span>
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {activeGroup.students.map((student, index) => {
+                        const risk = studentRiskLevels[student.id] || {level: 'low', reason: ''};
+                        return (
+                            <TableRow key={student.id} data-state={selectedStudents.includes(student.id) && "selected"}>
+                              {isSelectionMode && (
+                                <TableCell padding="checkbox">
+                                    <Checkbox
+                                        checked={selectedStudents.includes(student.id)}
+                                        onCheckedChange={() => handleSelectStudent(student.id)}
+                                        aria-label="Seleccionar fila"
+                                    />
+                                </TableCell>
+                              )}
+                              <TableCell className="text-muted-foreground">{index + 1}</TableCell>
+                              <TableCell className="hidden sm:table-cell">
+                                <Image
+                                alt="Foto del estudiante"
+                                className="aspect-square rounded-md object-cover"
+                                height="64"
+                                src={student.photo}
+                                data-ai-hint="student photo"
+                                width="64"
                                 />
                             </TableCell>
-                          )}
-                          <TableCell className="text-muted-foreground">{index + 1}</TableCell>
-                          <TableCell className="hidden sm:table-cell">
-                            <Image
-                            alt="Foto del estudiante"
-                            className="aspect-square rounded-md object-cover"
-                            height="64"
-                            src={student.photo}
-                            data-ai-hint="student photo"
-                            width="64"
-                            />
-                        </TableCell>
-                        <TableCell className="font-medium">
-                            <Link href={`/students/${student.id}`} className="hover:underline">
-                                {student.name}
-                            </Link>
-                        </TableCell>
-                        <TableCell>
-                            {risk.level === 'high' && (
-                            <Badge variant="destructive">Alto</Badge>
-                            )}
-                            {risk.level === 'medium' && (
-                            <Badge
-                                variant="secondary"
-                                className="bg-amber-400 text-black"
-                            >
-                                Medio
-                            </Badge>
-                            )}
-                            {risk.level === 'low' && (
-                            <Badge variant="secondary">Bajo</Badge>
-                            )}
-                        </TableCell>
-                        <TableCell>
-                            <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button
-                                aria-haspopup="true"
-                                size="icon"
-                                variant="ghost"
+                            <TableCell className="font-medium">
+                                <Link href={`/students/${student.id}`} className="hover:underline">
+                                    {student.name}
+                                </Link>
+                            </TableCell>
+                            <TableCell>
+                                {risk.level === 'high' && (
+                                <Badge variant="destructive">Alto</Badge>
+                                )}
+                                {risk.level === 'medium' && (
+                                <Badge
+                                    variant="secondary"
+                                    className="bg-amber-400 text-black"
                                 >
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Toggle menu</span>
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                                <DropdownMenuItem onClick={() => router.push(`/students/${student.id}`)}>Ver Perfil Completo</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleOpenPhotoDialog(student)}>
-                                    <ImagePlus className="mr-2 h-4 w-4" />
-                                    Cambiar Foto
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => handleRemoveStudent(student.id)} className="text-destructive">
-                                Quitar del Grupo
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                            </DropdownMenu>
-                        </TableCell>
+                                    Medio
+                                </Badge>
+                                )}
+                                {risk.level === 'low' && (
+                                <Badge variant="secondary">Bajo</Badge>
+                                )}
+                            </TableCell>
+                            <TableCell>
+                                <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                    aria-haspopup="true"
+                                    size="icon"
+                                    variant="ghost"
+                                    >
+                                    <MoreHorizontal className="h-4 w-4" />
+                                    <span className="sr-only">Toggle menu</span>
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                    <DropdownMenuItem onClick={() => router.push(`/students/${student.id}`)}>Ver Perfil Completo</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleOpenPhotoDialog(student)}>
+                                        <ImagePlus className="mr-2 h-4 w-4" />
+                                        Cambiar Foto
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={() => handleRemoveStudent(student.id)} className="text-destructive">
+                                    Quitar del Grupo
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                                </DropdownMenu>
+                            </TableCell>
+                            </TableRow>
+                        )
+                      })}
+                      {activeGroup.students.length === 0 && (
+                        <TableRow>
+                            <TableCell colSpan={6} className="text-center text-muted-foreground p-8">
+                                No hay estudiantes en este grupo.
+                            </TableCell>
                         </TableRow>
-                    )
-                  })}
-                   {activeGroup.students.length === 0 && (
-                    <TableRow>
-                        <TableCell colSpan={6} className="text-center text-muted-foreground p-8">
-                            No hay estudiantes en este grupo.
-                        </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-        </Card>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+            </Card>
 
-        <Card>
-            <CardHeader>
-                <CardTitle>Acciones del Grupo</CardTitle>
-                <CardDescription>
-                    Gestiona la asistencia, criterios de evaluación y calificaciones del parcial.
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-4">
-                <Button asChild variant="outline">
-                    <Link href={`/attendance`}>
-                        <CalendarCheck className="mr-2 h-4 w-4" />
-                        Tomar Asistencia
-                    </Link>
-                </Button>
-                 <Button asChild variant="outline">
-                    <Link href={`/participations`}>
-                        <PenSquare className="mr-2 h-4 w-4" />
-                        Registrar Participaciones
-                    </Link>
-                </Button>
-                 <Button asChild variant="outline">
-                    <Link href={`/groups/${activeGroup.id}/criteria`}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Gestionar Criterios
-                    </Link>
-                </Button>
-                 <Button asChild>
-                    <Link href={`/groups/${activeGroup.id}/grades`}>
-                        <FilePen className="mr-2 h-4 w-4" />
-                        Registrar Calificaciones
-                    </Link>
-                </Button>
-            </CardContent>
-            <CardHeader className="pt-0">
-                <CardTitle className="text-lg">Resumen de Criterios</CardTitle>
-                <CardDescription>Peso total: {totalWeight}%</CardDescription>
-            </CardHeader>
-            <CardContent>
-                 <div className="space-y-2">
-                    {criteria.map(criterion => (
-                        <div key={criterion.id} className="flex items-center justify-between p-2 bg-muted rounded-md">
-                            <div>
-                                <span className="font-medium">{criterion.name}</span>
-                                <p className="text-xs text-muted-foreground">
-                                  {criterion.name === 'Portafolio' && criterion.isAutomated ? 'Cálculo Automático' 
-                                    : (criterion.name === 'Participación' || criterion.name === 'Actividades') ? 'Cálculo Automático'
-                                    : `${criterion.expectedValue} es el valor esperado`
-                                  }
-                                </p>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Acciones del Grupo</CardTitle>
+                    <CardDescription>
+                        Gestiona la asistencia, criterios de evaluación y calificaciones del parcial.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-4">
+                    <Button asChild variant="outline">
+                        <Link href={`/attendance`}>
+                            <CalendarCheck className="mr-2 h-4 w-4" />
+                            Tomar Asistencia
+                        </Link>
+                    </Button>
+                    <Button asChild variant="outline">
+                        <Link href={`/participations`}>
+                            <PenSquare className="mr-2 h-4 w-4" />
+                            Registrar Participaciones
+                        </Link>
+                    </Button>
+                    <Button asChild variant="outline">
+                        <Link href={`/groups/${activeGroup.id}/criteria`}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Gestionar Criterios
+                        </Link>
+                    </Button>
+                    <Button asChild>
+                        <Link href={`/groups/${activeGroup.id}/grades`}>
+                            <FilePen className="mr-2 h-4 w-4" />
+                            Registrar Calificaciones
+                        </Link>
+                    </Button>
+                </CardContent>
+                <CardHeader className="pt-0">
+                    <CardTitle className="text-lg">Resumen de Criterios</CardTitle>
+                    <CardDescription>Peso total: {totalWeight}%</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="space-y-2">
+                        {criteria.map(criterion => (
+                            <div key={criterion.id} className="flex items-center justify-between p-2 bg-muted rounded-md">
+                                <div>
+                                    <span className="font-medium">{criterion.name}</span>
+                                    <p className="text-xs text-muted-foreground">
+                                    {criterion.name === 'Portafolio' && criterion.isAutomated ? 'Cálculo Automático' 
+                                        : (criterion.name === 'Participación' || criterion.name === 'Actividades') ? 'Cálculo Automático'
+                                        : `${criterion.expectedValue} es el valor esperado`
+                                    }
+                                    </p>
+                                </div>
+                                <Badge variant="secondary">{criterion.weight}%</Badge>
                             </div>
-                            <Badge variant="secondary">{criterion.weight}%</Badge>
-                        </div>
-                    ))}
-                    {criteria.length === 0 && (
-                        <p className="text-sm text-center text-muted-foreground py-4">No has definido criterios.</p>
-                    )}
-                     {totalWeight > 100 && (
-                        <div className="text-center text-sm font-bold text-destructive pt-2">
-                            Total: {totalWeight}% (Sobrepasa el 100%)
-                        </div>
-                    )}
-                </div>
-            </CardContent>
-        </Card>
-      </div>
-
-    </Tabs>
+                        ))}
+                        {criteria.length === 0 && (
+                            <p className="text-sm text-center text-muted-foreground py-4">No has definido criterios.</p>
+                        )}
+                        {totalWeight > 100 && (
+                            <div className="text-center text-sm font-bold text-destructive pt-2">
+                                Total: {totalWeight}% (Sobrepasa el 100%)
+                            </div>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
+          </div>
+        </TabsValueContent>
+      </Tabs>
+    </div>
     </>
   );
 }

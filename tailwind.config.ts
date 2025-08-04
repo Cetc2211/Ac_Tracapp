@@ -72,6 +72,14 @@ export default {
           border: 'hsl(var(--sidebar-border))',
           ring: 'hsl(var(--sidebar-ring))',
         },
+        partial: {
+          '1': 'hsl(var(--partial-1))',
+          '1-foreground': 'hsl(var(--partial-1-foreground))',
+          '2': 'hsl(var(--partial-2))',
+          '2-foreground': 'hsl(var(--partial-2-foreground))',
+          '3': 'hsl(var(--partial-3))',
+          '3-foreground': 'hsl(var(--partial-3-foreground))',
+        }
       },
       borderRadius: {
         lg: 'var(--radius)',
