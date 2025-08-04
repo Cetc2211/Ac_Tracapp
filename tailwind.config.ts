@@ -75,10 +75,16 @@ export default {
         partial: {
           '1': 'hsl(var(--partial-1))',
           '1-foreground': 'hsl(var(--partial-1-foreground))',
+          '1-border': 'hsl(var(--partial-1-border))',
+          '1-bg': 'hsl(var(--partial-1-bg))',
           '2': 'hsl(var(--partial-2))',
           '2-foreground': 'hsl(var(--partial-2-foreground))',
+          '2-border': 'hsl(var(--partial-2-border))',
+          '2-bg': 'hsl(var(--partial-2-bg))',
           '3': 'hsl(var(--partial-3))',
           '3-foreground': 'hsl(var(--partial-3-foreground))',
+          '3-border': 'hsl(var(--partial-3-border))',
+          '3-bg': 'hsl(var(--partial-3-bg))',
         }
       },
       borderRadius: {
@@ -112,3 +118,5 @@ export default {
   },
   plugins: [require('tailwindcss-animate')],
 } satisfies Config;
+
+    

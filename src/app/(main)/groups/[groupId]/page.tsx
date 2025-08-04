@@ -322,18 +322,6 @@ export default function GroupDetailsPage() {
   if (!activeGroup) {
     return null;
   }
-
-  const TabsValueContent = ({ value, children }: { value: string, children: React.ReactNode }) => (
-    <TabsContent value={value} className={cn(
-        "mt-6 rounded-lg border-2",
-        value === '1' && "border-partial-1",
-        value === '2' && "border-partial-2",
-        value === '3' && "border-partial-3"
-    )}>
-        <div className="p-0">{children}</div>
-    </TabsContent>
-);
-
   
   return (
     <>
@@ -418,13 +406,18 @@ export default function GroupDetailsPage() {
       </div>
       <Tabs value={activePartial || '1'} onValueChange={handlePartialChange} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="1" className="data-[state=active]:bg-partial-1 data-[state=active]:text-partial-1-foreground">Primer Parcial</TabsTrigger>
-          <TabsTrigger value="2" className="data-[state=active]:bg-partial-2 data-[state=active]:text-partial-2-foreground">Segundo Parcial</TabsTrigger>
-          <TabsTrigger value="3" className="data-[state=active]:bg-partial-3 data-[state=active]:text-partial-3-foreground">Tercer Parcial</TabsTrigger>
+            <TabsTrigger value="1" className={cn("text-partial-1-foreground", activePartial === '1' ? 'bg-partial-1' : 'bg-partial-1-bg border border-partial-1-border')}>Primer Parcial</TabsTrigger>
+            <TabsTrigger value="2" className={cn("text-partial-2-foreground", activePartial === '2' ? 'bg-partial-2' : 'bg-partial-2-bg border border-partial-2-border')}>Segundo Parcial</TabsTrigger>
+            <TabsTrigger value="3" className={cn("text-partial-3-foreground", activePartial === '3' ? 'bg-partial-3' : 'bg-partial-3-bg border border-partial-3-border')}>Tercer Parcial</TabsTrigger>
         </TabsList>
       
-        <TabsValueContent value={activePartial || '1'}>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <TabsContent value={activePartial || '1'} className={cn(
+            "mt-6 rounded-lg border-2",
+            activePartial === '1' && "border-partial-1",
+            activePartial === '2' && "border-partial-2",
+            activePartial === '3' && "border-partial-3"
+        )}>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 p-4">
             <Card className="lg:col-span-2">
                 <CardHeader>
                   <div className="flex items-center justify-between">
@@ -698,9 +691,11 @@ export default function GroupDetailsPage() {
                 </CardContent>
             </Card>
           </div>
-        </TabsValueContent>
+        </TabsContent>
       </Tabs>
     </div>
     </>
   );
 }
+
+    

@@ -47,13 +47,21 @@ body {
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 217.2 32.6% 17.5%;
     --sidebar-ring: 210.8 90.9% 52.9%;
-
+    
     --partial-1: 210.8 90.9% 52.9%;
     --partial-1-foreground: 210 40% 98%;
+    --partial-1-border: 210.8 90.9% 42.9%;
+    --partial-1-bg: 210.8 90.9% 22.9%;
+
     --partial-2: 162 72% 46%;
     --partial-2-foreground: 210 40% 98%;
+    --partial-2-border: 162 72% 36%;
+    --partial-2-bg: 162 72% 16%;
+
     --partial-3: 32 91% 54%;
     --partial-3-foreground: 210 40% 98%;
+    --partial-3-border: 32 91% 44%;
+    --partial-3-bg: 32 91% 24%;
   }
 
   .theme-light {
@@ -84,10 +92,18 @@ body {
 
     --partial-1: 217.2 91.2% 59.8%;
     --partial-1-foreground: 0 0% 100%;
+    --partial-1-border: 217.2 91.2% 69.8%;
+    --partial-1-bg: 217.2 91.2% 92.8%;
+
     --partial-2: 162 72% 46%;
     --partial-2-foreground: 0 0% 100%;
+    --partial-2-border: 162 72% 56%;
+    --partial-2-bg: 162 72% 89%;
+
     --partial-3: 262 82% 60%;
     --partial-3-foreground: 0 0% 100%;
+    --partial-3-border: 262 82% 70%;
+    --partial-3-bg: 262 82% 91%;
   }
   
   .theme-forest {
@@ -114,10 +130,18 @@ body {
 
     --partial-1: 140 60% 35%;
     --partial-1-foreground: 140 60% 95%;
+    --partial-1-border: 140 60% 45%;
+    --partial-1-bg: 140 60% 90%;
+
     --partial-2: 90 60% 45%;
     --partial-2-foreground: 90 60% 95%;
+    --partial-2-border: 90 60% 55%;
+    --partial-2-bg: 90 60% 92%;
+
     --partial-3: 40 60% 50%;
     --partial-3-foreground: 40 60% 95%;
+    --partial-3-border: 40 60% 60%;
+    --partial-3-bg: 40 60% 93%;
   }
 
   .theme-candy {
@@ -142,10 +166,18 @@ body {
 
     --partial-1: 340 82% 60%;
     --partial-1-foreground: 340 82% 98%;
+    --partial-1-border: 340 82% 70%;
+    --partial-1-bg: 340 82% 94%;
+
     --partial-2: 300 82% 65%;
     --partial-2-foreground: 300 82% 98%;
+    --partial-2-border: 300 82% 75%;
+    --partial-2-bg: 300 82% 95%;
+
     --partial-3: 24 95% 70%;
     --partial-3-foreground: 24 95% 20%;
+    --partial-3-border: 24 95% 80%;
+    --partial-3-bg: 24 95% 96%;
   }
 
   .theme-ocean {
@@ -170,10 +202,18 @@ body {
 
     --partial-1: 205 78% 46%;
     --partial-1-foreground: 210 40% 98%;
+    --partial-1-border: 205 78% 56%;
+    --partial-1-bg: 205 78% 92%;
+
     --partial-2: 185 62% 45%;
     --partial-2-foreground: 185 62% 95%;
+    --partial-2-border: 185 62% 55%;
+    --partial-2-bg: 185 62% 91%;
+
     --partial-3: 220 70% 55%;
     --partial-3-foreground: 220 70% 98%;
+    --partial-3-border: 220 70% 65%;
+    --partial-3-bg: 220 70% 93%;
   }
 
   .theme-sunset {
@@ -198,10 +238,18 @@ body {
 
     --partial-1: 30 90% 65%;
     --partial-1-foreground: 30 90% 10%;
+    --partial-1-border: 30 90% 55%;
+    --partial-1-bg: 30 90% 25%;
+
     --partial-2: 0 80% 55%;
     --partial-2-foreground: 0 80% 95%;
+    --partial-2-border: 0 80% 45%;
+    --partial-2-bg: 0 80% 20%;
+
     --partial-3: 50 95% 60%;
     --partial-3-foreground: 50 95% 10%;
+    --partial-3-border: 50 95% 50%;
+    --partial-3-bg: 50 95% 22%;
   }
 
   .theme-aurora {
@@ -225,10 +273,18 @@ body {
 
     --partial-1: 280 80% 70%;
     --partial-1-foreground: 280 80% 98%;
+    --partial-1-border: 280 80% 60%;
+    --partial-1-bg: 280 80% 25%;
+
     --partial-2: 240 70% 70%;
     --partial-2-foreground: 240 70% 98%;
+    --partial-2-border: 240 70% 60%;
+    --partial-2-bg: 240 70% 25%;
+
     --partial-3: 180 60% 65%;
     --partial-3-foreground: 180 60% 98%;
+    --partial-3-border: 180 60% 55%;
+    --partial-3-bg: 180 60% 22%;
   }
 
   .theme-sakura {
@@ -248,10 +304,18 @@ body {
 
     --partial-1: 330 70% 65%;
     --partial-1-foreground: 330 70% 98%;
+    --partial-1-border: 330 70% 75%;
+    --partial-1-bg: 330 70% 94%;
+
     --partial-2: 0 60% 70%;
     --partial-2-foreground: 0 60% 98%;
+    --partial-2-border: 0 60% 80%;
+    --partial-2-bg: 0 60% 95%;
+
     --partial-3: 120 20% 65%;
     --partial-3-foreground: 120 20% 15%;
+    --partial-3-border: 120 20% 75%;
+    --partial-3-bg: 120 20% 93%;
   }
 
   .theme-pro {
@@ -279,10 +343,18 @@ body {
 
     --partial-1: 240 6% 20%;
     --partial-1-foreground: 0 0% 98%;
+    --partial-1-border: 240 6% 30%;
+    --partial-1-bg: 240 2% 92%;
+
     --partial-2: 240 6% 40%;
     --partial-2-foreground: 0 0% 98%;
+    --partial-2-border: 240 6% 50%;
+    --partial-2-bg: 240 2% 94%;
+
     --partial-3: 240 6% 60%;
     --partial-3-foreground: 0 0% 98%;
+    --partial-3-border: 240 6% 70%;
+    --partial-3-bg: 240 2% 96%;
   }
 
   .theme-mint {
@@ -310,10 +382,18 @@ body {
 
     --partial-1: 155 70% 40%;
     --partial-1-foreground: 155 70% 98%;
+    --partial-1-border: 155 70% 50%;
+    --partial-1-bg: 155 70% 92%;
+
     --partial-2: 175 60% 45%;
     --partial-2-foreground: 175 60% 98%;
+    --partial-2-border: 175 60% 55%;
+    --partial-2-bg: 175 60% 94%;
+
     --partial-3: 195 75% 50%;
     --partial-3-foreground: 195 75% 98%;
+    --partial-3-border: 195 75% 60%;
+    --partial-3-bg: 195 75% 96%;
   }
 }
 
@@ -325,3 +405,5 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+    
