@@ -40,6 +40,7 @@ import { Separator } from '@/components/ui/separator';
 import { useState, useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SheetTitle } from '@/components/ui/sheet';
+import { useData } from '@/hooks/use-data';
 
 
 const navItems = [
@@ -68,54 +69,25 @@ export default function MainLayoutClient({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const [settings, setSettings] = useState(defaultSettings);
-  const [activeGroupName, setActiveGroupName] = useState<string | null>(null);
-  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
-  const [activePartial, setActivePartial] = useState<string | null>(null);
+  const { settings, activeGroup, activePartial } = useData();
   const [isClient, setIsClient] = useState(false);
 
   const getPartialLabel = (partial: string | null) => {
     if (partial === '1') return 'Primer Parcial';
     if (partial === '2') return 'Segundo Parcial';
     if (partial === '3') return 'Tercer Parcial';
-    return '';
+    return 'Parcial General';
   }
-
+  
   useEffect(() => {
     setIsClient(true);
-    const handleStorageChange = () => {
-        try {
-            const savedSettings = localStorage.getItem('appSettings');
-            if (savedSettings) {
-                const parsed = JSON.parse(savedSettings);
-                setSettings(parsed);
-                document.body.className = parsed.theme || defaultSettings.theme;
-            } else {
-                 document.body.className = defaultSettings.theme;
-            }
-            
-            const groupId = localStorage.getItem('activeGroupId');
-            setActiveGroupId(groupId);
-            if (groupId) {
-              const groupName = localStorage.getItem('activeGroupName');
-              setActiveGroupName(groupName);
-              const partial = localStorage.getItem(`activePartial_${groupId}`);
-              setActivePartial(partial);
-            } else {
-              setActiveGroupName(null);
-              setActivePartial(null);
-            }
-
-        } catch(e) {
-            console.error("Could not parse settings from localStorage", e);
-        }
+    // Apply theme from settings
+    if (settings.theme) {
+      document.body.className = settings.theme;
+    } else {
+      document.body.className = defaultSettings.theme;
     }
-    
-    handleStorageChange(); // Initial load
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-
-  }, []);
+  }, [settings.theme]);
 
   return (
     <SidebarProvider>
@@ -134,13 +106,13 @@ export default function MainLayoutClient({
           )}
         </SidebarHeader>
         <SidebarContent>
-           {isClient && activeGroupName && (
+           {isClient && activeGroup && (
                 <>
                   <div className="px-4 py-2">
                       <p className="text-xs font-semibold text-sidebar-foreground/70 tracking-wider uppercase">Grupo Activo</p>
                       <p className="font-bold text-sidebar-foreground flex items-center gap-2">
                         <Package className="h-4 w-4"/>
-                        {activeGroupName}
+                        {activeGroup.subject}
                       </p>
                       {activePartial && (
                         <p className="text-sm text-sidebar-foreground/80 font-medium">

@@ -22,9 +22,10 @@ import { es } from 'date-fns/locale';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { useData } from '@/hooks/use-data';
+import { getPartialLabel } from '@/lib/utils';
 
 export default function AttendancePage() {
-  const { activeGroup, attendance, setAttendance } = useData();
+  const { activeGroup, activePartial, attendance, setAttendance } = useData();
 
   const studentsToDisplay = useMemo(() => {
     return activeGroup ? [...activeGroup.students].sort((a,b) => a.name.localeCompare(b.name)) : [];
@@ -65,6 +66,7 @@ export default function AttendancePage() {
     });
   };
 
+  const partialLabel = getPartialLabel(activePartial);
 
   return (
     <div className="flex flex-col gap-6">
@@ -80,8 +82,8 @@ export default function AttendancePage() {
                 <h1 className="text-3xl font-bold">Registro de Asistencia</h1>
                 <p className="text-muted-foreground">
                     {activeGroup 
-                        ? `Mostrando asistencia para el grupo: ${activeGroup.subject}` 
-                        : 'Marca la asistencia de los estudiantes para una fecha específica.'
+                        ? `Grupo: ${activeGroup.subject} - ${partialLabel}`
+                        : 'Marca la asistencia de los estudiantes.'
                     }
                 </p>
             </div>

@@ -33,6 +33,8 @@ import {
 } from '@/components/ui/select';
 import { useData } from '@/hooks/use-data';
 import type { EvaluationCriteria } from '@/hooks/use-data';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { getPartialLabel } from '@/lib/utils';
 
 const nameOptions = ["Actividades", "Portafolio", "Participación", "Examen", "Proyecto Integrador", "Otros"];
 const weightOptions = ["10", "20", "30", "40", "50", "60", "70", "80", "90", "100", "Otros"];
@@ -52,19 +54,22 @@ export default function GroupCriteriaPage() {
   const [editingCriterion, setEditingCriterion] = useState<EvaluationCriteria | null>(null);
 
   const { toast } = useToast();
+
+  const [isPortfolioAutomated, setIsPortfolioAutomated] = useState(true);
   
-  const isAutomatedCriterion = useMemo(() => {
+  const isSelectedCriterionAutomated = useMemo(() => {
     const name = selectedName === 'Otros' ? customName : selectedName;
-    return name === 'Participación' || name === 'Actividades' || name === 'Portafolio';
-  }, [selectedName, customName]);
+    if (name === 'Portafolio') return isPortfolioAutomated;
+    return name === 'Participación' || name === 'Actividades';
+  }, [selectedName, customName, isPortfolioAutomated]);
 
   useEffect(() => {
-    if(isAutomatedCriterion) {
+    if(isSelectedCriterionAutomated) {
         setNewCriterionValue('0');
     } else {
         setNewCriterionValue('');
     }
-  }, [isAutomatedCriterion]);
+  }, [isSelectedCriterionAutomated]);
 
   
   const handleAddCriterion = () => {
@@ -74,7 +79,7 @@ export default function GroupCriteriaPage() {
     const weight = parseFloat(finalWeight);
     const expectedValue = parseInt(newCriterionValue, 10);
 
-    if (!finalName || isNaN(weight) || weight <= 0 || weight > 100 || (isNaN(expectedValue) && !isAutomatedCriterion) || (!isAutomatedCriterion && expectedValue < 0) ) {
+    if (!finalName || isNaN(weight) || weight <= 0 || weight > 100 || (isNaN(expectedValue) && !isSelectedCriterionAutomated) || (!isSelectedCriterionAutomated && expectedValue < 0) ) {
         toast({
             variant: 'destructive',
             title: 'Datos inválidos',
@@ -97,7 +102,8 @@ export default function GroupCriteriaPage() {
         id: `C${Date.now()}`,
         name: finalName,
         weight: weight,
-        expectedValue: isAutomatedCriterion ? 0 : expectedValue,
+        expectedValue: isSelectedCriterionAutomated ? 0 : expectedValue,
+        isAutomated: isSelectedCriterionAutomated,
     };
 
     setCriteria([...criteria, newCriterion]);
@@ -106,24 +112,13 @@ export default function GroupCriteriaPage() {
     setSelectedWeight('');
     setCustomWeight('');
     setNewCriterionValue('');
+    setIsPortfolioAutomated(true);
     toast({ title: 'Criterio Agregado', description: `Se agregó "${newCriterion.name}" a la lista.`});
   };
   
   const handleRemoveCriterion = (criterionId: string) => {
     const newCriteria = criteria.filter(c => c.id !== criterionId);
     setCriteria(newCriteria);
-    // Also remove any grades associated with this criterion
-    const gradesKey = `grades_${groupId}_${activePartial}`;
-    const storedGrades = localStorage.getItem(gradesKey);
-    if (storedGrades) {
-        const grades = JSON.parse(storedGrades);
-        for (const studentId in grades) {
-            if (grades[studentId][criterionId]) {
-                delete grades[studentId][criterionId];
-            }
-        }
-        localStorage.setItem(gradesKey, JSON.stringify(grades));
-    }
     toast({ title: 'Criterio Eliminado', description: 'El criterio de evaluación ha sido eliminado.' });
   };
   
@@ -137,7 +132,7 @@ export default function GroupCriteriaPage() {
 
     const weight = editingCriterion.weight;
     const expectedValue = editingCriterion.expectedValue;
-    const isAutomated = editingCriterion.name === 'Participación' || editingCriterion.name === 'Actividades' || editingCriterion.name === 'Portafolio';
+    const isAutomated = editingCriterion.name === 'Participación' || editingCriterion.name === 'Actividades' || (editingCriterion.name === 'Portafolio' && editingCriterion.isAutomated);
 
      if (!editingCriterion.name.trim() || isNaN(weight) || weight <= 0 || weight > 100 || (isNaN(expectedValue) && !isAutomated) || (!isAutomated && expectedValue < 0) ) {
         toast({
@@ -162,7 +157,12 @@ export default function GroupCriteriaPage() {
         return;
     }
     
-    const updatedCriteria = criteria.map(c => c.id === editingCriterion.id ? editingCriterion : c);
+    const updatedCriterion = { ...editingCriterion };
+    if (isAutomated) {
+        updatedCriterion.expectedValue = 0;
+    }
+
+    const updatedCriteria = criteria.map(c => c.id === updatedCriterion.id ? updatedCriterion : c);
     setCriteria(updatedCriteria);
 
     setIsEditDialogOpen(false);
@@ -181,7 +181,9 @@ export default function GroupCriteriaPage() {
   
   const finalNameForCheck = selectedName === 'Otros' ? customName.trim() : selectedName;
   const finalWeightForCheck = selectedWeight === 'Otros' ? customWeight : selectedWeight;
-  const isAddButtonDisabled = !finalNameForCheck || !finalWeightForCheck || (!newCriterionValue && !isAutomatedCriterion);
+  const isAddButtonDisabled = !finalNameForCheck || !finalWeightForCheck || (!newCriterionValue && !isSelectedCriterionAutomated);
+
+  const partialLabel = getPartialLabel(activePartial);
 
 
   return (
@@ -196,7 +198,7 @@ export default function GroupCriteriaPage() {
         <div>
           <h1 className="text-3xl font-bold">Criterios de Evaluación</h1>
           <p className="text-muted-foreground">
-            Gestiona los rubros para la calificación del grupo "{activeGroup.subject}".
+            Gestiona los rubros para el grupo "{activeGroup.subject}" - {partialLabel}.
           </p>
         </div>
       </div>
@@ -209,80 +211,101 @@ export default function GroupCriteriaPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-start gap-2 mb-6">
-            <div className="flex-grow space-y-1">
-                <Label htmlFor="criterion-name">Nombre del criterio</Label>
-                <div className="flex gap-2">
-                    <Select value={selectedName} onValueChange={setSelectedName}>
-                        <SelectTrigger id="criterion-name">
-                            <SelectValue placeholder="Selecciona un nombre" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {nameOptions.map(option => (
-                                <SelectItem key={option} value={option}>{option}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    {selectedName === 'Otros' && (
-                        <Input 
-                            placeholder="Nombre personalizado" 
-                            value={customName}
-                            onChange={(e) => setCustomName(e.target.value)}
-                        />
-                    )}
+          <div className="space-y-4">
+            <div className="flex items-end gap-2">
+                <div className="flex-grow space-y-1">
+                    <Label htmlFor="criterion-name">Nombre del criterio</Label>
+                    <div className="flex gap-2">
+                        <Select value={selectedName} onValueChange={setSelectedName}>
+                            <SelectTrigger id="criterion-name">
+                                <SelectValue placeholder="Selecciona un nombre" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {nameOptions.map(option => (
+                                    <SelectItem key={option} value={option}>{option}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        {selectedName === 'Otros' && (
+                            <Input 
+                                placeholder="Nombre personalizado" 
+                                value={customName}
+                                onChange={(e) => setCustomName(e.target.value)}
+                            />
+                        )}
+                    </div>
                 </div>
+                <div className="space-y-1">
+                    <Label htmlFor="criterion-weight">Peso %</Label>
+                    <div className="flex gap-2">
+                        <Select value={selectedWeight} onValueChange={setSelectedWeight}>
+                            <SelectTrigger id="criterion-weight" className="w-[120px]">
+                                <SelectValue placeholder="Peso" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {weightOptions.map(option => (
+                                    <SelectItem key={option} value={option}>{option === 'Otros' ? option : `${option}`}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        {selectedWeight === 'Otros' && (
+                            <Input 
+                                type="number"
+                                placeholder="Peso %" 
+                                className="w-[120px]"
+                                value={customWeight}
+                                onChange={(e) => setCustomWeight(e.target.value)}
+                            />
+                        )}
+                    </div>
+                </div>
+                <div className="space-y-1">
+                    <Label htmlFor="criterion-value">Valor Esperado</Label>
+                    <Input 
+                        id="criterion-value"
+                        type="number" 
+                        placeholder={isSelectedCriterionAutomated ? "Cálculo automático" : "Valor Esperado"}
+                        className="w-[180px]"
+                        value={newCriterionValue}
+                        onChange={(e) => setNewCriterionValue(e.target.value)}
+                        disabled={isSelectedCriterionAutomated}
+                    />
+                </div>
+                <Button size="icon" onClick={handleAddCriterion} disabled={isAddButtonDisabled}>
+                    <PlusCircle className="h-4 w-4"/>
+                    <span className="sr-only">Agregar</span>
+                </Button>
             </div>
-             <div className="space-y-1">
-                <Label htmlFor="criterion-weight">Peso %</Label>
-                <div className="flex gap-2">
-                    <Select value={selectedWeight} onValueChange={setSelectedWeight}>
-                        <SelectTrigger id="criterion-weight" className="w-[120px]">
-                            <SelectValue placeholder="Peso" />
-                        </SelectTrigger>
-                        <SelectContent>
-                             {weightOptions.map(option => (
-                                <SelectItem key={option} value={option}>{option === 'Otros' ? option : `${option}`}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                     {selectedWeight === 'Otros' && (
-                        <Input 
-                            type="number"
-                            placeholder="Peso %" 
-                            className="w-[120px]"
-                            value={customWeight}
-                            onChange={(e) => setCustomWeight(e.target.value)}
-                        />
-                     )}
+            {selectedName === 'Portafolio' && (
+                <div className="p-3 bg-muted/50 rounded-md">
+                    <Label className="font-medium">Tipo de Cálculo para Portafolio</Label>
+                    <RadioGroup 
+                        value={isPortfolioAutomated ? 'auto' : 'manual'} 
+                        onValueChange={(value) => setIsPortfolioAutomated(value === 'auto')} 
+                        className="flex gap-4 mt-2"
+                    >
+                        <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="auto" id="auto"/>
+                            <Label htmlFor="auto" className="font-normal">Automático (basado en entregas)</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="manual" id="manual" />
+                            <Label htmlFor="manual" className="font-normal">Manual (definir valor esperado)</Label>
+                        </div>
+                    </RadioGroup>
                 </div>
-             </div>
-             <div className="space-y-1">
-                <Label htmlFor="criterion-value">Valor Esperado</Label>
-                <Input 
-                    id="criterion-value"
-                    type="number" 
-                    placeholder={isAutomatedCriterion ? "Cálculo automático" : "Valor Esperado"}
-                    className="w-[180px]"
-                    value={newCriterionValue}
-                    onChange={(e) => setNewCriterionValue(e.target.value)}
-                    disabled={isAutomatedCriterion}
-                />
-             </div>
-            <Button size="icon" onClick={handleAddCriterion} disabled={isAddButtonDisabled} className="self-end">
-                <PlusCircle className="h-4 w-4"/>
-                <span className="sr-only">Agregar</span>
-            </Button>
+            )}
           </div>
           
-          <h3 className="text-lg font-medium mb-2">Lista de Criterios</h3>
+          <h3 className="text-lg font-medium mb-2 mt-6">Lista de Criterios</h3>
           <div className="space-y-2">
             {criteria.map(criterion => (
                 <div key={criterion.id} className="flex items-center justify-between p-3 bg-muted rounded-md">
                     <div>
                         <span className="font-medium">{criterion.name}</span>
                         <p className="text-xs text-muted-foreground">
-                          {criterion.name === 'Participación' || criterion.name === 'Actividades' || criterion.name === 'Portafolio'
-                            ? 'Calculado automáticamente' 
+                          {criterion.name === 'Portafolio' && criterion.isAutomated ? 'Cálculo Automático' 
+                            : (criterion.name === 'Participación' || criterion.name === 'Actividades') ? 'Cálculo Automático'
                             : `${criterion.expectedValue} es el valor esperado`
                           }
                         </p>
@@ -353,6 +376,27 @@ export default function GroupCriteriaPage() {
                   className="col-span-3"
                 />
               </div>
+              {editingCriterion.name === 'Portafolio' && (
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label className="text-right">Cálculo</Label>
+                    <div className="col-span-3">
+                        <RadioGroup 
+                            value={editingCriterion.isAutomated ? 'auto' : 'manual'} 
+                            onValueChange={(v) => setEditingCriterion(prev => prev ? {...prev, isAutomated: v === 'auto'} : null)}
+                            className="flex gap-4"
+                        >
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="auto" id="edit-auto"/>
+                                <Label htmlFor="edit-auto" className="font-normal">Automático</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="manual" id="edit-manual" />
+                                <Label htmlFor="edit-manual" className="font-normal">Manual</Label>
+                            </div>
+                        </RadioGroup>
+                    </div>
+                </div>
+              )}
                <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="edit-value" className="text-right">
                   Valor Esperado
@@ -363,8 +407,8 @@ export default function GroupCriteriaPage() {
                   value={editingCriterion.expectedValue}
                   onChange={(e) => setEditingCriterion({ ...editingCriterion, expectedValue: parseInt(e.target.value, 10) || 0 })}
                   className="col-span-3"
-                  disabled={editingCriterion.name === 'Participación' || editingCriterion.name === 'Actividades' || editingCriterion.name === 'Portafolio'}
-                  placeholder={editingCriterion.name === 'Participación' ? 'Automático por participación' : ''}
+                  disabled={editingCriterion.name === 'Participación' || editingCriterion.name === 'Actividades' || (editingCriterion.name === 'Portafolio' && editingCriterion.isAutomated)}
+                  placeholder={editingCriterion.isAutomated ? 'Automático' : ''}
                 />
               </div>
             </div>

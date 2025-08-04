@@ -28,6 +28,7 @@ import { useData } from '@/hooks/use-data';
 import type { EvaluationCriteria, Grades, StudentObservation } from '@/hooks/use-data';
 import { useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
+import { getPartialLabel } from '@/lib/utils';
 
 const criterionColors = [
   'bg-chart-1/10',
@@ -42,12 +43,13 @@ export default function GroupGradesPage() {
   const groupId = params.groupId as string;
   const { 
     activeGroup, 
+    activePartial,
     criteria, 
     grades, 
     participations, 
     activities, 
     activityRecords,
-    observations, 
+    allObservations, 
     setGrades,
     calculateFinalGrade
   } = useData();
@@ -55,8 +57,6 @@ export default function GroupGradesPage() {
   const { toast } = useToast();
 
   const handleSaveGrades = () => {
-    // The setGrades function from useData already handles saving.
-    // This function can be kept for user feedback.
     toast({
       title: 'Calificaciones Guardadas',
       description: 'Las calificaciones han sido guardadas exitosamente.',
@@ -75,7 +75,6 @@ export default function GroupGradesPage() {
         return;
     }
     
-    // Create a deep copy to avoid direct state mutation.
     const newGrades = JSON.parse(JSON.stringify(grades));
 
     if (!newGrades[studentId]) {
@@ -93,12 +92,12 @@ export default function GroupGradesPage() {
     const calculatedGrades: {[studentId: string]: number} = {};
     if (activeGroup) {
       for (const student of activeGroup.students) {
-         const studentObservations = observations.filter(o => o.studentId === student.id);
+         const studentObservations = allObservations[student.id] || [];
         calculatedGrades[student.id] = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords, studentObservations);
       }
     }
     return calculatedGrades;
-  }, [activeGroup, criteria, grades, participations, activities, activityRecords, calculateFinalGrade, observations]);
+  }, [activeGroup, criteria, grades, participations, activities, activityRecords, calculateFinalGrade, allObservations]);
 
   const studentsInGroup = useMemo(() => {
       if (!activeGroup || !activeGroup.students) return [];
@@ -108,6 +107,8 @@ export default function GroupGradesPage() {
   if (!activeGroup) {
     return notFound();
   }
+
+  const partialLabel = getPartialLabel(activePartial);
 
   return (
     <div className="flex flex-col gap-6">
@@ -122,7 +123,7 @@ export default function GroupGradesPage() {
             <div>
             <h1 className="text-3xl font-bold">Registrar Calificaciones</h1>
             <p className="text-muted-foreground">
-                Asigna las notas para el grupo "{activeGroup.subject}".
+                Grupo "{activeGroup.subject}" - {partialLabel}.
             </p>
             </div>
          </div>
@@ -144,7 +145,8 @@ export default function GroupGradesPage() {
                       <div className='font-bold'>{c.name}</div>
                        <div className="font-normal text-muted-foreground">
                         ({c.weight}%, {
-                          (c.name === 'Actividades' || c.name === 'Portafolio') ? `${activities.length} acts.`
+                          c.name === 'Portafolio' && !c.isAutomated ? `${c.expectedValue} esp.`
+                          : c.name === 'Actividades' || (c.name === 'Portafolio' && c.isAutomated) ? `${activities.length} acts.`
                           : c.name === 'Participación' ? `${Object.keys(participations).length} clases`
                           : `${c.expectedValue} esp.`
                         })
@@ -172,7 +174,7 @@ export default function GroupGradesPage() {
                   </TableRow>
                 )}
                 {studentsInGroup.length > 0 && criteria.length > 0 && studentsInGroup.map(student => {
-                  const studentObservations = observations.filter(o => o.studentId === student.id);
+                  const studentObservations = allObservations[student.id] || [];
                   const merits = studentObservations.filter(o => o.type === 'Mérito').length;
                   const demerits = studentObservations.filter(o => o.type === 'Demérito').length;
                   
@@ -189,13 +191,13 @@ export default function GroupGradesPage() {
                       {student.name}
                     </TableCell>
                     {criteria.map((criterion, index) => {
-                      const isAutomated = criterion.name === 'Participación' || criterion.name === 'Actividades' || criterion.name === 'Portafolio';
+                      const isAutomated = criterion.isAutomated;
                       let earnedPercentage = 0;
                       let performanceDetail = '';
 
                       if (isAutomated) {
                           let performanceRatio = 0;
-                          if (criterion.name === 'Actividades' || criterion.name === 'Portafolio') {
+                          if (criterion.name === 'Actividades' || (criterion.name === 'Portafolio' && criterion.isAutomated)) {
                               const totalActivities = activities.length;
                               if (totalActivities > 0) {
                                   const studentRecords = activityRecords[student.id] || {};

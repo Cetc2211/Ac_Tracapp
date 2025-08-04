@@ -34,6 +34,7 @@ import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useData } from '@/hooks/use-data';
 import type { Activity, ActivityRecord, GroupedActivities } from '@/hooks/use-data';
+import { getPartialLabel } from '@/lib/utils';
 
 export default function ActivitiesPage() {
   const { 
@@ -112,6 +113,7 @@ export default function ActivitiesPage() {
     });
   };
 
+  const partialLabel = getPartialLabel(activePartial);
 
   return (
     <div className="flex flex-col gap-6">
@@ -161,7 +163,7 @@ export default function ActivitiesPage() {
                 <h1 className="text-3xl font-bold">Registro de Actividades</h1>
                 <p className="text-muted-foreground">
                     {activeGroup 
-                        ? `Mostrando actividades para el grupo: ${activeGroup.subject}` 
+                        ? `Grupo: ${activeGroup.subject} - ${partialLabel}`
                         : 'Selecciona un grupo para registrar actividades.'
                     }
                 </p>

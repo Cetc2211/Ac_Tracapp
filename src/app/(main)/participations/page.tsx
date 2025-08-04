@@ -23,9 +23,10 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useData } from '@/hooks/use-data';
+import { getPartialLabel } from '@/lib/utils';
 
 export default function ParticipationsPage() {
-  const { activeGroup, participations, setParticipations, attendance } = useData();
+  const { activeGroup, activePartial, participations, setParticipations, attendance } = useData();
   const { toast } = useToast();
 
   const studentsToDisplay = useMemo(() => {
@@ -75,6 +76,7 @@ export default function ParticipationsPage() {
     })
   };
 
+  const partialLabel = getPartialLabel(activePartial);
 
   return (
     <div className="flex flex-col gap-6">
@@ -90,7 +92,7 @@ export default function ParticipationsPage() {
                 <h1 className="text-3xl font-bold">Registro de Participaciones</h1>
                 <p className="text-muted-foreground">
                     {activeGroup 
-                        ? `Mostrando participaciones para el grupo: ${activeGroup.subject}` 
+                        ? `Grupo: ${activeGroup.subject} - ${partialLabel}` 
                         : 'Selecciona un grupo para registrar participaciones.'
                     }
                 </p>
