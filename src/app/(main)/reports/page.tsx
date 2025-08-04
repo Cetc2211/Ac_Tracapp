@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -43,7 +44,7 @@ export default function ReportsPage() {
     attendance, 
     activities, 
     activityRecords,
-    observations,
+    allObservations,
     calculateFinalGrade,
     groupAverages,
     atRiskStudents
@@ -72,7 +73,7 @@ export default function ReportsPage() {
 
     let approvedCount = 0;
     const groupGrades = activeGroup.students.map(student => {
-        const studentObservations = observations.filter(o => o.studentId === student.id);
+        const studentObservations = allObservations[student.id] || [];
         const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords, studentObservations);
         if (finalGrade >= 70) approvedCount++;
         return finalGrade;
@@ -88,7 +89,7 @@ export default function ReportsPage() {
         totalAttendanceRecords: presentCount,
         criteriaCount: criteria.length,
     };
-  }, [activeGroup, attendance, criteria, grades, participations, activities, activityRecords, calculateFinalGrade, observations, groupAverages]);
+  }, [activeGroup, attendance, criteria, grades, participations, activities, activityRecords, calculateFinalGrade, allObservations, groupAverages]);
 
 
   const handleDownloadCsv = () => {
@@ -100,24 +101,12 @@ export default function ReportsPage() {
 
     activeGroup.students.forEach(student => {
         const row = [student.id, student.name];
-        const studentObservations = observations.filter(o => o.studentId === student.id);
+        const studentObservations = allObservations[student.id] || [];
         const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords, studentObservations);
         
         criteria.forEach(criterion => {
             let performanceRatio = 0;
-             if (criterion.name === 'Portafolio') {
-                if (criterion.isAutomated) {
-                    const totalActivities = activities.length;
-                    if (totalActivities > 0) {
-                        const deliveredActivities = Object.values(activityRecords[student.id] || {}).filter(Boolean).length;
-                        performanceRatio = deliveredActivities / totalActivities;
-                    }
-                } else {
-                    const gradeDetail = grades[student.id]?.[criterion.id];
-                    const delivered = gradeDetail?.delivered ?? 0;
-                    performanceRatio = (criterion.expectedValue > 0) ? (delivered / criterion.expectedValue) : 0;
-                }
-            } else if (criterion.name === 'Actividades') {
+            if ((criterion.name === 'Portafolio' && criterion.isAutomated) || criterion.name === 'Actividades') {
                 const totalActivities = activities.length;
                 if (totalActivities > 0) {
                     const deliveredActivities = Object.values(activityRecords[student.id] || {}).filter(Boolean).length;

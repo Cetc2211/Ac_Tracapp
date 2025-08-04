@@ -31,7 +31,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { WhatsAppDialog } from '@/components/whatsapp-dialog';
-import { Activity, ActivityRecord } from '@/hooks/use-data';
+import { Activity, ActivityRecord, useData } from '@/hooks/use-data';
 import { Separator } from '@/components/ui/separator';
 
 
@@ -40,6 +40,7 @@ type EvaluationCriteria = {
   name: string;
   weight: number;
   expectedValue: number;
+  isAutomated?: boolean;
 };
 
 type GradeDetail = {
@@ -103,56 +104,7 @@ export default function StudentProfilePage() {
   const [generatedFeedback, setGeneratedFeedback] = useState<{ feedback: string, recommendations: string[] } | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
   const [isWhatsAppDialogOpen, setIsWhatsAppDialogOpen] = useState(false);
-
-
-  const calculateFinalGradeDetails = useCallback((studentId: string, criteria: EvaluationCriteria[], grades: Grades, participations: ParticipationRecord, activities: Activity[], activityRecords: ActivityRecord, studentObservations: StudentObservation[]): { finalGrade: number; criteriaDetails: { name: string, earned: number, weight: number }[] } => {
-    if (!criteria || criteria.length === 0) return { finalGrade: 0, criteriaDetails: [] };
-    
-    let finalGrade = 0;
-    const criteriaDetails: { name: string, earned: number, weight: number }[] = [];
-
-    for (const criterion of criteria) {
-      let performanceRatio = 0;
-      
-      if (criterion.name === 'Actividades' || criterion.name === 'Portafolio') {
-            const totalActivities = activities.length;
-            if (totalActivities > 0) {
-                const studentRecords = activityRecords[studentId] || {};
-                const deliveredActivities = Object.values(studentRecords).filter(Boolean).length;
-                performanceRatio = deliveredActivities / totalActivities;
-            }
-        } else if(criterion.name === 'Participación') {
-          const participationDates = Object.keys(participations);
-          if (participationDates.length > 0) {
-            const participatedClasses = participationDates.filter(date => participations[date]?.[studentId]).length;
-            performanceRatio = participatedClasses / participationDates.length;
-          }
-      } else {
-          const gradeDetail = grades[studentId]?.[criterion.id];
-          const delivered = gradeDetail?.delivered ?? 0;
-          const expected = criterion.expectedValue;
-          if(expected > 0) {
-            performanceRatio = delivered / expected;
-          }
-      }
-      const earnedPercentage = performanceRatio * criterion.weight;
-      finalGrade += earnedPercentage;
-      criteriaDetails.push({ name: criterion.name, earned: earnedPercentage, weight: criterion.weight });
-    }
-    
-    studentObservations.forEach(obs => {
-        if (obs.type === 'Mérito') {
-            finalGrade += 10;
-        } else if (obs.type === 'Demérito') {
-            finalGrade -= 10;
-        }
-    });
-
-    if(finalGrade > 100) finalGrade = 100;
-    if(finalGrade < 0) finalGrade = 0;
-    
-    return { finalGrade, criteriaDetails };
-  }, []);
+  const { allStudents, allGroups, allObservations, allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, calculateFinalGrade, activePartials } = useData();
 
 
   useEffect(() => {
@@ -162,16 +114,14 @@ export default function StudentProfilePage() {
     };
     try {
       setIsLoading(true);
-      const storedStudents: Student[] = JSON.parse(localStorage.getItem('students') || '[]');
-      const currentStudent = storedStudents.find(s => s.id === studentId);
+      const currentStudent = allStudents.find(s => s.id === studentId);
       
       if (currentStudent) {
         setStudent(currentStudent);
-        const storedGroups: Group[] = JSON.parse(localStorage.getItem('groups') || '[]');
-        const studentGroups = storedGroups.filter(g => g.students.some(s => s.id === studentId));
+        const studentGroups = allGroups.filter(g => g.students.some(s => s.id === studentId));
         
         const activeGroupId = localStorage.getItem('activeGroupId');
-        const activeGroup = storedGroups.find(g => g.id === activeGroupId);
+        const activeGroup = allGroups.find(g => g.id === activeGroupId);
         if(activeGroup && activeGroup.students.some(s => s.id === studentId)) {
             setActiveGroupName(activeGroup.subject);
         } else if (studentGroups.length > 0) {
@@ -181,17 +131,49 @@ export default function StudentProfilePage() {
 
         const gradesByGroup: StudentStats['gradesByGroup'] = [];
         let totalGradeSum = 0;
-        const studentObservations: StudentObservation[] = JSON.parse(localStorage.getItem(`observations_${studentId}`) || '[]');
+        const studentObservations: StudentObservation[] = allObservations[studentId] || [];
         
         studentGroups.forEach(group => {
-            const activePartial = localStorage.getItem(`activePartial_${group.id}`) || '1';
-            const criteria: EvaluationCriteria[] = JSON.parse(localStorage.getItem(`criteria_${group.id}_${activePartial}`) || '[]');
-            const grades: Grades = JSON.parse(localStorage.getItem(`grades_${group.id}_${activePartial}`) || '{}');
-            const participations: ParticipationRecord = JSON.parse(localStorage.getItem(`participations_${group.id}_${activePartial}`) || '{}');
-            const activities: Activity[] = JSON.parse(localStorage.getItem(`activities_${group.id}_${activePartial}`) || '[]');
-            const activityRecords: ActivityRecord = JSON.parse(localStorage.getItem(`activityRecords_${group.id}_${activePartial}`) || '{}');
+            const activePartialForGroup = activePartials[group.id] || '1';
+            const criteria: EvaluationCriteria[] = allCriteria[`criteria_${group.id}_${activePartialForGroup}`] || [];
+            const grades: Grades = allGrades[group.id]?.[activePartialForGroup] || {};
+            const participations: ParticipationRecord = allParticipations[group.id]?.[activePartialForGroup] || {};
+            const activities: Activity[] = allActivities[group.id]?.[activePartialForGroup] || [];
+            const activityRecords: ActivityRecord = allActivityRecords[group.id]?.[activePartialForGroup] || {};
             
-            const { finalGrade, criteriaDetails } = calculateFinalGradeDetails(studentId, criteria, grades, participations, activities, activityRecords, studentObservations);
+            let finalGrade = 0;
+            const criteriaDetails: { name: string, earned: number, weight: number }[] = [];
+
+            if (criteria && criteria.length > 0) {
+                for (const criterion of criteria) {
+                  let performanceRatio = 0;
+                  
+                  if ((criterion.name === 'Portafolio' && criterion.isAutomated) || criterion.name === 'Actividades') {
+                    const totalActivities = activities.length;
+                    if (totalActivities > 0) {
+                        const studentRecords = activityRecords[studentId] || {};
+                        const deliveredActivities = Object.values(studentRecords).filter(Boolean).length;
+                        performanceRatio = deliveredActivities / totalActivities;
+                    }
+                  } else if (criterion.name === 'Participación') {
+                    const participationDates = Object.keys(participations);
+                    if (participationDates.length > 0) {
+                      const participatedClasses = participationDates.filter(date => participations[date]?.[studentId]).length;
+                      performanceRatio = participatedClasses / participationDates.length;
+                    }
+                  } else {
+                    const gradeDetail = grades[studentId]?.[criterion.id];
+                    const delivered = gradeDetail?.delivered ?? 0;
+                    const expected = criterion.expectedValue;
+                    if(expected > 0) {
+                      performanceRatio = delivered / expected;
+                    }
+                  }
+                  const earnedPercentage = performanceRatio * criterion.weight;
+                  finalGrade += earnedPercentage;
+                  criteriaDetails.push({ name: criterion.name, earned: earnedPercentage, weight: criterion.weight });
+                }
+            }
             gradesByGroup.push({ group: group.subject, grade: finalGrade, criteriaDetails });
             totalGradeSum += finalGrade;
         });
@@ -221,12 +203,12 @@ export default function StudentProfilePage() {
         setStudent(null);
       }
     } catch (error) {
-      console.error("Failed to load student data from localStorage", error);
+      console.error("Failed to load student data", error);
       toast({ variant: 'destructive', title: 'Error al cargar datos', description: 'No se pudo cargar la información del estudiante.'})
     } finally {
         setIsLoading(false);
     }
-  }, [studentId, calculateFinalGradeDetails, toast]);
+  }, [studentId, allStudents, allGroups, allObservations, allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, calculateFinalGrade, activePartials, toast]);
   
    const handleGenerateFeedback = async () => {
     if (!student || !studentStats) {

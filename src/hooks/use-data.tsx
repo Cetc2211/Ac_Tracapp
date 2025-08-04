@@ -263,14 +263,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             for (const criterion of criteria) {
                 let performanceRatio = 0;
         
-                if (criterion.name === 'Portafolio' && criterion.isAutomated) {
-                    const totalActivities = activities.length;
-                    if (totalActivities > 0) {
-                        const studentRecords = activityRecords[studentId] || {};
-                        const deliveredActivities = Object.values(studentRecords).filter(Boolean).length;
-                        performanceRatio = deliveredActivities / totalActivities;
-                    }
-                } else if (criterion.name === 'Actividades') {
+                if ((criterion.name === 'Portafolio' && criterion.isAutomated) || criterion.name === 'Actividades') {
                     const totalActivities = activities.length;
                     if (totalActivities > 0) {
                         const studentRecords = activityRecords[studentId] || {};
@@ -283,7 +276,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                         const participatedClasses = participationDates.filter(date => participations[date]?.[studentId]).length;
                         performanceRatio = participatedClasses / participationDates.length;
                     }
-                } else {
+                } else { // Manual criteria (Examen, Proyecto, Portafolio Manual, etc.)
                     const gradeDetail = grades[studentId]?.[criterion.id];
                     const delivered = gradeDetail?.delivered ?? 0;
                     const expected = criterion.expectedValue;
