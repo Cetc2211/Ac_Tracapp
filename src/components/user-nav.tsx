@@ -32,18 +32,22 @@ export function UserNav() {
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    setIsClient(true);
     const handleStorageChange = () => {
         const savedProfile = localStorage.getItem('userProfileInfo');
         if(savedProfile) {
             setProfile(JSON.parse(savedProfile));
+        } else {
+            setProfile(defaultProfile);
         }
         const savedAvatar = localStorage.getItem('userAvatar');
         if (savedAvatar) {
             setAvatar(savedAvatar);
+        } else {
+            setAvatar(defaultAvatar);
         }
     }
     handleStorageChange();
+    setIsClient(true);
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
