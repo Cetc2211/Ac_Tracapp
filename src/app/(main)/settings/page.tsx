@@ -21,16 +21,23 @@ import { useData } from '@/hooks/use-data';
 
 export default function SettingsPage() {
     const { settings, setSettings } = useData();
-    const [logoPreview, setLogoPreview] = useState(settings.logo);
+    const [logoPreview, setLogoPreview] = useState<string | null>(null);
+    const [isClient, setIsClient] = useState(false);
     const { toast } = useToast();
+    
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
 
     useEffect(() => {
-      setLogoPreview(settings.logo);
-    }, [settings.logo]);
+      if(isClient) {
+        setLogoPreview(settings.logo);
+      }
+    }, [settings.logo, isClient]);
 
 
     const handleSave = () => {
-        const newSettings = { ...settings, logo: logoPreview };
+        const newSettings = { ...settings, logo: logoPreview || '' };
         setSettings(newSettings);
         localStorage.setItem('appSettings', JSON.stringify(newSettings));
         window.dispatchEvent(new Event('storage'));
@@ -60,6 +67,9 @@ export default function SettingsPage() {
         setSettings(prev => ({ ...prev, theme }));
     };
 
+  if (!isClient) {
+    return null; // O un esqueleto de carga
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -90,7 +100,7 @@ export default function SettingsPage() {
             <div className="flex items-center gap-4">
               <div className="relative h-20 w-20">
                 <Image
-                  src={logoPreview}
+                  src={logoPreview || 'https://placehold.co/200x200.png'}
                   alt="Logo actual"
                   fill
                   className="rounded-md object-contain"

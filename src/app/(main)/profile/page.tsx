@@ -16,7 +16,6 @@ import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
-import { useData } from '@/hooks/use-data';
 
 type UserProfile = {
     name: string;
@@ -24,30 +23,28 @@ type UserProfile = {
 }
 
 export default function ProfilePage() {
-    const { settings, setSettings } = useData(); // We can reuse settings for profile info
     const [profile, setProfile] = useState<UserProfile>({ name: '', email: '' });
-    const [avatarPreview, setAvatarPreview] = useState("https://placehold.co/100x100.png");
+    const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+    const [isClient, setIsClient] = useState(false);
     const { toast } = useToast();
 
     useEffect(() => {
-      // Load from the centralized settings in useData
-      const savedProfileInfo = JSON.parse(localStorage.getItem('userProfileInfo') || '{}');
-      const savedAvatar = localStorage.getItem('userAvatar');
+        setIsClient(true);
+        const savedProfileInfo = JSON.parse(localStorage.getItem('userProfileInfo') || '{}');
+        const savedAvatar = localStorage.getItem('userAvatar');
 
-      setProfile({
-        name: savedProfileInfo.name || "John Doe",
-        email: savedProfileInfo.email || "john.doe@example.com"
-      });
-      setAvatarPreview(savedAvatar || "https://placehold.co/100x100.png");
-
+        setProfile({
+            name: savedProfileInfo.name || "John Doe",
+            email: savedProfileInfo.email || "john.doe@example.com"
+        });
+        setAvatarPreview(savedAvatar || "https://placehold.co/100x100.png");
     }, []);
 
     const handleSave = () => {
         try {
             localStorage.setItem('userProfileInfo', JSON.stringify(profile));
-            localStorage.setItem('userAvatar', avatarPreview);
+            if(avatarPreview) localStorage.setItem('userAvatar', avatarPreview);
             
-            // Dispatch a generic storage event that other components can listen to.
             window.dispatchEvent(new Event('storage')); 
             
             toast({
@@ -106,6 +103,10 @@ export default function ProfilePage() {
         }
     };
 
+  if (!isClient) {
+    return null;
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -127,7 +128,7 @@ export default function ProfilePage() {
             <div className="flex items-center gap-4">
               <div className="relative h-20 w-20">
                 <Image
-                  src={avatarPreview}
+                  src={avatarPreview || 'https://placehold.co/100x100.png'}
                   alt="Avatar actual"
                   fill
                   className="rounded-full object-cover"

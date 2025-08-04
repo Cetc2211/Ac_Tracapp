@@ -29,8 +29,10 @@ const defaultAvatar = "https://placehold.co/100x100.png";
 export function UserNav() {
   const [profile, setProfile] = useState<UserProfile>(defaultProfile);
   const [avatar, setAvatar] = useState(defaultAvatar);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
     const handleStorageChange = () => {
         const savedProfile = localStorage.getItem('userProfileInfo');
         if(savedProfile) {
@@ -52,6 +54,10 @@ export function UserNav() {
         return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
     }
     return name.substring(0,2).toUpperCase();
+  }
+  
+  if (!isClient) {
+    return null;
   }
 
   return (
