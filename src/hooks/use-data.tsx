@@ -301,8 +301,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                     }
                 } else if (criterion.name === 'Portafolio') {
                     const totalActivities = activities.length;
+                    const delivered = grades[studentId]?.[criterion.id]?.delivered ?? 0;
                     if (totalActivities > 0) {
-                        const delivered = grades[studentId]?.[criterion.id]?.delivered ?? 0;
                         performanceRatio = delivered / totalActivities;
                     }
                 } else if (criterion.name === 'Participación') {
@@ -322,10 +322,11 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             }
         }
 
-        studentObservations.forEach(obs => {
-            if (obs.type === 'Mérito') finalGrade += 10;
-            else if (obs.type === 'Demérito') finalGrade -= 10;
-        });
+        const merits = studentObservations.filter(o => o.type === 'Mérito').length;
+        const demerits = studentObservations.filter(o => o.type === 'Demérito').length;
+
+        finalGrade += (merits * 10);
+        finalGrade -= (demerits * 10);
 
         return Math.max(0, Math.min(100, finalGrade));
     }, [allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, allAttendances, allObservations]);

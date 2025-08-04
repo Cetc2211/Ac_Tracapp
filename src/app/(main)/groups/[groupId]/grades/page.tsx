@@ -28,6 +28,7 @@ import { useData } from '@/hooks/use-data';
 import { useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { getPartialLabel } from '@/lib/utils';
+import type { EvaluationCriteria } from '@/hooks/use-data';
 
 const criterionColors = [
   'bg-chart-1/10',
@@ -93,7 +94,7 @@ export default function GroupGradesPage() {
       }
     }
     return calculatedGrades;
-  }, [activeGroup, activePartial, calculateFinalGrade]);
+  }, [activeGroup, activePartial, calculateFinalGrade, criteria, grades, participations, activities, activityRecords, allObservations, attendance]);
 
   const studentsInGroup = useMemo(() => {
       if (!activeGroup || !activeGroup.students) return [];
@@ -106,7 +107,7 @@ export default function GroupGradesPage() {
 
   const partialLabel = getPartialLabel(activePartial);
 
-  const getPerformanceDetail = (studentId: string, criterion: (typeof criteria)[0]) => {
+  const getPerformanceDetail = (studentId: string, criterion: EvaluationCriteria) => {
     if (criterion.name === 'Actividades') {
         const total = activities.length;
         const delivered = Object.values(activityRecords[studentId] || {}).filter(Boolean).length;
@@ -124,7 +125,7 @@ export default function GroupGradesPage() {
     return `${criterion.expectedValue} esp.`;
   }
 
-  const getEarnedPercentage = (studentId: string, criterion: (typeof criteria)[0]) => {
+  const getEarnedPercentage = (studentId: string, criterion: EvaluationCriteria) => {
     let performanceRatio = 0;
     if (criterion.name === 'Actividades') {
         const total = activities.length;
