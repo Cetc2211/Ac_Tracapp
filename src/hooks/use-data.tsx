@@ -85,6 +85,25 @@ export type CalculatedRisk = {
 export type StudentWithRisk = Student & { calculatedRisk: CalculatedRisk };
 
 
+export type StudentStats = {
+    averageGrade: number;
+    attendance: {
+        p: number;
+        a: number;
+        total: number;
+    };
+    gradesByGroup: {
+        group: string;
+        grade: number;
+        criteriaDetails: {
+            name: string;
+            earned: number;
+            weight: number;
+        }[];
+    }[];
+};
+
+
 // CONTEXT TYPE
 interface DataContextType {
   // State
@@ -194,13 +213,17 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     
     // --- INITIAL DATA LOADING ---
     useEffect(() => {
-        const loadedStudents = loadFromLocalStorage('students', initialStudents);
-        const loadedGroups = loadFromLocalStorage('groups', initialGroups);
+        const loadedStudents = loadFromLocalStorage<Student[]>('students', initialStudents);
+        const loadedGroups = loadFromLocalStorage<Group[]>('groups', initialGroups);
+        const loadedSettings = loadFromLocalStorage('appSettings', defaultSettings);
+        const loadedActivePartials = loadFromLocalStorage<{[groupId: string]: string}>('activePartials', {});
+        const storedActiveGroupId = loadFromLocalStorage<string | null>('activeGroupId', null);
 
         setAllStudentsState(loadedStudents);
         setGroupsState(loadedGroups);
-        setSettings(loadFromLocalStorage('appSettings', defaultSettings));
-        setActivePartials(loadFromLocalStorage('activePartials', {}));
+        setSettings(loadedSettings);
+        setActivePartials(loadedActivePartials);
+        setActiveGroupIdState(storedActiveGroupId);
 
         // Load all data into memory
         const criteriaStore: {[key: string]: EvaluationCriteria[]} = {};
@@ -249,9 +272,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             observationsStore[student.id] = loadFromLocalStorage(`observations_${student.id}`, []);
         }
         setAllObservations(observationsStore);
-
-        const storedActiveGroupId = localStorage.getItem('activeGroupId');
-        setActiveGroupIdState(storedActiveGroupId);
 
     }, []);
 
@@ -438,14 +458,13 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     
     const setActiveGroupId = (groupId: string | null) => {
         setActiveGroupIdState(groupId);
+        saveToLocalStorage('activeGroupId', groupId);
         if (groupId) {
-            saveToLocalStorage('activeGroupId', groupId);
             const group = groups.find(g => g.id === groupId);
             if (group) {
                 saveToLocalStorage('activeGroupName', group.subject);
             }
         } else {
-            localStorage.removeItem('activeGroupId');
             localStorage.removeItem('activeGroupName');
         }
         window.dispatchEvent(new Event('storage'));
@@ -517,22 +536,26 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     const atRiskStudents: StudentWithRisk[] = useMemo(() => {
         const students: StudentWithRisk[] = [];
+        const checkedStudentIds = new Set<string>();
         groups.forEach(group => {
             const partial = activePartials[group.id] || '1';
-            const criteria = allCriteria[`criteria_${group.id}_${partial}`] || [];
-            const grades = allGrades[group.id]?.[partial] || {};
-            const attendance = allAttendances[group.id]?.[partial] || {};
-            const participations = allParticipations[group.id]?.[partial] || {};
-            const activities = allActivities[group.id]?.[partial] || [];
-            const activityRecords = allActivityRecords[group.id]?.[partial] || {};
+            const criteriaForPartial = allCriteria[`criteria_${group.id}_${partial}`] || [];
+            const gradesForPartial = allGrades[group.id]?.[partial] || {};
+            const attendanceForPartial = allAttendances[group.id]?.[partial] || {};
+            const participationsForPartial = allParticipations[group.id]?.[partial] || {};
+            const activitiesForPartial = allActivities[group.id]?.[partial] || [];
+            const activityRecordsForPartial = allActivityRecords[group.id]?.[partial] || {};
 
             group.students.forEach(student => {
+                if(checkedStudentIds.has(student.id)) return;
+
                 const studentObservations = allObservations[student.id] || [];
-                const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords, studentObservations);
-                const risk = getStudentRiskLevel(finalGrade, attendance, student.id);
+                const finalGrade = calculateFinalGrade(student.id, criteriaForPartial, gradesForPartial, participationsForPartial, activitiesForPartial, activityRecordsForPartial, studentObservations);
+                const risk = getStudentRiskLevel(finalGrade, attendanceForPartial, student.id);
                 if (risk.level === 'high' || risk.level === 'medium') {
                     students.push({ ...student, calculatedRisk: risk });
                 }
+                checkedStudentIds.add(student.id);
             });
         });
         return students.sort((a, b) => {
@@ -643,3 +666,6 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
+
+
+    
