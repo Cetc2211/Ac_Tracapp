@@ -33,43 +33,8 @@ import {
 import { WhatsAppDialog } from '@/components/whatsapp-dialog';
 import { Activity, ActivityRecord, useData } from '@/hooks/use-data';
 import { Separator } from '@/components/ui/separator';
+import type { EvaluationCriteria, Grades, GlobalAttendanceRecord, ParticipationRecord, StudentStats } from '@/hooks/use-data';
 
-
-type EvaluationCriteria = {
-  id: string;
-  name: string;
-  weight: number;
-  expectedValue: number;
-  isAutomated?: boolean;
-};
-
-type GradeDetail = {
-  delivered: number | null;
-};
-
-type Grades = {
-  [studentId: string]: {
-    [criterionId: string]: GradeDetail;
-  };
-};
-
-type GlobalAttendanceRecord = {
-  [date: string]: {
-    [studentId: string]: boolean;
-  };
-};
-
-type ParticipationRecord = {
-  [date: string]: {
-    [studentId: string]: boolean;
-  };
-};
-
-export type StudentStats = {
-  averageGrade: number;
-  attendance: { p: number, a: number, total: number };
-  gradesByGroup: { group: string, grade: number, criteriaDetails: { name: string, earned: number, weight: number }[] }[];
-};
 
 const WhatsAppIcon = () => (
     <svg
@@ -94,41 +59,29 @@ export default function StudentProfilePage() {
   const studentId = params.studentId as string;
   const router = useRouter();
   
-  const [student, setStudent] = useState<Student | null>(null);
+  const { allStudents, allGroups, allObservations, allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, calculateFinalGrade, allAttendances, activePartials } = useData();
+  const student = useMemo(() => allStudents.find(s => s.id === studentId), [allStudents, studentId]);
+
   const [studentStats, setStudentStats] = useState<StudentStats | null>(null);
   const [observations, setObservations] = useState<StudentObservation[]>([]);
-  const [activeGroupName, setActiveGroupName] = useState('');
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
   const [generatedFeedback, setGeneratedFeedback] = useState<{ feedback: string, recommendations: string[] } | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
   const [isWhatsAppDialogOpen, setIsWhatsAppDialogOpen] = useState(false);
-  const { allStudents, allGroups, allObservations, allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, calculateFinalGrade, activePartials } = useData();
 
 
   useEffect(() => {
-    if (!studentId) {
+    if (!student) {
         setIsLoading(false);
         return;
     };
+    
     try {
-      setIsLoading(true);
-      const currentStudent = allStudents.find(s => s.id === studentId);
-      
-      if (currentStudent) {
-        setStudent(currentStudent);
+        setIsLoading(true);
         const studentGroups = allGroups.filter(g => g.students.some(s => s.id === studentId));
         
-        const activeGroupId = localStorage.getItem('activeGroupId');
-        const activeGroup = allGroups.find(g => g.id === activeGroupId);
-        if(activeGroup && activeGroup.students.some(s => s.id === studentId)) {
-            setActiveGroupName(activeGroup.subject);
-        } else if (studentGroups.length > 0) {
-            setActiveGroupName(studentGroups[0].subject);
-        }
-
-
         const gradesByGroup: StudentStats['gradesByGroup'] = [];
         let totalGradeSum = 0;
         const studentObservations: StudentObservation[] = allObservations[studentId] || [];
@@ -141,56 +94,39 @@ export default function StudentProfilePage() {
             const activities: Activity[] = allActivities[group.id]?.[activePartialForGroup] || [];
             const activityRecords: ActivityRecord = allActivityRecords[group.id]?.[activePartialForGroup] || {};
             
-            let finalGrade = 0;
-            const criteriaDetails: { name: string, earned: number, weight: number }[] = [];
-
-            if (criteria && criteria.length > 0) {
-                for (const criterion of criteria) {
-                  let performanceRatio = 0;
-                  
-                  if ((criterion.name === 'Portafolio' && criterion.isAutomated) || criterion.name === 'Actividades') {
-                    const totalActivities = activities.length;
-                    if (totalActivities > 0) {
-                        const studentRecords = activityRecords[studentId] || {};
-                        const deliveredActivities = Object.values(studentRecords).filter(Boolean).length;
-                        performanceRatio = deliveredActivities / totalActivities;
+            const finalGrade = calculateFinalGrade(studentId, criteria, grades, participations, activities, activityRecords, studentObservations);
+            const criteriaDetails = criteria.map(c => {
+                let performanceRatio = 0;
+                if (c.isAutomated) {
+                     if (c.name === 'Portafolio' || c.name === 'Actividades') {
+                        const totalActivities = activities.length;
+                        if(totalActivities > 0) performanceRatio = (Object.values(activityRecords[studentId] || {}).filter(Boolean).length) / totalActivities;
+                    } else if (c.name === 'Participación') {
+                        const totalClasses = Object.keys(participations).length;
+                        if(totalClasses > 0) performanceRatio = (Object.values(participations).filter(p => p[studentId]).length) / totalClasses;
                     }
-                  } else if (criterion.name === 'Participación') {
-                    const participationDates = Object.keys(participations);
-                    if (participationDates.length > 0) {
-                      const participatedClasses = participationDates.filter(date => participations[date]?.[studentId]).length;
-                      performanceRatio = participatedClasses / participationDates.length;
-                    }
-                  } else {
-                    const gradeDetail = grades[studentId]?.[criterion.id];
-                    const delivered = gradeDetail?.delivered ?? 0;
-                    const expected = criterion.expectedValue;
-                    if(expected > 0) {
-                      performanceRatio = delivered / expected;
-                    }
-                  }
-                  const earnedPercentage = performanceRatio * criterion.weight;
-                  finalGrade += earnedPercentage;
-                  criteriaDetails.push({ name: criterion.name, earned: earnedPercentage, weight: criterion.weight });
+                } else {
+                    const delivered = grades[studentId]?.[c.id]?.delivered ?? 0;
+                    if(c.expectedValue > 0) performanceRatio = delivered / c.expectedValue;
                 }
-            }
+                return { name: c.name, earned: performanceRatio * c.weight, weight: c.weight };
+            });
+
             gradesByGroup.push({ group: group.subject, grade: finalGrade, criteriaDetails });
             totalGradeSum += finalGrade;
         });
 
         const attendanceStats = { p: 0, a: 0, total: 0 };
-        const globalAttendance: GlobalAttendanceRecord = JSON.parse(localStorage.getItem('globalAttendance') || '{}');
-        
-        Object.keys(globalAttendance).forEach(date => {
-            if (globalAttendance[date]?.[studentId] !== undefined) {
-                attendanceStats.total++;
-                if (globalAttendance[date]?.[studentId] === true) {
-                    attendanceStats.p++;
-                } else {
-                    attendanceStats.a++;
+        for(const groupId in allAttendances){
+            for(const partialId in allAttendances[groupId]){
+                for(const date in allAttendances[groupId][partialId]){
+                    if(allAttendances[groupId][partialId][date][studentId] !== undefined){
+                        attendanceStats.total++;
+                        if(allAttendances[groupId][partialId][date][studentId]) attendanceStats.p++; else attendanceStats.a++;
+                    }
                 }
             }
-        });
+        }
         
         setObservations(studentObservations.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
         
@@ -199,16 +135,13 @@ export default function StudentProfilePage() {
           attendance: attendanceStats,
           gradesByGroup,
         });
-      } else {
-        setStudent(null);
-      }
     } catch (error) {
       console.error("Failed to load student data", error);
       toast({ variant: 'destructive', title: 'Error al cargar datos', description: 'No se pudo cargar la información del estudiante.'})
     } finally {
         setIsLoading(false);
     }
-  }, [studentId, allStudents, allGroups, allObservations, allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, calculateFinalGrade, activePartials, toast]);
+  }, [student, allGroups, allObservations, allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, calculateFinalGrade, activePartials, studentId, toast, allAttendances]);
   
    const handleGenerateFeedback = async () => {
     if (!student || !studentStats) {
@@ -372,7 +305,7 @@ export default function StudentProfilePage() {
        </Card>
       
       <div ref={reportRef} className="flex flex-col gap-6 bg-background p-4 rounded-lg">
-        <h2 className="text-xl font-bold text-center">Informe Individual de {activeGroupName}</h2>
+        <h2 className="text-xl font-bold text-center">Informe Individual de Desempeño</h2>
         <Card>
             <CardHeader>
                 <CardTitle>Información Personal</CardTitle>
@@ -447,20 +380,8 @@ export default function StudentProfilePage() {
                                         <p className="font-semibold">{item.group}</p>
                                     </div>
                                     <div className='p-3 border-x border-b rounded-b-md text-sm space-y-2'>
-                                        <div className='flex justify-between'>
-                                            <span>Primer Parcial:</span>
-                                            <span className='font-medium'>{item.grade.toFixed(1)}%</span>
-                                        </div>
-                                         <div className='flex justify-between'>
-                                            <span>Segundo Parcial:</span>
-                                            <span className='font-medium'>0.0%</span>
-                                        </div>
-                                         <div className='flex justify-between'>
-                                            <span>Tercer Parcial:</span>
-                                            <span className='font-medium'>0.0%</span>
-                                        </div>
                                          <div className='flex justify-between pt-2 border-t mt-2'>
-                                            <span className="font-bold">Promedio Semestral:</span>
+                                            <span className="font-bold">Calificación del Parcial:</span>
                                             <Badge variant={item.grade >= 70 ? "default" : "destructive"} className="text-base">{item.grade.toFixed(1)}%</Badge>
                                         </div>
                                     </div>
@@ -476,7 +397,7 @@ export default function StudentProfilePage() {
              <div>
                 <Card>
                     <CardHeader>
-                        <CardTitle>Historial de Asistencia</CardTitle>
+                        <CardTitle>Historial de Asistencia Global</CardTitle>
                         <CardDescription>Resumen de todos los grupos</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-2">

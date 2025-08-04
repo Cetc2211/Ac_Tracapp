@@ -16,44 +16,30 @@ import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
+import { useData } from '@/hooks/use-data';
 
 type UserProfile = {
     name: string;
     email: string;
 }
 
-const defaultProfileInfo: UserProfile = {
-    name: "John Doe",
-    email: "john.doe@example.com",
-};
-
-const defaultAvatar = "https://placehold.co/100x100.png";
-
 export default function ProfilePage() {
-    const [profile, setProfile] = useState<UserProfile>(defaultProfileInfo);
-    const [avatarPreview, setAvatarPreview] = useState(defaultAvatar);
+    const { settings, setSettings } = useData(); // We can reuse settings for profile info
+    const [profile, setProfile] = useState<UserProfile>({ name: '', email: '' });
+    const [avatarPreview, setAvatarPreview] = useState("https://placehold.co/100x100.png");
     const { toast } = useToast();
 
     useEffect(() => {
-        try {
-            const savedProfileInfo = localStorage.getItem('userProfileInfo');
-            if (savedProfileInfo) {
-                setProfile(JSON.parse(savedProfileInfo));
-            } else {
-                 localStorage.setItem('userProfileInfo', JSON.stringify(defaultProfileInfo));
-            }
+      // Load from the centralized settings in useData
+      const savedProfileInfo = JSON.parse(localStorage.getItem('userProfileInfo') || '{}');
+      const savedAvatar = localStorage.getItem('userAvatar');
 
-            const savedAvatar = localStorage.getItem('userAvatar');
-            if (savedAvatar) {
-                setAvatarPreview(savedAvatar);
-            } else {
-                localStorage.setItem('userAvatar', defaultAvatar);
-            }
-        } catch (error) {
-            console.error("Failed to load user profile from localStorage", error);
-            setProfile(defaultProfileInfo);
-            setAvatarPreview(defaultAvatar);
-        }
+      setProfile({
+        name: savedProfileInfo.name || "John Doe",
+        email: savedProfileInfo.email || "john.doe@example.com"
+      });
+      setAvatarPreview(savedAvatar || "https://placehold.co/100x100.png");
+
     }, []);
 
     const handleSave = () => {

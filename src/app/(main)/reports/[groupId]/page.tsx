@@ -55,12 +55,11 @@ export default function GroupReportPage() {
       allActivityRecords,
       calculateFinalGrade,
       getStudentRiskLevel,
+      settings
   } = useData();
   
   const [summary, setSummary] = useState<ReportSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [institutionName, setInstitutionName] = useState('Academic Tracker');
-  const [institutionLogo, setInstitutionLogo] = useState('');
   const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -152,10 +151,6 @@ export default function GroupReportPage() {
           highRiskCount: highRiskStudents,
           mediumRiskCount: mediumRiskStudents,
       });
-      
-      const appSettings = JSON.parse(localStorage.getItem('appSettings') || '{}');
-      setInstitutionName(appSettings.institutionName || 'Academic Tracker');
-      setInstitutionLogo(appSettings.logo || '');
 
     } catch (e) {
       console.error("Failed to generate report data", e);
@@ -230,12 +225,12 @@ export default function GroupReportPage() {
         <header className="border-b pb-6 mb-6">
            <div className="flex justify-between items-start">
                 <div className="flex flex-col">
-                    <h1 className="text-2xl font-bold">{institutionName}</h1>
+                    <h1 className="text-2xl font-bold">{settings.institutionName}</h1>
                     <p className="text-lg text-muted-foreground">Informe de Rendimiento Académico Grupal</p>
                 </div>
-                 {institutionLogo && (
+                 {settings.logo && (
                     <Image
-                        src={institutionLogo}
+                        src={settings.logo}
                         alt="Logo de la Institución"
                         width={80}
                         height={80}

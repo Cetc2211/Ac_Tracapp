@@ -134,7 +134,6 @@ interface DataContextType {
   setParticipations: React.Dispatch<React.SetStateAction<ParticipationRecord>>;
   setActivities: (activities: Activity[]) => void;
   setActivityRecords: React.Dispatch<React.SetStateAction<ActivityRecord>>;
-  setObservations: (observations: StudentObservation[]) => void;
 
   // Functions
   saveStudentObservation: (observation: StudentObservation) => void;
@@ -263,20 +262,22 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             for (const criterion of criteria) {
                 let performanceRatio = 0;
         
-                if ((criterion.name === 'Portafolio' && criterion.isAutomated) || criterion.name === 'Actividades') {
-                    const totalActivities = activities.length;
-                    if (totalActivities > 0) {
-                        const studentRecords = activityRecords[studentId] || {};
-                        const deliveredActivities = Object.values(studentRecords).filter(Boolean).length;
-                        performanceRatio = deliveredActivities / totalActivities;
+                if (criterion.isAutomated) {
+                    if (criterion.name === 'Portafolio' || criterion.name === 'Actividades') {
+                        const totalActivities = activities.length;
+                        if (totalActivities > 0) {
+                            const studentRecords = activityRecords[studentId] || {};
+                            const deliveredActivities = Object.values(studentRecords).filter(Boolean).length;
+                            performanceRatio = deliveredActivities / totalActivities;
+                        }
+                    } else if (criterion.name === 'Participación') {
+                        const participationDates = Object.keys(participations);
+                        if (participationDates.length > 0) {
+                            const participatedClasses = participationDates.filter(date => participations[date]?.[studentId]).length;
+                            performanceRatio = participatedClasses / participationDates.length;
+                        }
                     }
-                } else if(criterion.name === 'Participación') {
-                    const participationDates = Object.keys(participations);
-                    if (participationDates.length > 0) {
-                        const participatedClasses = participationDates.filter(date => participations[date]?.[studentId]).length;
-                        performanceRatio = participatedClasses / participationDates.length;
-                    }
-                } else { // Manual criteria (Examen, Proyecto, Portafolio Manual, etc.)
+                } else { // Manual criteria
                     const gradeDetail = grades[studentId]?.[criterion.id];
                     const delivered = gradeDetail?.delivered ?? 0;
                     const expected = criterion.expectedValue;
@@ -417,7 +418,9 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const setActivitiesWrapper = (newActivities: Activity[]) => {
         if (!activeGroupId || !activePartial) return;
         const key = `activities_${activeGroupId}_${activePartial}`;
-        setAllActivities(prev => ({ ...prev, [activeGroupId]: { ...prev[activeGroupId], [activePartial]: newActivities } }));
+        const currentGroupActivities = allActivities[activeGroupId] || {};
+        const updatedGroupActivities = { ...currentGroupActivities, [activePartial]: newActivities };
+        setAllActivities(prev => ({ ...prev, [activeGroupId]: updatedGroupActivities }));
         saveToLocalStorage(key, newActivities);
     }
 
@@ -432,19 +435,14 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
              return updatedState;
         });
     }
-
-    const setObservationsWrapper = (newObservations: StudentObservation[]) => {
-        // This is complex because observations are per student. 
-        // We'll use a dedicated save function instead.
-    };
     
     const setActiveGroupId = (groupId: string | null) => {
         setActiveGroupIdState(groupId);
         if (groupId) {
-            localStorage.setItem('activeGroupId', groupId);
+            saveToLocalStorage('activeGroupId', groupId);
             const group = groups.find(g => g.id === groupId);
             if (group) {
-                localStorage.setItem('activeGroupName', group.subject);
+                saveToLocalStorage('activeGroupName', group.subject);
             }
         } else {
             localStorage.removeItem('activeGroupId');
@@ -625,11 +623,12 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     return (
         <DataContext.Provider value={{
-            students: allStudents, groups, allStudents, activeStudentsInGroups, settings, activeGroup, activePartial, criteria, grades, attendance, participations, activities, activityRecords, observations,
+            students: allStudents, groups, allStudents, activeStudentsInGroups, settings, activeGroup, activePartial, criteria, grades, attendance, participations, activities, activityRecords,
+            observations: Object.values(allObservations).flat(),
             groupStats, atRiskStudents, overallAverageParticipation, groupAverages,
             allObservations, allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, allAttendances, activePartials,
             setStudents: setAllStudents, setGroups, setAllStudents, setSettings, setActiveGroupId, setActivePartialForGroup,
-            setCriteria: setCriteriaWrapper, setGrades: setGradesWrapper, setAttendance: setAttendanceWrapper, setParticipations: setParticipationsWrapper, setActivities: setActivitiesWrapper, setActivityRecords: setActivityRecordsWrapper, setObservations: setObservationsWrapper,
+            setCriteria: setCriteriaWrapper, setGrades: setGradesWrapper, setAttendance: setAttendanceWrapper, setParticipations: setParticipationsWrapper, setActivities: setActivitiesWrapper, setActivityRecords: setActivityRecordsWrapper,
             saveStudentObservation, deleteGroup, calculateFinalGrade, getStudentRiskLevel,
         }}>
             {children}

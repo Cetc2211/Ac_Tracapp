@@ -41,7 +41,7 @@ const cardColors = [
 
 
 export default function GroupsPage() {
-  const { groups, allStudents, setGroups, setAllStudents, groupStats } = useData();
+  const { groups, allStudents, setGroups, setAllStudents, groupStats, setActiveGroupId } = useData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
   const [newGroupName, setNewGroupName] = useState('');
@@ -109,6 +109,10 @@ export default function GroupsPage() {
         title: 'Grupo Creado',
         description: `El grupo "${newGroupName}" ha sido creado exitosamente.`
     });
+  };
+
+  const handleGroupClick = (groupId: string) => {
+    setActiveGroupId(groupId);
   };
 
   return (
@@ -185,7 +189,7 @@ export default function GroupsPage() {
                             </CardDescription>
                         </div>
                         <Button asChild variant="ghost" size="icon" className="text-card-foreground-alt hover:bg-white/20 hover:text-card-foreground-alt">
-                            <Link href={`/groups/${group.id}`}>
+                            <Link href={`/groups/${group.id}`} onClick={() => handleGroupClick(group.id)}>
                                 <Settings className="h-5 w-5" />
                                   <span className="sr-only">Configurar</span>
                             </Link>
@@ -200,7 +204,7 @@ export default function GroupsPage() {
                 </CardContent>
                 <CardFooter className="flex justify-between gap-2">
                   <Button asChild variant="outline" className="bg-transparent border-card-foreground-alt/50 text-card-foreground-alt hover:bg-white/20 hover:text-card-foreground-alt">
-                    <Link href={`/groups/${group.id}`}>
+                    <Link href={`/groups/${group.id}`} onClick={() => handleGroupClick(group.id)}>
                       <ClipboardList className="mr-2 h-4 w-4" /> Detalles
                     </Link>
                   </Button>
@@ -224,5 +228,3 @@ export default function GroupsPage() {
     </div>
   );
 }
-
-    

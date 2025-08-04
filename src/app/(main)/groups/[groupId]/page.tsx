@@ -311,16 +311,12 @@ export default function GroupDetailsPage() {
 
   const partialLabel = getPartialLabel(activePartial);
 
-  if (isLoading) {
+  if (!activeGroup) {
     return (
       <div className="flex justify-center items-center h-full">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
-  }
-
-  if (!activeGroup) {
-    return null;
   }
   
   return (
@@ -670,8 +666,8 @@ export default function GroupDetailsPage() {
                                 <div>
                                     <span className="font-medium">{criterion.name}</span>
                                     <p className="text-xs text-muted-foreground">
-                                    {criterion.name === 'Portafolio' && criterion.isAutomated ? 'Cálculo Automático' 
-                                        : (criterion.name === 'Participación' || criterion.name === 'Actividades') ? 'Cálculo Automático'
+                                    {criterion.isAutomated
+                                        ? `Cálculo Automático`
                                         : `${criterion.expectedValue} es el valor esperado`
                                     }
                                     </p>
@@ -697,5 +693,3 @@ export default function GroupDetailsPage() {
     </>
   );
 }
-
-    

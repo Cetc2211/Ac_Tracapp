@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Student, StudentObservation } from '@/lib/placeholder-data';
 import { useState } from 'react';
 import { Input } from './ui/input';
+import { useData } from '@/hooks/use-data';
 
 interface ObservationDialogProps {
   student: Student | null;
@@ -40,6 +41,7 @@ const canalizationTypes: StudentObservation['canalizationTarget'][] = [
 ]
 
 export function ObservationDialog({ student, open, onOpenChange }: ObservationDialogProps) {
+  const { saveStudentObservation } = useData();
   const [step, setStep] = useState(1);
   const [observationType, setObservationType] = useState<StudentObservation['type'] | ''>('');
   const [otherType, setOtherType] = useState('');
@@ -135,27 +137,14 @@ export function ObservationDialog({ student, open, onOpenChange }: ObservationDi
       isClosed: false,
     };
 
-    try {
-      const observationsKey = `observations_${student.id}`;
-      const storedObservations = localStorage.getItem(observationsKey);
-      const allObservations: StudentObservation[] = storedObservations ? JSON.parse(storedObservations) : [];
-      allObservations.push(newObservation);
-      localStorage.setItem(observationsKey, JSON.stringify(allObservations));
+    saveStudentObservation(newObservation);
 
-      toast({
-        title: 'Observación guardada',
-        description: `Se ha añadido una nueva entrada a la bitácora de ${student.name}.`,
-      });
+    toast({
+      title: 'Observación guardada',
+      description: `Se ha añadido una nueva entrada a la bitácora de ${student.name}.`,
+    });
 
-      handleClose();
-    } catch (error) {
-      console.error('Error saving observation to localStorage', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error al guardar',
-        description: 'No se pudo guardar la observación.',
-      });
-    }
+    handleClose();
   };
 
   if (!student) return null;
@@ -266,7 +255,7 @@ export function ObservationDialog({ student, open, onOpenChange }: ObservationDi
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{getDialogTitle()}</DialogTitle>

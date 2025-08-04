@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -20,37 +20,21 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import Image from 'next/image';
-import { Student, Group } from '@/lib/placeholder-data';
+import { Student } from '@/lib/placeholder-data';
 import { Search, Users, BookText } from 'lucide-react';
 import { ObservationDialog } from '@/components/observation-dialog';
+import { useData } from '@/hooks/use-data';
 
 export default function ObservationsPage() {
-  const [studentsToDisplay, setStudentsToDisplay] = useState<Student[]>([]);
-  const [activeGroupName, setActiveGroupName] = useState<string | null>(null);
+  const { activeGroup } = useData();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  useEffect(() => {
-    try {
-      const activeGroupId = localStorage.getItem('activeGroupId');
-      const groupName = localStorage.getItem('activeGroupName');
-      setActiveGroupName(groupName);
+  const studentsToDisplay = useMemo(() => {
+    return activeGroup?.students || [];
+  }, [activeGroup]);
 
-      const allGroupsJson = localStorage.getItem('groups');
-      const allGroups: Group[] = allGroupsJson ? JSON.parse(allGroupsJson) : [];
-
-      if (activeGroupId) {
-        const activeGroup = allGroups.find(g => g.id === activeGroupId);
-        setStudentsToDisplay(activeGroup ? activeGroup.students : []);
-      } else {
-        setStudentsToDisplay([]);
-      }
-    } catch (error) {
-      console.error('Failed to parse data from localStorage', error);
-    }
-  }, []);
-  
   const handleOpenDialog = (student: Student) => {
     setSelectedStudent(student);
     setIsDialogOpen(true);
@@ -75,8 +59,8 @@ export default function ObservationsPage() {
         <div>
           <h1 className="text-3xl font-bold">Bitácora de Observaciones</h1>
           <p className="text-muted-foreground">
-            {activeGroupName 
-                ? `Registra observaciones para el grupo: ${activeGroupName}.`
+            {activeGroup 
+                ? `Registra observaciones para el grupo: ${activeGroup.subject}.`
                 : 'Selecciona un grupo para ver a sus estudiantes.'
             }
           </p>
@@ -142,10 +126,10 @@ export default function ObservationsPage() {
                             <div className="flex flex-col items-center gap-4">
                                 <Users className="h-12 w-12" />
                                 <h3 className="text-lg font-semibold">
-                                    {activeGroupName ? "Este grupo no tiene estudiantes" : "No hay un grupo activo seleccionado"}
+                                    {activeGroup ? "Este grupo no tiene estudiantes" : "No hay un grupo activo seleccionado"}
                                 </h3>
                                 <p className="text-sm">
-                                    {activeGroupName ? "Agrega estudiantes desde la página del grupo." : "Por favor, ve a la sección 'Grupos' y selecciona uno para empezar."}
+                                    {activeGroup ? "Agrega estudiantes desde la página del grupo." : "Por favor, ve a la sección 'Grupos' y selecciona uno para empezar."}
                                 </p>
                             </div>
                          )}

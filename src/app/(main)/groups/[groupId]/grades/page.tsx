@@ -145,10 +145,9 @@ export default function GroupGradesPage() {
                       <div className='font-bold'>{c.name}</div>
                        <div className="font-normal text-muted-foreground">
                         ({c.weight}%, {
-                          c.name === 'Portafolio' && !c.isAutomated ? `${c.expectedValue} esp.`
-                          : c.name === 'Actividades' || (c.name === 'Portafolio' && c.isAutomated) ? `${activities.length} acts.`
-                          : c.name === 'Participación' ? `${Object.keys(participations).length} clases`
-                          : `${c.expectedValue} esp.`
+                          c.isAutomated
+                            ? (c.name === 'Participación' ? `${Object.keys(participations).length} clases` : `${activities.length} acts.`)
+                            : `${c.expectedValue} esp.`
                         })
                       </div>
                     </TableHead>
@@ -191,13 +190,12 @@ export default function GroupGradesPage() {
                       {student.name}
                     </TableCell>
                     {criteria.map((criterion, index) => {
-                      const isAutomated = criterion.name === 'Participación' || criterion.name === 'Actividades' || (criterion.name === 'Portafolio' && criterion.isAutomated);
                       let earnedPercentage = 0;
                       let performanceDetail = '';
 
-                      if (isAutomated) {
+                      if (criterion.isAutomated) {
                           let performanceRatio = 0;
-                          if (criterion.name === 'Actividades' || (criterion.name === 'Portafolio' && criterion.isAutomated)) {
+                          if (criterion.name === 'Actividades' || criterion.name === 'Portafolio') {
                               const totalActivities = activities.length;
                               if (totalActivities > 0) {
                                   const studentRecords = activityRecords[student.id] || {};
@@ -229,7 +227,7 @@ export default function GroupGradesPage() {
 
                       return (
                       <TableCell key={criterion.id} className={cn("text-center", criterionColors[index % criterionColors.length])}>
-                        {isAutomated ? (
+                        {criterion.isAutomated ? (
                           <div className="flex flex-col items-center justify-center p-1">
                               <Label className='text-xs'>
                                 {criterion.name === 'Participación' ? 'Participaciones' : 'Entregas'}

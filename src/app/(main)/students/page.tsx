@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { MoreHorizontal, Trash2 } from 'lucide-react';
-import { students as initialStudents, Student, Group } from '@/lib/placeholder-data';
+import { Student, Group } from '@/lib/placeholder-data';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,68 +40,36 @@ import {
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { StudentObservationDialog } from '@/components/student-observation-dialog';
+import { ObservationDialog } from '@/components/observation-dialog';
+import { useData } from '@/hooks/use-data';
 
 export default function StudentsPage() {
-  const [studentsToDisplay, setStudentsToDisplay] = useState<Student[]>([]);
-  const [allStudents, setAllStudents] = useState<Student[]>([]);
-  const [activeGroupName, setActiveGroupName] = useState<string | null>(null);
+  const { groups, allStudents, setGroups, setAllStudents, activeGroup } = useData();
   const [isObservationDialogOpen, setIsObservationDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const { toast } = useToast();
   const router = useRouter();
 
-  useEffect(() => {
-    try {
-      const activeGroupId = localStorage.getItem('activeGroupId');
-      const groupName = localStorage.getItem('activeGroupName');
-      setActiveGroupName(groupName);
-
-      const allGroupsJson = localStorage.getItem('groups');
-      const allGroups: Group[] = allGroupsJson ? JSON.parse(allGroupsJson) : [];
-      
-      const storedStudents = localStorage.getItem('students');
-      const allStudentsList = storedStudents ? JSON.parse(storedStudents) : initialStudents;
-      setAllStudents(allStudentsList);
-
-      if (activeGroupId) {
-        const activeGroup = allGroups.find(g => g.id === activeGroupId);
-        if (activeGroup) {
-          setStudentsToDisplay(activeGroup.students);
-        } else {
-          // Fallback if group not found for some reason
-          setStudentsToDisplay(allStudentsList);
-          setActiveGroupName(null); // Clear invalid group name
-        }
-      } else {
-        setStudentsToDisplay(allStudentsList);
-      }
-
-    } catch (error) {
-        console.error("Failed to parse data from localStorage", error);
-        setAllStudents(initialStudents);
-        setStudentsToDisplay(initialStudents);
-    }
-  }, []);
+  const studentsToDisplay = useMemo(() => {
+    return activeGroup ? activeGroup.students : allStudents;
+  }, [activeGroup, allStudents]);
 
   const saveStudents = (newStudents: Student[]) => {
       setAllStudents(newStudents);
-      
-      const activeGroupId = localStorage.getItem('activeGroupId');
+      const activeGroupId = activeGroup?.id;
       if (activeGroupId) {
-         const allGroupsJson = localStorage.getItem('groups');
-         const allGroups: Group[] = allGroupsJson ? JSON.parse(allGroupsJson) : [];
-         const activeGroup = allGroups.find(g => g.id === activeGroupId);
-         setStudentsToDisplay(activeGroup ? activeGroup.students : newStudents);
-      } else {
-        setStudentsToDisplay(newStudents);
+         const newGroups = groups.map(g => {
+            if (g.id === activeGroupId) {
+                return {...g, students: g.students.filter(s => newStudents.some(ns => ns.id === s.id))};
+            }
+            return g;
+         });
+         setGroups(newGroups);
       }
-      
-      localStorage.setItem('students', JSON.stringify(newStudents));
   }
 
   const handleOpenObservationDialog = (student: Student) => {
@@ -113,16 +81,11 @@ export default function StudentsPage() {
     const updatedStudents = allStudents.filter(s => s.id !== studentId);
     
     // Also remove from all groups
-    const storedGroups = localStorage.getItem('groups');
-    let updatedGroups: Group[] = [];
-    if (storedGroups) {
-        const groups: Group[] = JSON.parse(storedGroups);
-        updatedGroups = groups.map(g => ({
-            ...g,
-            students: g.students.filter(s => s.id !== studentId)
-        }));
-        localStorage.setItem('groups', JSON.stringify(updatedGroups));
-    }
+    const updatedGroups = groups.map(g => ({
+        ...g,
+        students: g.students.filter(s => s.id !== studentId)
+    }));
+    setGroups(updatedGroups);
 
     saveStudents(updatedStudents);
     
@@ -150,15 +113,11 @@ export default function StudentsPage() {
       const updatedStudents = allStudents.filter(s => !selectedStudents.includes(s.id));
       
        // Also remove from all groups
-        const storedGroups = localStorage.getItem('groups');
-        if (storedGroups) {
-            const groups: Group[] = JSON.parse(storedGroups);
-            const updatedGroups = groups.map(g => ({
-                ...g,
-                students: g.students.filter(s => !selectedStudents.includes(s.id))
-            }));
-            localStorage.setItem('groups', JSON.stringify(updatedGroups));
-        }
+        const updatedGroups = groups.map(g => ({
+            ...g,
+            students: g.students.filter(s => !selectedStudents.includes(s.id))
+        }));
+        setGroups(updatedGroups);
 
       saveStudents(updatedStudents);
 
@@ -182,8 +141,8 @@ export default function StudentsPage() {
           <div>
             <CardTitle>Estudiantes</CardTitle>
             <CardDescription>
-              {activeGroupName 
-                ? `Mostrando estudiantes del grupo: ${activeGroupName}.`
+              {activeGroup 
+                ? `Mostrando estudiantes del grupo: ${activeGroup.subject}.`
                 : 'Lista consolidada de todos los estudiantes. Para agregar, ve a un grupo específico.'
               }
             </CardDescription>
@@ -250,7 +209,7 @@ export default function StudentsPage() {
                  <TableCell padding="checkbox">
                    <Checkbox
                         checked={selectedStudents.includes(student.id)}
-                        onCheckedChange={(checked) => handleSelectStudent(student.id, checked)}
+                        onCheckedChange={(checked) => handleSelectStudent(student.id, !!checked)}
                         aria-label="Seleccionar fila"
                     />
                 </TableCell>
@@ -315,7 +274,7 @@ export default function StudentsPage() {
              {studentsToDisplay.length === 0 && (
                 <TableRow>
                     <TableCell colSpan={7} className="text-center text-muted-foreground p-8">
-                      {activeGroupName 
+                      {activeGroup 
                         ? "Este grupo no tiene estudiantes."
                         : "No hay estudiantes registrados. Agrégalos desde la página de un grupo."
                       }

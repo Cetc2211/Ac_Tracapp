@@ -1,27 +1,25 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
 import { FilePen, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { useData } from '@/hooks/use-data';
 
 export default function GradesRedirectPage() {
   const router = useRouter();
+  const { activeGroup } = useData();
   const [isLoading, setIsLoading] = useState(true);
-  const [hasActiveGroup, setHasActiveGroup] = useState(false);
 
   useEffect(() => {
-    const activeGroupId = localStorage.getItem('activeGroupId');
-    if (activeGroupId) {
-      setHasActiveGroup(true);
-      router.replace(`/groups/${activeGroupId}/grades`);
+    if (activeGroup) {
+      router.replace(`/groups/${activeGroup.id}/grades`);
     } else {
-      setHasActiveGroup(false);
       setIsLoading(false);
     }
-  }, [router]);
+  }, [router, activeGroup]);
 
   if (isLoading) {
     return (

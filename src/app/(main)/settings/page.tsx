@@ -17,38 +17,23 @@ import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { ThemeSwitcher, themes } from '@/components/theme-switcher';
 import { Separator } from '@/components/ui/separator';
-
-const defaultSettings = {
-    institutionName: "Instituto de Innovación Educativa",
-    logo: "https://placehold.co/200x200.png",
-    theme: "theme-default",
-};
+import { useData } from '@/hooks/use-data';
 
 export default function SettingsPage() {
-    const [settings, setSettings] = useState(defaultSettings);
+    const { settings, setSettings } = useData();
     const [logoPreview, setLogoPreview] = useState(settings.logo);
     const { toast } = useToast();
 
     useEffect(() => {
-        try {
-            const savedSettings = localStorage.getItem('appSettings');
-            if (savedSettings) {
-                const parsedSettings = JSON.parse(savedSettings);
-                setSettings(parsedSettings);
-                setLogoPreview(parsedSettings.logo);
-            } else {
-                 localStorage.setItem('appSettings', JSON.stringify(defaultSettings));
-            }
-        } catch (error) {
-            console.error("Failed to load settings from localStorage", error);
-            setSettings(defaultSettings);
-        }
-    }, []);
+      setLogoPreview(settings.logo);
+    }, [settings.logo]);
+
 
     const handleSave = () => {
         const newSettings = { ...settings, logo: logoPreview };
+        setSettings(newSettings);
         localStorage.setItem('appSettings', JSON.stringify(newSettings));
-        window.dispatchEvent(new Event('storage')); // Notificar a otros componentes
+        window.dispatchEvent(new Event('storage'));
         toast({
             title: 'Ajustes Guardados',
             description: 'La información ha sido actualizada.',
