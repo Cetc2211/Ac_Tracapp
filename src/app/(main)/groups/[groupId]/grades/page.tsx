@@ -75,17 +75,17 @@ export default function GroupGradesPage() {
         return;
     }
     
-    const newGrades = JSON.parse(JSON.stringify(grades));
-
-    if (!newGrades[studentId]) {
-      newGrades[studentId] = {};
-    }
-    if (!newGrades[studentId][criterionId]) {
-      newGrades[studentId][criterionId] = { delivered: null };
-    }
-    newGrades[studentId][criterionId].delivered = numericValue;
-    
-    setGrades(newGrades);
+    setGrades(prevGrades => {
+      const newGrades = JSON.parse(JSON.stringify(prevGrades));
+      if (!newGrades[studentId]) {
+        newGrades[studentId] = {};
+      }
+      if (!newGrades[studentId][criterionId]) {
+        newGrades[studentId][criterionId] = { delivered: null };
+      }
+      newGrades[studentId][criterionId].delivered = numericValue;
+      return newGrades;
+    });
   };
   
   const finalGrades = useMemo(() => {
@@ -195,7 +195,7 @@ export default function GroupGradesPage() {
                       let earnedPercentage = 0;
                       let performanceDetail = '';
 
-                      if (isAutomated) {
+                      if (isAutomated || criterion.name === 'Actividades' || criterion.name === 'Participación') {
                           let performanceRatio = 0;
                           if (criterion.name === 'Actividades' || (criterion.name === 'Portafolio' && criterion.isAutomated)) {
                               const totalActivities = activities.length;

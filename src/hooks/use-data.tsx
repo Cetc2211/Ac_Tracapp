@@ -129,7 +129,7 @@ interface DataContextType {
   setActivePartialForGroup: (groupId: string, partial: string) => void;
   
   setCriteria: (criteria: EvaluationCriteria[]) => void;
-  setGrades: (grades: Grades) => void;
+  setGrades: (grades: React.SetStateAction<Grades>) => void;
   setAttendance: React.Dispatch<React.SetStateAction<AttendanceRecord>>;
   setParticipations: React.Dispatch<React.SetStateAction<ParticipationRecord>>;
   setActivities: (activities: Activity[]) => void;
@@ -263,17 +263,11 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             for (const criterion of criteria) {
                 let performanceRatio = 0;
         
-                if (criterion.name === 'Portafolio') {
-                    if (criterion.isAutomated) {
-                        const totalActivities = activities.length;
-                        if (totalActivities > 0) {
-                            const deliveredActivities = Object.values(activityRecords[studentId] || {}).filter(Boolean).length;
-                            performanceRatio = deliveredActivities / totalActivities;
-                        }
-                    } else {
-                        const gradeDetail = grades[studentId]?.[criterion.id];
-                        const delivered = gradeDetail?.delivered ?? 0;
-                        performanceRatio = (criterion.expectedValue > 0) ? (delivered / criterion.expectedValue) : 0;
+                if (criterion.name === 'Portafolio' && criterion.isAutomated) {
+                    const totalActivities = activities.length;
+                    if (totalActivities > 0) {
+                        const deliveredActivities = Object.values(activityRecords[studentId] || {}).filter(Boolean).length;
+                        performanceRatio = deliveredActivities / totalActivities;
                     }
                 } else if (criterion.name === 'Actividades') {
                     const totalActivities = activities.length;
@@ -389,11 +383,16 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         saveToLocalStorage(key, newCriteria);
     };
 
-    const setGradesWrapper = (newGrades: Grades) => {
+    const setGradesWrapper = (value: React.SetStateAction<Grades>) => {
         if (!activeGroupId || !activePartial) return;
         const key = `grades_${activeGroupId}_${activePartial}`;
-        setAllGrades(prev => ({...prev, [activeGroupId]: { ...prev[activeGroupId], [activePartial]: newGrades}}));
-        saveToLocalStorage(key, newGrades);
+        setAllGrades(prev => {
+            const currentGrades = prev[activeGroupId]?.[activePartial] || {};
+            const newGrades = typeof value === 'function' ? value(currentGrades) : value;
+            const updatedState = {...prev, [activeGroupId]: { ...prev[activeGroupId], [activePartial]: newGrades}};
+            saveToLocalStorage(key, newGrades);
+            return updatedState;
+        });
     }
     
     const setAttendanceWrapper = (value: React.SetStateAction<AttendanceRecord>) => {
