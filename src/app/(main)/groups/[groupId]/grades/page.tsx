@@ -195,7 +195,7 @@ export default function GroupGradesPage() {
 
                       if (criterion.isAutomated) {
                           let performanceRatio = 0;
-                          if (criterion.name === 'Actividades' || criterion.name === 'Portafolio') {
+                          if (criterion.name === 'Actividades' || (criterion.name === 'Portafolio' && criterion.isAutomated)) {
                               const totalActivities = activities.length;
                               if (totalActivities > 0) {
                                   const studentRecords = activityRecords[student.id] || {};
@@ -286,3 +286,4 @@ export default function GroupGradesPage() {
     </div>
   );
 }
+
