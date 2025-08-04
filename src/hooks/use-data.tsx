@@ -336,10 +336,10 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                             const deliveredActivities = Object.values(activityRecords[studentId] || {}).filter(Boolean).length;
                             performanceRatio = deliveredActivities / totalActivities;
                         }
-                    } else if (criterion.name === 'Portafolio' && criterion.isAutomated) {
+                    } else if (criterion.name === 'Portafolio') { //This is Portafolio when set to 'Automatic'
                         const totalActivities = activities.length;
-                        const delivered = grades[studentId]?.[criterion.id]?.delivered ?? 0;
                         if (totalActivities > 0) {
+                             const delivered = grades[studentId]?.[criterion.id]?.delivered ?? 0;
                             performanceRatio = delivered / totalActivities;
                         }
                     } else if (criterion.name === 'Participación') {
@@ -349,7 +349,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                             performanceRatio = studentParticipations / totalAttendanceDays;
                         }
                     }
-                } else { // Manual criteria
+                } else { // Manual criteria (includes manual portfolio)
                     const delivered = grades[studentId]?.[criterion.id]?.delivered ?? 0;
                     const expected = criterion.expectedValue;
                     if (expected > 0) {
@@ -367,7 +367,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         let merits = 0;
         let demerits = 0;
 
-        if (currentPartialRange) {
+        if (currentPartialRange && studentObservations) {
             const observationsForPartial = studentObservations.filter(o => {
                 const obsDate = startOfDay(parseISO(o.date));
                 return isWithinInterval(obsDate, currentPartialRange);

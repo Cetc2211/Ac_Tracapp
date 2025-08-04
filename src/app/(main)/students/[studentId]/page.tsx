@@ -59,7 +59,7 @@ export default function StudentProfilePage() {
   const studentId = params.studentId as string;
   const router = useRouter();
   
-  const { allStudents, allGroups, allObservations, allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, calculateFinalGrade, allAttendances, activePartials } = useData();
+  const { allStudents, groups, allObservations, allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, calculateFinalGrade, allAttendances, activePartials } = useData();
   const student = useMemo(() => allStudents.find(s => s.id === studentId), [allStudents, studentId]);
 
   const [studentStats, setStudentStats] = useState<StudentStats | null>(null);
@@ -80,7 +80,7 @@ export default function StudentProfilePage() {
     
     try {
         setIsLoading(true);
-        const studentGroups = allGroups.filter(g => g.students.some(s => s.id === studentId));
+        const studentGroups = groups.filter(g => g.students.some(s => s.id === studentId));
         
         const gradesByGroup: StudentStats['gradesByGroup'] = [];
         let totalGradeSum = 0;
@@ -94,8 +94,9 @@ export default function StudentProfilePage() {
             const criteria: EvaluationCriteria[] = allCriteria[`criteria_${group.id}_${activePartialForGroup}`] || [];
             const grades: Grades = allGrades[group.id]?.[activePartialForGroup] || {};
             const participations: ParticipationRecord = allParticipations[group.id]?.[activePartialForGroup] || {};
-            const activities: Activity[] = allActivities[group.id]?.[activePartialForGroup] || {};
+            const activities: Activity[] = allActivities[group.id]?.[activePartialForGroup] || [];
             const activityRecords: ActivityRecord = allActivityRecords[group.id]?.[activePartialForGroup] || {};
+            const attendance = allAttendances[group.id]?.[activePartialForGroup] || {};
 
             const criteriaDetails = criteria.map(c => {
                 let performanceRatio = 0;
@@ -104,7 +105,7 @@ export default function StudentProfilePage() {
                         const totalActivities = activities.length;
                         if(totalActivities > 0) performanceRatio = (Object.values(activityRecords[studentId] || {}).filter(Boolean).length) / totalActivities;
                     } else if (c.name === 'Participación') {
-                        const totalClasses = Object.keys(participations).length;
+                        const totalClasses = Object.keys(attendance).length;
                         if(totalClasses > 0) performanceRatio = (Object.values(participations).filter(p => p[studentId]).length) / totalClasses;
                     }
                 } else {
@@ -143,7 +144,7 @@ export default function StudentProfilePage() {
     } finally {
         setIsLoading(false);
     }
-  }, [student, allGroups, allObservations, allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, activePartials, studentId, toast, allAttendances, calculateFinalGrade]);
+  }, [student, groups, allObservations, allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, activePartials, studentId, toast, allAttendances, calculateFinalGrade]);
   
    const handleGenerateFeedback = async () => {
     if (!student || !studentStats) {
