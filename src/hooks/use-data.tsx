@@ -3,6 +3,8 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { Student, Group, StudentObservation, students as initialStudents, groups as initialGroups } from '@/lib/placeholder-data';
+import { parseISO, startOfDay, isWithinInterval, startOfMonth, endOfMonth, getMonth } from 'date-fns';
+
 
 // TYPE DEFINITIONS
 export type EvaluationCriteria = {
@@ -277,6 +279,42 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         setAllObservations(observationsStore);
 
     }, []);
+    
+    const getPartialDateRanges = useCallback((groupAttendances: AllAttendances) => {
+        const allDates: Date[] = [];
+        Object.values(groupAttendances).forEach(partialRecords => {
+            Object.keys(partialRecords).forEach(dateStr => {
+                allDates.push(parseISO(dateStr));
+            });
+        });
+
+        if (allDates.length === 0) return {};
+
+        const sortedDates = allDates.sort((a, b) => a.getTime() - b.getTime());
+        const months = sortedDates.map(d => getMonth(d));
+        const uniqueMonths = [...new Set(months)].sort((a,b) => a-b);
+        
+        if (uniqueMonths.length < 3) {
+            // Not enough data to split into 3, treat as one block
+             return { '1': { start: sortedDates[0], end: sortedDates[sortedDates.length - 1] } };
+        }
+        
+        // Simple split for now, can be made more robust
+        const firstMonth = uniqueMonths[0];
+        const secondMonth = uniqueMonths[uniqueMonths.length > 1 ? 1 : 0];
+        const thirdMonth = uniqueMonths[uniqueMonths.length > 2 ? 2 : 1];
+
+        const partial1Dates = sortedDates.filter(d => getMonth(d) <= firstMonth);
+        const partial2Dates = sortedDates.filter(d => getMonth(d) > firstMonth && getMonth(d) <= secondMonth);
+        const partial3Dates = sortedDates.filter(d => getMonth(d) > secondMonth);
+
+        return {
+            '1': { start: partial1Dates[0], end: partial1Dates[partial1Dates.length - 1] },
+            '2': partial2Dates.length > 0 ? { start: partial2Dates[0], end: partial2Dates[partial2Dates.length-1] } : undefined,
+            '3': partial3Dates.length > 0 ? { start: partial3Dates[0], end: partial3Dates[partial3Dates.length - 1] } : undefined,
+        };
+
+    }, []);
 
     const calculateFinalGrade = useCallback((studentId: string, partial: string, groupId: string): number => {
         const criteria = allCriteria[`criteria_${groupId}_${partial}`] || [];
@@ -293,23 +331,25 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             for (const criterion of criteria) {
                 let performanceRatio = 0;
 
-                if (criterion.name === 'Actividades') {
-                    const totalActivities = activities.length;
-                    if (totalActivities > 0) {
-                        const deliveredActivities = Object.values(activityRecords[studentId] || {}).filter(Boolean).length;
-                        performanceRatio = deliveredActivities / totalActivities;
-                    }
-                } else if (criterion.name === 'Portafolio') {
-                    const totalActivities = activities.length;
-                    const delivered = grades[studentId]?.[criterion.id]?.delivered ?? 0;
-                    if (totalActivities > 0) {
-                        performanceRatio = delivered / totalActivities;
-                    }
-                } else if (criterion.name === 'Participación') {
-                    const totalAttendanceDays = Object.keys(attendance).length;
-                    if (totalAttendanceDays > 0) {
-                        const studentParticipations = Object.values(participations).filter(day => day[studentId]).length;
-                        performanceRatio = studentParticipations / totalAttendanceDays;
+                if (criterion.isAutomated) {
+                    if (criterion.name === 'Actividades') {
+                        const totalActivities = activities.length;
+                        if (totalActivities > 0) {
+                            const deliveredActivities = Object.values(activityRecords[studentId] || {}).filter(Boolean).length;
+                            performanceRatio = deliveredActivities / totalActivities;
+                        }
+                    } else if (criterion.name === 'Portafolio' && criterion.isAutomated) {
+                        const totalActivities = activities.length;
+                        const delivered = grades[studentId]?.[criterion.id]?.delivered ?? 0;
+                        if (totalActivities > 0) {
+                            performanceRatio = delivered / totalActivities;
+                        }
+                    } else if (criterion.name === 'Participación') {
+                        const totalAttendanceDays = Object.keys(attendance).length;
+                        if (totalAttendanceDays > 0) {
+                            const studentParticipations = Object.values(participations).filter(day => day[studentId]).length;
+                            performanceRatio = studentParticipations / totalAttendanceDays;
+                        }
                     }
                 } else { // Manual criteria
                     const delivered = grades[studentId]?.[criterion.id]?.delivered ?? 0;
@@ -321,15 +361,28 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 finalGrade += (performanceRatio * criterion.weight);
             }
         }
+        
+        const groupAttendances = allAttendances[groupId];
+        const partialDateRanges = getPartialDateRanges(groupAttendances || {});
+        const currentPartialRange = partialDateRanges[partial as keyof typeof partialDateRanges];
+        
+        let merits = 0;
+        let demerits = 0;
 
-        const merits = studentObservations.filter(o => o.type === 'Mérito').length;
-        const demerits = studentObservations.filter(o => o.type === 'Demérito').length;
+        if (currentPartialRange) {
+            const observationsForPartial = studentObservations.filter(o => {
+                const obsDate = startOfDay(parseISO(o.date));
+                return isWithinInterval(obsDate, currentPartialRange);
+            });
+            merits = observationsForPartial.filter(o => o.type === 'Mérito').length;
+            demerits = observationsForPartial.filter(o => o.type === 'Demérito').length;
+        }
 
         finalGrade += (merits * 10);
         finalGrade -= (demerits * 10);
 
         return Math.max(0, Math.min(100, finalGrade));
-    }, [allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, allAttendances, allObservations]);
+    }, [allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, allAttendances, allObservations, getPartialDateRanges]);
 
     // --- DERIVED STATE & MEMOS ---
     const activePartial = useMemo(() => {
