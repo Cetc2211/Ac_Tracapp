@@ -25,7 +25,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { useData } from '@/hooks/use-data';
-import type { EvaluationCriteria, Grades, StudentObservation } from '@/hooks/use-data';
+import type { EvaluationCriteria, Grades, StudentObservation, Activity, ActivityRecord, ParticipationRecord } from '@/hooks/use-data';
 import { useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { getPartialLabel } from '@/lib/utils';
@@ -191,11 +191,11 @@ export default function GroupGradesPage() {
                       {student.name}
                     </TableCell>
                     {criteria.map((criterion, index) => {
-                      const isAutomated = criterion.isAutomated;
+                      const isAutomated = criterion.name === 'Participación' || criterion.name === 'Actividades' || (criterion.name === 'Portafolio' && criterion.isAutomated);
                       let earnedPercentage = 0;
                       let performanceDetail = '';
 
-                      if (isAutomated || criterion.name === 'Actividades' || criterion.name === 'Participación') {
+                      if (isAutomated) {
                           let performanceRatio = 0;
                           if (criterion.name === 'Actividades' || (criterion.name === 'Portafolio' && criterion.isAutomated)) {
                               const totalActivities = activities.length;

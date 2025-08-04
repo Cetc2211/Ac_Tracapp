@@ -266,13 +266,15 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 if (criterion.name === 'Portafolio' && criterion.isAutomated) {
                     const totalActivities = activities.length;
                     if (totalActivities > 0) {
-                        const deliveredActivities = Object.values(activityRecords[studentId] || {}).filter(Boolean).length;
+                        const studentRecords = activityRecords[studentId] || {};
+                        const deliveredActivities = Object.values(studentRecords).filter(Boolean).length;
                         performanceRatio = deliveredActivities / totalActivities;
                     }
                 } else if (criterion.name === 'Actividades') {
                     const totalActivities = activities.length;
                     if (totalActivities > 0) {
-                        const deliveredActivities = Object.values(activityRecords[studentId] || {}).filter(Boolean).length;
+                        const studentRecords = activityRecords[studentId] || {};
+                        const deliveredActivities = Object.values(studentRecords).filter(Boolean).length;
                         performanceRatio = deliveredActivities / totalActivities;
                     }
                 } else if(criterion.name === 'Participación') {
