@@ -311,18 +311,18 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 let performanceRatio = 0;
 
                 if (criterion.isAutomated) {
-                    if (criterion.name === 'Actividades') {
+                     if (criterion.name === 'Actividades') {
                         const totalActivities = partialActivities.length;
                         if (totalActivities > 0) {
-                            const deliveredActivities = Object.values(partialActivityRecords).filter(Boolean).length;
+                            const deliveredActivities = Object.keys(partialActivityRecords).filter(activityId => {
+                                const activityExists = partialActivities.some(act => act.id === activityId);
+                                return activityExists && partialActivityRecords[activityId];
+                            }).length;
                             performanceRatio = deliveredActivities / totalActivities;
                         }
                     } else if (criterion.name === 'Portafolio') {
-                        const totalActivities = partialActivities.length;
-                        if (totalActivities > 0) {
-                             const delivered = partialGrades[studentId]?.[criterion.id]?.delivered ?? 0;
-                            performanceRatio = delivered / totalActivities;
-                        }
+                        // This case is for automated Portafolio, which has a manual input but automated expected value
+                        // The manual input is handled in the 'else' block
                     } else if (criterion.name === 'Participación') {
                         const totalAttendanceDays = Object.keys(partialAttendance).length;
                         if (totalAttendanceDays > 0) {
@@ -332,7 +332,10 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                     }
                 } else { 
                     const delivered = partialGrades[studentId]?.[criterion.id]?.delivered ?? 0;
-                    const expected = criterion.expectedValue;
+                    let expected = criterion.expectedValue;
+                    if (criterion.name === 'Portafolio') {
+                        expected = partialActivities.length;
+                    }
                     if (expected > 0) {
                         performanceRatio = delivered / expected;
                     }

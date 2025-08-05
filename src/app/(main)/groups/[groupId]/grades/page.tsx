@@ -52,7 +52,7 @@ export default function GroupGradesPage() {
     allActivities,
     allAttendances,
     allParticipations,
-    activityRecords
+    allActivityRecords
   } = useData();
 
   const { toast } = useToast();
@@ -94,7 +94,8 @@ export default function GroupGradesPage() {
       }
     }
     return calculatedGrades;
-  }, [activeGroup, activePartial, calculateFinalGrade, criteria, grades, allParticipations, allActivities, activityRecords, allObservations, allAttendances]);
+  // The dependency array ensures this recalculates whenever the underlying data for the active partial/group changes.
+  }, [activeGroup, activePartial, calculateFinalGrade, allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, allObservations, allAttendances]);
 
   const studentsInGroup = useMemo(() => {
       if (!activeGroup || !activeGroup.students) return [];
@@ -108,10 +109,11 @@ export default function GroupGradesPage() {
   const partialLabel = getPartialLabel(activePartial);
 
   const getPerformanceDetail = (studentId: string, criterion: EvaluationCriteria) => {
+    if (!activeGroup || !activePartial) return "";
     const activitiesForPartial = allActivities[activeGroup.id]?.[activePartial] || [];
     const attendanceForPartial = allAttendances[activeGroup.id]?.[activePartial] || {};
     const participationsForPartial = allParticipations[activeGroup.id]?.[activePartial] || {};
-    const activityRecordsForPartial = activityRecords[studentId] || {};
+    const activityRecordsForPartial = allActivityRecords[activeGroup.id]?.[activePartial]?.[studentId] || {};
 
 
     if (criterion.name === 'Actividades') {
@@ -137,14 +139,16 @@ export default function GroupGradesPage() {
   }
 
   const getEarnedPercentage = (studentId: string, criterion: EvaluationCriteria) => {
+    if (!activeGroup || !activePartial) return 0;
     let performanceRatio = 0;
     const activitiesForPartial = allActivities[activeGroup.id]?.[activePartial] || [];
     const attendanceForPartial = allAttendances[activeGroup.id]?.[activePartial] || {};
     const participationsForPartial = allParticipations[activeGroup.id]?.[activePartial] || {};
-    const activityRecordsForPartial = activityRecords[studentId] || {};
+    const gradesForPartial = allGrades[activeGroup.id]?.[activePartial] || {};
+    const activityRecordsForPartial = allActivityRecords[activeGroup.id]?.[activePartial]?.[studentId] || {};
 
 
-    if (criterion.name === 'Actividades') {
+    if (criterion.name === 'Actividades' && criterion.isAutomated) {
         const total = activitiesForPartial.length;
         if (total > 0) {
             const delivered = Object.keys(activityRecordsForPartial).filter(activityId => {
@@ -153,20 +157,20 @@ export default function GroupGradesPage() {
             }).length;
             performanceRatio = delivered / total;
         }
-    } else if (criterion.name === 'Portafolio') {
+    } else if (criterion.name === 'Portafolio' && criterion.isAutomated) {
         const total = activitiesForPartial.length;
         if (total > 0) {
-            const delivered = grades[studentId]?.[criterion.id]?.delivered ?? 0;
+            const delivered = gradesForPartial[studentId]?.[criterion.id]?.delivered ?? 0;
             performanceRatio = delivered / total;
         }
-    } else if (criterion.name === 'Participación') {
+    } else if (criterion.name === 'Participación' && criterion.isAutomated) {
         const total = Object.keys(attendanceForPartial).length;
         if (total > 0) {
             const participated = Object.values(participationsForPartial).filter(day => day[studentId]).length;
             performanceRatio = participated / total;
         }
     } else {
-        const delivered = grades[studentId]?.[criterion.id]?.delivered ?? 0;
+        const delivered = gradesForPartial[studentId]?.[criterion.id]?.delivered ?? 0;
         const expected = criterion.expectedValue;
         if (expected > 0) {
             performanceRatio = delivered / expected;
@@ -251,7 +255,7 @@ export default function GroupGradesPage() {
                       {student.name}
                     </TableCell>
                     {criteria.map((criterion, index) => {
-                      const isFullyAutomatic = criterion.name === 'Actividades' || criterion.name === 'Participación';
+                      const isFullyAutomatic = (criterion.name === 'Actividades' || criterion.name === 'Participación') && criterion.isAutomated;
                       const earnedPercentage = getEarnedPercentage(student.id, criterion);
 
                       return (
