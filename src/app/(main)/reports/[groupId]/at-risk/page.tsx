@@ -304,34 +304,39 @@ export default function AtRiskReportPage() {
   const [reportData, setReportData] = useState<StudentReportData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const getStudentDetails = useCallback((studentId: string) => {
+  const getStudentDetails = useCallback((studentId: string, partial: string, groupId: string) => {
         if (!activeGroup) return null;
         
-        const partial = activePartial || '1';
-        const criteria = allCriteria[`criteria_${activeGroup.id}_${partial}`] || [];
-        const grades = allGrades[activeGroup.id]?.[partial] || {};
-        const participations = allParticipations[activeGroup.id]?.[partial] || {};
-        const activities = allActivities[activeGroup.id]?.[partial] || [];
-        const activityRecords = allActivityRecords[activeGroup.id]?.[partial] || {};
-        const attendance = allAttendances[activeGroup.id]?.[partial] || {};
+        const criteria = allCriteria[`criteria_${groupId}_${partial}`] || [];
+        const grades = allGrades[groupId]?.[partial] || {};
+        const participations = allParticipations[groupId]?.[partial] || {};
+        const activities = allActivities[groupId]?.[partial] || [];
+        const activityRecords = allActivityRecords[groupId]?.[partial] || {};
+        const attendance = allAttendances[groupId]?.[partial] || {};
         
         const studentObservations = allObservations[studentId] || [];
 
-        const finalGrade = calculateFinalGrade(studentId, criteria, grades, participations, activities, activityRecords, studentObservations);
+        const finalGrade = calculateFinalGrade(studentId, partial, groupId);
 
         const criteriaDetails: StudentReportData['criteriaDetails'] = criteria.map(criterion => {
              let performanceRatio = 0;
-            if ((criterion.name === 'Portafolio' && criterion.isAutomated) || criterion.name === 'Actividades') {
+            if (criterion.name === 'Actividades') {
                 const totalActivities = activities.length;
                 if(totalActivities > 0) {
                     const deliveredActivities = Object.values(activityRecords[studentId] || {}).filter(Boolean).length;
                     performanceRatio = deliveredActivities / totalActivities;
                 }
+            } else if (criterion.name === 'Portafolio' && criterion.isAutomated) {
+                const totalActivities = activities.length;
+                if (totalActivities > 0) {
+                    const delivered = grades[studentId]?.[criterion.id]?.delivered ?? 0;
+                    performanceRatio = delivered / totalActivities;
+                }
             } else if (criterion.name === 'Participación') {
-                const totalParticipations = Object.keys(participations).length;
-                if(totalParticipations > 0) {
+                const totalClasses = Object.keys(attendance).length;
+                if(totalClasses > 0) {
                     const studentParticipations = Object.values(participations).filter(p => p[studentId]).length;
-                    performanceRatio = studentParticipations / totalParticipations;
+                    performanceRatio = studentParticipations / totalClasses;
                 }
             } else {
                 const delivered = (grades[studentId]?.[criterion.id]?.delivered ?? 0);
@@ -352,14 +357,14 @@ export default function AtRiskReportPage() {
         
         return { finalGrade, attendance: attendanceStats, criteriaDetails, observations: studentObservations };
 
-  }, [activeGroup, activePartial, allObservations, calculateFinalGrade, allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, allAttendances]);
+  }, [activeGroup, allObservations, calculateFinalGrade, allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, allAttendances]);
 
 
   useEffect(() => {
-    if (atRiskStudents.length > 0 && activeGroup) {
+    if (atRiskStudents.length > 0 && activeGroup && activePartial) {
       const data = atRiskStudents
         .map(student => {
-            const details = getStudentDetails(student.id);
+            const details = getStudentDetails(student.id, activePartial, activeGroup.id);
             if (!details) return null;
             
             return {
@@ -382,7 +387,7 @@ export default function AtRiskReportPage() {
       setReportData(data);
     }
     setIsLoading(false);
-  }, [atRiskStudents, activeGroup, getStudentDetails]);
+  }, [atRiskStudents, activeGroup, activePartial, getStudentDetails]);
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /> <span className="ml-2">Cargando informe...</span></div>;
@@ -404,7 +409,7 @@ export default function AtRiskReportPage() {
        <div className="flex items-center justify-between">
          <div className="flex items-center gap-4">
             <Button asChild variant="outline" size="icon">
-              <Link href="/reports">
+              <Link href={`/reports/${activeGroup.id}`}>
                 <ArrowLeft />
                 <span className="sr-only">Volver a Informes</span>
               </Link>
@@ -453,5 +458,3 @@ export default function AtRiskReportPage() {
     </div>
   );
 }
-
-    

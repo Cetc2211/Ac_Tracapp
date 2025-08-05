@@ -47,13 +47,14 @@ export default function ReportsPage() {
     allObservations,
     calculateFinalGrade,
     groupAverages,
-    atRiskStudents
+    atRiskStudents,
+    activePartial
   } = useData();
 
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
   const quickStats = useMemo(() => {
-    if (!activeGroup) return null;
+    if (!activeGroup || !activePartial) return null;
 
     const studentCount = activeGroup.students.length;
     
@@ -72,11 +73,9 @@ export default function ReportsPage() {
     const attendanceRate = totalAttendancePossible > 0 ? (presentCount / totalAttendancePossible) * 100 : 100;
 
     let approvedCount = 0;
-    const groupGrades = activeGroup.students.map(student => {
-        const studentObservations = allObservations[student.id] || [];
-        const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords, studentObservations);
+    activeGroup.students.forEach(student => {
+        const finalGrade = calculateFinalGrade(student.id, activePartial, activeGroup.id);
         if (finalGrade >= 70) approvedCount++;
-        return finalGrade;
     });
 
     const groupAverage = groupAverages[activeGroup.id] || 0;
@@ -89,11 +88,11 @@ export default function ReportsPage() {
         totalAttendanceRecords: presentCount,
         criteriaCount: criteria.length,
     };
-  }, [activeGroup, attendance, criteria, grades, participations, activities, activityRecords, calculateFinalGrade, allObservations, groupAverages]);
+  }, [activeGroup, activePartial, attendance, criteria, grades, participations, activities, activityRecords, calculateFinalGrade, allObservations, groupAverages]);
 
 
   const handleDownloadCsv = () => {
-    if (!activeGroup) return;
+    if (!activeGroup || !activePartial) return;
 
     let csvContent = "data:text/csv;charset=utf-8,";
     const headers = ["ID Estudiante", "Nombre", ...criteria.map(c => `${c.name} (${c.weight}%)`), "Calificacion Final"];
@@ -101,8 +100,7 @@ export default function ReportsPage() {
 
     activeGroup.students.forEach(student => {
         const row = [student.id, student.name];
-        const studentObservations = allObservations[student.id] || [];
-        const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords, studentObservations);
+        const finalGrade = calculateFinalGrade(student.id, activePartial!, activeGroup.id);
         
         criteria.forEach(criterion => {
             let performanceRatio = 0;
@@ -212,7 +210,7 @@ export default function ReportsPage() {
                 </CardHeader>
                 <CardFooter>
                     <Button className="w-full" variant="destructive" asChild>
-                        <Link href={`/reports/at-risk`}>
+                        <Link href={`/reports/${activeGroup.id}/at-risk`}>
                             <Eye className="mr-2 h-4 w-4" /> Ver Informe de Riesgo
                         </Link>
                     </Button>
