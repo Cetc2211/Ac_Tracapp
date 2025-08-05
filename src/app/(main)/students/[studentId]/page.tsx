@@ -92,24 +92,19 @@ export default function StudentProfilePage() {
             const finalGrade = calculateFinalGrade(studentId, activePartialForGroup, group.id);
 
             const criteria: EvaluationCriteria[] = allCriteria[`criteria_${group.id}_${activePartialForGroup}`] || [];
-            const grades: Grades = allGrades[group.id]?.[activePartialForGroup] || {};
-            const participations: ParticipationRecord = allParticipations[group.id]?.[activePartialForGroup] || {};
-            const activities: Activity[] = allActivities[group.id]?.[activePartialForGroup] || [];
-            const activityRecords: ActivityRecord = allActivityRecords[group.id]?.[activePartialForGroup] || {};
-            const attendance = allAttendances[group.id]?.[activePartialForGroup] || {};
-
+            
             const criteriaDetails = criteria.map(c => {
                 let performanceRatio = 0;
                 if (c.isAutomated) {
                      if (c.name === 'Portafolio' || c.name === 'Actividades') {
-                        const totalActivities = activities.length;
-                        if(totalActivities > 0) performanceRatio = (Object.values(activityRecords[studentId] || {}).filter(Boolean).length) / totalActivities;
+                        const totalActivities = allActivities[group.id]?.[activePartialForGroup]?.length || 0;
+                        if(totalActivities > 0) performanceRatio = (Object.values(allActivityRecords[group.id]?.[activePartialForGroup]?.[studentId] || {}).filter(Boolean).length) / totalActivities;
                     } else if (c.name === 'Participación') {
-                        const totalClasses = Object.keys(attendance).length;
-                        if(totalClasses > 0) performanceRatio = (Object.values(participations).filter(p => p[studentId]).length) / totalClasses;
+                        const totalClasses = Object.keys(allAttendances[group.id]?.[activePartialForGroup] || {}).length;
+                        if(totalClasses > 0) performanceRatio = (Object.values(allParticipations[group.id]?.[activePartialForGroup] || {}).filter(p => p[studentId]).length) / totalClasses;
                     }
                 } else {
-                    const delivered = grades[studentId]?.[c.id]?.delivered ?? 0;
+                    const delivered = allGrades[group.id]?.[activePartialForGroup]?.[studentId]?.[c.id]?.delivered ?? 0;
                     if(c.expectedValue > 0) performanceRatio = delivered / c.expectedValue;
                 }
                 return { name: c.name, earned: performanceRatio * c.weight, weight: c.weight };
@@ -144,7 +139,7 @@ export default function StudentProfilePage() {
     } finally {
         setIsLoading(false);
     }
-  }, [student, groups, allObservations, allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, activePartials, studentId, toast, allAttendances, calculateFinalGrade]);
+  }, [student, groups, allObservations, allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, allAttendances, activePartials, studentId, toast, calculateFinalGrade]);
   
    const handleGenerateFeedback = async () => {
     if (!student || !studentStats) {
@@ -498,3 +493,5 @@ export default function StudentProfilePage() {
     </>
   );
 }
+
+    
