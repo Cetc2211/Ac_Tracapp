@@ -52,7 +52,9 @@ export default function GroupGradesPage() {
     allActivities,
     allAttendances,
     allParticipations,
-    allActivityRecords
+    allActivityRecords,
+    allCriteria,
+    allGrades
   } = useData();
 
   const { toast } = useToast();
@@ -94,7 +96,6 @@ export default function GroupGradesPage() {
       }
     }
     return calculatedGrades;
-  // The dependency array ensures this recalculates whenever the underlying data for the active partial/group changes.
   }, [activeGroup, activePartial, calculateFinalGrade, allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, allObservations, allAttendances]);
 
   const studentsInGroup = useMemo(() => {
