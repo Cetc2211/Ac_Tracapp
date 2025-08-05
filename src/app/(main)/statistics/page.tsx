@@ -21,7 +21,7 @@ import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useData } from '@/hooks/use-data';
-import type { Student, StudentObservation, EvaluationCriteria, Grades, ParticipationRecord, Activity, ActivityRecord } from '@/hooks/use-data';
+import type { Student, StudentObservation } from '@/hooks/use-data';
 
 
 type GroupStats = {
@@ -68,7 +68,6 @@ export default function StatisticsPage() {
         activityRecords,
         allObservations,
         allAttendances,
-        activePartials,
         allCriteria,
         allGrades,
         allParticipations,
@@ -82,13 +81,12 @@ export default function StatisticsPage() {
 
     const groupCalculations = useMemo(() => {
         return groups.map(group => {
-            const partial = activePartials[group.id] || '1';
-            const groupCriteria = allCriteria[`criteria_${group.id}_${partial}`] || [];
-            const groupGrades = allGrades[group.id]?.[partial] || {};
-            const groupParticipations = allParticipations[group.id]?.[partial] || {};
-            const groupAttendance = allAttendances[group.id]?.[partial] || {};
-            const groupActivities = allActivities[group.id]?.[partial] || [];
-            const groupActivityRecords = allActivityRecords[group.id]?.[partial] || {};
+            const groupCriteria = allCriteria[`criteria_${group.id}`] || [];
+            const groupGrades = allGrades[group.id] || {};
+            const groupParticipations = allParticipations[group.id] || {};
+            const groupAttendance = allAttendances[group.id] || {};
+            const groupActivities = allActivities[group.id] || [];
+            const groupActivityRecords = allActivityRecords[group.id] || {};
 
             const finalGrades = group.students.map(s => {
                 const studentObservations = allObservations[s.id] || [];
@@ -128,7 +126,7 @@ export default function StatisticsPage() {
             };
         });
 
-    }, [groups, calculateFinalGrade, getStudentRiskLevel, allObservations, activePartials, allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, allAttendances]);
+    }, [groups, calculateFinalGrade, getStudentRiskLevel, allObservations, allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, allAttendances]);
     
     useEffect(() => {
         setIsLoading(true);
@@ -242,7 +240,7 @@ export default function StatisticsPage() {
         <div>
           <h1 className="text-3xl font-bold">Estadísticas</h1>
           <p className="text-muted-foreground">
-            Analiza el rendimiento de tus grupos y estudiantes en el parcial activo.
+            Analiza el rendimiento de tus grupos y estudiantes.
           </p>
         </div>
       </div>
@@ -266,7 +264,7 @@ export default function StatisticsPage() {
                      <Card>
                         <CardHeader>
                         <CardTitle>Rendimiento por Grupo</CardTitle>
-                        <CardDescription>Comparativa de la calificación promedio final y la tasa de asistencia entre grupos (del parcial activo de cada uno).</CardDescription>
+                        <CardDescription>Comparativa de la calificación promedio final y la tasa de asistencia entre grupos.</CardDescription>
                         </CardHeader>
                         <CardContent>
                         <ChartContainer config={{}} className="min-h-[300px] w-full">
@@ -294,7 +292,7 @@ export default function StatisticsPage() {
                     <Card>
                         <CardHeader>
                         <CardTitle>Distribución de Riesgo por Grupo</CardTitle>
-                        <CardDescription>Comparativa del número de estudiantes en cada nivel de riesgo por grupo (del parcial activo de cada uno).</CardDescription>
+                        <CardDescription>Comparativa del número de estudiantes en cada nivel de riesgo por grupo.</CardDescription>
                         </CardHeader>
                         <CardContent>
                            <ChartContainer config={{}} className="min-h-[300px] w-full">

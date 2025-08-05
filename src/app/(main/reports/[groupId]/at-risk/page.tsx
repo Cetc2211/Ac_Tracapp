@@ -288,7 +288,7 @@ const AtRiskStudentCard = ({ studentData }: { studentData: StudentReportData }) 
 
 export default function AtRiskReportPage() {
   const { 
-      activeGroup, 
+      activeGroup,
       atRiskStudents, 
       calculateFinalGrade, 
       allObservations, 

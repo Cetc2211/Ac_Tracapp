@@ -22,7 +22,7 @@ import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useData } from '@/hooks/use-data';
-import type { Activity, ActivityRecord, EvaluationCriteria, Grades, ParticipationRecord } from '@/hooks/use-data';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type ReportSummary = {
     totalStudents: number;
@@ -45,7 +45,6 @@ export default function GroupReportPage() {
   const groupId = params.groupId as string;
   const { 
       groups,
-      activePartial,
       allObservations,
       allAttendances,
       allParticipations,
@@ -55,17 +54,20 @@ export default function GroupReportPage() {
       allActivityRecords,
       calculateFinalGrade,
       getStudentRiskLevel,
+      settings
   } = useData();
   
   const [summary, setSummary] = useState<ReportSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [institutionName, setInstitutionName] = useState('Academic Tracker');
-  const [institutionLogo, setInstitutionLogo] = useState('');
+  const [isClient, setIsClient] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   const group = useMemo(() => groups.find(g => g.id === groupId), [groups, groupId]);
-  const partial = useMemo(() => activePartial || '1', [activePartial]);
 
   useEffect(() => {
     if (!group) {
@@ -75,12 +77,12 @@ export default function GroupReportPage() {
 
     setIsLoading(true);
     try {
-      const criteria: EvaluationCriteria[] = allCriteria[`criteria_${group.id}_${partial}`] || [];
-      const grades: Grades = allGrades[group.id]?.[partial] || {};
-      const participations: ParticipationRecord = allParticipations[group.id]?.[partial] || {};
-      const attendance: ParticipationRecord = allAttendances[group.id]?.[partial] || {};
-      const activities: Activity[] = allActivities[group.id]?.[partial] || [];
-      const activityRecords: ActivityRecord = allActivityRecords[group.id]?.[partial] || {};
+      const criteria = allCriteria[`criteria_${group.id}`] || [];
+      const grades = allGrades[group.id] || {};
+      const participations = allParticipations[group.id] || {};
+      const attendance = allAttendances[group.id] || {};
+      const activities = allActivities[group.id] || [];
+      const activityRecords = allActivityRecords[group.id] || {};
       const observations = allObservations;
 
       let approved = 0;
@@ -152,17 +154,13 @@ export default function GroupReportPage() {
           highRiskCount: highRiskStudents,
           mediumRiskCount: mediumRiskStudents,
       });
-      
-      const appSettings = JSON.parse(localStorage.getItem('appSettings') || '{}');
-      setInstitutionName(appSettings.institutionName || 'Academic Tracker');
-      setInstitutionLogo(appSettings.logo || '');
 
     } catch (e) {
       console.error("Failed to generate report data", e);
     } finally {
       setIsLoading(false);
     }
-  }, [group, partial, calculateFinalGrade, getStudentRiskLevel, allCriteria, allGrades, allParticipations, allAttendances, allActivities, allActivityRecords, allObservations]);
+  }, [group, calculateFinalGrade, getStudentRiskLevel, allCriteria, allGrades, allParticipations, allAttendances, allActivities, allActivityRecords, allObservations]);
 
   const handleDownloadPdf = () => {
     const input = reportRef.current;
@@ -230,18 +228,18 @@ export default function GroupReportPage() {
         <header className="border-b pb-6 mb-6">
            <div className="flex justify-between items-start">
                 <div className="flex flex-col">
-                    <h1 className="text-2xl font-bold">{institutionName}</h1>
+                    <h1 className="text-2xl font-bold">{settings.institutionName}</h1>
                     <p className="text-lg text-muted-foreground">Informe de Rendimiento Académico Grupal</p>
                 </div>
-                 {institutionLogo && (
+                 {isClient && settings.logo ? (
                     <Image
-                        src={institutionLogo}
+                        src={settings.logo}
                         alt="Logo de la Institución"
                         width={80}
                         height={80}
                         className="object-contain"
                     />
-                 )}
+                 ): <Skeleton className="w-[80px] h-[80px]" /> }
            </div>
            <div className="pt-4 flex justify-between text-sm text-muted-foreground">
                 <div>
@@ -333,5 +331,3 @@ export default function GroupReportPage() {
     </div>
   );
 }
-
-    

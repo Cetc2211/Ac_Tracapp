@@ -32,7 +32,6 @@ import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { useData } from '@/hooks/use-data';
-import type { Activity, EvaluationCriteria, Grades, ParticipationRecord } from '@/hooks/use-data';
 
 
 export default function ReportsPage() {
@@ -47,14 +46,12 @@ export default function ReportsPage() {
     allObservations,
     calculateFinalGrade,
     groupAverages,
-    atRiskStudents,
-    activePartial
   } = useData();
 
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
   const quickStats = useMemo(() => {
-    if (!activeGroup || !activePartial) return null;
+    if (!activeGroup) return null;
 
     const studentCount = activeGroup.students.length;
     
@@ -74,7 +71,8 @@ export default function ReportsPage() {
 
     let approvedCount = 0;
     activeGroup.students.forEach(student => {
-        const finalGrade = calculateFinalGrade(student.id, activePartial, activeGroup.id);
+        const studentObservations = allObservations[student.id] || [];
+        const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords, studentObservations);
         if (finalGrade >= 70) approvedCount++;
     });
 
@@ -88,11 +86,11 @@ export default function ReportsPage() {
         totalAttendanceRecords: presentCount,
         criteriaCount: criteria.length,
     };
-  }, [activeGroup, activePartial, attendance, criteria, grades, participations, activities, activityRecords, calculateFinalGrade, allObservations, groupAverages]);
+  }, [activeGroup, attendance, criteria, grades, participations, activities, activityRecords, calculateFinalGrade, allObservations, groupAverages]);
 
 
   const handleDownloadCsv = () => {
-    if (!activeGroup || !activePartial) return;
+    if (!activeGroup) return;
 
     let csvContent = "data:text/csv;charset=utf-8,";
     const headers = ["ID Estudiante", "Nombre", ...criteria.map(c => `${c.name} (${c.weight}%)`), "Calificacion Final"];
@@ -100,11 +98,12 @@ export default function ReportsPage() {
 
     activeGroup.students.forEach(student => {
         const row = [student.id, student.name];
-        const finalGrade = calculateFinalGrade(student.id, activePartial!, activeGroup.id);
+        const studentObservations = allObservations[student.id] || [];
+        const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords, studentObservations);
         
         criteria.forEach(criterion => {
             let performanceRatio = 0;
-            if ((criterion.name === 'Portafolio' && criterion.isAutomated) || criterion.name === 'Actividades') {
+            if (criterion.name === 'Actividades' || criterion.name === 'Portafolio') {
                 const totalActivities = activities.length;
                 if (totalActivities > 0) {
                     const deliveredActivities = Object.values(activityRecords[student.id] || {}).filter(Boolean).length;
@@ -230,7 +229,7 @@ export default function ReportsPage() {
         </div>
          <Card>
             <CardHeader>
-                <CardTitle>Estadísticas Rápidas del Parcial</CardTitle>
+                <CardTitle>Estadísticas Rápidas</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
                 <div className="flex flex-col items-center gap-1">

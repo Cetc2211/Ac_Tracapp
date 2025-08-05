@@ -69,15 +69,8 @@ export default function MainLayoutClient({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { settings, activeGroup, activePartial } = useData();
+  const { settings, activeGroup } = useData();
   const [isClient, setIsClient] = useState(false);
-
-  const getPartialLabel = (partial: string | null) => {
-    if (partial === '1') return 'Primer Parcial';
-    if (partial === '2') return 'Segundo Parcial';
-    if (partial === '3') return 'Tercer Parcial';
-    return 'Parcial General';
-  }
   
   useEffect(() => {
     setIsClient(true);
@@ -114,11 +107,6 @@ export default function MainLayoutClient({
                         <Package className="h-4 w-4"/>
                         {activeGroup.subject}
                       </p>
-                      {activePartial && (
-                        <p className="text-sm text-sidebar-foreground/80 font-medium">
-                          {getPartialLabel(activePartial)}
-                        </p>
-                      )}
                   </div>
                   <Separator className="my-2" />
                 </>

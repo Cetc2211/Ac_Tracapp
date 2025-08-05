@@ -34,7 +34,6 @@ import {
 import { useData } from '@/hooks/use-data';
 import type { EvaluationCriteria } from '@/hooks/use-data';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { getPartialLabel } from '@/lib/utils';
 
 const nameOptions = ["Actividades", "Portafolio", "Participación", "Examen", "Proyecto Integrador", "Otros"];
 const weightOptions = ["10", "20", "30", "40", "50", "60", "70", "80", "90", "100", "Otros"];
@@ -42,7 +41,7 @@ const weightOptions = ["10", "20", "30", "40", "50", "60", "70", "80", "90", "10
 export default function GroupCriteriaPage() {
   const params = useParams();
   const groupId = params.groupId as string;
-  const { activeGroup, criteria, setCriteria, activePartial } = useData();
+  const { activeGroup, criteria, setCriteria } = useData();
 
   const [selectedName, setSelectedName] = useState('');
   const [customName, setCustomName] = useState('');
@@ -183,8 +182,6 @@ export default function GroupCriteriaPage() {
   const finalWeightForCheck = selectedWeight === 'Otros' ? customWeight : selectedWeight;
   const isAddButtonDisabled = !finalNameForCheck || !finalWeightForCheck || (!newCriterionValue && !isSelectedCriterionAutomated);
 
-  const partialLabel = getPartialLabel(activePartial);
-
 
   return (
     <div className="flex flex-col gap-6">
@@ -198,7 +195,7 @@ export default function GroupCriteriaPage() {
         <div>
           <h1 className="text-3xl font-bold">Criterios de Evaluación</h1>
           <p className="text-muted-foreground">
-            Gestiona los rubros para el grupo "{activeGroup.subject}" - {partialLabel}.
+            Gestiona los rubros para el grupo "{activeGroup.subject}".
           </p>
         </div>
       </div>

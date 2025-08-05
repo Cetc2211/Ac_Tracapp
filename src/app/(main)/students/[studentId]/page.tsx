@@ -15,7 +15,7 @@ import { Student, Group, StudentObservation } from '@/lib/placeholder-data';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import { Mail, User, Contact, ArrowLeft, Download, FileText, Loader2, Phone, Wand2, ListChecks } from 'lucide-react';
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -31,9 +31,9 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { WhatsAppDialog } from '@/components/whatsapp-dialog';
-import { Activity, ActivityRecord, useData } from '@/hooks/use-data';
+import { useData } from '@/hooks/use-data';
 import { Separator } from '@/components/ui/separator';
-import type { EvaluationCriteria, Grades, GlobalAttendanceRecord, ParticipationRecord, StudentStats } from '@/hooks/use-data';
+import type { EvaluationCriteria, Grades, ParticipationRecord, StudentStats } from '@/hooks/use-data';
 
 
 const WhatsAppIcon = () => (
@@ -59,8 +59,8 @@ export default function StudentProfilePage() {
   const studentId = params.studentId as string;
   const router = useRouter();
   
-  const { allStudents, groups, allObservations, allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, calculateFinalGrade, allAttendances, activePartials } = useData();
-  const student = useMemo(() => allStudents.find(s => s.id === studentId), [allStudents, studentId]);
+  const { students, groups, allObservations, allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, calculateFinalGrade, allAttendances } = useData();
+  const student = students.find(s => s.id === studentId);
 
   const [studentStats, setStudentStats] = useState<StudentStats | null>(null);
   const [observations, setObservations] = useState<StudentObservation[]>([]);
@@ -87,24 +87,26 @@ export default function StudentProfilePage() {
         const studentObservations: StudentObservation[] = allObservations[studentId] || [];
         
         studentGroups.forEach(group => {
-            const activePartialForGroup = activePartials[group.id] || '1';
+            const criteria = allCriteria[`criteria_${group.id}`] || [];
+            const grades = allGrades[group.id] || {};
+            const participations = allParticipations[group.id] || {};
+            const activities = allActivities[group.id] || [];
+            const activityRecords = allActivityRecords[group.id] || {};
             
-            const finalGrade = calculateFinalGrade(studentId, activePartialForGroup, group.id);
+            const finalGrade = calculateFinalGrade(studentId, criteria, grades, participations, activities, activityRecords, studentObservations);
 
-            const criteria: EvaluationCriteria[] = allCriteria[`criteria_${group.id}_${activePartialForGroup}`] || [];
-            
             const criteriaDetails = criteria.map(c => {
                 let performanceRatio = 0;
                 if (c.isAutomated) {
-                     if (c.name === 'Portafolio' || c.name === 'Actividades') {
-                        const totalActivities = allActivities[group.id]?.[activePartialForGroup]?.length || 0;
-                        if(totalActivities > 0) performanceRatio = (Object.values(allActivityRecords[group.id]?.[activePartialForGroup]?.[studentId] || {}).filter(Boolean).length) / totalActivities;
+                    if (c.name === 'Portafolio' || c.name === 'Actividades') {
+                        const totalActivities = allActivities[group.id]?.length || 0;
+                        if(totalActivities > 0) performanceRatio = (Object.values(allActivityRecords[group.id]?.[studentId] || {}).filter(Boolean).length) / totalActivities;
                     } else if (c.name === 'Participación') {
-                        const totalClasses = Object.keys(allAttendances[group.id]?.[activePartialForGroup] || {}).length;
-                        if(totalClasses > 0) performanceRatio = (Object.values(allParticipations[group.id]?.[activePartialForGroup] || {}).filter(p => p[studentId]).length) / totalClasses;
+                        const totalClasses = Object.keys(allAttendances[group.id] || {}).length;
+                        if(totalClasses > 0) performanceRatio = (Object.values(allParticipations[group.id] || {}).filter(p => p[studentId]).length) / totalClasses;
                     }
                 } else {
-                    const delivered = allGrades[group.id]?.[activePartialForGroup]?.[studentId]?.[c.id]?.delivered ?? 0;
+                    const delivered = allGrades[group.id]?.[studentId]?.[c.id]?.delivered ?? 0;
                     if(c.expectedValue > 0) performanceRatio = delivered / c.expectedValue;
                 }
                 return { name: c.name, earned: performanceRatio * c.weight, weight: c.weight };
@@ -116,12 +118,11 @@ export default function StudentProfilePage() {
 
         const attendanceStats = { p: 0, a: 0, total: 0 };
         for(const groupId in allAttendances){
-            for(const partialId in allAttendances[groupId]){
-                for(const date in allAttendances[groupId][partialId]){
-                    if(allAttendances[groupId][partialId][date][studentId] !== undefined){
-                        attendanceStats.total++;
-                        if(allAttendances[groupId][partialId][date][studentId]) attendanceStats.p++; else attendanceStats.a++;
-                    }
+            const groupAttendance = allAttendances[groupId] || {};
+            for(const date in groupAttendance){
+                if(groupAttendance[date][studentId] !== undefined){
+                    attendanceStats.total++;
+                    if(groupAttendance[date][studentId]) attendanceStats.p++; else attendanceStats.a++;
                 }
             }
         }
@@ -139,7 +140,7 @@ export default function StudentProfilePage() {
     } finally {
         setIsLoading(false);
     }
-  }, [student, groups, allObservations, allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, allAttendances, activePartials, studentId, toast, calculateFinalGrade]);
+  }, [student, groups, allObservations, allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, allAttendances, studentId, toast, calculateFinalGrade]);
   
    const handleGenerateFeedback = async () => {
     if (!student || !studentStats) {

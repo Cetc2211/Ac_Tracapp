@@ -34,12 +34,10 @@ import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useData } from '@/hooks/use-data';
 import type { Activity, ActivityRecord, GroupedActivities } from '@/hooks/use-data';
-import { getPartialLabel } from '@/lib/utils';
 
 export default function ActivitiesPage() {
   const { 
     activeGroup, 
-    activePartial, 
     activities, 
     activityRecords, 
     setActivities, 
@@ -78,7 +76,7 @@ export default function ActivitiesPage() {
       });
       return;
     }
-    if (!activeGroup || !activePartial) return;
+    if (!activeGroup) return;
 
     const newActivity: Activity = {
       id: `ACT-${Date.now()}`,
@@ -101,7 +99,7 @@ export default function ActivitiesPage() {
   };
   
   const handleRecordChange = (studentId: string, activityId: string, isDelivered: boolean) => {
-    if (!activeGroup || !activePartial) return;
+    if (!activeGroup) return;
 
     setActivityRecords(prev => {
         const newRecords = { ...prev };
@@ -112,8 +110,6 @@ export default function ActivitiesPage() {
         return newRecords;
     });
   };
-
-  const partialLabel = getPartialLabel(activePartial);
 
   return (
     <div className="flex flex-col gap-6">
@@ -163,7 +159,7 @@ export default function ActivitiesPage() {
                 <h1 className="text-3xl font-bold">Registro de Actividades</h1>
                 <p className="text-muted-foreground">
                     {activeGroup 
-                        ? `Grupo: ${activeGroup.subject} - ${partialLabel}`
+                        ? `Grupo: ${activeGroup.subject}`
                         : 'Selecciona un grupo para registrar actividades.'
                     }
                 </p>
@@ -253,7 +249,7 @@ export default function ActivitiesPage() {
                     {activities.length === 0 && studentsToDisplay.length > 0 && (
                         <TableRow>
                             <TableCell colSpan={1} className="text-center h-24">
-                            Aún no hay actividades registradas para este parcial. <br/> Haz clic en "Registrar Nueva Actividad" para empezar.
+                            Aún no hay actividades registradas. <br/> Haz clic en "Registrar Nueva Actividad" para empezar.
                             </TableCell>
                         </TableRow>
                     )}
