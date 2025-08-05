@@ -300,7 +300,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         const partialGrades = allGrades[groupId]?.[partial] || {};
         const partialParticipations = allParticipations[groupId]?.[partial] || {};
         const partialActivities = allActivities[groupId]?.[partial] || [];
-        const partialActivityRecords = allActivityRecords[groupId]?.[partial] || {};
+        const partialActivityRecords = allActivityRecords[groupId]?.[partial]?.[studentId] || {};
         const partialAttendance = allAttendances[groupId]?.[partial] || {};
         const studentObservations = allObservations[studentId] || [];
 
@@ -314,7 +314,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                     if (criterion.name === 'Actividades') {
                         const totalActivities = partialActivities.length;
                         if (totalActivities > 0) {
-                            const deliveredActivities = Object.values(partialActivityRecords[studentId] || {}).filter(Boolean).length;
+                            const deliveredActivities = Object.values(partialActivityRecords).filter(Boolean).length;
                             performanceRatio = deliveredActivities / totalActivities;
                         }
                     } else if (criterion.name === 'Portafolio') {
@@ -679,5 +679,3 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
-
-    

@@ -46,13 +46,13 @@ export default function GroupGradesPage() {
     activePartial,
     criteria, 
     grades, 
-    participations, 
-    allActivities,
-    activityRecords,
-    allObservations,
-    attendance,
     setGrades,
-    calculateFinalGrade
+    calculateFinalGrade,
+    allObservations,
+    allActivities,
+    allAttendances,
+    allParticipations,
+    activityRecords
   } = useData();
 
   const { toast } = useToast();
@@ -94,7 +94,7 @@ export default function GroupGradesPage() {
       }
     }
     return calculatedGrades;
-  }, [activeGroup, activePartial, calculateFinalGrade, criteria, grades, participations, allActivities, activityRecords, allObservations, attendance]);
+  }, [activeGroup, activePartial, calculateFinalGrade, criteria, grades, allParticipations, allActivities, activityRecords, allObservations, allAttendances]);
 
   const studentsInGroup = useMemo(() => {
       if (!activeGroup || !activeGroup.students) return [];
@@ -109,18 +109,28 @@ export default function GroupGradesPage() {
 
   const getPerformanceDetail = (studentId: string, criterion: EvaluationCriteria) => {
     const activitiesForPartial = allActivities[activeGroup.id]?.[activePartial] || [];
+    const attendanceForPartial = allAttendances[activeGroup.id]?.[activePartial] || {};
+    const participationsForPartial = allParticipations[activeGroup.id]?.[activePartial] || {};
+    const activityRecordsForPartial = activityRecords[studentId] || {};
+
+
     if (criterion.name === 'Actividades') {
         const total = activitiesForPartial.length;
-        const delivered = Object.values(activityRecords[studentId] || {}).filter(Boolean).length;
+        if (studentId === 'none') return `${total} esp.`;
+        const delivered = Object.keys(activityRecordsForPartial).filter(activityId => {
+            const activityExists = activitiesForPartial.some(act => act.id === activityId);
+            return activityExists && activityRecordsForPartial[activityId];
+        }).length;
         return `${delivered} de ${total}`;
     }
     if (criterion.name === 'Portafolio') {
         const total = activitiesForPartial.length;
-        return `de ${total} programadas`;
+        return `${total} programadas`;
     }
     if (criterion.name === 'Participación') {
-        const total = Object.keys(attendance).length;
-        const participated = Object.values(participations).filter(day => day[studentId]).length;
+        const total = Object.keys(attendanceForPartial).length;
+        if (studentId === 'none') return `${total} clases`;
+        const participated = Object.values(participationsForPartial).filter(day => day[studentId]).length;
         return `${participated} de ${total}`;
     }
     return `${criterion.expectedValue} esp.`;
@@ -129,11 +139,18 @@ export default function GroupGradesPage() {
   const getEarnedPercentage = (studentId: string, criterion: EvaluationCriteria) => {
     let performanceRatio = 0;
     const activitiesForPartial = allActivities[activeGroup.id]?.[activePartial] || [];
+    const attendanceForPartial = allAttendances[activeGroup.id]?.[activePartial] || {};
+    const participationsForPartial = allParticipations[activeGroup.id]?.[activePartial] || {};
+    const activityRecordsForPartial = activityRecords[studentId] || {};
+
 
     if (criterion.name === 'Actividades') {
         const total = activitiesForPartial.length;
         if (total > 0) {
-            const delivered = Object.values(activityRecords[studentId] || {}).filter(Boolean).length;
+            const delivered = Object.keys(activityRecordsForPartial).filter(activityId => {
+                const activityExists = activitiesForPartial.some(act => act.id === activityId);
+                return activityExists && activityRecordsForPartial[activityId];
+            }).length;
             performanceRatio = delivered / total;
         }
     } else if (criterion.name === 'Portafolio') {
@@ -143,9 +160,9 @@ export default function GroupGradesPage() {
             performanceRatio = delivered / total;
         }
     } else if (criterion.name === 'Participación') {
-        const total = Object.keys(attendance).length;
+        const total = Object.keys(attendanceForPartial).length;
         if (total > 0) {
-            const participated = Object.values(participations).filter(day => day[studentId]).length;
+            const participated = Object.values(participationsForPartial).filter(day => day[studentId]).length;
             performanceRatio = participated / total;
         }
     } else {
