@@ -33,7 +33,6 @@ import {
 } from '@/components/ui/select';
 import { useData } from '@/hooks/use-data';
 import type { EvaluationCriteria } from '@/hooks/use-data';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 const nameOptions = ["Actividades", "Portafolio", "Participación", "Examen", "Proyecto Integrador", "Otros"];
 const weightOptions = ["10", "20", "30", "40", "50", "60", "70", "80", "90", "100", "Otros"];
@@ -53,14 +52,11 @@ export default function GroupCriteriaPage() {
   const [editingCriterion, setEditingCriterion] = useState<EvaluationCriteria | null>(null);
 
   const { toast } = useToast();
-
-  const [isPortfolioAutomated, setIsPortfolioAutomated] = useState(true);
   
   const isSelectedCriterionAutomated = useMemo(() => {
     const name = selectedName === 'Otros' ? customName : selectedName;
-    if (name === 'Portafolio') return isPortfolioAutomated;
-    return name === 'Participación' || name === 'Actividades';
-  }, [selectedName, customName, isPortfolioAutomated]);
+    return name === 'Participación' || name === 'Actividades' || name === 'Portafolio';
+  }, [selectedName, customName]);
 
   useEffect(() => {
     if(isSelectedCriterionAutomated) {
@@ -102,7 +98,6 @@ export default function GroupCriteriaPage() {
         name: finalName,
         weight: weight,
         expectedValue: isSelectedCriterionAutomated ? 0 : expectedValue,
-        isAutomated: isSelectedCriterionAutomated,
     };
 
     setCriteria([...criteria, newCriterion]);
@@ -111,7 +106,6 @@ export default function GroupCriteriaPage() {
     setSelectedWeight('');
     setCustomWeight('');
     setNewCriterionValue('');
-    setIsPortfolioAutomated(true);
     toast({ title: 'Criterio Agregado', description: `Se agregó "${newCriterion.name}" a la lista.`});
   };
   
@@ -131,7 +125,7 @@ export default function GroupCriteriaPage() {
 
     const weight = editingCriterion.weight;
     const expectedValue = editingCriterion.expectedValue;
-    const isAutomated = editingCriterion.name === 'Participación' || editingCriterion.name === 'Actividades' || (editingCriterion.name === 'Portafolio' && editingCriterion.isAutomated);
+    const isAutomated = editingCriterion.name === 'Participación' || editingCriterion.name === 'Actividades' || editingCriterion.name === 'Portafolio';
 
      if (!editingCriterion.name.trim() || isNaN(weight) || weight <= 0 || weight > 100 || (isNaN(expectedValue) && !isAutomated) || (!isAutomated && expectedValue < 0) ) {
         toast({
@@ -273,25 +267,6 @@ export default function GroupCriteriaPage() {
                     <span className="sr-only">Agregar</span>
                 </Button>
             </div>
-            {selectedName === 'Portafolio' && (
-                <div className="p-3 bg-muted/50 rounded-md">
-                    <Label className="font-medium">Tipo de Cálculo para Portafolio</Label>
-                    <RadioGroup 
-                        value={isPortfolioAutomated ? 'auto' : 'manual'} 
-                        onValueChange={(value) => setIsPortfolioAutomated(value === 'auto')} 
-                        className="flex gap-4 mt-2"
-                    >
-                        <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="auto" id="auto"/>
-                            <Label htmlFor="auto" className="font-normal">Automático (basado en entregas)</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="manual" id="manual" />
-                            <Label htmlFor="manual" className="font-normal">Manual (definir valor esperado)</Label>
-                        </div>
-                    </RadioGroup>
-                </div>
-            )}
           </div>
           
           <h3 className="text-lg font-medium mb-2 mt-6">Lista de Criterios</h3>
@@ -301,8 +276,8 @@ export default function GroupCriteriaPage() {
                     <div>
                         <span className="font-medium">{criterion.name}</span>
                         <p className="text-xs text-muted-foreground">
-                          {criterion.name === 'Portafolio' && criterion.isAutomated ? 'Cálculo Automático' 
-                            : (criterion.name === 'Participación' || criterion.name === 'Actividades') ? 'Cálculo Automático'
+                          {criterion.name === 'Portafolio' || criterion.name === 'Actividades' || criterion.name === 'Participación'
+                            ? 'Cálculo Automático'
                             : `${criterion.expectedValue} es el valor esperado`
                           }
                         </p>
@@ -373,27 +348,6 @@ export default function GroupCriteriaPage() {
                   className="col-span-3"
                 />
               </div>
-              {editingCriterion.name === 'Portafolio' && (
-                <div className="grid grid-cols-4 items-center gap-4">
-                    <Label className="text-right">Cálculo</Label>
-                    <div className="col-span-3">
-                        <RadioGroup 
-                            value={editingCriterion.isAutomated ? 'auto' : 'manual'} 
-                            onValueChange={(v) => setEditingCriterion(prev => prev ? {...prev, isAutomated: v === 'auto'} : null)}
-                            className="flex gap-4"
-                        >
-                            <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="auto" id="edit-auto"/>
-                                <Label htmlFor="edit-auto" className="font-normal">Automático</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="manual" id="edit-manual" />
-                                <Label htmlFor="edit-manual" className="font-normal">Manual</Label>
-                            </div>
-                        </RadioGroup>
-                    </div>
-                </div>
-              )}
                <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="edit-value" className="text-right">
                   Valor Esperado
@@ -404,8 +358,8 @@ export default function GroupCriteriaPage() {
                   value={editingCriterion.expectedValue}
                   onChange={(e) => setEditingCriterion({ ...editingCriterion, expectedValue: parseInt(e.target.value, 10) || 0 })}
                   className="col-span-3"
-                  disabled={editingCriterion.name === 'Participación' || editingCriterion.name === 'Actividades' || (editingCriterion.name === 'Portafolio' && editingCriterion.isAutomated)}
-                  placeholder={editingCriterion.isAutomated ? 'Automático' : ''}
+                  disabled={editingCriterion.name === 'Participación' || editingCriterion.name === 'Actividades' || editingCriterion.name === 'Portafolio'}
+                  placeholder={(editingCriterion.name === 'Participación' || editingCriterion.name === 'Actividades' || editingCriterion.name === 'Portafolio') ? 'Automático' : ''}
                 />
               </div>
             </div>

@@ -27,6 +27,7 @@ import { cn } from '@/lib/utils';
 import { useData } from '@/hooks/use-data';
 import { useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
+import type { EvaluationCriteria } from '@/hooks/use-data';
 
 const criterionColors = [
   'bg-chart-1/10',
@@ -121,7 +122,7 @@ export default function GroupGradesPage() {
   const getEarnedPercentage = (studentId: string, criterion: EvaluationCriteria) => {
     let performanceRatio = 0;
     
-    if (criterion.name === 'Actividades' || (criterion.name === 'Portafolio' && criterion.isAutomated)) {
+    if (criterion.name === 'Actividades' || criterion.name === 'Portafolio') {
         const totalActivities = activities.length;
         if(totalActivities > 0) {
             const deliveredActivities = Object.values(activityRecords[studentId] || {}).filter(Boolean).length;
@@ -144,7 +145,7 @@ export default function GroupGradesPage() {
   };
   
   const getExpectedValueLabel = (criterion: EvaluationCriteria) => {
-    if (criterion.name === 'Actividades' || (criterion.name === 'Portafolio' && criterion.isAutomated)) {
+    if (criterion.name === 'Actividades' || criterion.name === 'Portafolio') {
       return `${activities.length} esp.`;
     }
     if (criterion.name === 'Participación') {
@@ -229,7 +230,7 @@ export default function GroupGradesPage() {
                       {student.name}
                     </TableCell>
                     {criteria.map((criterion, index) => {
-                      const isAutomated = criterion.isAutomated;
+                      const isAutomated = criterion.name === 'Actividades' || criterion.name === 'Participación' || criterion.name === 'Portafolio';
                       const earnedPercentage = getEarnedPercentage(student.id, criterion);
 
                       return (
@@ -292,5 +293,3 @@ export default function GroupGradesPage() {
     </div>
   );
 }
-
-    
