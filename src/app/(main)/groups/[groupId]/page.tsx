@@ -626,10 +626,12 @@ export default function GroupDetailsPage() {
                             <div>
                                 <span className="font-medium">{criterion.name}</span>
                                 <p className="text-xs text-muted-foreground">
-                                {criterion.isAutomated
-                                    ? `Cálculo Automático`
+                                  {criterion.name === 'Actividades' || criterion.name === 'Portafolio'
+                                    ? 'Cálculo por entregas'
+                                    : criterion.name === 'Participación' 
+                                    ? 'Cálculo por asistencia'
                                     : `${criterion.expectedValue} es el valor esperado`
-                                }
+                                  }
                                 </p>
                             </div>
                             <Badge variant="secondary">{criterion.weight}%</Badge>
