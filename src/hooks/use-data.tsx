@@ -252,7 +252,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             for (const criterion of criteria) {
                 let performanceRatio = 0;
 
-                if (criterion.name === 'Actividades' || criterion.name === 'Portafolio') {
+                 if (criterion.name === 'Actividades' || (criterion.name === 'Portafolio' && criterion.isAutomated)) {
                     const totalActivities = activities.length;
                     if (totalActivities > 0) {
                         const deliveredActivities = Object.values(activityRecords[studentId] || {}).filter(Boolean).length;
@@ -599,3 +599,5 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
+
+    

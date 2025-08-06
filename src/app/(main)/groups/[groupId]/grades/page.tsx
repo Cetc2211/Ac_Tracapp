@@ -103,15 +103,11 @@ export default function GroupGradesPage() {
   }
 
   const getPerformanceDetail = (studentId: string, criterionName: string) => {
-    if (criterionName === 'Actividades') {
+    if (criterionName === 'Actividades' || criterionName === 'Portafolio') {
         const total = activities.length;
         if (studentId === 'none') return `${total} esp.`;
         const delivered = Object.values(activityRecords[studentId] || {}).filter(Boolean).length;
         return `${delivered} de ${total}`;
-    }
-    if (criterionName === 'Portafolio') {
-        const total = activities.length;
-        return `${total} programadas`;
     }
     if (criterionName === 'Participación') {
         const total = Object.keys(participations).length;
@@ -122,29 +118,40 @@ export default function GroupGradesPage() {
     return "";
   }
 
-  const getEarnedPercentage = (studentId: string, criterionName: string, criterionWeight: number, criterionExpectedValue: number) => {
+  const getEarnedPercentage = (studentId: string, criterion: EvaluationCriteria) => {
     let performanceRatio = 0;
-    if (criterionName === 'Actividades' || criterionName === 'Portafolio') {
+    
+    if (criterion.name === 'Actividades' || (criterion.name === 'Portafolio' && criterion.isAutomated)) {
         const totalActivities = activities.length;
         if(totalActivities > 0) {
             const deliveredActivities = Object.values(activityRecords[studentId] || {}).filter(Boolean).length;
             performanceRatio = deliveredActivities / totalActivities;
         }
-    } else if (criterionName === 'Participación') {
+    } else if (criterion.name === 'Participación') {
         const totalParticipations = Object.keys(participations).length;
         if(totalParticipations > 0) {
             const studentParticipations = Object.values(participations).filter(p => p[studentId]).length;
             performanceRatio = studentParticipations / totalParticipations;
         }
     } else {
-        const delivered = grades[studentId]?.[criteria.find(c => c.name === criterionName)!.id]?.delivered ?? 0;
-        const expected = criterionExpectedValue;
+        const delivered = grades[studentId]?.[criterion.id]?.delivered ?? 0;
+        const expected = criterion.expectedValue;
         if (expected > 0) {
             performanceRatio = delivered / expected;
         }
     }
-    return performanceRatio * criterionWeight;
+    return performanceRatio * criterion.weight;
   };
+  
+  const getExpectedValueLabel = (criterion: EvaluationCriteria) => {
+    if (criterion.name === 'Actividades' || (criterion.name === 'Portafolio' && criterion.isAutomated)) {
+      return `${activities.length} esp.`;
+    }
+    if (criterion.name === 'Participación') {
+      return `${Object.keys(participations).length} clases`;
+    }
+    return `${criterion.expectedValue} esp.`;
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -180,7 +187,7 @@ export default function GroupGradesPage() {
                     <TableHead key={c.id} className={cn("text-center min-w-[250px] align-top", criterionColors[index % criterionColors.length])}>
                       <div className='font-bold'>{c.name}</div>
                       <div className="font-normal text-muted-foreground">
-                        ({c.weight}%, {(c.name === 'Actividades' || c.name === 'Participación') ? getPerformanceDetail('none', c.name) : `${c.expectedValue} esp.`})
+                        ({c.weight}%, {getExpectedValueLabel(c)})
                       </div>
                     </TableHead>
                   ))}
@@ -222,9 +229,8 @@ export default function GroupGradesPage() {
                       {student.name}
                     </TableCell>
                     {criteria.map((criterion, index) => {
-                      const isAutomated = criterion.name === 'Actividades' || criterion.name === 'Participación';
-                      const isPortfolio = criterion.name === 'Portafolio';
-                      const earnedPercentage = getEarnedPercentage(student.id, criterion.name, criterion.weight, criterion.expectedValue);
+                      const isAutomated = criterion.isAutomated;
+                      const earnedPercentage = getEarnedPercentage(student.id, criterion);
 
                       return (
                       <TableCell key={criterion.id} className={cn("text-center", criterionColors[index % criterionColors.length])}>
@@ -286,3 +292,5 @@ export default function GroupGradesPage() {
     </div>
   );
 }
+
+    
