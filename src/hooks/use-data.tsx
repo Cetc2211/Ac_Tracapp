@@ -214,6 +214,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         const participationsStore: {[key: string]: ParticipationRecord} = {};
         const activitiesStore: {[key: string]: Activity[]} = {};
         const activityRecordsStore: {[key: string]: ActivityRecord} = {};
+        const observationsStore: {[studentId: string]: StudentObservation[]} = {};
         
         for (const group of loadedGroups) {
           for (const partial of partials) {
@@ -236,14 +237,18 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             activityRecordsStore[activityRecordsKey] = loadFromLocalStorage(activityRecordsKey, {});
           }
         }
+
+        for (const student of loadedStudents) {
+            observationsStore[student.id] = loadFromLocalStorage(`observations_${student.id}`, []);
+        }
+
         setAllCriteria(criteriaStore);
         setAllGrades(gradesStore);
         setAllAttendances(attendancesStore);
         setAllParticipations(participationsStore);
         setAllActivities(activitiesStore);
         setAllActivityRecords(activityRecordsStore);
-        
-        setAllObservations({});
+        setAllObservations(observationsStore);
 
     }, []);
 
@@ -256,9 +261,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
       activityRecords: ActivityRecord,
       studentObservationsParam?: StudentObservation[]
     ): number => {
-        if (!criteria || criteria.length === 0) {
-            return 0;
-        }
+        if (!criteria) return 0;
+
         let finalGrade = 0;
         
         for (const criterion of criteria) {
@@ -289,8 +293,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         const studentObservations = studentObservationsParam ?? allObservations[studentId] ?? [];
         const merits = studentObservations.filter(o => o.type === 'Mérito').length;
         const demerits = studentObservations.filter(o => o.type === 'Demérito').length;
-        finalGrade += (merits * 1);
-        finalGrade -= (demerits * 1);
+        finalGrade += merits;
+        finalGrade -= demerits;
 
         return Math.max(0, Math.min(100, finalGrade));
     }, [allObservations]);
