@@ -101,7 +101,7 @@ export default function GroupDetailsPage() {
   
   const isPartialClosed = useMemo(() => {
     if (!activeGroup || !activePartial) return true;
-    return activeGroup.closedPartials.includes(activePartial);
+    return activeGroup.closedPartials && activeGroup.closedPartials.includes(activePartial);
   }, [activeGroup, activePartial]);
 
 
@@ -674,7 +674,7 @@ export default function GroupDetailsPage() {
                                 <span className="font-medium">{criterion.name}</span>
                                 <p className="text-xs text-muted-foreground">
                                   {criterion.name === 'Portafolio' || criterion.name === 'Actividades' 
-                                    ? 'Cálculo por entregas'
+                                    ? 'Cálculo Automático'
                                     : criterion.name === 'Participación' 
                                     ? 'Cálculo por asistencia'
                                     : `${criterion.expectedValue} es el valor esperado`
