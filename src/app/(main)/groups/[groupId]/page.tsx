@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Student, Group, StudentObservation } from '@/lib/placeholder-data';
+import { Student, Group, StudentObservation, PartialId } from '@/lib/placeholder-data';
 import { notFound, useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -91,6 +91,7 @@ export default function GroupDetailsPage() {
   const [bulkTutorNames, setBulkTutorNames] = useState('');
   const [bulkTutorPhones, setBulkTutorPhones] = useState('');
 
+
   const [isLoading, setIsLoading] = useState(false);
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -98,7 +99,11 @@ export default function GroupDetailsPage() {
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   
-  const isPartialClosed = activeGroup && activePartial ? activeGroup.closedPartials.includes(activePartial) : true;
+  const isPartialClosed = useMemo(() => {
+    if (!activeGroup || !activePartial) return true;
+    return activeGroup.closedPartials.includes(activePartial);
+  }, [activeGroup, activePartial]);
+
 
   const studentRiskLevels = useMemo(() => {
     if (!activeGroup) return {};
@@ -381,7 +386,7 @@ export default function GroupDetailsPage() {
 
        <Card>
         <CardHeader>
-          <Tabs value={activePartial || 'p1'} onValueChange={(val) => setActivePartialForGroup(activeGroup.id, val as 'p1'|'p2'|'p3')} className="w-full">
+          <Tabs value={activePartial || 'p1'} onValueChange={(val) => setActivePartialForGroup(activeGroup.id, val as PartialId)} className="w-full">
             <div className="flex items-center justify-between">
               <TabsList>
                 <TabsTrigger value="p1">Primer Parcial</TabsTrigger>
