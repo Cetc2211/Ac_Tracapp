@@ -22,7 +22,6 @@ import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useData } from '@/hooks/use-data';
-import type { Activity, ActivityRecord, EvaluationCriteria, Grades, ParticipationRecord } from '@/hooks/use-data';
 import { Skeleton } from '@/components/ui/skeleton';
 
 type ReportSummary = {
@@ -46,7 +45,6 @@ export default function GroupReportPage() {
   const groupId = params.groupId as string;
   const { 
       groups,
-      activePartial,
       allObservations,
       allAttendances,
       allParticipations,
@@ -70,10 +68,6 @@ export default function GroupReportPage() {
   }, []);
 
   const group = useMemo(() => groups.find(g => g.id === groupId), [groups, groupId]);
-  const partial = useMemo(() => {
-    if (!group || !activePartial) return '1';
-    return activePartial;
-  }, [group, activePartial]);
 
   useEffect(() => {
     if (!group) {
@@ -83,12 +77,12 @@ export default function GroupReportPage() {
 
     setIsLoading(true);
     try {
-      const criteria: EvaluationCriteria[] = allCriteria[`criteria_${group.id}_${partial}`] || [];
-      const grades: Grades = allGrades[group.id]?.[partial] || {};
-      const participations: ParticipationRecord = allParticipations[group.id]?.[partial] || {};
-      const attendance: ParticipationRecord = allAttendances[group.id]?.[partial] || {};
-      const activities: Activity[] = allActivities[group.id]?.[partial] || [];
-      const activityRecords: ActivityRecord = allActivityRecords[group.id]?.[partial] || {};
+      const criteria = allCriteria[`criteria_${group.id}`] || [];
+      const grades = allGrades[group.id] || {};
+      const participations = allParticipations[group.id] || {};
+      const attendance = allAttendances[group.id] || {};
+      const activities = allActivities[group.id] || [];
+      const activityRecords = allActivityRecords[group.id] || {};
       const observations = allObservations;
 
       let approved = 0;
@@ -107,7 +101,8 @@ export default function GroupReportPage() {
 
       group.students.forEach(student => {
         const studentObservations: StudentObservation[] = observations[student.id] || [];
-        const finalGrade = calculateFinalGrade(student.id, partial, group.id);
+        const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords, studentObservations);
+        
         totalGroupGrade += finalGrade;
         if (finalGrade >= 70) approved++;
 
@@ -166,7 +161,7 @@ export default function GroupReportPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [group, partial, calculateFinalGrade, getStudentRiskLevel, allCriteria, allGrades, allParticipations, allAttendances, allActivities, allActivityRecords, allObservations]);
+  }, [group, calculateFinalGrade, getStudentRiskLevel, allCriteria, allGrades, allParticipations, allAttendances, allActivities, allActivityRecords, allObservations]);
 
   const handleDownloadPdf = () => {
     const input = reportRef.current;
@@ -337,3 +332,5 @@ export default function GroupReportPage() {
     </div>
   );
 }
+
+    
