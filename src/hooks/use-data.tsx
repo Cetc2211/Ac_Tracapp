@@ -309,32 +309,38 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     const criteria = useMemo(() => {
         if (!activeGroupId || !activePartial) return [];
-        return allCriteria[getPartialDataKey('criteria', activeGroupId, activePartial)] || [];
+        const key = getPartialDataKey('criteria', activeGroupId, activePartial);
+        return allCriteria[key] || [];
     }, [activeGroupId, activePartial, allCriteria]);
 
     const grades = useMemo(() => {
         if (!activeGroupId || !activePartial) return {};
-        return allGrades[getPartialDataKey('grades', activeGroupId, activePartial)] || {};
+        const key = getPartialDataKey('grades', activeGroupId, activePartial);
+        return allGrades[key] || {};
     }, [activeGroupId, activePartial, allGrades]);
 
     const attendance = useMemo(() => {
         if (!activeGroupId || !activePartial) return {};
-        return allAttendances[getPartialDataKey('attendance', activeGroupId, activePartial)] || {};
+        const key = getPartialDataKey('attendance', activeGroupId, activePartial);
+        return allAttendances[key] || {};
     }, [activeGroupId, activePartial, allAttendances]);
 
     const participations = useMemo(() => {
         if (!activeGroupId || !activePartial) return {};
-        return allParticipations[getPartialDataKey('participations', activeGroupId, activePartial)] || {};
+        const key = getPartialDataKey('participations', activeGroupId, activePartial);
+        return allParticipations[key] || {};
     }, [activeGroupId, activePartial, allParticipations]);
     
     const activities = useMemo(() => {
         if (!activeGroupId || !activePartial) return [];
-        return allActivities[getPartialDataKey('activities', activeGroupId, activePartial)] || [];
+        const key = getPartialDataKey('activities', activeGroupId, activePartial);
+        return allActivities[key] || [];
     }, [activeGroupId, activePartial, allActivities]);
     
     const activityRecords = useMemo(() => {
         if (!activeGroupId || !activePartial) return {};
-        return allActivityRecords[getPartialDataKey('activityRecords', activeGroupId, activePartial)] || {};
+        const key = getPartialDataKey('activityRecords', activeGroupId, activePartial);
+        return allActivityRecords[key] || {};
     }, [activeGroupId, activePartial, allActivityRecords]);
     
     const observations = useMemo(() => {
