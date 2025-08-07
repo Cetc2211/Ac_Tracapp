@@ -134,7 +134,7 @@ export default function StatisticsPage() {
 
         if (activeGroup) {
             let approved = 0, failed = 0;
-            let present = 0, absent = 0, late = 0;
+            let present = 0, absent = 0;
             let observationCount = 0, canalizationCount = 0, followUpCount = 0;
             const studentGrades: {student: Student, grade: number}[] = [];
             const riskDistribution = { low: 0, medium: 0, high: 0 };
@@ -165,13 +165,15 @@ export default function StatisticsPage() {
                     else if (participationRate <= 80) participationDistribution[3].students++;
                     else participationDistribution[4].students++;
                 } else if(activeGroup.students.length > 0) {
-                    participationDistribution[0].students = activeGroup.students.length;
+                     // If no participation days, all students have 0% participation
+                     participationDistribution[0].students = activeGroup.students.length;
                 }
             }
-             Object.values(attendance).forEach(dailyRecord => {
-                Object.values(dailyRecord).forEach(status => {
-                    if(status) present++; else absent++;
-                })
+            
+            Object.values(attendance).forEach(dailyRecord => {
+                for (const studentId in dailyRecord) {
+                    if (dailyRecord[studentId]) present++; else absent++;
+                }
             });
 
             studentGrades.sort((a,b) => b.grade - a.grade);
