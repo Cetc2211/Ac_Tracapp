@@ -214,8 +214,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         const participationsStore: {[key: string]: ParticipationRecord} = {};
         const activitiesStore: {[key: string]: Activity[]} = {};
         const activityRecordsStore: {[key: string]: ActivityRecord} = {};
-        const observationsStore: {[studentId: string]: StudentObservation[]} = {};
-
+        
         for (const group of loadedGroups) {
           for (const partial of partials) {
             const criteriaKey = getPartialDataKey('criteria', group.id, partial);
@@ -244,10 +243,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         setAllActivities(activitiesStore);
         setAllActivityRecords(activityRecordsStore);
         
-        for (const student of loadedStudents) {
-            observationsStore[student.id] = loadFromLocalStorage(`observations_${student.id}`, []);
-        }
-        setAllObservations(observationsStore);
+        // This ensures observations start fresh, ignoring localStorage.
+        setAllObservations({});
 
     }, []);
 
@@ -554,6 +551,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
                 for(const partial of partials) {
                     const groupCriteria = allCriteria[getPartialDataKey('criteria', group.id, partial)] || [];
+                    if(groupCriteria.length === 0) continue; // Don't evaluate risk if no criteria
                     const groupGrades = allGrades[getPartialDataKey('grades', group.id, partial)] || {};
                     const groupParticipations = allParticipations[getPartialDataKey('participations', group.id, partial)] || {};
                     const groupAttendance = allAttendances[getPartialDataKey('attendance', group.id, partial)] || {};
