@@ -41,6 +41,13 @@ export type Activity = {
   programmedDate: string; // YYYY-MM-DD
 };
 
+export type ActivityRecord = {
+    [studentId: string]: {
+        [activityId: string]: boolean;
+    };
+};
+
+
 export type GroupedActivities = {
   [dueDate: string]: Activity[];
 };
@@ -238,17 +245,13 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
           }
         }
 
-        for (const student of loadedStudents) {
-            observationsStore[student.id] = loadFromLocalStorage(`observations_${student.id}`, []);
-        }
+        // Initialize all observations as an empty object to start fresh
+        setAllObservations({});
+        // If you need to clear localStorage for observations for all students:
+        // loadedStudents.forEach(student => {
+        //     localStorage.removeItem(`observations_${student.id}`);
+        // });
 
-        setAllCriteria(criteriaStore);
-        setAllGrades(gradesStore);
-        setAllAttendances(attendancesStore);
-        setAllParticipations(participationsStore);
-        setAllActivities(activitiesStore);
-        setAllActivityRecords(activityRecordsStore);
-        setAllObservations(observationsStore);
 
     }, []);
 
@@ -261,7 +264,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
       activityRecords: ActivityRecord,
       studentObservationsParam?: StudentObservation[]
     ): number => {
-        if (!criteria) return 0;
+        if (!criteria || criteria.length === 0) return 0;
 
         let finalGrade = 0;
         
@@ -519,9 +522,9 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     // --- GLOBAL CALCULATIONS ---
     const getStudentRiskLevel = useCallback((finalGrade: number, attendance: AttendanceRecord, studentId: string): CalculatedRisk => {
         let absences = 0;
-        const totalDays = Object.keys(attendance).filter(date => attendance[date].hasOwnProperty(studentId)).length;
+        const totalDaysForStudent = Object.keys(attendance).filter(date => attendance[date].hasOwnProperty(studentId)).length;
         
-        if (totalDays > 0) {
+        if (totalDaysForStudent > 0) {
             Object.keys(attendance).forEach(date => {
                 if (attendance[date][studentId] === false) {
                     absences++;
@@ -529,7 +532,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             });
         }
         
-        const absencePercentage = totalDays > 0 ? (absences / totalDays) * 100 : 0;
+        const absencePercentage = totalDaysForStudent > 0 ? (absences / totalDaysForStudent) * 100 : 0;
         const reason = `Promedio de ${finalGrade.toFixed(0)}% y ${absencePercentage.toFixed(0)}% de ausencias.`;
 
         if (finalGrade < 70 || absencePercentage > 20) {
