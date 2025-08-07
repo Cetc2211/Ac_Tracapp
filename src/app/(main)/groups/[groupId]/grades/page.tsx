@@ -88,17 +88,20 @@ export default function GroupGradesPage() {
   
   const finalGrades = useMemo(() => {
     const calculatedGrades: {[studentId: string]: number} = {};
-    if (activeGroup && activePartial) {
+    if (activeGroup) {
       for (const student of activeGroup.students) {
         calculatedGrades[student.id] = calculateFinalGrade(
           student.id,
-          activeGroup.id,
-          activePartial
+          criteria,
+          grades,
+          participations,
+          activities,
+          activityRecords
         );
       }
     }
     return calculatedGrades;
-  }, [activeGroup, activePartial, calculateFinalGrade]);
+  }, [activeGroup, criteria, grades, participations, activities, activityRecords, calculateFinalGrade]);
 
   const studentsInGroup = useMemo(() => {
       if (!activeGroup || !activeGroup.students) return [];
