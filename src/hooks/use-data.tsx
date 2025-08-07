@@ -275,8 +275,9 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             }
         }
         
-        const merits = studentObservations.filter(o => o.type === 'Mérito').length;
-        const demerits = studentObservations.filter(o => o.type === 'Demérito').length;
+        const safeStudentObservations = studentObservations || [];
+        const merits = safeStudentObservations.filter(o => o.type === 'Mérito').length;
+        const demerits = safeStudentObservations.filter(o => o.type === 'Demérito').length;
         finalGrade += (merits * 10);
         finalGrade -= (demerits * 10);
 
