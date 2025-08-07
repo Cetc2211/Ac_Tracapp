@@ -22,7 +22,7 @@ import { Student, Group, StudentObservation, PartialId } from '@/lib/placeholder
 import { notFound, useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, MoreHorizontal, UserPlus, Trash2, CalendarCheck, FilePen, Edit, Loader2, PenSquare, X, ImagePlus, Lock } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, UserPlus, Trash2, CalendarCheck, FilePen, Edit, Loader2, PenSquare, X, ImagePlus, Lock, Unlock } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -77,7 +77,7 @@ export default function GroupDetailsPage() {
     deleteGroup,
     setActivePartialForGroup,
     activePartial,
-    closePartial
+    togglePartialLock
   } = useData();
 
   const router = useRouter();
@@ -393,28 +393,18 @@ export default function GroupDetailsPage() {
                 <TabsTrigger value="p2">Segundo Parcial</TabsTrigger>
                 <TabsTrigger value="p3">Tercer Parcial</TabsTrigger>
               </TabsList>
-               <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive" size="sm" disabled={isPartialClosed}>
-                      <Lock className="mr-2 h-4 w-4" />
-                      Cerrar Parcial
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>¿Seguro que quieres cerrar este parcial?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Esta acción es irreversible. Una vez cerrado, no podrás editar calificaciones, criterios, asistencias ni ninguna otra información de este parcial.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => closePartial(activeGroup.id, activePartial!)}>
-                        Sí, cerrar parcial
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                <Button 
+                    onClick={() => togglePartialLock(activeGroup.id, activePartial!)}
+                    variant={isPartialClosed ? "secondary" : "destructive"} 
+                    size="sm"
+                >
+                    {isPartialClosed ? (
+                        <Unlock className="mr-2 h-4 w-4" />
+                    ) : (
+                        <Lock className="mr-2 h-4 w-4" />
+                    )}
+                    {isPartialClosed ? 'Abrir Parcial para Editar' : 'Cerrar Parcial'}
+                </Button>
             </div>
           </Tabs>
         </CardHeader>
@@ -700,5 +690,3 @@ export default function GroupDetailsPage() {
     </>
   );
 }
-
-    

@@ -41,12 +41,6 @@ export type Activity = {
   programmedDate: string; // YYYY-MM-DD
 };
 
-export type ActivityRecord = {
-  [studentId: string]: {
-    [activityId: string]: boolean; // delivered or not
-  };
-};
-
 export type GroupedActivities = {
   [dueDate: string]: Activity[];
 };
@@ -145,7 +139,7 @@ interface DataContextType {
   ) => number;
   getStudentRiskLevel: (finalGrade: number, attendance: AttendanceRecord, studentId: string) => CalculatedRisk;
   setActivePartialForGroup: (groupId: string, partial: PartialId) => void;
-  closePartial: (groupId: string, partial: PartialId) => void;
+  togglePartialLock: (groupId: string, partial: PartialId) => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -453,11 +447,15 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         });
     }, []);
 
-    const closePartial = useCallback((groupId: string, partial: PartialId) => {
+    const togglePartialLock = useCallback((groupId: string, partial: PartialId) => {
         setGroupsState(prevGroups => {
             const newGroups = prevGroups.map(g => {
                 if (g.id === groupId) {
-                    const newClosedPartials = [...new Set([...g.closedPartials, partial])];
+                    const currentClosed = g.closedPartials || [];
+                    const isClosed = currentClosed.includes(partial);
+                    const newClosedPartials = isClosed
+                        ? currentClosed.filter(p => p !== partial)
+                        : [...currentClosed, partial];
                     return { ...g, closedPartials: newClosedPartials };
                 }
                 return g;
@@ -641,7 +639,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             allObservations, allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, allAttendances,
             setStudents: setAllStudents, setGroups, setAllStudents, setSettings, setActiveGroupId,
             setCriteria: setCriteriaWrapper, setGrades: setGradesWrapper, setAttendance: setAttendanceWrapper, setParticipations: setParticipationsWrapper, setActivities: setActivitiesWrapper, setActivityRecords: setActivityRecordsWrapper,
-            saveStudentObservation, updateStudentObservation, deleteGroup, calculateFinalGrade, getStudentRiskLevel, setActivePartialForGroup, closePartial
+            saveStudentObservation, updateStudentObservation, deleteGroup, calculateFinalGrade, getStudentRiskLevel, setActivePartialForGroup, togglePartialLock
         }}>
             {children}
         </DataContext.Provider>
