@@ -304,7 +304,7 @@ export default function AtRiskReportPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (activeGroup) {
+    if (activeGroup && criteria) {
       const atRiskStudentsInGroup = activeGroup.students.map(student => {
         const studentObservations = allObservations[student.id] || [];
         const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords, studentObservations);

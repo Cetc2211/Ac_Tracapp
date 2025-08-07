@@ -262,31 +262,33 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     ): number => {
         let finalGrade = 0;
         
-        if (criteria.length > 0) {
-            for (const criterion of criteria) {
-                let performanceRatio = 0;
+        if (criteria.length === 0) {
+            return 0; // Prevent calculation if criteria are not set
+        }
 
-                 if (criterion.name === 'Actividades' || criterion.name === 'Portafolio') {
-                    const totalActivities = activities.length;
-                    if (totalActivities > 0) {
-                        const deliveredActivities = Object.values(activityRecords[studentId] || {}).filter(Boolean).length;
-                        performanceRatio = deliveredActivities / totalActivities;
-                    }
-                } else if (criterion.name === 'Participación') {
-                    const totalClasses = Object.keys(participations).length;
-                    if (totalClasses > 0) {
-                        const studentParticipations = Object.values(participations).filter(day => day[studentId]).length;
-                        performanceRatio = studentParticipations / totalClasses;
-                    }
-                } else {
-                    const delivered = grades[studentId]?.[criterion.id]?.delivered ?? 0;
-                    const expected = criterion.expectedValue;
-                    if (expected > 0) {
-                        performanceRatio = delivered / expected;
-                    }
+        for (const criterion of criteria) {
+            let performanceRatio = 0;
+
+             if (criterion.name === 'Actividades' || criterion.name === 'Portafolio') {
+                const totalActivities = activities.length;
+                if (totalActivities > 0) {
+                    const deliveredActivities = Object.values(activityRecords[studentId] || {}).filter(Boolean).length;
+                    performanceRatio = deliveredActivities / totalActivities;
                 }
-                finalGrade += (performanceRatio * criterion.weight);
+            } else if (criterion.name === 'Participación') {
+                const totalClasses = Object.keys(participations).length;
+                if (totalClasses > 0) {
+                    const studentParticipations = Object.values(participations).filter(day => day[studentId]).length;
+                    performanceRatio = studentParticipations / totalClasses;
+                }
+            } else {
+                const delivered = grades[studentId]?.[criterion.id]?.delivered ?? 0;
+                const expected = criterion.expectedValue;
+                if (expected > 0) {
+                    performanceRatio = delivered / expected;
+                }
             }
+            finalGrade += (performanceRatio * criterion.weight);
         }
         
         const safeStudentObservations = studentObservations || [];

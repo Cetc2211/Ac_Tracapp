@@ -45,13 +45,14 @@ export default function GroupReportPage() {
   const groupId = params.groupId as string;
   const { 
       groups,
+      activeGroup,
+      criteria,
+      grades,
+      participations,
+      attendance,
+      activities,
+      activityRecords,
       allObservations,
-      allAttendances,
-      allParticipations,
-      allGrades,
-      allCriteria,
-      allActivities,
-      allActivityRecords,
       calculateFinalGrade,
       getStudentRiskLevel,
       settings
@@ -67,24 +68,15 @@ export default function GroupReportPage() {
     setIsClient(true);
   }, []);
 
-  const group = useMemo(() => groups.find(g => g.id === groupId), [groups, groupId]);
-
   useEffect(() => {
-    if (!group) {
+    if (!activeGroup) {
         setIsLoading(false);
         return
     };
 
     setIsLoading(true);
     try {
-      const criteria = allCriteria[`criteria_${group.id}`] || [];
-      const grades = allGrades[group.id] || {};
-      const participations = allParticipations[group.id] || {};
-      const attendance = allAttendances[group.id] || {};
-      const activities = allActivities[group.id] || [];
-      const activityRecords = allActivityRecords[group.id] || {};
-      const observations = allObservations;
-      const studentCount = group.students.length;
+      const studentCount = activeGroup.students.length;
 
       let approved = 0;
       let studentsWithObservations = 0;
@@ -99,8 +91,8 @@ export default function GroupReportPage() {
       let highRiskStudents = 0;
       let mediumRiskStudents = 0;
 
-      group.students.forEach(student => {
-        const studentObservations: StudentObservation[] = observations[student.id] || [];
+      activeGroup.students.forEach(student => {
+        const studentObservations: StudentObservation[] = allObservations[student.id] || [];
         const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords, studentObservations);
         
         totalGroupGrade += finalGrade;
@@ -161,7 +153,7 @@ export default function GroupReportPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [group, calculateFinalGrade, getStudentRiskLevel, allCriteria, allGrades, allParticipations, allAttendances, allActivities, allActivityRecords, allObservations]);
+  }, [activeGroup, criteria, grades, participations, attendance, activities, activityRecords, calculateFinalGrade, getStudentRiskLevel, allObservations]);
 
   const handleDownloadPdf = () => {
     const input = reportRef.current;
@@ -189,7 +181,7 @@ export default function GroupReportPage() {
         const y = 10;
         
         pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
-        pdf.save(`informe_grupal_${group?.subject.replace(/\s+/g, '_') || 'reporte'}.pdf`);
+        pdf.save(`informe_grupal_${activeGroup?.subject.replace(/\s+/g, '_') || 'reporte'}.pdf`);
       });
     }
   };
@@ -198,7 +190,7 @@ export default function GroupReportPage() {
     return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /> <span className="ml-2">Generando informe...</span></div>;
   }
 
-  if (!group || !summary) {
+  if (!activeGroup || !summary) {
     return notFound();
   }
 
@@ -215,7 +207,7 @@ export default function GroupReportPage() {
             <div>
               <h1 className="text-3xl font-bold">Informe General del Grupo</h1>
               <p className="text-muted-foreground">
-                  Resumen global de "{group.subject}".
+                  Resumen global de "{activeGroup.subject}".
               </p>
             </div>
          </div>
@@ -245,7 +237,7 @@ export default function GroupReportPage() {
            <div className="pt-4 flex justify-between text-sm text-muted-foreground">
                 <div>
                     <span className="font-semibold text-foreground">Asignatura: </span>
-                    <span>{group.subject}</span>
+                    <span>{activeGroup.subject}</span>
                 </div>
                 <div>
                     <span className="font-semibold text-foreground">Fecha del Informe: </span>
@@ -258,7 +250,7 @@ export default function GroupReportPage() {
             <h2 className="text-xl font-semibold mb-4">Resumen General del Grupo</h2>
             <p className="text-muted-foreground leading-relaxed mt-2">
                 Por medio del presente, se muestran los resultados generales obtenidos durante el semestre actual para el grupo 
-                de <span className="font-bold text-foreground">{group.subject}</span>, que cuenta con un total de 
+                de <span className="font-bold text-foreground">{activeGroup.subject}</span>, que cuenta con un total de 
                 <span className="font-bold text-foreground"> {summary.totalStudents} estudiante(s)</span>.
             </p>
 
