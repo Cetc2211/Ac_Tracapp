@@ -33,7 +33,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import type { EvaluationCriteria, Grades, Activity, ActivityRecord, ParticipationRecord } from '@/hooks/use-data';
+import type { CalculatedRisk } from '@/hooks/use-data';
 
 
 type StudentReportData = {
@@ -290,104 +290,84 @@ const AtRiskStudentCard = ({ studentData }: { studentData: StudentReportData }) 
 export default function AtRiskReportPage() {
   const { 
       activeGroup,
-      activePartial,
-      atRiskStudents, 
       calculateFinalGrade, 
+      getStudentRiskLevel,
       allObservations, 
-      allCriteria, 
-      allGrades,
-      allParticipations,
-      allActivities,
-      allActivityRecords,
-      allAttendances
+      criteria,
+      grades,
+      participations,
+      activities,
+      activityRecords,
+      attendance,
   } = useData();
   const [reportData, setReportData] = useState<StudentReportData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const getStudentDetails = useCallback((studentId: string, partial: string, groupId: string) => {
-        if (!activeGroup) return null;
+  useEffect(() => {
+    if (activeGroup) {
+      const atRiskStudentsInGroup = activeGroup.students.map(student => {
+        const studentObservations = allObservations[student.id] || [];
+        const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords, studentObservations);
+        const risk = getStudentRiskLevel(finalGrade, attendance, student.id);
         
-        const criteria = allCriteria[`criteria_${groupId}_${partial}`] || [];
-        const grades = allGrades[groupId]?.[partial] || {};
-        const participations = allParticipations[groupId]?.[partial] || {};
-        const activities = allActivities[groupId]?.[partial] || [];
-        const activityRecords = allActivityRecords[groupId]?.[partial] || {};
-        const attendance = allAttendances[groupId]?.[partial] || {};
-        
-        const studentObservations = allObservations[studentId] || [];
+        return {
+          ...student,
+          finalGrade,
+          risk,
+          studentObservations
+        };
+      }).filter(s => s.risk.level === 'high' || s.risk.level === 'medium');
 
-        const finalGrade = calculateFinalGrade(studentId, partial, groupId);
-
+      const data = atRiskStudentsInGroup.map(student => {
         const criteriaDetails: StudentReportData['criteriaDetails'] = criteria.map(criterion => {
-             let performanceRatio = 0;
-            if (criterion.name === 'Actividades') {
+          let performanceRatio = 0;
+            if (criterion.name === 'Actividades' || criterion.name === 'Portafolio') {
                 const totalActivities = activities.length;
                 if(totalActivities > 0) {
-                    const deliveredActivities = Object.values(activityRecords[studentId] || {}).filter(Boolean).length;
+                    const deliveredActivities = Object.values(activityRecords[student.id] || {}).filter(Boolean).length;
                     performanceRatio = deliveredActivities / totalActivities;
                 }
-            } else if (criterion.name === 'Portafolio' && criterion.isAutomated) {
-                const totalActivities = activities.length;
-                if (totalActivities > 0) {
-                    const delivered = grades[studentId]?.[criterion.id]?.delivered ?? 0;
-                    performanceRatio = delivered / totalActivities;
-                }
             } else if (criterion.name === 'Participación') {
-                const totalClasses = Object.keys(attendance).length;
-                if(totalClasses > 0) {
-                    const studentParticipations = Object.values(participations).filter(p => p[studentId]).length;
-                    performanceRatio = studentParticipations / totalClasses;
+                const totalParticipations = Object.keys(participations).length;
+                if(totalParticipations > 0) {
+                    const studentParticipations = Object.values(participations).filter(p => p[student.id]).length;
+                    performanceRatio = studentParticipations / totalParticipations;
                 }
             } else {
-                const delivered = (grades[studentId]?.[criterion.id]?.delivered ?? 0);
-                const expected = criterion.expectedValue;
-                performanceRatio = expected > 0 ? (delivered / expected) : 0;
+                performanceRatio = (criterion.expectedValue > 0) ? ((grades[student.id]?.[criterion.id]?.delivered ?? 0) / criterion.expectedValue) : 0;
             }
-            const earned = performanceRatio * criterion.weight;
-            return { name: criterion.name, earned, weight: criterion.weight };
+          const earned = performanceRatio * criterion.weight;
+          return { name: criterion.name, earned, weight: criterion.weight };
         });
 
         const attendanceStats = { p: 0, a: 0, total: 0 };
         Object.keys(attendance).forEach(date => {
-            if (attendance[date]?.[studentId] !== undefined) {
+            if (attendance[date]?.[student.id] !== undefined) {
                 attendanceStats.total++;
-                if (attendance[date][studentId]) attendanceStats.p++; else attendanceStats.a++;
+                if (attendance[date][student.id]) attendanceStats.p++; else attendanceStats.a++;
             }
         });
-        
-        return { finalGrade, attendance: attendanceStats, criteriaDetails, observations: studentObservations };
 
-  }, [activeGroup, allObservations, calculateFinalGrade, allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, allAttendances]);
+        return {
+          id: student.id,
+          name: student.name,
+          photo: student.photo,
+          email: student.email,
+          tutorName: student.tutorName,
+          tutorPhone: student.tutorPhone,
+          riskLevel: student.risk.level,
+          riskReason: student.risk.reason,
+          finalGrade: student.finalGrade,
+          attendance: attendanceStats,
+          criteriaDetails: criteriaDetails,
+          observations: student.studentObservations,
+        };
+      });
 
-
-  useEffect(() => {
-    if (atRiskStudents.length > 0 && activeGroup && activePartial) {
-      const data = atRiskStudents
-        .map(student => {
-            const details = getStudentDetails(student.id, activePartial, activeGroup.id);
-            if (!details) return null;
-            
-            return {
-                id: student.id,
-                name: student.name,
-                photo: student.photo,
-                email: student.email,
-                tutorName: student.tutorName,
-                tutorPhone: student.tutorPhone,
-                riskLevel: student.calculatedRisk.level,
-                riskReason: student.calculatedRisk.reason,
-                finalGrade: details.finalGrade,
-                attendance: details.attendance,
-                criteriaDetails: details.criteriaDetails,
-                observations: details.observations,
-            };
-        })
-        .filter((item): item is StudentReportData => item !== null);
-      
       setReportData(data);
     }
     setIsLoading(false);
-  }, [atRiskStudents, activeGroup, activePartial, getStudentDetails]);
+  }, [activeGroup, allObservations, calculateFinalGrade, getStudentRiskLevel, criteria, grades, participations, activities, activityRecords, attendance]);
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /> <span className="ml-2">Cargando informe...</span></div>;
