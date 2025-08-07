@@ -21,7 +21,7 @@ import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useData } from '@/hooks/use-data';
-import type { Student, StudentObservation } from '@/hooks/use-data';
+import type { Student, StudentObservation, EvaluationCriteria, Grades, ParticipationRecord, Activity, ActivityRecord, AttendanceRecord } from '@/hooks/use-data';
 
 
 type GroupStats = {
@@ -53,6 +53,17 @@ const PIE_CHART_COLORS = {
     late: "hsl(var(--chart-4))",
 };
 
+const loadFromLocalStorage = <T,>(key: string, defaultValue: T): T => {
+  if (typeof window === 'undefined') return defaultValue;
+  try {
+    const item = window.localStorage.getItem(key);
+    return item ? JSON.parse(item) : defaultValue;
+  } catch (error) {
+    console.error(`Error reading from localStorage key “${key}”:`, error);
+    return defaultValue;
+  }
+};
+
 
 export default function StatisticsPage() {
     const { 
@@ -66,13 +77,7 @@ export default function StatisticsPage() {
         attendance,
         activities,
         activityRecords,
-        allObservations,
-        allAttendances,
-        allCriteria,
-        allGrades,
-        allParticipations,
-        allActivities,
-        allActivityRecords,
+        allObservations
     } = useData();
 
     const [stats, setStats] = useState<GroupStats[]>([]);
@@ -81,12 +86,12 @@ export default function StatisticsPage() {
 
     const groupCalculations = useMemo(() => {
         return groups.map(group => {
-            const groupCriteria = allCriteria[`criteria_${group.id}`] || [];
-            const groupGrades = allGrades[group.id] || {};
-            const groupParticipations = allParticipations[group.id] || {};
-            const groupAttendance = allAttendances[group.id] || {};
-            const groupActivities = allActivities[group.id] || [];
-            const groupActivityRecords = allActivityRecords[group.id] || {};
+            const groupCriteria = loadFromLocalStorage<EvaluationCriteria[]>(`criteria_${group.id}`, []);
+            const groupGrades = loadFromLocalStorage<Grades>(`grades_${group.id}`, {});
+            const groupParticipations = loadFromLocalStorage<ParticipationRecord>(`participations_${group.id}`, {});
+            const groupAttendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${group.id}`, {});
+            const groupActivities = loadFromLocalStorage<Activity[]>(`activities_${group.id}`, []);
+            const groupActivityRecords = loadFromLocalStorage<ActivityRecord>(`activityRecords_${group.id}`, {});
 
             const finalGrades = group.students.map(s => {
                 const studentObservations = allObservations[s.id] || [];
@@ -126,7 +131,7 @@ export default function StatisticsPage() {
             };
         });
 
-    }, [groups, calculateFinalGrade, getStudentRiskLevel, allObservations, allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, allAttendances]);
+    }, [groups, calculateFinalGrade, getStudentRiskLevel, allObservations]);
     
     useEffect(() => {
         setIsLoading(true);
@@ -446,5 +451,7 @@ export default function StatisticsPage() {
     </div>
   );
 }
+
+    
 
     
