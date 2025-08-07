@@ -35,7 +35,7 @@ type GroupStats = {
 
 type ActiveGroupStats = {
   approvalRate: { approved: number; failed: number };
-  attendanceTotals: { present: number; absent: number; late: number };
+  attendanceTotals: { present: number; absent: number; };
   observationStats: { observations: number, canalizations: number, followUps: number };
   riskDistribution: { low: number, medium: number, high: number };
   topStudents: { name: string, grade: number }[];
@@ -165,14 +165,15 @@ export default function StatisticsPage() {
                     else if (participationRate <= 80) participationDistribution[3].students++;
                     else participationDistribution[4].students++;
                 } else if(activeGroup.students.length > 0) {
-                     // If no participation days, all students have 0% participation
                      participationDistribution[0].students = activeGroup.students.length;
                 }
             }
             
             Object.values(attendance).forEach(dailyRecord => {
-                for (const studentId in dailyRecord) {
-                    if (dailyRecord[studentId]) present++; else absent++;
+                for (const studentId of activeGroup.students.map(s => s.id)) {
+                    if (dailyRecord.hasOwnProperty(studentId)) {
+                        if (dailyRecord[studentId]) present++; else absent++;
+                    }
                 }
             });
 
@@ -180,7 +181,7 @@ export default function StatisticsPage() {
 
             setActiveGroupStats({
                 approvalRate: { approved, failed },
-                attendanceTotals: { present, absent, late: 0 },
+                attendanceTotals: { present, absent },
                 observationStats: { observations: observationCount, canalizations: canalizationCount, followUps: followUpCount },
                 riskDistribution,
                 topStudents: studentGrades.slice(0,5).map(s => ({name: s.student.name, grade: parseFloat(s.grade.toFixed(1))})),
@@ -445,3 +446,5 @@ export default function StatisticsPage() {
     </div>
   );
 }
+
+    
