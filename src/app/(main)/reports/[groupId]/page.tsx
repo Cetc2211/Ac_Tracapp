@@ -84,6 +84,7 @@ export default function GroupReportPage() {
       const activities = allActivities[group.id] || [];
       const activityRecords = allActivityRecords[group.id] || {};
       const observations = allObservations;
+      const studentCount = group.students.length;
 
       let approved = 0;
       let studentsWithObservations = 0;
@@ -95,7 +96,6 @@ export default function GroupReportPage() {
       let totalPossibleAttendance = 0;
       let totalPresent = 0;
       let totalParticipations = 0;
-      let totalParticipationOpportunities = 0;
       let highRiskStudents = 0;
       let mediumRiskStudents = 0;
 
@@ -130,16 +130,16 @@ export default function GroupReportPage() {
                 if(attendance[date][student.id]) totalPresent++;
             }
         });
-        
-        Object.keys(participations).forEach(date => {
-            if (Object.prototype.hasOwnProperty.call(participations[date], student.id)) {
-                totalParticipationOpportunities++;
-                if (participations[date]?.[student.id]) totalParticipations++;
-            }
-        })
       });
+
+      const participationDates = Object.keys(participations);
+      if (participationDates.length > 0 && studentCount > 0) {
+          totalParticipations = participationDates.reduce((sum, date) => {
+              return sum + Object.values(participations[date]).filter(Boolean).length;
+          }, 0);
+      }
+      const totalParticipationOpportunities = participationDates.length * studentCount;
       
-      const studentCount = group.students.length;
       setSummary({
           totalStudents: studentCount,
           approvedCount: approved,
@@ -332,5 +332,3 @@ export default function GroupReportPage() {
     </div>
   );
 }
-
-    
