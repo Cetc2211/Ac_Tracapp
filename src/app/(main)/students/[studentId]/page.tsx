@@ -33,7 +33,7 @@ import {
 import { WhatsAppDialog } from '@/components/whatsapp-dialog';
 import { useData } from '@/hooks/use-data';
 import { Separator } from '@/components/ui/separator';
-import type { EvaluationCriteria, Grades, ParticipationRecord, StudentStats } from '@/hooks/use-data';
+import type { EvaluationCriteria, Grades, ParticipationRecord, StudentStats, Activity, ActivityRecord, AttendanceRecord } from '@/hooks/use-data';
 
 
 const WhatsAppIcon = () => (
@@ -53,13 +53,24 @@ const WhatsAppIcon = () => (
     </svg>
 );
 
+const loadFromLocalStorage = <T,>(key: string, defaultValue: T): T => {
+  if (typeof window === 'undefined') return defaultValue;
+  try {
+    const item = window.localStorage.getItem(key);
+    return item ? JSON.parse(item) : defaultValue;
+  } catch (error) {
+    console.error(`Error reading from localStorage key “${key}”:`, error);
+    return defaultValue;
+  }
+};
+
 
 export default function StudentProfilePage() {
   const params = useParams();
   const studentId = params.studentId as string;
   const router = useRouter();
   
-  const { students, groups, allObservations, allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, calculateFinalGrade, allAttendances } = useData();
+  const { students, groups, allObservations, calculateFinalGrade } = useData();
   const student = students.find(s => s.id === studentId);
 
   const [studentStats, setStudentStats] = useState<StudentStats | null>(null);
@@ -87,26 +98,24 @@ export default function StudentProfilePage() {
         const studentObservations: StudentObservation[] = allObservations[studentId] || [];
         
         studentGroups.forEach(group => {
-            const criteria = allCriteria[`criteria_${group.id}`] || [];
-            const grades = allGrades[group.id] || {};
-            const participations = allParticipations[group.id] || {};
-            const activities = allActivities[group.id] || [];
-            const activityRecords = allActivityRecords[group.id] || {};
+            const criteria = loadFromLocalStorage<EvaluationCriteria[]>(`criteria_${group.id}`, []);
+            const grades = loadFromLocalStorage<Grades>(`grades_${group.id}`, {});
+            const participations = loadFromLocalStorage<ParticipationRecord>(`participations_${group.id}`, {});
+            const activities = loadFromLocalStorage<Activity[]>(`activities_${group.id}`, []);
+            const activityRecords = loadFromLocalStorage<ActivityRecord>(`activityRecords_${group.id}`, {});
             
             const finalGrade = calculateFinalGrade(studentId, criteria, grades, participations, activities, activityRecords, studentObservations);
 
             const criteriaDetails = criteria.map(c => {
                 let performanceRatio = 0;
-                if (c.isAutomated) {
-                    if (c.name === 'Portafolio' || c.name === 'Actividades') {
-                        const totalActivities = allActivities[group.id]?.length || 0;
-                        if(totalActivities > 0) performanceRatio = (Object.values(allActivityRecords[group.id]?.[studentId] || {}).filter(Boolean).length) / totalActivities;
-                    } else if (c.name === 'Participación') {
-                        const totalClasses = Object.keys(allAttendances[group.id] || {}).length;
-                        if(totalClasses > 0) performanceRatio = (Object.values(allParticipations[group.id] || {}).filter(p => p[studentId]).length) / totalClasses;
-                    }
+                if (c.name === 'Portafolio' || c.name === 'Actividades') {
+                    const totalActivities = activities.length || 0;
+                    if(totalActivities > 0) performanceRatio = (Object.values(activityRecords[studentId] || {}).filter(Boolean).length) / totalActivities;
+                } else if (c.name === 'Participación') {
+                    const totalClasses = Object.keys(participations).length || 0;
+                    if(totalClasses > 0) performanceRatio = (Object.values(participations).filter(p => p[studentId]).length) / totalClasses;
                 } else {
-                    const delivered = allGrades[group.id]?.[studentId]?.[c.id]?.delivered ?? 0;
+                    const delivered = grades[studentId]?.[c.id]?.delivered ?? 0;
                     if(c.expectedValue > 0) performanceRatio = delivered / c.expectedValue;
                 }
                 return { name: c.name, earned: performanceRatio * c.weight, weight: c.weight };
@@ -117,15 +126,15 @@ export default function StudentProfilePage() {
         });
 
         const attendanceStats = { p: 0, a: 0, total: 0 };
-        for(const groupId in allAttendances){
-            const groupAttendance = allAttendances[groupId] || {};
+        studentGroups.forEach(group => {
+            const groupAttendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${group.id}`, {});
             for(const date in groupAttendance){
                 if(groupAttendance[date][studentId] !== undefined){
                     attendanceStats.total++;
                     if(groupAttendance[date][studentId]) attendanceStats.p++; else attendanceStats.a++;
                 }
             }
-        }
+        });
         
         setObservations(studentObservations.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
         
@@ -140,7 +149,7 @@ export default function StudentProfilePage() {
     } finally {
         setIsLoading(false);
     }
-  }, [student, groups, allObservations, allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, allAttendances, studentId, toast, calculateFinalGrade]);
+  }, [student, groups, allObservations, studentId, toast, calculateFinalGrade]);
   
    const handleGenerateFeedback = async () => {
     if (!student || !studentStats) {
@@ -493,4 +502,5 @@ export default function StudentProfilePage() {
     </div>
     </>
   );
-}
+
+    
