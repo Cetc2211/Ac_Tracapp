@@ -135,7 +135,7 @@ interface DataContextType {
     participations: ParticipationRecord,
     activities: Activity[],
     activityRecords: ActivityRecord,
-    studentObservations: StudentObservation[]
+    studentObservations?: StudentObservation[]
   ) => number;
   getStudentRiskLevel: (finalGrade: number, attendance: AttendanceRecord, studentId: string) => CalculatedRisk;
   setActivePartialForGroup: (groupId: string, partial: PartialId) => void;
@@ -243,7 +243,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         setAllActivities(activitiesStore);
         setAllActivityRecords(activityRecordsStore);
         
-        // This ensures observations start fresh, ignoring localStorage.
         setAllObservations({});
 
     }, []);
@@ -255,14 +254,13 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
       participations: ParticipationRecord,
       activities: Activity[],
       activityRecords: ActivityRecord,
-      studentObservations: StudentObservation[]
+      studentObservationsParam?: StudentObservation[]
     ): number => {
-        let finalGrade = 0;
-        
         if (!criteria || criteria.length === 0) {
             return 0;
         }
-
+        let finalGrade = 0;
+        
         for (const criterion of criteria) {
             let performanceRatio = 0;
 
@@ -288,14 +286,14 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             finalGrade += (performanceRatio * criterion.weight);
         }
         
-        const safeStudentObservations = studentObservations || [];
-        const merits = safeStudentObservations.filter(o => o.type === 'Mérito').length;
-        const demerits = safeStudentObservations.filter(o => o.type === 'Demérito').length;
+        const studentObservations = studentObservationsParam ?? allObservations[studentId] ?? [];
+        const merits = studentObservations.filter(o => o.type === 'Mérito').length;
+        const demerits = studentObservations.filter(o => o.type === 'Demérito').length;
         finalGrade += (merits * 1);
         finalGrade -= (demerits * 1);
 
         return Math.max(0, Math.min(100, finalGrade));
-    }, []);
+    }, [allObservations]);
 
     // --- DERIVED STATE & MEMOS ---
     const activeGroup = useMemo(() => {
