@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Student, Group, StudentObservation, PartialId } from '@/lib/placeholder-data';
+import { Student, Group, StudentObservation } from '@/lib/placeholder-data';
 import { notFound, useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -59,7 +59,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useData } from '@/hooks/use-data';
 import { Input } from '@/components/ui/input';
 import type { CalculatedRisk } from '@/hooks/use-data';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 
 
@@ -75,9 +74,6 @@ export default function GroupDetailsPage() {
     criteria,
     atRiskStudents,
     deleteGroup,
-    setActivePartialForGroup,
-    activePartial,
-    togglePartialLock
   } = useData();
 
   const router = useRouter();
@@ -99,12 +95,6 @@ export default function GroupDetailsPage() {
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   
-  const isPartialClosed = useMemo(() => {
-    if (!activeGroup || !activePartial) return true;
-    return activeGroup.closedPartials && activeGroup.closedPartials.includes(activePartial);
-  }, [activeGroup, activePartial]);
-
-
   const studentRiskLevels = useMemo(() => {
     if (!activeGroup) return {};
     const riskMap: {[studentId: string]: CalculatedRisk} = {};
@@ -383,32 +373,6 @@ export default function GroupDetailsPage() {
             </AlertDialog>
          </div>
       </div>
-
-       <Card>
-        <CardHeader>
-          <Tabs value={activePartial || 'p1'} onValueChange={(val) => setActivePartialForGroup(activeGroup.id, val as PartialId)} className="w-full">
-            <div className="flex items-center justify-between">
-              <TabsList>
-                <TabsTrigger value="p1">Primer Parcial</TabsTrigger>
-                <TabsTrigger value="p2">Segundo Parcial</TabsTrigger>
-                <TabsTrigger value="p3">Tercer Parcial</TabsTrigger>
-              </TabsList>
-                <Button 
-                    onClick={() => togglePartialLock(activeGroup.id, activePartial!)}
-                    variant={isPartialClosed ? "secondary" : "destructive"} 
-                    size="sm"
-                >
-                    {isPartialClosed ? (
-                        <Unlock className="mr-2 h-4 w-4" />
-                    ) : (
-                        <Lock className="mr-2 h-4 w-4" />
-                    )}
-                    {isPartialClosed ? 'Abrir Parcial para Editar' : 'Cerrar Parcial'}
-                </Button>
-            </div>
-          </Tabs>
-        </CardHeader>
-      </Card>
       
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card className="lg:col-span-2">
@@ -663,10 +627,8 @@ export default function GroupDetailsPage() {
                             <div>
                                 <span className="font-medium">{criterion.name}</span>
                                 <p className="text-xs text-muted-foreground">
-                                  {criterion.name === 'Portafolio' || criterion.name === 'Actividades' 
+                                  {criterion.name === 'Portafolio' || criterion.name === 'Actividades' || criterion.name === 'Participación'
                                     ? 'Cálculo Automático'
-                                    : criterion.name === 'Participación' 
-                                    ? 'Cálculo por asistencia'
                                     : `${criterion.expectedValue} es el valor esperado`
                                   }
                                 </p>

@@ -38,7 +38,6 @@ import type { Activity, ActivityRecord, GroupedActivities } from '@/hooks/use-da
 export default function ActivitiesPage() {
   const { 
     activeGroup,
-    activePartial,
     activities, 
     activityRecords, 
     setActivities, 
@@ -51,8 +50,6 @@ export default function ActivitiesPage() {
   const dialogContentRef = useRef<HTMLDivElement>(null);
   
   const { toast } = useToast();
-
-  const isPartialClosed = activeGroup && activePartial ? activeGroup.closedPartials.includes(activePartial) : true;
 
   const studentsToDisplay = useMemo(() => {
     return activeGroup ? [...activeGroup.students].sort((a, b) => a.name.localeCompare(b.name)) : [];
@@ -169,7 +166,7 @@ export default function ActivitiesPage() {
             </div>
         </div>
         {activeGroup && (
-            <Button onClick={() => setIsDialogOpen(true)} disabled={isPartialClosed}>
+            <Button onClick={() => setIsDialogOpen(true)}>
                 <PlusCircle className="mr-2 h-4 w-4"/>
                 Registrar Nueva Actividad
             </Button>
@@ -222,7 +219,6 @@ export default function ActivitiesPage() {
                                              <Checkbox 
                                                 checked={activityRecords[student.id]?.[activity.id] || false}
                                                 onCheckedChange={(checked) => handleRecordChange(student.id, activity.id, !!checked)}
-                                                disabled={isPartialClosed}
                                              />
                                         </TooltipTrigger>
                                         <TooltipContent>

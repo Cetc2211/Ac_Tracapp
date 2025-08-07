@@ -42,7 +42,6 @@ export default function GroupGradesPage() {
   const groupId = params.groupId as string;
   const { 
     activeGroup,
-    activePartial,
     criteria, 
     grades, 
     setGrades,
@@ -54,8 +53,6 @@ export default function GroupGradesPage() {
   } = useData();
 
   const { toast } = useToast();
-  
-  const isPartialClosed = activeGroup && activePartial ? activeGroup.closedPartials.includes(activePartial) : true;
 
   const handleSaveGrades = () => {
     toast({
@@ -90,18 +87,20 @@ export default function GroupGradesPage() {
     const calculatedGrades: {[studentId: string]: number} = {};
     if (activeGroup) {
       for (const student of activeGroup.students) {
+        const studentObservations = allObservations[student.id] || [];
         calculatedGrades[student.id] = calculateFinalGrade(
           student.id,
           criteria,
           grades,
           participations,
           activities,
-          activityRecords
+          activityRecords,
+          studentObservations
         );
       }
     }
     return calculatedGrades;
-  }, [activeGroup, criteria, grades, participations, activities, activityRecords, calculateFinalGrade]);
+  }, [activeGroup, criteria, grades, participations, activities, activityRecords, calculateFinalGrade, allObservations]);
 
   const studentsInGroup = useMemo(() => {
       if (!activeGroup || !activeGroup.students) return [];
@@ -180,7 +179,7 @@ export default function GroupGradesPage() {
             </p>
             </div>
          </div>
-         <Button onClick={handleSaveGrades} disabled={isPartialClosed}>
+         <Button onClick={handleSaveGrades}>
             <Save className="mr-2 h-4 w-4"/>
             Guardar Calificaciones
          </Button>
@@ -269,7 +268,6 @@ export default function GroupGradesPage() {
                                     min={0}
                                     value={grades[student.id]?.[criterion.id]?.delivered ?? ''}
                                     onChange={e => handleGradeChange(student.id, criterion.id, e.target.value)}
-                                    disabled={isPartialClosed}
                                 />
                             </div>
                             <div className='flex-1'>

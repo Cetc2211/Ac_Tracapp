@@ -2,7 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { Student, Group, StudentObservation, students as initialStudents, groups as initialGroups, PartialId } from '@/lib/placeholder-data';
+import { Student, Group, StudentObservation, students as initialStudents, groups as initialGroups } from '@/lib/placeholder-data';
 
 // TYPE DEFINITIONS
 export type EvaluationCriteria = {
@@ -10,6 +10,7 @@ export type EvaluationCriteria = {
   name: string;
   weight: number;
   expectedValue: number;
+  isAutomated?: boolean;
 };
 
 export type GradeDetail = {
@@ -93,7 +94,6 @@ interface DataContextType {
   settings: { institutionName: string; logo: string; theme: string };
   
   activeGroup: Group | null;
-  activePartial: PartialId | null;
   
   criteria: EvaluationCriteria[];
   grades: Grades;
@@ -101,20 +101,11 @@ interface DataContextType {
   participations: ParticipationRecord;
   activities: Activity[];
   activityRecords: ActivityRecord;
-  observations: StudentObservation[];
+  allObservations: { [studentId: string]: StudentObservation[] };
 
-  groupStats: {[groupId: string]: GroupStats};
+  groupAverages: {[groupId: string]: number};
   atRiskStudents: StudentWithRisk[];
   overallAverageParticipation: number;
-  groupAverages: {[groupId: string]: number};
-
-  allObservations: { [studentId: string]: StudentObservation[] };
-  allCriteria: { [key: string]: EvaluationCriteria[] };
-  allGrades: { [key: string]: Grades };
-  allParticipations: { [key: string]: ParticipationRecord };
-  allActivities: { [key: string]: Activity[] };
-  allActivityRecords: { [key: string]: ActivityRecord };
-  allAttendances: { [key: string]: AttendanceRecord };
 
   // Setters
   setStudents: (students: Student[]) => void;
@@ -142,11 +133,9 @@ interface DataContextType {
     participations: ParticipationRecord,
     activities: Activity[],
     activityRecords: ActivityRecord,
-    studentObservations?: StudentObservation[]
+    studentObservations: StudentObservation[]
   ) => number;
   getStudentRiskLevel: (finalGrade: number, attendance: AttendanceRecord, studentId: string) => CalculatedRisk;
-  setActivePartialForGroup: (groupId: string, partial: PartialId) => void;
-  togglePartialLock: (groupId: string, partial: PartialId) => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -179,9 +168,6 @@ const saveToLocalStorage = <T,>(key: string, value: T) => {
   }
 };
 
-const getPartialDataKey = (baseKey: string, groupId: string, partialId: PartialId) => {
-    return `${baseKey}_${groupId}_${partialId}`;
-}
 
 // DATA PROVIDER COMPONENT
 export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
@@ -193,98 +179,74 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     // Active state
     const [activeGroupId, setActiveGroupIdState] = useState<string | null>(null);
     
-    // Data stores for all groups and partials
-    const [allCriteria, setAllCriteria] = useState<{[key: string]: EvaluationCriteria[]}>({});
-    const [allGrades, setAllGrades] = useState<{[key: string]: Grades}>({});
-    const [allAttendances, setAllAttendances] = useState<{[key: string]: AttendanceRecord}>({});
-    const [allParticipations, setAllParticipations] = useState<{[key: string]: ParticipationRecord}>({});
-    const [allActivities, setAllActivities] = useState<{[key: string]: Activity[]}>({});
-    const [allActivityRecords, setAllActivityRecords] = useState<{[key: string]: ActivityRecord}>({});
-    const [allObservations, setAllObservations] = useState<{[studentId: string]: StudentObservation[]}>({});
+    // Data stores for active group
+    const [criteria, setCriteriaState] = useState<EvaluationCriteria[]>([]);
+    const [grades, setGradesState] = useState<Grades>({});
+    const [attendance, setAttendanceState] = useState<AttendanceRecord>({});
+    const [participations, setParticipationsState] = useState<ParticipationRecord>({});
+    const [activities, setActivitiesState] = useState<Activity[]>([]);
+    const [activityRecords, setActivityRecordsState] = useState<ActivityRecord>({});
+    const [allObservations, setAllObservations] = useState<{ [studentId: string]: StudentObservation[] }>({});
     
     // --- INITIAL DATA LOADING ---
     useEffect(() => {
-        const loadedStudents = loadFromLocalStorage<Student[]>('students', initialStudents);
-        const loadedGroups = loadFromLocalStorage<Group[]>('groups', initialGroups);
-        const loadedSettings = loadFromLocalStorage('appSettings', defaultSettings);
-        const storedActiveGroupId = loadFromLocalStorage<string | null>('activeGroupId', null);
-
-        setAllStudentsState(loadedStudents);
-        setGroupsState(loadedGroups);
-        setSettings(loadedSettings);
-        setActiveGroupIdState(storedActiveGroupId);
-
-        const partials: PartialId[] = ['p1', 'p2', 'p3'];
-        const criteriaStore: {[key: string]: EvaluationCriteria[]} = {};
-        const gradesStore: {[key: string]: Grades} = {};
-        const attendancesStore: {[key: string]: AttendanceRecord} = {};
-        const participationsStore: {[key: string]: ParticipationRecord} = {};
-        const activitiesStore: {[key: string]: Activity[]} = {};
-        const activityRecordsStore: {[key: string]: ActivityRecord} = {};
-        const observationsStore: {[studentId: string]: StudentObservation[]} = {};
-        
-        for (const group of loadedGroups) {
-          for (const partial of partials) {
-            const criteriaKey = getPartialDataKey('criteria', group.id, partial);
-            criteriaStore[criteriaKey] = loadFromLocalStorage(criteriaKey, []);
-
-            const gradesKey = getPartialDataKey('grades', group.id, partial);
-            gradesStore[gradesKey] = loadFromLocalStorage(gradesKey, {});
-            
-            const attendanceKey = getPartialDataKey('attendance', group.id, partial);
-            attendancesStore[attendanceKey] = loadFromLocalStorage(attendanceKey, {});
-            
-            const participationsKey = getPartialDataKey('participations', group.id, partial);
-            participationsStore[participationsKey] = loadFromLocalStorage(participationsKey, {});
-            
-            const activitiesKey = getPartialDataKey('activities', group.id, partial);
-            activitiesStore[activitiesKey] = loadFromLocalStorage(activitiesKey, []);
-            
-            const activityRecordsKey = getPartialDataKey('activityRecords', group.id, partial);
-            activityRecordsStore[activityRecordsKey] = loadFromLocalStorage(activityRecordsKey, {});
-          }
-        }
-
-        // Initialize all observations as an empty object to start fresh
-        setAllObservations({});
-        // If you need to clear localStorage for observations for all students:
-        // loadedStudents.forEach(student => {
-        //     localStorage.removeItem(`observations_${student.id}`);
-        // });
-
-
+        setAllStudentsState(loadFromLocalStorage<Student[]>('students', initialStudents));
+        setGroupsState(loadFromLocalStorage<Group[]>('groups', initialGroups));
+        setSettings(loadFromLocalStorage('appSettings', defaultSettings));
+        setActiveGroupIdState(loadFromLocalStorage<string | null>('activeGroupId', null));
+        setAllObservations(loadFromLocalStorage('allObservations', {}));
     }, []);
+    
+    // --- ACTIVE GROUP DATA LOADING ---
+    useEffect(() => {
+        if(activeGroupId) {
+            setCriteriaState(loadFromLocalStorage(`criteria_${activeGroupId}`, []));
+            setGradesState(loadFromLocalStorage(`grades_${activeGroupId}`, {}));
+            setAttendanceState(loadFromLocalStorage(`attendance_${activeGroupId}`, {}));
+            setParticipationsState(loadFromLocalStorage(`participations_${activeGroupId}`, {}));
+            setActivitiesState(loadFromLocalStorage(`activities_${activeGroupId}`, []));
+            setActivityRecordsState(loadFromLocalStorage(`activityRecords_${activeGroupId}`, {}));
+        } else {
+            setCriteriaState([]);
+            setGradesState({});
+            setAttendanceState({});
+            setParticipationsState({});
+            setActivitiesState([]);
+            setActivityRecordsState({});
+        }
+    }, [activeGroupId]);
+
 
     const calculateFinalGrade = useCallback((
       studentId: string, 
-      criteria: EvaluationCriteria[],
-      grades: Grades,
-      participations: ParticipationRecord,
-      activities: Activity[],
-      activityRecords: ActivityRecord,
-      studentObservationsParam?: StudentObservation[]
+      pCriteria: EvaluationCriteria[],
+      pGrades: Grades,
+      pParticipations: ParticipationRecord,
+      pActivities: Activity[],
+      pActivityRecords: ActivityRecord,
+      studentObservations: StudentObservation[]
     ): number => {
-        if (!criteria || criteria.length === 0) return 0;
+        if (!pCriteria || pCriteria.length === 0) return 0;
 
         let finalGrade = 0;
         
-        for (const criterion of criteria) {
+        for (const criterion of pCriteria) {
             let performanceRatio = 0;
 
              if (criterion.name === 'Actividades' || criterion.name === 'Portafolio') {
-                const totalActivities = activities.length;
+                const totalActivities = pActivities.length;
                 if (totalActivities > 0) {
-                    const deliveredActivities = Object.values(activityRecords[studentId] || {}).filter(Boolean).length;
+                    const deliveredActivities = Object.values(pActivityRecords[studentId] || {}).filter(Boolean).length;
                     performanceRatio = deliveredActivities / totalActivities;
                 }
             } else if (criterion.name === 'Participación') {
-                const totalClasses = Object.keys(participations).length;
+                const totalClasses = Object.keys(pParticipations).length;
                 if (totalClasses > 0) {
-                    const studentParticipations = Object.values(participations).filter(day => day[studentId]).length;
+                    const studentParticipations = Object.values(pParticipations).filter(day => day[studentId]).length;
                     performanceRatio = studentParticipations / totalClasses;
                 }
             } else {
-                const delivered = grades[studentId]?.[criterion.id]?.delivered ?? 0;
+                const delivered = pGrades[studentId]?.[criterion.id]?.delivered ?? 0;
                 const expected = criterion.expectedValue;
                 if (expected > 0) {
                     performanceRatio = delivered / expected;
@@ -293,63 +255,18 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             finalGrade += (performanceRatio * criterion.weight);
         }
         
-        const studentObservations = studentObservationsParam ?? allObservations[studentId] ?? [];
         const merits = studentObservations.filter(o => o.type === 'Mérito').length;
         const demerits = studentObservations.filter(o => o.type === 'Demérito').length;
         finalGrade += merits;
         finalGrade -= demerits;
 
         return Math.max(0, Math.min(100, finalGrade));
-    }, [allObservations]);
+    }, []);
 
     // --- DERIVED STATE & MEMOS ---
     const activeGroup = useMemo(() => {
         return groups.find(g => g.id === activeGroupId) || null;
     }, [groups, activeGroupId]);
-
-    const activePartial = useMemo(() => {
-        return activeGroup?.activePartial || null;
-    }, [activeGroup]);
-
-    const criteria = useMemo(() => {
-        if (!activeGroupId || !activePartial) return [];
-        const key = getPartialDataKey('criteria', activeGroupId, activePartial);
-        return allCriteria[key] || [];
-    }, [activeGroupId, activePartial, allCriteria]);
-
-    const grades = useMemo(() => {
-        if (!activeGroupId || !activePartial) return {};
-        const key = getPartialDataKey('grades', activeGroupId, activePartial);
-        return allGrades[key] || {};
-    }, [activeGroupId, activePartial, allGrades]);
-
-    const attendance = useMemo(() => {
-        if (!activeGroupId || !activePartial) return {};
-        const key = getPartialDataKey('attendance', activeGroupId, activePartial);
-        return allAttendances[key] || {};
-    }, [activeGroupId, activePartial, allAttendances]);
-
-    const participations = useMemo(() => {
-        if (!activeGroupId || !activePartial) return {};
-        const key = getPartialDataKey('participations', activeGroupId, activePartial);
-        return allParticipations[key] || {};
-    }, [activeGroupId, activePartial, allParticipations]);
-    
-    const activities = useMemo(() => {
-        if (!activeGroupId || !activePartial) return [];
-        const key = getPartialDataKey('activities', activeGroupId, activePartial);
-        return allActivities[key] || [];
-    }, [activeGroupId, activePartial, allActivities]);
-    
-    const activityRecords = useMemo(() => {
-        if (!activeGroupId || !activePartial) return {};
-        const key = getPartialDataKey('activityRecords', activeGroupId, activePartial);
-        return allActivityRecords[key] || {};
-    }, [activeGroupId, activePartial, allActivityRecords]);
-    
-    const observations = useMemo(() => {
-        return Object.values(allObservations).flat();
-    }, [allObservations]);
 
     const activeStudentsInGroups = useMemo(() => {
         const studentSet = new Set<Student>();
@@ -376,65 +293,51 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         saveToLocalStorage('students', newStudents);
     };
     
-    const setCriteriaWrapper = (newCriteria: EvaluationCriteria[]) => {
-        if (!activeGroupId || !activePartial) return;
-        const key = getPartialDataKey('criteria', activeGroupId, activePartial);
-        setAllCriteria(prev => ({...prev, [key]: newCriteria}));
-        saveToLocalStorage(key, newCriteria);
+    const setCriteria = (newCriteria: EvaluationCriteria[]) => {
+        if (!activeGroupId) return;
+        setCriteriaState(newCriteria);
+        saveToLocalStorage(`criteria_${activeGroupId}`, newCriteria);
     };
 
-    const setGradesWrapper = (value: React.SetStateAction<Grades>) => {
-        if (!activeGroupId || !activePartial) return;
-        const key = getPartialDataKey('grades', activeGroupId, activePartial);
-        setAllGrades(prev => {
-            const currentGrades = prev[key] || {};
-            const newGrades = typeof value === 'function' ? value(currentGrades) : value;
-            const updatedState = {...prev, [key]: newGrades};
-            saveToLocalStorage(key, newGrades);
-            return updatedState;
+    const setGrades = (value: React.SetStateAction<Grades>) => {
+        if (!activeGroupId) return;
+        setGradesState(prev => {
+            const newGrades = typeof value === 'function' ? value(prev) : value;
+            saveToLocalStorage(`grades_${activeGroupId}`, newGrades);
+            return newGrades;
         });
     }
     
-    const setAttendanceWrapper = (value: React.SetStateAction<AttendanceRecord>) => {
-        if (!activeGroupId || !activePartial) return;
-        const key = getPartialDataKey('attendance', activeGroupId, activePartial);
-        setAllAttendances(prev => {
-            const currentAttendance = prev[key] || {};
-            const newAttendance = typeof value === 'function' ? value(currentAttendance) : value;
-            const updatedState = {...prev, [key]: newAttendance};
-            saveToLocalStorage(key, newAttendance);
-            return updatedState;
+    const setAttendance = (value: React.SetStateAction<AttendanceRecord>) => {
+        if (!activeGroupId) return;
+        setAttendanceState(prev => {
+            const newAttendance = typeof value === 'function' ? value(prev) : value;
+            saveToLocalStorage(`attendance_${activeGroupId}`, newAttendance);
+            return newAttendance;
         });
     }
 
-    const setParticipationsWrapper = (value: React.SetStateAction<ParticipationRecord>) => {
-        if (!activeGroupId || !activePartial) return;
-        const key = getPartialDataKey('participations', activeGroupId, activePartial);
-        setAllParticipations(prev => {
-            const currentParticipations = prev[key] || {};
-            const newParticipations = typeof value === 'function' ? value(currentParticipations) : value;
-            const updatedState = {...prev, [key]: newParticipations};
-            saveToLocalStorage(key, newParticipations);
-            return updatedState;
+    const setParticipations = (value: React.SetStateAction<ParticipationRecord>) => {
+        if (!activeGroupId) return;
+        setParticipationsState(prev => {
+            const newParticipations = typeof value === 'function' ? value(prev) : value;
+            saveToLocalStorage(`participations_${activeGroupId}`, newParticipations);
+            return newParticipations;
         });
     }
     
-    const setActivitiesWrapper = (newActivities: Activity[]) => {
-        if (!activeGroupId || !activePartial) return;
-        const key = getPartialDataKey('activities', activeGroupId, activePartial);
-        setAllActivities(prev => ({ ...prev, [key]: newActivities }));
-        saveToLocalStorage(key, newActivities);
+    const setActivities = (newActivities: Activity[]) => {
+        if (!activeGroupId) return;
+        setActivitiesState(newActivities);
+        saveToLocalStorage(`activities_${activeGroupId}`, newActivities);
     }
 
-    const setActivityRecordsWrapper = (value: React.SetStateAction<ActivityRecord>) => {
-        if (!activeGroupId || !activePartial) return;
-        const key = getPartialDataKey('activityRecords', activeGroupId, activePartial);
-        setAllActivityRecords(prev => {
-             const currentRecords = prev[key] || {};
-             const newRecords = typeof value === 'function' ? value(currentRecords) : value;
-             const updatedState = {...prev, [key]: newRecords};
-             saveToLocalStorage(key, newRecords);
-             return updatedState;
+    const setActivityRecords = (value: React.SetStateAction<ActivityRecord>) => {
+        if (!activeGroupId) return;
+        setActivityRecordsState(prev => {
+             const newRecords = typeof value === 'function' ? value(prev) : value;
+             saveToLocalStorage(`activityRecords_${activeGroupId}`, newRecords);
+             return newRecords;
         });
     }
     
@@ -444,50 +347,17 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         window.dispatchEvent(new Event('storage'));
     };
 
-    const setActivePartialForGroup = useCallback((groupId: string, partial: PartialId) => {
-        setGroupsState(prevGroups => {
-            const newGroups = prevGroups.map(g => {
-                if (g.id === groupId) {
-                    return { ...g, activePartial: partial };
-                }
-                return g;
-            });
-            saveToLocalStorage('groups', newGroups);
-            return newGroups;
-        });
-    }, []);
-
-    const togglePartialLock = useCallback((groupId: string, partial: PartialId) => {
-        setGroupsState(prevGroups => {
-            const newGroups = prevGroups.map(g => {
-                if (g.id === groupId) {
-                    const currentClosed = g.closedPartials || [];
-                    const isClosed = currentClosed.includes(partial);
-                    const newClosedPartials = isClosed
-                        ? currentClosed.filter(p => p !== partial)
-                        : [...currentClosed, partial];
-                    return { ...g, closedPartials: newClosedPartials };
-                }
-                return g;
-            });
-            saveToLocalStorage('groups', newGroups);
-            return newGroups;
-        });
-    }, []);
-
-
     const saveStudentObservation = (observation: StudentObservation) => {
-        const key = `observations_${observation.studentId}`;
         setAllObservations(prev => {
             const studentObs = prev[observation.studentId] || [];
             const newStudentObs = [...studentObs, observation];
-            saveToLocalStorage(key, newStudentObs);
-            return {...prev, [observation.studentId]: newStudentObs };
+            const newState = {...prev, [observation.studentId]: newStudentObs };
+            saveToLocalStorage('allObservations', newState);
+            return newState;
         });
     };
 
     const updateStudentObservation = (studentId: string, observationId: string, updateText: string, isClosing: boolean) => {
-        const key = `observations_${studentId}`;
         setAllObservations(prev => {
             const studentObs = prev[studentId] || [];
             const newStudentObs = studentObs.map(obs => {
@@ -497,36 +367,35 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 }
                 return obs;
             });
-            saveToLocalStorage(key, newStudentObs);
-            return { ...prev, [studentId]: newStudentObs };
+            const newState = { ...prev, [studentId]: newStudentObs };
+            saveToLocalStorage('allObservations', newState);
+            return newState;
         });
     }
 
     const deleteGroup = (groupId: string) => {
         const newGroups = groups.filter(g => g.id !== groupId);
         setGroups(newGroups);
-        const partials: PartialId[] = ['p1', 'p2', 'p3'];
-        for(const partial of partials) {
-            localStorage.removeItem(getPartialDataKey('criteria', groupId, partial));
-            localStorage.removeItem(getPartialDataKey('grades', groupId, partial));
-            localStorage.removeItem(getPartialDataKey('attendance', groupId, partial));
-            localStorage.removeItem(getPartialDataKey('participations', groupId, partial));
-            localStorage.removeItem(getPartialDataKey('activities', groupId, partial));
-            localStorage.removeItem(getPartialDataKey('activityRecords', groupId, partial));
-        }
+        localStorage.removeItem(`criteria_${groupId}`);
+        localStorage.removeItem(`grades_${groupId}`);
+        localStorage.removeItem(`attendance_${groupId}`);
+        localStorage.removeItem(`participations_${groupId}`);
+        localStorage.removeItem(`activities_${groupId}`);
+        localStorage.removeItem(`activityRecords_${groupId}`);
+
         if (activeGroupId === groupId) {
             setActiveGroupId(null);
         }
     }
 
     // --- GLOBAL CALCULATIONS ---
-    const getStudentRiskLevel = useCallback((finalGrade: number, attendance: AttendanceRecord, studentId: string): CalculatedRisk => {
+    const getStudentRiskLevel = useCallback((finalGrade: number, pAttendance: AttendanceRecord, studentId: string): CalculatedRisk => {
         let absences = 0;
-        const totalDaysForStudent = Object.keys(attendance).filter(date => attendance[date].hasOwnProperty(studentId)).length;
+        const totalDaysForStudent = Object.keys(pAttendance).filter(date => pAttendance[date].hasOwnProperty(studentId)).length;
         
         if (totalDaysForStudent > 0) {
-            Object.keys(attendance).forEach(date => {
-                if (attendance[date][studentId] === false) {
+            Object.keys(pAttendance).forEach(date => {
+                if (pAttendance[date][studentId] === false) {
                     absences++;
                 }
             });
@@ -544,113 +413,95 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         
         return {level: 'low', reason: 'Sin riesgo detectado' };
     }, []);
+    
+    const groupAverages = useMemo(() => {
+        const averages: { [groupId: string]: number } = {};
+        groups.forEach(group => {
+            const pCriteria = loadFromLocalStorage<EvaluationCriteria[]>(`criteria_${group.id}`, []);
+            if (pCriteria.length === 0) {
+                averages[group.id] = 0;
+                return;
+            }
+            const pGrades = loadFromLocalStorage<Grades>(`grades_${group.id}`, {});
+            const pParticipations = loadFromLocalStorage<ParticipationRecord>(`participations_${group.id}`, {});
+            const pActivities = loadFromLocalStorage<Activity[]>(`activities_${group.id}`, []);
+            const pActivityRecords = loadFromLocalStorage<ActivityRecord>(`activityRecords_${group.id}`, {});
+            
+            const groupGrades = group.students.map(s => {
+                const studentObs = allObservations[s.id] || [];
+                return calculateFinalGrade(s.id, pCriteria, pGrades, pParticipations, pActivities, pActivityRecords, studentObs);
+            });
+
+            const total = groupGrades.reduce((sum, grade) => sum + grade, 0);
+            averages[group.id] = groupGrades.length > 0 ? total / groupGrades.length : 0;
+        });
+        return averages;
+    }, [groups, allObservations, calculateFinalGrade]);
+    
 
     const atRiskStudents: StudentWithRisk[] = useMemo(() => {
-        const students: StudentWithRisk[] = [];
-        const checkedStudentIds = new Set<string>();
-        const partials: PartialId[] = ['p1', 'p2', 'p3'];
+        const atRisk: StudentWithRisk[] = [];
+        const studentRiskMap: { [studentId: string]: CalculatedRisk } = {};
         
         groups.forEach(group => {
-            group.students.forEach(student => {
-                if(checkedStudentIds.has(student.id)) return;
+            const pCriteria = loadFromLocalStorage<EvaluationCriteria[]>(`criteria_${group.id}`, []);
+            if (pCriteria.length === 0) return;
 
-                for(const partial of partials) {
-                    const groupCriteria = allCriteria[getPartialDataKey('criteria', group.id, partial)] || [];
-                    if(groupCriteria.length === 0) continue; // Don't evaluate risk if no criteria
-                    const groupGrades = allGrades[getPartialDataKey('grades', group.id, partial)] || {};
-                    const groupParticipations = allParticipations[getPartialDataKey('participations', group.id, partial)] || {};
-                    const groupAttendance = allAttendances[getPartialDataKey('attendance', group.id, partial)] || {};
-                    const groupActivities = allActivities[getPartialDataKey('activities', group.id, partial)] || [];
-                    const groupActivityRecords = allActivityRecords[getPartialDataKey('activityRecords', group.id, partial)] || {};
-                    const studentObservations = allObservations[student.id] || [];
-                    const finalGrade = calculateFinalGrade(student.id, groupCriteria, groupGrades, groupParticipations, groupActivities, groupActivityRecords, studentObservations);
-                    const risk = getStudentRiskLevel(finalGrade, groupAttendance, student.id);
-                    if (risk.level === 'high' || risk.level === 'medium') {
-                        students.push({ ...student, calculatedRisk: risk });
-                        checkedStudentIds.add(student.id);
-                        return; // Found risk in one partial, move to next student
+            const pGrades = loadFromLocalStorage<Grades>(`grades_${group.id}`, {});
+            const pParticipations = loadFromLocalStorage<ParticipationRecord>(`participations_${group.id}`, {});
+            const pActivities = loadFromLocalStorage<Activity[]>(`activities_${group.id}`, []);
+            const pActivityRecords = loadFromLocalStorage<ActivityRecord>(`activityRecords_${group.id}`, {});
+            const pAttendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${group.id}`, {});
+
+            group.students.forEach(student => {
+                const studentObs = allObservations[student.id] || [];
+                const finalGrade = calculateFinalGrade(student.id, pCriteria, pGrades, pParticipations, pActivities, pActivityRecords, studentObs);
+                const risk = getStudentRiskLevel(finalGrade, pAttendance, student.id);
+
+                if (risk.level === 'high' || risk.level === 'medium') {
+                    if (!studentRiskMap[student.id] || risk.level === 'high') {
+                        studentRiskMap[student.id] = risk;
                     }
                 }
-                 checkedStudentIds.add(student.id);
             });
         });
-        return students.sort((a, b) => {
+
+        allStudents.forEach(student => {
+            if (studentRiskMap[student.id]) {
+                atRisk.push({ ...student, calculatedRisk: studentRiskMap[student.id] });
+            }
+        });
+
+        return atRisk.sort((a, b) => {
             if (a.calculatedRisk.level === 'high' && b.calculatedRisk.level !== 'high') return -1;
             if (a.calculatedRisk.level !== 'high' && b.calculatedRisk.level === 'high') return 1;
             return 0;
         });
-    }, [groups, allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, allAttendances, allObservations, calculateFinalGrade, getStudentRiskLevel]);
+    }, [groups, allStudents, allObservations, calculateFinalGrade, getStudentRiskLevel]);
     
-    const groupStats = useMemo(() => {
-        const allStats: {[groupId: string]: GroupStats} = {};
-        const partials: PartialId[] = ['p1', 'p2', 'p3'];
-        for(const group of groups) {
-            let totalGradeSum = 0;
-            let partialsWithData = 0;
-            let highRiskStudents = new Set<string>();
-
-            for (const partial of partials) {
-                const groupCriteria = allCriteria[getPartialDataKey('criteria', group.id, partial)] || [];
-                const groupGrades = allGrades[getPartialDataKey('grades', group.id, partial)] || {};
-                
-                if (groupCriteria.length === 0 && Object.keys(groupGrades).length === 0) continue;
-                
-                const groupParticipations = allParticipations[getPartialDataKey('participations', group.id, partial)] || {};
-                const groupAttendance = allAttendances[getPartialDataKey('attendance', group.id, partial)] || {};
-                const groupActivities = allActivities[getPartialDataKey('activities', group.id, partial)] || [];
-                const groupActivityRecords = allActivityRecords[getPartialDataKey('activityRecords', group.id, partial)] || {};
-
-                const groupFinalGrades = group.students.map(s => {
-                    const studentObservations = allObservations[s.id] || [];
-                    const finalGrade = calculateFinalGrade(s.id, groupCriteria, groupGrades, groupParticipations, groupActivities, groupActivityRecords, studentObservations);
-                     const risk = getStudentRiskLevel(finalGrade, groupAttendance, s.id);
-                    if (risk.level === 'high') {
-                        highRiskStudents.add(s.id);
-                    }
-                    return finalGrade;
-                });
-                
-                if (groupFinalGrades.length > 0) {
-                    totalGradeSum += groupFinalGrades.reduce((a, b) => a + b, 0) / groupFinalGrades.length;
-                    partialsWithData++;
-                }
-            }
-            
-            allStats[group.id] = {
-                average: partialsWithData > 0 ? totalGradeSum / partialsWithData : 0,
-                highRiskCount: highRiskStudents.size
-            };
-        }
-        return allStats;
-    }, [groups, allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, allAttendances, allObservations, calculateFinalGrade, getStudentRiskLevel]);
-    
-    const groupAverages = useMemo(() => {
-        return Object.fromEntries(Object.entries(groupStats).map(([groupId, stats]) => [groupId, stats.average]));
-    }, [groupStats]);
     
     const overallAverageParticipation = useMemo(() => {
         let totalPossibleAttendance = 0;
         let totalPresents = 0;
-        for(const key in allAttendances) {
-          const groupAttendance = allAttendances[key];
-          for(const date in groupAttendance){
-            totalPossibleAttendance += Object.keys(groupAttendance[date]).length;
-            totalPresents += Object.values(groupAttendance[date]).filter(Boolean).length;
-          }
-        }
+        groups.forEach(group => {
+            const groupAttendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${group.id}`, {});
+            for(const date in groupAttendance){
+                totalPossibleAttendance += Object.keys(groupAttendance[date]).length;
+                totalPresents += Object.values(groupAttendance[date]).filter(Boolean).length;
+            }
+        });
         return totalPossibleAttendance > 0 ? Math.round((totalPresents / totalPossibleAttendance) * 100) : 100;
-    }, [allAttendances]);
+    }, [groups]);
 
 
     return (
         <DataContext.Provider value={{
-            students: allStudents, groups, allStudents, activeStudentsInGroups, settings, activeGroup, activePartial, criteria, grades, attendance, participations, activities, activityRecords,
-            observations,
-            groupStats, atRiskStudents, overallAverageParticipation, groupAverages,
-            allObservations, allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, allAttendances,
+            students: allStudents, groups, allStudents, activeStudentsInGroups, settings, activeGroup,
+            criteria, grades, attendance, participations, activities, activityRecords, allObservations,
+            groupAverages, atRiskStudents, overallAverageParticipation,
             setStudents: setAllStudents, setGroups, setAllStudents, setSettings, setActiveGroupId,
-            setCriteria: setCriteriaWrapper, setGrades: setGradesWrapper, setAttendance: setAttendanceWrapper, setParticipations: setParticipationsWrapper, setActivities: setActivitiesWrapper, setActivityRecords: setActivityRecordsWrapper,
-            saveStudentObservation, updateStudentObservation, deleteGroup, calculateFinalGrade, getStudentRiskLevel, setActivePartialForGroup, togglePartialLock
+            setCriteria, setGrades, setAttendance, setParticipations, setActivities, setActivityRecords,
+            saveStudentObservation, updateStudentObservation, deleteGroup, calculateFinalGrade, getStudentRiskLevel
         }}>
             {children}
         </DataContext.Provider>

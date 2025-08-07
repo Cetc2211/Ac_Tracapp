@@ -25,10 +25,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useData } from '@/hooks/use-data';
 
 export default function ParticipationsPage() {
-  const { activeGroup, activePartial, participations, setParticipations, attendance } = useData();
+  const { activeGroup, participations, setParticipations, attendance } = useData();
   const { toast } = useToast();
-
-  const isPartialClosed = activeGroup && activePartial ? activeGroup.closedPartials.includes(activePartial) : true;
 
   const studentsToDisplay = useMemo(() => {
     return activeGroup ? [...activeGroup.students].sort((a,b) => a.name.localeCompare(b.name)) : [];
@@ -97,7 +95,7 @@ export default function ParticipationsPage() {
                 </p>
             </div>
         </div>
-        {activeGroup && <Button onClick={handleRegisterToday} disabled={isPartialClosed}>Registrar Participaciones de Hoy</Button>}
+        {activeGroup && <Button onClick={handleRegisterToday}>Registrar Participaciones de Hoy</Button>}
       </div>
 
       <Card>
@@ -132,7 +130,6 @@ export default function ParticipationsPage() {
                         <Checkbox 
                            checked={participations[date]?.[student.id] || false}
                            onCheckedChange={(checked) => handleParticipationChange(student.id, date, !!checked)}
-                           disabled={isPartialClosed}
                         />
                       </TableCell>
                     ))}

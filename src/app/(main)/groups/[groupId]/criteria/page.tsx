@@ -40,7 +40,7 @@ const weightOptions = ["10", "20", "30", "40", "50", "60", "70", "80", "90", "10
 export default function GroupCriteriaPage() {
   const params = useParams();
   const groupId = params.groupId as string;
-  const { activeGroup, activePartial, criteria, setCriteria } = useData();
+  const { activeGroup, criteria, setCriteria } = useData();
 
   const [selectedName, setSelectedName] = useState('');
   const [customName, setCustomName] = useState('');
@@ -53,8 +53,6 @@ export default function GroupCriteriaPage() {
 
   const { toast } = useToast();
   
-  const isPartialClosed = activeGroup && activePartial ? activeGroup.closedPartials.includes(activePartial) : true;
-
   const isSelectedCriterionAutomated = useMemo(() => {
     const name = selectedName === 'Otros' ? customName : selectedName;
     return name === 'Participación' || name === 'Actividades' || name === 'Portafolio';
@@ -176,7 +174,7 @@ export default function GroupCriteriaPage() {
   
   const finalNameForCheck = selectedName === 'Otros' ? customName.trim() : selectedName;
   const finalWeightForCheck = selectedWeight === 'Otros' ? customWeight : selectedWeight;
-  const isAddButtonDisabled = !finalNameForCheck || !finalWeightForCheck || (!newCriterionValue && !isSelectedCriterionAutomated) || isPartialClosed;
+  const isAddButtonDisabled = !finalNameForCheck || !finalWeightForCheck || (!newCriterionValue && !isSelectedCriterionAutomated);
 
 
   return (
@@ -209,7 +207,7 @@ export default function GroupCriteriaPage() {
                 <div className="flex-grow space-y-1">
                     <Label htmlFor="criterion-name">Nombre del criterio</Label>
                     <div className="flex gap-2">
-                        <Select value={selectedName} onValueChange={setSelectedName} disabled={isPartialClosed}>
+                        <Select value={selectedName} onValueChange={setSelectedName}>
                             <SelectTrigger id="criterion-name">
                                 <SelectValue placeholder="Selecciona un nombre" />
                             </SelectTrigger>
@@ -224,7 +222,6 @@ export default function GroupCriteriaPage() {
                                 placeholder="Nombre personalizado" 
                                 value={customName}
                                 onChange={(e) => setCustomName(e.target.value)}
-                                disabled={isPartialClosed}
                             />
                         )}
                     </div>
@@ -232,7 +229,7 @@ export default function GroupCriteriaPage() {
                 <div className="space-y-1">
                     <Label htmlFor="criterion-weight">Peso %</Label>
                     <div className="flex gap-2">
-                        <Select value={selectedWeight} onValueChange={setSelectedWeight} disabled={isPartialClosed}>
+                        <Select value={selectedWeight} onValueChange={setSelectedWeight}>
                             <SelectTrigger id="criterion-weight" className="w-[120px]">
                                 <SelectValue placeholder="Peso" />
                             </SelectTrigger>
@@ -249,7 +246,6 @@ export default function GroupCriteriaPage() {
                                 className="w-[120px]"
                                 value={customWeight}
                                 onChange={(e) => setCustomWeight(e.target.value)}
-                                disabled={isPartialClosed}
                             />
                         )}
                     </div>
@@ -263,7 +259,7 @@ export default function GroupCriteriaPage() {
                         className="w-[180px]"
                         value={newCriterionValue}
                         onChange={(e) => setNewCriterionValue(e.target.value)}
-                        disabled={isSelectedCriterionAutomated || isPartialClosed}
+                        disabled={isSelectedCriterionAutomated}
                     />
                 </div>
                 <Button size="icon" onClick={handleAddCriterion} disabled={isAddButtonDisabled}>
@@ -288,11 +284,11 @@ export default function GroupCriteriaPage() {
                     </div>
                     <div className="flex items-center gap-2">
                         <Badge variant="secondary">{criterion.weight}%</Badge>
-                         <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleOpenEditDialog(criterion)} disabled={isPartialClosed}>
+                         <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleOpenEditDialog(criterion)}>
                             <Edit className="h-4 w-4"/>
                             <span className="sr-only">Editar</span>
                         </Button>
-                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleRemoveCriterion(criterion.id)} disabled={isPartialClosed}>
+                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleRemoveCriterion(criterion.id)}>
                             <Trash className="h-4 w-4 text-destructive"/>
                             <span className="sr-only">Eliminar</span>
                         </Button>

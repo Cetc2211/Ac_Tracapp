@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -42,7 +41,7 @@ const cardColors = [
 
 
 export default function GroupsPage() {
-  const { groups, allStudents, setGroups, setAllStudents, groupStats, setActiveGroupId } = useData();
+  const { groups, allStudents, setGroups, setAllStudents, groupAverages, atRiskStudents, setActiveGroupId } = useData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
   const [newGroupName, setNewGroupName] = useState('');
@@ -84,8 +83,6 @@ export default function GroupsPage() {
         id: `G${Date.now()}`,
         subject: newGroupName,
         students: studentsForNewGroup,
-        activePartial: 'p1',
-        closedPartials: [],
     };
     
     const updatedGroups = [...groups, newGroup];
@@ -117,6 +114,12 @@ export default function GroupsPage() {
   const handleGroupClick = (groupId: string) => {
     setActiveGroupId(groupId);
   };
+  
+  const getHighRiskCountForGroup = (groupId: string) => {
+      const group = groups.find(g => g.id === groupId);
+      if(!group) return 0;
+      return atRiskStudents.filter(s => s.calculatedRisk.level === 'high' && group.students.some(gs => gs.id === s.id)).length;
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -177,7 +180,8 @@ export default function GroupsPage() {
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {groups.map((group, index) => {
-            const stats = groupStats[group.id] || { average: 0, highRiskCount: 0 };
+            const average = groupAverages[group.id] || 0;
+            const highRiskCount = getHighRiskCountForGroup(group.id);
             const colorClass = cardColors[index % cardColors.length];
             
             return (
@@ -201,8 +205,8 @@ export default function GroupsPage() {
                 </CardHeader>
                 <CardContent className="flex-grow">
                   <div className="text-sm space-y-2">
-                    <div className='flex items-center gap-2'><span className='font-semibold'>Promedio Gral:</span> <span className={`font-bold`}>{stats.average.toFixed(1)}</span></div>
-                    <div className='flex items-center gap-2'><span className='font-semibold'>Riesgo Alto:</span> <span className='font-bold flex items-center gap-1'>{stats.highRiskCount > 0 && <AlertTriangle className="h-4 w-4" />} {stats.highRiskCount}</span></div>
+                    <div className='flex items-center gap-2'><span className='font-semibold'>Promedio Gral:</span> <span className={`font-bold`}>{average.toFixed(1)}</span></div>
+                    <div className='flex items-center gap-2'><span className='font-semibold'>Riesgo Alto:</span> <span className='font-bold flex items-center gap-1'>{highRiskCount > 0 && <AlertTriangle className="h-4 w-4" />} {highRiskCount}</span></div>
                   </div>
                 </CardContent>
                 <CardFooter className="flex justify-between gap-2">
@@ -231,5 +235,3 @@ export default function GroupsPage() {
     </div>
   );
 }
-
-    
