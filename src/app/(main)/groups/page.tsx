@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -82,7 +83,9 @@ export default function GroupsPage() {
     const newGroup: Group = {
         id: `G${Date.now()}`,
         subject: newGroupName,
-        students: studentsForNewGroup
+        students: studentsForNewGroup,
+        activePartial: 'p1',
+        closedPartials: [],
     };
     
     const updatedGroups = [...groups, newGroup];
@@ -228,3 +231,5 @@ export default function GroupsPage() {
     </div>
   );
 }
+
+    

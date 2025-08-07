@@ -87,7 +87,8 @@ export default function GroupDetailsPage() {
   
   const [bulkNames, setBulkNames] = useState('');
   const [bulkEmails, setBulkEmails] = useState('');
-  const [bulkPhones, setBulkTutorNames] = useState('');
+  const [bulkPhones, setBulkPhones] = useState('');
+  const [bulkTutorNames, setBulkTutorNames] = useState('');
   const [bulkTutorPhones, setBulkTutorPhones] = useState('');
 
   const [isLoading, setIsLoading] = useState(false);
@@ -694,3 +695,5 @@ export default function GroupDetailsPage() {
     </>
   );
 }
+
+    
