@@ -131,6 +131,7 @@ interface DataContextType {
 
   // Functions
   saveStudentObservation: (observation: StudentObservation) => void;
+  updateStudentObservation: (studentId: string, observationId: string, updateText: string, isClosing: boolean) => void;
   deleteGroup: (groupId: string) => void;
   calculateFinalGrade: (
     studentId: string, 
@@ -218,7 +219,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             criteriaStore[`criteria_${group.id}`] = loadFromLocalStorage(`criteria_${group.id}`, []);
             gradesStore[group.id] = loadFromLocalStorage(`grades_${group.id}`, {});
             attendancesStore[group.id] = loadFromLocalStorage(`attendance_${group.id}`, {});
-            participationsStore[group.id] = loadFromLocalStorage(`participations_${group.id}`, {});
+            participationsStore[group.id] = loadFromLocalStorage(`participations_${group.id}`, []);
             activitiesStore[group.id] = loadFromLocalStorage(`activities_${group.id}`, []);
             activityRecordsStore[group.id] = loadFromLocalStorage(`activityRecords_${group.id}`, {});
         }
@@ -432,6 +433,22 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         });
     };
 
+    const updateStudentObservation = (studentId: string, observationId: string, updateText: string, isClosing: boolean) => {
+        const key = `observations_${studentId}`;
+        setAllObservations(prev => {
+            const studentObs = prev[studentId] || [];
+            const newStudentObs = studentObs.map(obs => {
+                if (obs.id === observationId) {
+                    const newUpdates = [...obs.followUpUpdates, { date: new Date().toISOString(), update: updateText }];
+                    return { ...obs, followUpUpdates: newUpdates, isClosed: isClosing };
+                }
+                return obs;
+            });
+            saveToLocalStorage(key, newStudentObs);
+            return { ...prev, [studentId]: newStudentObs };
+        });
+    }
+
     const deleteGroup = (groupId: string) => {
         const newGroups = groups.filter(g => g.id !== groupId);
         setGroups(newGroups);
@@ -584,7 +601,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             allObservations, allCriteria, allGrades, allParticipations, allActivities, allActivityRecords, allAttendances,
             setStudents: setAllStudents, setGroups, setAllStudents, setSettings, setActiveGroupId,
             setCriteria: setCriteriaWrapper, setGrades: setGradesWrapper, setAttendance: setAttendanceWrapper, setParticipations: setParticipationsWrapper, setActivities: setActivitiesWrapper, setActivityRecords: setActivityRecordsWrapper,
-            saveStudentObservation, deleteGroup, calculateFinalGrade, getStudentRiskLevel,
+            saveStudentObservation, updateStudentObservation, deleteGroup, calculateFinalGrade, getStudentRiskLevel,
         }}>
             {children}
         </DataContext.Provider>

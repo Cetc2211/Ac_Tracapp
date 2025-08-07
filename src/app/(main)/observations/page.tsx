@@ -21,13 +21,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import Image from 'next/image';
 import { Student } from '@/lib/placeholder-data';
-import { Search, Users, BookText } from 'lucide-react';
+import { Search, Users, BookText, Library } from 'lucide-react';
 import { ObservationDialog } from '@/components/observation-dialog';
+import { StudentObservationLogDialog } from '@/components/student-observation-log-dialog';
 import { useData } from '@/hooks/use-data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 
-const StudentTable = ({ students, onOpenDialog }: { students: Student[], onOpenDialog: (student: Student) => void }) => {
+const StudentTable = ({ students, onOpenDialog, buttonText, buttonIcon }: { students: Student[], onOpenDialog: (student: Student) => void, buttonText: string, buttonIcon: React.ReactNode }) => {
     if (students.length === 0) {
         return (
             <div className="text-center p-12 text-muted-foreground">
@@ -64,8 +65,8 @@ const StudentTable = ({ students, onOpenDialog }: { students: Student[], onOpenD
                     <TableCell>{student.id}</TableCell>
                     <TableCell className="text-right">
                         <Button variant="outline" size="sm" onClick={() => onOpenDialog(student)}>
-                            <BookText className="mr-2 h-4 w-4" />
-                            Ver / Registrar
+                            {buttonIcon}
+                            {buttonText}
                         </Button>
                     </TableCell>
                 </TableRow>
@@ -79,8 +80,10 @@ const StudentTable = ({ students, onOpenDialog }: { students: Student[], onOpenD
 export default function ObservationsPage() {
   const { activeGroup, allObservations } = useData();
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedStudentForNew, setSelectedStudentForNew] = useState<Student | null>(null);
+  const [selectedStudentForLog, setSelectedStudentForLog] = useState<Student | null>(null);
+  const [isNewObservationDialogOpen, setIsNewObservationDialogOpen] = useState(false);
+  const [isLogDialogOpen, setIsLogDialogOpen] = useState(false);
 
   const studentsToDisplay = useMemo(() => {
     return activeGroup?.students || [];
@@ -91,10 +94,15 @@ export default function ObservationsPage() {
     return activeGroup.students.filter(student => allObservations[student.id] && allObservations[student.id].length > 0);
   }, [activeGroup, allObservations]);
 
-  const handleOpenDialog = (student: Student) => {
-    setSelectedStudent(student);
-    setIsDialogOpen(true);
+  const handleOpenNewObservationDialog = (student: Student) => {
+    setSelectedStudentForNew(student);
+    setIsNewObservationDialogOpen(true);
   };
+  
+  const handleOpenLogDialog = (student: Student) => {
+    setSelectedStudentForLog(student);
+    setIsLogDialogOpen(true);
+  }
 
   const filteredAllStudents = useMemo(() => {
     return studentsToDisplay.filter(student =>
@@ -110,19 +118,26 @@ export default function ObservationsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-       {selectedStudent && (
+       {selectedStudentForNew && (
         <ObservationDialog
-          student={selectedStudent}
-          open={isDialogOpen}
-          onOpenChange={setIsDialogOpen}
+          student={selectedStudentForNew}
+          open={isNewObservationDialogOpen}
+          onOpenChange={setIsNewObservationDialogOpen}
         />
       )}
+       {selectedStudentForLog && (
+        <StudentObservationLogDialog
+          student={selectedStudentForLog}
+          open={isLogDialogOpen}
+          onOpenChange={setIsLogDialogOpen}
+        />
+       )}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Bitácora de Observaciones</h1>
           <p className="text-muted-foreground">
             {activeGroup 
-                ? `Registra observaciones para el grupo: ${activeGroup.subject}.`
+                ? `Registra y consulta observaciones para el grupo: ${activeGroup.subject}.`
                 : 'Selecciona un grupo para ver a sus estudiantes.'
             }
           </p>
@@ -154,10 +169,20 @@ export default function ObservationsPage() {
                       </TabsTrigger>
                     </TabsList>
                     <TabsContent value="all">
-                        <StudentTable students={filteredAllStudents} onOpenDialog={handleOpenDialog} />
+                        <StudentTable 
+                          students={filteredAllStudents} 
+                          onOpenDialog={handleOpenNewObservationDialog}
+                          buttonText='Ver / Registrar'
+                          buttonIcon={<BookText className="mr-2 h-4 w-4" />}
+                        />
                     </TabsContent>
                     <TabsContent value="with-observations">
-                         <StudentTable students={filteredStudentsWithObservations} onOpenDialog={handleOpenDialog} />
+                         <StudentTable 
+                          students={filteredStudentsWithObservations} 
+                          onOpenDialog={handleOpenLogDialog}
+                          buttonText='Ver Bitácora'
+                          buttonIcon={<Library className="mr-2 h-4 w-4" />}
+                        />
                     </TabsContent>
                   </Tabs>
                 ) : (
