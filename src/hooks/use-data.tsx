@@ -262,8 +262,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     ): number => {
         let finalGrade = 0;
         
-        if (criteria.length === 0) {
-            return 0; // Prevent calculation if criteria are not set
+        if (!criteria || criteria.length === 0) {
+            return 0;
         }
 
         for (const criterion of criteria) {
