@@ -24,7 +24,9 @@ import { ArrowLeft } from 'lucide-react';
 import { useData } from '@/hooks/use-data';
 
 export default function AttendancePage() {
-  const { activeGroup, attendance, setAttendance } = useData();
+  const { activeGroup, activePartial, attendance, setAttendance } = useData();
+
+  const isPartialClosed = activeGroup && activePartial ? activeGroup.closedPartials.includes(activePartial) : true;
 
   const studentsToDisplay = useMemo(() => {
     return activeGroup ? [...activeGroup.students].sort((a,b) => a.name.localeCompare(b.name)) : [];
@@ -85,7 +87,7 @@ export default function AttendancePage() {
                 </p>
             </div>
         </div>
-        {activeGroup && <Button onClick={handleRegisterToday}>Registrar Asistencia de Hoy</Button>}
+        {activeGroup && <Button onClick={handleRegisterToday} disabled={isPartialClosed}>Registrar Asistencia de Hoy</Button>}
       </div>
 
       <Card>
@@ -120,6 +122,7 @@ export default function AttendancePage() {
                         <Checkbox 
                            checked={attendance[date]?.[student.id] || false}
                            onCheckedChange={(checked) => handleAttendanceChange(student.id, date, !!checked)}
+                           disabled={isPartialClosed}
                         />
                       </TableCell>
                     ))}

@@ -22,7 +22,7 @@ import { Student, Group, StudentObservation } from '@/lib/placeholder-data';
 import { notFound, useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, MoreHorizontal, UserPlus, Trash2, CalendarCheck, FilePen, Edit, Loader2, PenSquare, X, ImagePlus } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, UserPlus, Trash2, CalendarCheck, FilePen, Edit, Loader2, PenSquare, X, ImagePlus, Lock } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -59,6 +59,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useData } from '@/hooks/use-data';
 import { Input } from '@/components/ui/input';
 import type { CalculatedRisk } from '@/hooks/use-data';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
 
 
 export default function GroupDetailsPage() {
@@ -72,7 +74,10 @@ export default function GroupDetailsPage() {
     activeGroup, 
     criteria,
     atRiskStudents,
-    deleteGroup
+    deleteGroup,
+    setActivePartialForGroup,
+    activePartial,
+    closePartial
   } = useData();
 
   const router = useRouter();
@@ -82,8 +87,7 @@ export default function GroupDetailsPage() {
   
   const [bulkNames, setBulkNames] = useState('');
   const [bulkEmails, setBulkEmails] = useState('');
-  const [bulkPhones, setBulkPhones] = useState('');
-  const [bulkTutorNames, setBulkTutorNames] = useState('');
+  const [bulkPhones, setBulkTutorNames] = useState('');
   const [bulkTutorPhones, setBulkTutorPhones] = useState('');
 
   const [isLoading, setIsLoading] = useState(false);
@@ -93,6 +97,7 @@ export default function GroupDetailsPage() {
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   
+  const isPartialClosed = activeGroup && activePartial ? activeGroup.closedPartials.includes(activePartial) : true;
 
   const studentRiskLevels = useMemo(() => {
     if (!activeGroup) return {};
@@ -372,6 +377,42 @@ export default function GroupDetailsPage() {
             </AlertDialog>
          </div>
       </div>
+
+       <Card>
+        <CardHeader>
+          <Tabs value={activePartial || 'p1'} onValueChange={(val) => setActivePartialForGroup(activeGroup.id, val as 'p1'|'p2'|'p3')} className="w-full">
+            <div className="flex items-center justify-between">
+              <TabsList>
+                <TabsTrigger value="p1">Primer Parcial</TabsTrigger>
+                <TabsTrigger value="p2">Segundo Parcial</TabsTrigger>
+                <TabsTrigger value="p3">Tercer Parcial</TabsTrigger>
+              </TabsList>
+               <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="sm" disabled={isPartialClosed}>
+                      <Lock className="mr-2 h-4 w-4" />
+                      Cerrar Parcial
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>¿Seguro que quieres cerrar este parcial?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Esta acción es irreversible. Una vez cerrado, no podrás editar calificaciones, criterios, asistencias ni ninguna otra información de este parcial.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => closePartial(activeGroup.id, activePartial!)}>
+                        Sí, cerrar parcial
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+            </div>
+          </Tabs>
+        </CardHeader>
+      </Card>
       
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card className="lg:col-span-2">
@@ -626,7 +667,7 @@ export default function GroupDetailsPage() {
                             <div>
                                 <span className="font-medium">{criterion.name}</span>
                                 <p className="text-xs text-muted-foreground">
-                                  {criterion.name === 'Actividades' || criterion.name === 'Portafolio'
+                                  {criterion.name === 'Portafolio' || criterion.name === 'Actividades' 
                                     ? 'Cálculo por entregas'
                                     : criterion.name === 'Participación' 
                                     ? 'Cálculo por asistencia'

@@ -41,6 +41,7 @@ import { useState, useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SheetTitle } from '@/components/ui/sheet';
 import { useData } from '@/hooks/use-data';
+import { getPartialLabel } from '@/lib/utils';
 
 
 const navItems = [
@@ -69,7 +70,7 @@ export default function MainLayoutClient({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { settings, activeGroup } = useData();
+  const { settings, activeGroup, activePartial } = useData();
   const [isClient, setIsClient] = useState(false);
   
   useEffect(() => {
@@ -107,6 +108,11 @@ export default function MainLayoutClient({
                         <Package className="h-4 w-4"/>
                         {activeGroup.subject}
                       </p>
+                       {activePartial && (
+                        <p className="text-sm text-sidebar-foreground/80 mt-1">
+                          Parcial Activo: {getPartialLabel(activePartial)}
+                        </p>
+                       )}
                   </div>
                   <Separator className="my-2" />
                 </>

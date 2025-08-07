@@ -41,7 +41,8 @@ export default function GroupGradesPage() {
   const params = useParams();
   const groupId = params.groupId as string;
   const { 
-    activeGroup, 
+    activeGroup,
+    activePartial,
     criteria, 
     grades, 
     setGrades,
@@ -53,6 +54,8 @@ export default function GroupGradesPage() {
   } = useData();
 
   const { toast } = useToast();
+  
+  const isPartialClosed = activeGroup && activePartial ? activeGroup.closedPartials.includes(activePartial) : true;
 
   const handleSaveGrades = () => {
     toast({
@@ -85,14 +88,17 @@ export default function GroupGradesPage() {
   
   const finalGrades = useMemo(() => {
     const calculatedGrades: {[studentId: string]: number} = {};
-    if (activeGroup) {
+    if (activeGroup && activePartial) {
       for (const student of activeGroup.students) {
-        const studentObservations = allObservations[student.id] || [];
-        calculatedGrades[student.id] = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords, studentObservations);
+        calculatedGrades[student.id] = calculateFinalGrade(
+          student.id,
+          activeGroup.id,
+          activePartial
+        );
       }
     }
     return calculatedGrades;
-  }, [activeGroup, criteria, grades, participations, activities, activityRecords, allObservations, calculateFinalGrade]);
+  }, [activeGroup, activePartial, calculateFinalGrade]);
 
   const studentsInGroup = useMemo(() => {
       if (!activeGroup || !activeGroup.students) return [];
@@ -171,7 +177,7 @@ export default function GroupGradesPage() {
             </p>
             </div>
          </div>
-         <Button onClick={handleSaveGrades}>
+         <Button onClick={handleSaveGrades} disabled={isPartialClosed}>
             <Save className="mr-2 h-4 w-4"/>
             Guardar Calificaciones
          </Button>
@@ -260,6 +266,7 @@ export default function GroupGradesPage() {
                                     min={0}
                                     value={grades[student.id]?.[criterion.id]?.delivered ?? ''}
                                     onChange={e => handleGradeChange(student.id, criterion.id, e.target.value)}
+                                    disabled={isPartialClosed}
                                 />
                             </div>
                             <div className='flex-1'>

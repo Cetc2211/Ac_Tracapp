@@ -1,4 +1,6 @@
 
+export type PartialId = 'p1' | 'p2' | 'p3';
+
 export type Student = {
   id: string;
   name: string;
@@ -14,6 +16,8 @@ export type Group = {
   id: string;
   subject: string;
   students: Student[];
+  activePartial: PartialId;
+  closedPartials: PartialId[];
 };
 
 export type StudentObservation = {
@@ -39,7 +43,7 @@ export const students: Student[] = [
 ];
 
 export const groups: Group[] = [
-  { id: 'G01', subject: 'Matemáticas Avanzadas', students: students.slice(0, 4) },
-  { id: 'G02', subject: 'Historia del Arte', students: students.slice(2, 6) },
-  { id: 'G03', subject: 'Programación I', students: students.slice(1, 5) },
+  { id: 'G01', subject: 'Matemáticas Avanzadas', students: students.slice(0, 4), activePartial: 'p1', closedPartials: [] },
+  { id: 'G02', subject: 'Historia del Arte', students: students.slice(2, 6), activePartial: 'p1', closedPartials: [] },
+  { id: 'G03', subject: 'Programación I', students: students.slice(1, 5), activePartial: 'p1', closedPartials: [] },
 ];
