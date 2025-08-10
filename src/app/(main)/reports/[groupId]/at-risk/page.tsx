@@ -34,7 +34,7 @@ import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useParams } from 'next/navigation';
-import type { EvaluationCriteria, Grades, ParticipationRecord, Activity, ActivityRecord, AttendanceRecord, CalculatedRisk } from '@/hooks/use-data';
+import type { EvaluationCriteria, Grades, ParticipationRecord, Activity, ActivityRecord, AttendanceRecord, CalculatedRisk, PartialId } from '@/hooks/use-data';
 
 
 type StudentReportData = {
@@ -296,6 +296,7 @@ export default function AtRiskReportPage() {
       calculateFinalGrade, 
       getStudentRiskLevel,
       allObservations, 
+      activePartialId,
   } = useData();
   const [reportData, setReportData] = useState<StudentReportData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -304,17 +305,18 @@ export default function AtRiskReportPage() {
 
   useEffect(() => {
     if (group) {
-        const criteria = loadFromLocalStorage<EvaluationCriteria[]>(`criteria_${group.id}`, []);
-        const grades = loadFromLocalStorage<Grades>(`grades_${group.id}`, {});
-        const participations = loadFromLocalStorage<ParticipationRecord>(`participations_${group.id}`, {});
-        const activities = loadFromLocalStorage<Activity[]>(`activities_${group.id}`, []);
-        const activityRecords = loadFromLocalStorage<ActivityRecord>(`activityRecords_${group.id}`, {});
-        const attendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${group.id}`, {});
+        const keySuffix = `${group.id}_${activePartialId}`;
+        const criteria = loadFromLocalStorage<EvaluationCriteria[]>(`criteria_${keySuffix}`, []);
+        const grades = loadFromLocalStorage<Grades>(`grades_${keySuffix}`, {});
+        const participations = loadFromLocalStorage<ParticipationRecord>(`participations_${keySuffix}`, {});
+        const activities = loadFromLocalStorage<Activity[]>(`activities_${keySuffix}`, []);
+        const activityRecords = loadFromLocalStorage<ActivityRecord>(`activityRecords_${keySuffix}`, {});
+        const attendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${keySuffix}`, {});
 
         const atRiskStudentsInGroup = group.students
             .map(student => {
                 const studentObservations = allObservations[student.id] || [];
-                const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords, studentObservations);
+                const finalGrade = calculateFinalGrade(student.id, activePartialId, criteria, grades, participations, activities, activityRecords, studentObservations);
                 const riskLevel = getStudentRiskLevel(finalGrade, attendance, student.id);
                 return { ...student, finalGrade, riskLevel, studentObservations };
             })
@@ -349,6 +351,8 @@ export default function AtRiskReportPage() {
                 if (attendance[date][student.id]) attendanceStats.p++; else attendanceStats.a++;
             }
         });
+        
+        const partialObservations = student.studentObservations.filter(o => o.partialId === activePartialId);
 
         return {
           id: student.id,
@@ -362,14 +366,14 @@ export default function AtRiskReportPage() {
           finalGrade: student.finalGrade,
           attendance: attendanceStats,
           criteriaDetails,
-          observations: student.studentObservations,
+          observations: partialObservations,
         };
       });
 
       setReportData(data);
     }
     setIsLoading(false);
-  }, [group, allObservations, calculateFinalGrade, getStudentRiskLevel]);
+  }, [group, allObservations, calculateFinalGrade, getStudentRiskLevel, activePartialId]);
 
 
   if (isLoading) {
@@ -441,3 +445,4 @@ export default function AtRiskReportPage() {
     </div>
   );
 }
+

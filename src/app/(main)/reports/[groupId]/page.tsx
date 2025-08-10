@@ -23,7 +23,7 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useData, loadFromLocalStorage } from '@/hooks/use-data';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { EvaluationCriteria, Grades, ParticipationRecord, Activity, ActivityRecord, AttendanceRecord } from '@/hooks/use-data';
+import type { EvaluationCriteria, Grades, ParticipationRecord, Activity, ActivityRecord, AttendanceRecord, PartialId } from '@/hooks/use-data';
 
 
 type ReportSummary = {
@@ -50,7 +50,8 @@ export default function GroupReportPage() {
       allObservations,
       calculateFinalGrade,
       getStudentRiskLevel,
-      settings
+      settings,
+      activePartialId
   } = useData();
   
   const [summary, setSummary] = useState<ReportSummary | null>(null);
@@ -73,13 +74,13 @@ export default function GroupReportPage() {
 
     setIsLoading(true);
     try {
-      // Load data specifically for this group from localStorage
-      const criteria = loadFromLocalStorage<EvaluationCriteria[]>(`criteria_${group.id}`, []);
-      const grades = loadFromLocalStorage<Grades>(`grades_${group.id}`, {});
-      const participations = loadFromLocalStorage<ParticipationRecord>(`participations_${group.id}`, {});
-      const attendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${group.id}`, {});
-      const activities = loadFromLocalStorage<Activity[]>(`activities_${group.id}`, []);
-      const activityRecords = loadFromLocalStorage<ActivityRecord>(`activityRecords_${group.id}`, {});
+      const keySuffix = `${group.id}_${activePartialId}`;
+      const criteria = loadFromLocalStorage<EvaluationCriteria[]>(`criteria_${keySuffix}`, []);
+      const grades = loadFromLocalStorage<Grades>(`grades_${keySuffix}`, {});
+      const participations = loadFromLocalStorage<ParticipationRecord>(`participations_${keySuffix}`, {});
+      const attendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${keySuffix}`, {});
+      const activities = loadFromLocalStorage<Activity[]>(`activities_${keySuffix}`, []);
+      const activityRecords = loadFromLocalStorage<ActivityRecord>(`activityRecords_${keySuffix}`, {});
       
       const studentCount = group.students.length;
       let approved = 0;
@@ -97,7 +98,7 @@ export default function GroupReportPage() {
 
       group.students.forEach(student => {
         const studentObservations: StudentObservation[] = allObservations[student.id] || [];
-        const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords, studentObservations);
+        const finalGrade = calculateFinalGrade(student.id, activePartialId, criteria, grades, participations, activities, activityRecords, studentObservations);
         
         totalGroupGrade += finalGrade;
         if (finalGrade >= 70) approved++;
@@ -106,12 +107,14 @@ export default function GroupReportPage() {
         if (riskLevel.level === 'high') highRiskStudents++;
         if (riskLevel.level === 'medium') mediumRiskStudents++;
         
-        if(studentObservations.length > 0) {
+        const partialObservations = studentObservations.filter(o => o.partialId === activePartialId);
+
+        if(partialObservations.length > 0) {
             studentsWithObservations++;
-            if(studentObservations.some(o => o.requiresCanalization)) canalizedStudents++;
-            if(studentObservations.some(o => o.requiresFollowUp)) {
+            if(partialObservations.some(o => o.requiresCanalization)) canalizedStudents++;
+            if(partialObservations.some(o => o.requiresFollowUp)) {
                 followUpStudents++;
-                const followUpCases = studentObservations.filter(o => o.requiresFollowUp);
+                const followUpCases = partialObservations.filter(o => o.requiresFollowUp);
                 if (followUpCases.some(c => c.isClosed)) {
                     improvedStudents++;
                 } else {
@@ -157,7 +160,7 @@ export default function GroupReportPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [group, calculateFinalGrade, getStudentRiskLevel, allObservations]);
+  }, [group, calculateFinalGrade, getStudentRiskLevel, allObservations, activePartialId]);
 
   const handleDownloadPdf = () => {
     const input = reportRef.current;
@@ -328,3 +331,4 @@ export default function GroupReportPage() {
     </div>
   );
 }
+

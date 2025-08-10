@@ -180,7 +180,7 @@ export default function ObservationsPage() {
                     <TabsContent value="all">
                         <StudentTable 
                           students={filteredAllStudents} 
-                          onOpenDialog={handleOpenNewObservationDialog}
+                          onOpenDialog={handleOpenLogDialog}
                           buttonText='Ver / Registrar'
                           buttonIcon={<BookText className="mr-2 h-4 w-4" />}
                         />
