@@ -82,6 +82,11 @@ export type StudentStats = {
         group: string;
         grade: number;
         criteriaDetails: CriteriaDetail[];
+        groupInfo: {
+            subject: string;
+            semester: string;
+            groupName: string;
+        };
     }[];
 };
 
@@ -399,7 +404,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         const newGroups = groups.filter(g => g.id !== groupId);
         setGroups(newGroups);
         
-        // Remove all associated partials data for the deleted group
         const partials: PartialId[] = ['p1', 'p2', 'p3'];
         const keysToRemove = [
             'criteria', 'grades', 'attendance', 'participations', 'activities', 'activityRecords'
@@ -482,8 +486,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 const risk = getStudentRiskLevel(finalGrade, pAttendance, student.id);
 
                 if (risk.level === 'high' || risk.level === 'medium') {
-                    if (!allAtRiskStudents.has(student.id)) {
-                        allAtRiskStudents.set(student.id, { ...student, calculatedRisk: risk });
+                    if (!allAtRiskStudents.has(student.id) || allAtRiskStudents.get(student.id)!.calculatedRisk.level !== 'high') {
+                         allAtRiskStudents.set(student.id, { ...student, calculatedRisk: risk });
                     }
                 }
             });

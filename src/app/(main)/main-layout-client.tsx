@@ -69,7 +69,7 @@ export default function MainLayoutClient({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { settings, activeGroup } = useData();
+  const { settings, activeGroup, activePartialId } = useData();
   const [isClient, setIsClient] = useState(false);
   
   useEffect(() => {
@@ -103,10 +103,16 @@ export default function MainLayoutClient({
                 <>
                   <div className="px-4 py-2">
                       <p className="text-xs font-semibold text-sidebar-foreground/70 tracking-wider uppercase">Grupo Activo</p>
-                      <p className="font-bold text-sidebar-foreground flex items-center gap-2">
-                        <Package className="h-4 w-4"/>
-                        {activeGroup.subject}
-                      </p>
+                      <div className='space-y-1 mt-1'>
+                        <p className="font-bold text-sidebar-foreground flex items-center gap-2">
+                          <Package className="h-4 w-4"/>
+                          {activeGroup.subject}
+                        </p>
+                         <p className="font-semibold text-sidebar-foreground/80 flex items-center gap-2 text-sm pl-1">
+                          <BookText className="h-4 w-4"/>
+                          {getPartialLabel(activePartialId)}
+                        </p>
+                      </div>
                   </div>
                   <Separator className="my-2" />
                 </>

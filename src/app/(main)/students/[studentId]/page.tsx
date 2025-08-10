@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Student, Group, PartialId } from '@/lib/placeholder-data';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
-import { Mail, User, Contact, ArrowLeft, Download, FileText, Loader2, Phone, Wand2, ListChecks, Edit, Save } from 'lucide-react';
+import { Mail, User, Contact, ArrowLeft, Download, FileText, Loader2, Phone, Wand2, ListChecks, Edit, Save, BookCopy } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -103,8 +103,14 @@ export default function StudentProfilePage() {
                     const activityRecords = loadFromLocalStorage<ActivityRecord>(`activityRecords_${group.id}_${partialId}`, {});
                     
                     const { finalGrade, criteriaDetails } = calculateDetailedFinalGrade(studentId, partialId, criteria, grades, participations, activities, activityRecords);
+                    
+                    const groupInfo = {
+                        subject: group.subject,
+                        semester: group.semester || '',
+                        groupName: group.groupName || ''
+                    };
 
-                    gradesByGroup.push({ group: `${group.subject} - ${getPartialLabel(partialId)}`, grade: finalGrade, criteriaDetails });
+                    gradesByGroup.push({ group: `${group.subject} - ${getPartialLabel(partialId)}`, grade: finalGrade, criteriaDetails, groupInfo });
                     totalGradeSum += finalGrade;
                     totalPartialsWithGrades++;
                 }
@@ -394,8 +400,11 @@ export default function StudentProfilePage() {
                         <div className="space-y-4">
                             {studentStats?.gradesByGroup.map(item => (
                                 <div key={item.group}>
-                                    <div className="flex justify-between items-center p-3 rounded-t-md border bg-muted/50">
-                                        <p className="font-semibold">{item.group}</p>
+                                    <div className="flex justify-between items-start p-3 rounded-t-md border bg-muted/50">
+                                        <div>
+                                            <p className="font-semibold flex items-center gap-2"><BookCopy className="h-4 w-4" />{item.group}</p>
+                                            <p className="text-xs text-muted-foreground pl-6">{item.groupInfo.semester} - {item.groupInfo.groupName}</p>
+                                        </div>
                                     </div>
                                     <div className='p-3 border-x border-b rounded-b-md text-sm space-y-2'>
                                         {item.criteriaDetails.map(c => (
