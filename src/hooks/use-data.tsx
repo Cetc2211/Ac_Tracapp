@@ -191,9 +191,23 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     // --- INITIAL DATA LOADING ---
     useEffect(() => {
         setAllStudentsState(loadFromLocalStorage<Student[]>('students', initialStudents));
-        setGroupsState(loadFromLocalStorage<Group[]>('groups', initialGroups));
+        const loadedGroups = loadFromLocalStorage<Group[]>('groups', initialGroups);
+        setGroupsState(loadedGroups);
+        
+        const storedActiveGroupId = loadFromLocalStorage<string | null>('activeGroupId', null);
+        const activeGroupExists = loadedGroups.some(g => g.id === storedActiveGroupId);
+        
+        if (storedActiveGroupId && activeGroupExists) {
+            setActiveGroupIdState(storedActiveGroupId);
+        } else if (loadedGroups.length > 0) {
+            const newActiveGroupId = loadedGroups[0].id;
+            setActiveGroupIdState(newActiveGroupId);
+            saveToLocalStorage('activeGroupId', newActiveGroupId);
+        } else {
+            setActiveGroupIdState(null);
+        }
+
         setSettings(loadFromLocalStorage('appSettings', defaultSettings));
-        setActiveGroupIdState(loadFromLocalStorage<string | null>('activeGroupId', null));
         setAllObservations(loadFromLocalStorage('allObservations', {}));
     }, []);
     
@@ -224,10 +238,10 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
       pParticipations: ParticipationRecord,
       pActivities: Activity[],
       pActivityRecords: ActivityRecord,
-      studentObservations: StudentObservation[]
+      pStudentObservations: StudentObservation[]
     ): number => {
         if (!pCriteria || pCriteria.length === 0) return 0;
-
+        
         let finalGrade = 0;
         
         for (const criterion of pCriteria) {
@@ -255,8 +269,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             finalGrade += (performanceRatio * criterion.weight);
         }
         
-        const merits = studentObservations.filter(o => o.type === 'Mérito').length;
-        const demerits = studentObservations.filter(o => o.type === 'Demérito').length;
+        const merits = pStudentObservations.filter(o => o.type === 'Mérito').length;
+        const demerits = pStudentObservations.filter(o => o.type === 'Demérito').length;
         finalGrade += merits;
         finalGrade -= demerits;
 
@@ -426,10 +440,15 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             const pParticipations = loadFromLocalStorage<ParticipationRecord>(`participations_${group.id}`, {});
             const pActivities = loadFromLocalStorage<Activity[]>(`activities_${group.id}`, []);
             const pActivityRecords = loadFromLocalStorage<ActivityRecord>(`activityRecords_${group.id}`, {});
+            const studentObservations = Object.entries(allObservations).reduce((acc, [studentId, observations]) => {
+                if(group.students.some(s => s.id === studentId)) {
+                    acc[studentId] = observations;
+                }
+                return acc;
+            }, {} as {[studentId: string]: StudentObservation[]});
             
             const groupGrades = group.students.map(s => {
-                const studentObs = allObservations[s.id] || [];
-                return calculateFinalGrade(s.id, pCriteria, pGrades, pParticipations, pActivities, pActivityRecords, studentObs);
+                return calculateFinalGrade(s.id, pCriteria, pGrades, pParticipations, pActivities, pActivityRecords, studentObservations[s.id] || []);
             });
 
             const total = groupGrades.reduce((sum, grade) => sum + grade, 0);
@@ -485,10 +504,16 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         let totalPresents = 0;
         groups.forEach(group => {
             const groupAttendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${group.id}`, {});
-            for(const date in groupAttendance){
-                totalPossibleAttendance += Object.keys(groupAttendance[date]).length;
-                totalPresents += Object.values(groupAttendance[date]).filter(Boolean).length;
-            }
+            group.students.forEach(student => {
+                Object.keys(groupAttendance).forEach(date => {
+                    if (groupAttendance[date]?.[student.id] !== undefined) {
+                        totalPossibleAttendance++;
+                        if (groupAttendance[date][student.id]) {
+                            totalPresents++;
+                        }
+                    }
+                });
+            });
         });
         return totalPossibleAttendance > 0 ? Math.round((totalPresents / totalPossibleAttendance) * 100) : 100;
     }, [groups]);
