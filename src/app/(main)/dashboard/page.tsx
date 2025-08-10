@@ -34,6 +34,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { useData } from '@/hooks/use-data';
 import type { StudentWithRisk } from '@/hooks/use-data';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export default function DashboardPage() {
   const { activeStudentsInGroups, groups, atRiskStudents, overallAverageParticipation, groupAverages } = useData();
@@ -41,13 +48,22 @@ export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [studentSearchQuery, setStudentSearchQuery] = useState('');
   const [isRiskDialogOpen, setIsRiskDialogOpen] = useState(false);
+  const [selectedRiskGroup, setSelectedRiskGroup] = useState('all');
   
   const filteredAtRiskStudents = useMemo(() => {
-    if (!searchQuery) return atRiskStudents;
-    return atRiskStudents.filter(student =>
+    const students = selectedRiskGroup === 'all'
+      ? atRiskStudents
+      : atRiskStudents.filter(student => 
+          groups.find(g => g.id === selectedRiskGroup)?.students.some(s => s.id === student.id)
+        );
+
+    if (!searchQuery) return students;
+
+    return students.filter(student =>
       student.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [atRiskStudents, searchQuery]);
+  }, [atRiskStudents, searchQuery, selectedRiskGroup, groups]);
+
 
   const filteredStudentsForSearch = useMemo(() => {
     if (!studentSearchQuery) return [];
@@ -213,11 +229,22 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle>Estudiantes con Alertas</CardTitle>
             <CardDescription>
-              Estudiantes que requieren seguimiento (todos los grupos).
+              Filtra por grupo para ver los estudiantes que requieren seguimiento.
             </CardDescription>
+             <Select value={selectedRiskGroup} onValueChange={setSelectedRiskGroup}>
+                <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar grupo..." />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="all">Todos los grupos</SelectItem>
+                    {groups.map(group => (
+                        <SelectItem key={group.id} value={group.id}>{group.subject}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
           </CardHeader>
           <CardContent className="grid gap-6 flex-grow">
-            {atRiskStudents.slice(0, 4).map((student) => (
+            {filteredAtRiskStudents.slice(0, 4).map((student) => (
               <div key={student.id} className="flex items-center gap-4">
                 <Image
                   alt="Avatar"
@@ -249,8 +276,8 @@ export default function DashboardPage() {
                 </div>
               </div>
             ))}
-             {atRiskStudents.length === 0 && (
-                <p className="text-sm text-center text-muted-foreground">No hay estudiantes con alertas.</p>
+             {filteredAtRiskStudents.length === 0 && (
+                <p className="text-sm text-center text-muted-foreground">No hay estudiantes con alertas en esta selección.</p>
             )}
           </CardContent>
           {atRiskStudents.length > 0 && (
@@ -258,14 +285,14 @@ export default function DashboardPage() {
                  <Dialog open={isRiskDialogOpen} onOpenChange={setIsRiskDialogOpen}>
                   <DialogTrigger asChild>
                     <Button variant="outline" className="w-full">
-                        Ver todos ({atRiskStudents.length})
+                        Ver todos ({filteredAtRiskStudents.length})
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="sm:max-w-2xl">
                     <DialogHeader>
                       <DialogTitle>Estudiantes en Riesgo</DialogTitle>
                       <DialogDescription>
-                        Lista completa de estudiantes que requieren atención especial.
+                        Lista de estudiantes que requieren atención especial.
                       </DialogDescription>
                     </DialogHeader>
                     <div className="relative">
