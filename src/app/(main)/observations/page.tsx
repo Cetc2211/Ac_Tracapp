@@ -27,12 +27,13 @@ import { StudentObservationLogDialog } from '@/components/student-observation-lo
 import { useData } from '@/hooks/use-data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { getPartialLabel } from '@/lib/utils';
 
 const StudentTable = ({ students, onOpenDialog, buttonText, buttonIcon }: { students: Student[], onOpenDialog: (student: Student) => void, buttonText: string, buttonIcon: React.ReactNode }) => {
     if (students.length === 0) {
         return (
             <div className="text-center p-12 text-muted-foreground">
-                <p>No se encontraron estudiantes.</p>
+                <p>No se encontraron estudiantes que coincidan con los criterios.</p>
             </div>
         )
     }
@@ -78,7 +79,7 @@ const StudentTable = ({ students, onOpenDialog, buttonText, buttonIcon }: { stud
 
 
 export default function ObservationsPage() {
-  const { activeGroup, allObservations } = useData();
+  const { activeGroup, allObservations, activePartialId } = useData();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStudentForNew, setSelectedStudentForNew] = useState<Student | null>(null);
   const [selectedStudentForLog, setSelectedStudentForLog] = useState<Student | null>(null);
@@ -91,8 +92,16 @@ export default function ObservationsPage() {
 
   const studentsWithObservations = useMemo(() => {
     if (!activeGroup) return [];
-    return activeGroup.students.filter(student => allObservations[student.id] && allObservations[student.id].length > 0);
-  }, [activeGroup, allObservations]);
+    // Filter students who have observations IN THE CURRENT PARTIAL
+    const studentIdsWithObservationsInPartial = new Set();
+    Object.entries(allObservations).forEach(([studentId, observations]) => {
+      if (observations.some(obs => obs.partialId === activePartialId)) {
+        studentIdsWithObservationsInPartial.add(studentId);
+      }
+    });
+
+    return activeGroup.students.filter(student => studentIdsWithObservationsInPartial.has(student.id));
+  }, [activeGroup, allObservations, activePartialId]);
 
   const handleOpenNewObservationDialog = (student: Student) => {
     setSelectedStudentForNew(student);
@@ -137,7 +146,7 @@ export default function ObservationsPage() {
           <h1 className="text-3xl font-bold">Bitácora de Observaciones</h1>
           <p className="text-muted-foreground">
             {activeGroup 
-                ? `Registra y consulta observaciones para el grupo: ${activeGroup.subject}.`
+                ? `Registra y consulta observaciones para: ${activeGroup.subject} - ${getPartialLabel(activePartialId)}.`
                 : 'Selecciona un grupo para ver a sus estudiantes.'
             }
           </p>
@@ -163,9 +172,9 @@ export default function ObservationsPage() {
                 {activeGroup ? (
                   <Tabs defaultValue="all">
                     <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="all">Todos los Estudiantes</TabsTrigger>
+                      <TabsTrigger value="all">Todos los Estudiantes ({filteredAllStudents.length})</TabsTrigger>
                       <TabsTrigger value="with-observations">
-                        Con Observaciones <Badge className="ml-2">{studentsWithObservations.length}</Badge>
+                        Con Observaciones <Badge className="ml-2">{filteredStudentsWithObservations.length}</Badge>
                       </TabsTrigger>
                     </TabsList>
                     <TabsContent value="all">
@@ -199,3 +208,5 @@ export default function ObservationsPage() {
     </div>
   );
 }
+
+    
