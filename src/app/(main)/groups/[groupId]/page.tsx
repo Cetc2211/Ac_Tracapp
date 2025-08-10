@@ -81,7 +81,9 @@ export default function GroupDetailsPage() {
   const { toast } = useToast();
   
   const [isAddStudentDialogOpen, setIsAddStudentDialogOpen] = useState(false);
-  
+  const [isEditGroupDialogOpen, setIsEditGroupDialogOpen] = useState(false);
+  const [editingGroup, setEditingGroup] = useState<Group | null>(null);
+
   const [bulkNames, setBulkNames] = useState('');
   const [bulkEmails, setBulkEmails] = useState('');
   const [bulkPhones, setBulkPhones] = useState('');
@@ -278,6 +280,26 @@ export default function GroupDetailsPage() {
     setPhotoPreview(null);
   };
 
+  const handleOpenEditGroupDialog = () => {
+    if(activeGroup) {
+      setEditingGroup({...activeGroup});
+      setIsEditGroupDialogOpen(true);
+    }
+  };
+
+  const handleUpdateGroup = () => {
+    if (!editingGroup) return;
+    
+    const updatedGroups = groups.map(g => g.id === editingGroup.id ? editingGroup : g);
+    setGroups(updatedGroups);
+    
+    toast({
+        title: 'Grupo Actualizado',
+        description: 'La información del grupo ha sido guardada.',
+    });
+    setIsEditGroupDialogOpen(false);
+  };
+
     
   const totalWeight = useMemo(() => {
     return criteria.reduce((sum, c) => sum + c.weight, 0);
@@ -321,6 +343,40 @@ export default function GroupDetailsPage() {
         </DialogContent>
       </Dialog>
     )}
+    {editingGroup && (
+        <Dialog open={isEditGroupDialogOpen} onOpenChange={setIsEditGroupDialogOpen}>
+            <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                    <DialogTitle>Editar Grupo</DialogTitle>
+                    <DialogDescription>
+                        Actualiza la información de tu grupo.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="edit-subject">Nombre de la Asignatura</Label>
+                        <Input id="edit-subject" value={editingGroup.subject} onChange={(e) => setEditingGroup({...editingGroup, subject: e.target.value})} />
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="edit-semester">Semestre</Label>
+                        <Input id="edit-semester" value={editingGroup.semester} onChange={(e) => setEditingGroup({...editingGroup, semester: e.target.value})} />
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="edit-groupName">Grupo</Label>
+                        <Input id="edit-groupName" value={editingGroup.groupName} onChange={(e) => setEditingGroup({...editingGroup, groupName: e.target.value})} />
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="edit-facilitator">Facilitador</Label>
+                        <Input id="edit-facilitator" value={editingGroup.facilitator} onChange={(e) => setEditingGroup({...editingGroup, facilitator: e.target.value})} />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsEditGroupDialogOpen(false)}>Cancelar</Button>
+                    <Button onClick={handleUpdateGroup}>Guardar Cambios</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )}
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
          <div className="flex items-center gap-4">
@@ -350,6 +406,10 @@ export default function GroupDetailsPage() {
                 <DropdownMenuContent align="end">
                   <DropdownMenuLabel>Opciones del Grupo</DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                   <DropdownMenuItem onSelect={handleOpenEditGroupDialog}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    <span>Editar Grupo</span>
+                  </DropdownMenuItem>
                   <AlertDialogTrigger asChild>
                     <DropdownMenuItem
                       onSelect={(e) => e.preventDefault()}
