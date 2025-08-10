@@ -290,8 +290,8 @@ const AtRiskStudentCard = ({ studentData }: { studentData: StudentReportData }) 
 export default function AtRiskReportPage() {
   const { 
       activeGroup,
+      atRiskStudents, 
       calculateFinalGrade, 
-      getStudentRiskLevel,
       allObservations, 
       criteria,
       grades,
@@ -305,20 +305,10 @@ export default function AtRiskReportPage() {
 
   useEffect(() => {
     if (activeGroup && criteria) {
-      const atRiskStudentsInGroup = activeGroup.students.map(student => {
+      const data = atRiskStudents.map(student => {
         const studentObservations = allObservations[student.id] || [];
         const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords, studentObservations);
-        const risk = getStudentRiskLevel(finalGrade, attendance, student.id);
         
-        return {
-          ...student,
-          finalGrade,
-          risk,
-          studentObservations
-        };
-      }).filter(s => s.risk.level === 'high' || s.risk.level === 'medium');
-
-      const data = atRiskStudentsInGroup.map(student => {
         const criteriaDetails: StudentReportData['criteriaDetails'] = criteria.map(criterion => {
           let performanceRatio = 0;
             if (criterion.name === 'Actividades' || criterion.name === 'Portafolio') {
@@ -355,19 +345,20 @@ export default function AtRiskReportPage() {
           email: student.email,
           tutorName: student.tutorName,
           tutorPhone: student.tutorPhone,
-          riskLevel: student.risk.level,
-          riskReason: student.risk.reason,
-          finalGrade: student.finalGrade,
+          riskLevel: student.calculatedRisk.level,
+          riskReason: student.calculatedRisk.reason,
+          finalGrade,
           attendance: attendanceStats,
-          criteriaDetails: criteriaDetails,
-          observations: student.studentObservations,
+          criteriaDetails,
+          observations: studentObservations,
         };
       });
 
       setReportData(data);
     }
     setIsLoading(false);
-  }, [activeGroup, allObservations, calculateFinalGrade, getStudentRiskLevel, criteria, grades, participations, activities, activityRecords, attendance]);
+  }, [activeGroup, atRiskStudents, allObservations, calculateFinalGrade, criteria, grades, participations, activities, activityRecords, attendance]);
+
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /> <span className="ml-2">Cargando informe...</span></div>;
