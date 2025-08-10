@@ -65,6 +65,11 @@ export type CalculatedRisk = {
 }
 export type StudentWithRisk = Student & { calculatedRisk: CalculatedRisk };
 
+export type CriteriaDetail = {
+    name: string;
+    earned: number;
+    weight: number;
+}
 
 export type StudentStats = {
     averageGrade: number;
@@ -76,11 +81,7 @@ export type StudentStats = {
     gradesByGroup: {
         group: string;
         grade: number;
-        criteriaDetails: {
-            name: string;
-            earned: number;
-            weight: number;
-        }[];
+        criteriaDetails: CriteriaDetail[];
     }[];
 };
 
@@ -135,6 +136,15 @@ interface DataContextType {
     pActivities: Activity[],
     pActivityRecords: ActivityRecord,
   ) => number;
+  calculateDetailedFinalGrade: (
+    studentId: string, 
+    partialId: PartialId,
+    pCriteria: EvaluationCriteria[],
+    pGrades: Grades,
+    pParticipations: ParticipationRecord,
+    pActivities: Activity[],
+    pActivityRecords: ActivityRecord,
+  ) => { finalGrade: number, criteriaDetails: CriteriaDetail[] };
   getStudentRiskLevel: (finalGrade: number, attendance: AttendanceRecord, studentId: string) => CalculatedRisk;
 }
 
@@ -231,8 +241,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         }
     }, [activeGroupId, activePartialId]);
 
-
-    const calculateFinalGrade = useCallback((
+    const calculateDetailedFinalGrade = useCallback((
       studentId: string, 
       partialId: PartialId,
       pCriteria: EvaluationCriteria[],
@@ -240,10 +249,11 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
       pParticipations: ParticipationRecord,
       pActivities: Activity[],
       pActivityRecords: ActivityRecord,
-    ): number => {
-        if (!pCriteria || pCriteria.length === 0) return 0;
+    ): { finalGrade: number, criteriaDetails: CriteriaDetail[] } => {
+        if (!pCriteria || pCriteria.length === 0) return { finalGrade: 0, criteriaDetails: [] };
         
         let finalGrade = 0;
+        const criteriaDetails: CriteriaDetail[] = [];
         
         for (const criterion of pCriteria) {
             let performanceRatio = 0;
@@ -255,10 +265,11 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                     performanceRatio = deliveredActivities / totalActivities;
                 }
             } else if (criterion.name === 'Participación') {
-                const totalClasses = Object.keys(pParticipations).length;
-                if (totalClasses > 0) {
-                    const studentParticipations = Object.values(pParticipations).filter(day => day[studentId]).length;
-                    performanceRatio = studentParticipations / totalClasses;
+                const participationDates = Object.keys(pParticipations);
+                const studentParticipationOpportunities = participationDates.filter(date => pParticipations[date].hasOwnProperty(studentId)).length;
+                if (studentParticipationOpportunities > 0) {
+                    const studentParticipations = Object.values(pParticipations).filter(p => p[studentId]).length;
+                    performanceRatio = studentParticipations / studentParticipationOpportunities;
                 }
             } else {
                 const delivered = pGrades[studentId]?.[criterion.id]?.delivered ?? 0;
@@ -267,11 +278,26 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                     performanceRatio = delivered / expected;
                 }
             }
-            finalGrade += (performanceRatio * criterion.weight);
+            const earnedPercentage = performanceRatio * criterion.weight;
+            finalGrade += earnedPercentage;
+            criteriaDetails.push({ name: criterion.name, earned: earnedPercentage, weight: criterion.weight });
         }
         
-        return Math.max(0, Math.min(100, finalGrade));
+        const grade = Math.max(0, Math.min(100, finalGrade));
+        return { finalGrade: grade, criteriaDetails };
     }, []);
+
+    const calculateFinalGrade = useCallback((
+      studentId: string, 
+      partialId: PartialId,
+      pCriteria: EvaluationCriteria[],
+      pGrades: Grades,
+      pParticipations: ParticipationRecord,
+      pActivities: Activity[],
+      pActivityRecords: ActivityRecord,
+    ): number => {
+        return calculateDetailedFinalGrade(studentId, partialId, pCriteria, pGrades, pParticipations, pActivities, pActivityRecords).finalGrade;
+    }, [calculateDetailedFinalGrade]);
 
     // --- DERIVED STATE & MEMOS ---
     const activeGroup = useMemo(() => {
@@ -494,7 +520,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             groupAverages, atRiskStudents, overallAverageParticipation,
             setStudents: setAllStudents, setGroups, setAllStudents, setSettings, setActiveGroupId, setActivePartialId,
             setCriteria, setGrades, setAttendance, setParticipations, setActivities, setActivityRecords,
-            deleteGroup, calculateFinalGrade, getStudentRiskLevel
+            deleteGroup, calculateFinalGrade, getStudentRiskLevel, calculateDetailedFinalGrade
         }}>
             {children}
         </DataContext.Provider>
@@ -508,7 +534,3 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
-
-    
-
-    

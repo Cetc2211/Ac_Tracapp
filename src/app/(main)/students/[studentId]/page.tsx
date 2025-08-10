@@ -63,7 +63,7 @@ export default function StudentProfilePage() {
   const studentId = params.studentId as string;
   const router = useRouter();
   
-  const { students, groups, calculateFinalGrade } = useData();
+  const { students, groups, calculateDetailedFinalGrade } = useData();
   const student = students.find(s => s.id === studentId);
 
   const [studentStats, setStudentStats] = useState<StudentStats | null>(null);
@@ -90,36 +90,23 @@ export default function StudentProfilePage() {
         
         const gradesByGroup: StudentStats['gradesByGroup'] = [];
         let totalGradeSum = 0;
+        let totalPartialsWithGrades = 0;
         
         studentGroups.forEach(group => {
             const partials: PartialId[] = ['p1', 'p2'];
             partials.forEach(partialId => {
                  const criteria = loadFromLocalStorage<EvaluationCriteria[]>(`criteria_${group.id}_${partialId}`, []);
-                if (criteria.length > 0) { // Only process if there's data for this partial
+                if (criteria.length > 0) {
                     const grades = loadFromLocalStorage<Grades>(`grades_${group.id}_${partialId}`, {});
                     const participations = loadFromLocalStorage<ParticipationRecord>(`participations_${group.id}_${partialId}`, {});
                     const activities = loadFromLocalStorage<Activity[]>(`activities_${group.id}_${partialId}`, []);
                     const activityRecords = loadFromLocalStorage<ActivityRecord>(`activityRecords_${group.id}_${partialId}`, {});
                     
-                    const finalGrade = calculateFinalGrade(studentId, partialId, criteria, grades, participations, activities, activityRecords);
-
-                    const criteriaDetails = criteria.map(c => {
-                        let performanceRatio = 0;
-                        if (c.name === 'Portafolio' || c.name === 'Actividades') {
-                            const totalActivities = activities.length || 0;
-                            if(totalActivities > 0) performanceRatio = (Object.values(activityRecords[studentId] || {}).filter(Boolean).length) / totalActivities;
-                        } else if (c.name === 'Participación') {
-                            const totalClasses = Object.keys(participations).length || 0;
-                            if(totalClasses > 0) performanceRatio = (Object.values(participations).filter(p => p[studentId]).length) / totalClasses;
-                        } else {
-                            const delivered = grades[studentId]?.[c.id]?.delivered ?? 0;
-                            if(c.expectedValue > 0) performanceRatio = delivered / c.expectedValue;
-                        }
-                        return { name: c.name, earned: performanceRatio * c.weight, weight: c.weight };
-                    });
+                    const { finalGrade, criteriaDetails } = calculateDetailedFinalGrade(studentId, partialId, criteria, grades, participations, activities, activityRecords);
 
                     gradesByGroup.push({ group: `${group.subject} - ${getPartialLabel(partialId)}`, grade: finalGrade, criteriaDetails });
                     totalGradeSum += finalGrade;
+                    totalPartialsWithGrades++;
                 }
             });
         });
@@ -139,7 +126,7 @@ export default function StudentProfilePage() {
         });
         
         setStudentStats({
-          averageGrade: studentGroups.length > 0 ? totalGradeSum / studentGroups.length : 0,
+          averageGrade: totalPartialsWithGrades > 0 ? totalGradeSum / totalPartialsWithGrades : 0,
           attendance: attendanceStats,
           gradesByGroup,
         });
@@ -149,7 +136,7 @@ export default function StudentProfilePage() {
     } finally {
         setIsLoading(false);
     }
-  }, [student, groups, studentId, toast, calculateFinalGrade]);
+  }, [student, groups, studentId, toast, calculateDetailedFinalGrade]);
   
    const handleGenerateFeedback = async () => {
     if (!student || !studentStats) {
@@ -531,5 +518,3 @@ export default function StudentProfilePage() {
     </div>
     </>
   );
-
-    
