@@ -130,12 +130,13 @@ interface DataContextType {
   deleteGroup: (groupId: string) => void;
   calculateFinalGrade: (
     studentId: string, 
-    criteria: EvaluationCriteria[],
-    grades: Grades,
-    participations: ParticipationRecord,
-    activities: Activity[],
-    activityRecords: ActivityRecord,
-    studentObservations: StudentObservation[]
+    partialId: PartialId,
+    pCriteria: EvaluationCriteria[],
+    pGrades: Grades,
+    pParticipations: ParticipationRecord,
+    pActivities: Activity[],
+    pActivityRecords: ActivityRecord,
+    pStudentObservations: StudentObservation[]
   ) => number;
   getStudentRiskLevel: (finalGrade: number, attendance: AttendanceRecord, studentId: string) => CalculatedRisk;
 }
@@ -238,6 +239,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     const calculateFinalGrade = useCallback((
       studentId: string, 
+      partialId: PartialId,
       pCriteria: EvaluationCriteria[],
       pGrades: Grades,
       pParticipations: ParticipationRecord,
@@ -274,8 +276,9 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             finalGrade += (performanceRatio * criterion.weight);
         }
         
-        const merits = pStudentObservations.filter(o => o.type === 'Mérito').length;
-        const demerits = pStudentObservations.filter(o => o.type === 'Demérito').length;
+        const partialObservations = pStudentObservations.filter(o => o.partialId === partialId);
+        const merits = partialObservations.filter(o => o.type === 'Mérito').length;
+        const demerits = partialObservations.filter(o => o.type === 'Demérito').length;
         finalGrade += (merits * 10);
         finalGrade -= (demerits * 10);
 
@@ -470,7 +473,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             }, {} as {[studentId: string]: StudentObservation[]});
             
             const groupGrades = group.students.map(s => {
-                return calculateFinalGrade(s.id, pCriteria, pGrades, pParticipations, pActivities, pActivityRecords, studentObservations[s.id] || []);
+                return calculateFinalGrade(s.id, activePartialId, pCriteria, pGrades, pParticipations, pActivities, pActivityRecords, studentObservations[s.id] || []);
             });
 
             const total = groupGrades.reduce((sum, grade) => sum + grade, 0);
@@ -493,7 +496,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
         activeGroup.students.forEach(student => {
             const studentObs = allObservations[student.id] || [];
-            const finalGrade = calculateFinalGrade(student.id, pCriteria, pGrades, pParticipations, pActivities, pActivityRecords, studentObs);
+            const finalGrade = calculateFinalGrade(student.id, activePartialId, pCriteria, pGrades, pParticipations, pActivities, pActivityRecords, studentObs);
             const risk = getStudentRiskLevel(finalGrade, pAttendance, student.id);
             
             if (risk.level === 'high' || risk.level === 'medium') {

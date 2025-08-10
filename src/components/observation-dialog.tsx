@@ -41,7 +41,7 @@ const canalizationTypes: StudentObservation['canalizationTarget'][] = [
 ]
 
 export function ObservationDialog({ student, open, onOpenChange }: ObservationDialogProps) {
-  const { saveStudentObservation } = useData();
+  const { saveStudentObservation, activePartialId } = useData();
   const [step, setStep] = useState(1);
   const [observationType, setObservationType] = useState<StudentObservation['type'] | ''>('');
   const [otherType, setOtherType] = useState('');
@@ -127,6 +127,7 @@ export function ObservationDialog({ student, open, onOpenChange }: ObservationDi
     const newObservation: StudentObservation = {
       id: `OBS-${Date.now()}`,
       studentId: student.id,
+      partialId: activePartialId,
       date: new Date().toISOString(),
       type: finalObservationType,
       details: details.trim(),

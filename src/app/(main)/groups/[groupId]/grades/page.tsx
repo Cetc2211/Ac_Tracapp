@@ -42,6 +42,7 @@ export default function GroupGradesPage() {
   const groupId = params.groupId as string;
   const { 
     activeGroup,
+    activePartialId,
     criteria, 
     grades, 
     setGrades,
@@ -90,6 +91,7 @@ export default function GroupGradesPage() {
         const studentObservations = allObservations[student.id] || [];
         calculatedGrades[student.id] = calculateFinalGrade(
           student.id,
+          activePartialId,
           criteria,
           grades,
           participations,
@@ -100,7 +102,7 @@ export default function GroupGradesPage() {
       }
     }
     return calculatedGrades;
-  }, [activeGroup, criteria, grades, participations, activities, activityRecords, calculateFinalGrade, allObservations]);
+  }, [activeGroup, activePartialId, criteria, grades, participations, activities, activityRecords, calculateFinalGrade, allObservations]);
 
   const studentsInGroup = useMemo(() => {
       if (!activeGroup || !activeGroup.students) return [];
@@ -222,8 +224,9 @@ export default function GroupGradesPage() {
                 )}
                 {studentsInGroup.length > 0 && criteria.length > 0 && studentsInGroup.map(student => {
                   const studentObservations = allObservations[student.id] || [];
-                  const merits = studentObservations.filter(o => o.type === 'Mérito').length;
-                  const demerits = studentObservations.filter(o => o.type === 'Demérito').length;
+                  const partialObservations = studentObservations.filter(o => o.partialId === activePartialId);
+                  const merits = partialObservations.filter(o => o.type === 'Mérito').length;
+                  const demerits = partialObservations.filter(o => o.type === 'Demérito').length;
                   
                   return (
                   <TableRow key={student.id}>

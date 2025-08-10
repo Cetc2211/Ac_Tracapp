@@ -22,6 +22,7 @@ import { Checkbox } from './ui/checkbox';
 import { Label } from './ui/label';
 import { Badge } from './ui/badge';
 import { ScrollArea } from './ui/scroll-area';
+import { getPartialLabel } from '@/lib/utils';
 
 interface StudentObservationLogDialogProps {
   student: Student | null;
@@ -47,7 +48,10 @@ const ObservationItem = ({ observation, onUpdate }: { observation: StudentObserv
                     <p className="font-semibold text-sm">{observation.type}</p>
                     {observation.isClosed && <Badge variant="secondary">Cerrado</Badge>}
                 </div>
-                <p className="text-xs text-muted-foreground">{format(new Date(observation.date), "dd MMM yyyy", { locale: es })}</p>
+                <div className="text-xs text-muted-foreground space-x-2">
+                    <Badge variant="outline" className="text-xs">{getPartialLabel(observation.partialId)}</Badge>
+                    <span>{format(new Date(observation.date), "dd MMM yyyy", { locale: es })}</span>
+                </div>
             </div>
             <p className="text-sm mt-1 mb-2">{observation.details}</p>
             {observation.canalizationTarget && <Badge variant="outline" className="text-xs">Canalizado a: {observation.canalizationTarget}</Badge>}
@@ -142,4 +146,3 @@ export function StudentObservationLogDialog({ student, open, onOpenChange }: Stu
     </Dialog>
   );
 }
-

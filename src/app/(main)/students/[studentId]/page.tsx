@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Student, Group, StudentObservation } from '@/lib/placeholder-data';
+import { Student, Group, StudentObservation, PartialId } from '@/lib/placeholder-data';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import { Mail, User, Contact, ArrowLeft, Download, FileText, Loader2, Phone, Wand2, ListChecks, Edit, Save } from 'lucide-react';
@@ -36,6 +36,7 @@ import { Separator } from '@/components/ui/separator';
 import type { EvaluationCriteria, Grades, ParticipationRecord, StudentStats, Activity, ActivityRecord, AttendanceRecord } from '@/hooks/use-data';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { getPartialLabel } from '@/lib/utils';
 
 
 const WhatsAppIcon = () => (
@@ -92,42 +93,50 @@ export default function StudentProfilePage() {
         const studentObservations: StudentObservation[] = allObservations[studentId] || [];
         
         studentGroups.forEach(group => {
-            const criteria = loadFromLocalStorage<EvaluationCriteria[]>(`criteria_${group.id}`, []);
-            const grades = loadFromLocalStorage<Grades>(`grades_${group.id}`, {});
-            const participations = loadFromLocalStorage<ParticipationRecord>(`participations_${group.id}`, {});
-            const activities = loadFromLocalStorage<Activity[]>(`activities_${group.id}`, []);
-            const activityRecords = loadFromLocalStorage<ActivityRecord>(`activityRecords_${group.id}`, {});
-            
-            const finalGrade = calculateFinalGrade(studentId, criteria, grades, participations, activities, activityRecords, studentObservations);
+            const partials: PartialId[] = ['p1', 'p2', 'p3'];
+            partials.forEach(partialId => {
+                 const criteria = loadFromLocalStorage<EvaluationCriteria[]>(`criteria_${group.id}_${partialId}`, []);
+                if (criteria.length > 0) { // Only process if there's data for this partial
+                    const grades = loadFromLocalStorage<Grades>(`grades_${group.id}_${partialId}`, {});
+                    const participations = loadFromLocalStorage<ParticipationRecord>(`participations_${group.id}_${partialId}`, {});
+                    const activities = loadFromLocalStorage<Activity[]>(`activities_${group.id}_${partialId}`, []);
+                    const activityRecords = loadFromLocalStorage<ActivityRecord>(`activityRecords_${group.id}_${partialId}`, {});
+                    
+                    const finalGrade = calculateFinalGrade(studentId, partialId, criteria, grades, participations, activities, activityRecords, studentObservations);
 
-            const criteriaDetails = criteria.map(c => {
-                let performanceRatio = 0;
-                if (c.name === 'Portafolio' || c.name === 'Actividades') {
-                    const totalActivities = activities.length || 0;
-                    if(totalActivities > 0) performanceRatio = (Object.values(activityRecords[studentId] || {}).filter(Boolean).length) / totalActivities;
-                } else if (c.name === 'Participación') {
-                    const totalClasses = Object.keys(participations).length || 0;
-                    if(totalClasses > 0) performanceRatio = (Object.values(participations).filter(p => p[studentId]).length) / totalClasses;
-                } else {
-                    const delivered = grades[studentId]?.[c.id]?.delivered ?? 0;
-                    if(c.expectedValue > 0) performanceRatio = delivered / c.expectedValue;
+                    const criteriaDetails = criteria.map(c => {
+                        let performanceRatio = 0;
+                        if (c.name === 'Portafolio' || c.name === 'Actividades') {
+                            const totalActivities = activities.length || 0;
+                            if(totalActivities > 0) performanceRatio = (Object.values(activityRecords[studentId] || {}).filter(Boolean).length) / totalActivities;
+                        } else if (c.name === 'Participación') {
+                            const totalClasses = Object.keys(participations).length || 0;
+                            if(totalClasses > 0) performanceRatio = (Object.values(participations).filter(p => p[studentId]).length) / totalClasses;
+                        } else {
+                            const delivered = grades[studentId]?.[c.id]?.delivered ?? 0;
+                            if(c.expectedValue > 0) performanceRatio = delivered / c.expectedValue;
+                        }
+                        return { name: c.name, earned: performanceRatio * c.weight, weight: c.weight };
+                    });
+
+                    gradesByGroup.push({ group: `${group.subject} - ${getPartialLabel(partialId)}`, grade: finalGrade, criteriaDetails });
+                    totalGradeSum += finalGrade;
                 }
-                return { name: c.name, earned: performanceRatio * c.weight, weight: c.weight };
             });
-
-            gradesByGroup.push({ group: group.subject, grade: finalGrade, criteriaDetails });
-            totalGradeSum += finalGrade;
         });
 
         const attendanceStats = { p: 0, a: 0, total: 0 };
         studentGroups.forEach(group => {
-            const groupAttendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${group.id}`, {});
-            for(const date in groupAttendance){
-                if(groupAttendance[date][studentId] !== undefined){
-                    attendanceStats.total++;
-                    if(groupAttendance[date][studentId]) attendanceStats.p++; else attendanceStats.a++;
+            const partials: PartialId[] = ['p1', 'p2', 'p3'];
+            partials.forEach(partialId => {
+                const groupAttendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${group.id}_${partialId}`, {});
+                for(const date in groupAttendance){
+                    if(groupAttendance[date][studentId] !== undefined){
+                        attendanceStats.total++;
+                        if(groupAttendance[date][studentId]) attendanceStats.p++; else attendanceStats.a++;
+                    }
                 }
-            }
+            });
         });
         
         setObservations(studentObservations.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
@@ -456,7 +465,10 @@ export default function StudentProfilePage() {
                             <div key={obs.id} className="border-l-4 pl-3 py-1" style={{borderColor: obs.type === 'Mérito' ? 'hsl(var(--chart-2))' : 'hsl(var(--destructive))'}}>
                                 <div className="flex justify-between items-center">
                                     <p className="font-semibold text-sm">{obs.type}</p>
-                                    <p className="text-xs text-muted-foreground">{format(new Date(obs.date), "dd/MM/yy", { locale: es })}</p>
+                                    <div className="text-xs text-muted-foreground space-x-2">
+                                        <Badge variant="outline" className="text-xs">{getPartialLabel(obs.partialId)}</Badge>
+                                        <span>{format(new Date(obs.date), "dd/MM/yy", { locale: es })}</span>
+                                    </div>
                                 </div>
                                 <p className="text-xs mt-1">{obs.details}</p>
                             </div>

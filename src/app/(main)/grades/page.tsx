@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
 import { FilePen, Loader2 } from 'lucide-react';
@@ -10,16 +10,16 @@ import { useData } from '@/hooks/use-data';
 
 export default function GradesRedirectPage() {
   const router = useRouter();
-  const { activeGroup } = useData();
+  const { activeGroup, activePartialId } = useData();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (activeGroup) {
-      router.replace(`/groups/${activeGroup.id}/grades`);
+      router.replace(`/groups/${activeGroup.id}/grades?partial=${activePartialId}`);
     } else {
       setIsLoading(false);
     }
-  }, [router, activeGroup]);
+  }, [router, activeGroup, activePartialId]);
 
   if (isLoading) {
     return (
