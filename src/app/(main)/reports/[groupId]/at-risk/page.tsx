@@ -19,21 +19,22 @@ import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, Download, FileText, Loader2, Wand2, User, Mail, Phone, Check, X, AlertTriangle, ListChecks, MessageSquare, BadgeInfo, Edit, Save } from 'lucide-react';
-import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { StudentObservation } from '@/lib/placeholder-data';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { useData } from '@/hooks/use-data';
+import { useData, loadFromLocalStorage } from '@/hooks/use-data';
 import { generateAtRiskStudentRecommendation } from '@/ai/flows/at-risk-student-recommendation';
 import type { AtRiskStudentOutput, AtRiskStudentInput } from '@/ai/flows/at-risk-student-recommendation';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import type { CalculatedRisk } from '@/hooks/use-data';
+import { useParams } from 'next/navigation';
+import type { EvaluationCriteria, Grades, ParticipationRecord, Activity, ActivityRecord, AttendanceRecord, CalculatedRisk } from '@/hooks/use-data';
 
 
 type StudentReportData = {
@@ -288,27 +289,38 @@ const AtRiskStudentCard = ({ studentData }: { studentData: StudentReportData }) 
 
 
 export default function AtRiskReportPage() {
+  const params = useParams();
+  const groupId = params.groupId as string;
   const { 
-      activeGroup,
-      atRiskStudents, 
+      groups,
       calculateFinalGrade, 
+      getStudentRiskLevel,
       allObservations, 
-      criteria,
-      grades,
-      participations,
-      activities,
-      activityRecords,
-      attendance,
   } = useData();
   const [reportData, setReportData] = useState<StudentReportData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const group = useMemo(() => groups.find(g => g.id === groupId), [groups, groupId]);
+
   useEffect(() => {
-    if (activeGroup && criteria) {
-      const data = atRiskStudents.map(student => {
-        const studentObservations = allObservations[student.id] || [];
-        const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords, studentObservations);
-        
+    if (group) {
+        const criteria = loadFromLocalStorage<EvaluationCriteria[]>(`criteria_${group.id}`, []);
+        const grades = loadFromLocalStorage<Grades>(`grades_${group.id}`, {});
+        const participations = loadFromLocalStorage<ParticipationRecord>(`participations_${group.id}`, {});
+        const activities = loadFromLocalStorage<Activity[]>(`activities_${group.id}`, []);
+        const activityRecords = loadFromLocalStorage<ActivityRecord>(`activityRecords_${group.id}`, {});
+        const attendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${group.id}`, {});
+
+        const atRiskStudentsInGroup = group.students
+            .map(student => {
+                const studentObservations = allObservations[student.id] || [];
+                const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords, studentObservations);
+                const riskLevel = getStudentRiskLevel(finalGrade, attendance, student.id);
+                return { ...student, finalGrade, riskLevel, studentObservations };
+            })
+            .filter(student => student.riskLevel.level === 'high' || student.riskLevel.level === 'medium');
+
+      const data = atRiskStudentsInGroup.map(student => {
         const criteriaDetails: StudentReportData['criteriaDetails'] = criteria.map(criterion => {
           let performanceRatio = 0;
             if (criterion.name === 'Actividades' || criterion.name === 'Portafolio') {
@@ -345,26 +357,26 @@ export default function AtRiskReportPage() {
           email: student.email,
           tutorName: student.tutorName,
           tutorPhone: student.tutorPhone,
-          riskLevel: student.calculatedRisk.level,
-          riskReason: student.calculatedRisk.reason,
-          finalGrade,
+          riskLevel: student.riskLevel.level,
+          riskReason: student.riskLevel.reason,
+          finalGrade: student.finalGrade,
           attendance: attendanceStats,
           criteriaDetails,
-          observations: studentObservations,
+          observations: student.studentObservations,
         };
       });
 
       setReportData(data);
     }
     setIsLoading(false);
-  }, [activeGroup, atRiskStudents, allObservations, calculateFinalGrade, criteria, grades, participations, activities, activityRecords, attendance]);
+  }, [group, allObservations, calculateFinalGrade, getStudentRiskLevel]);
 
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /> <span className="ml-2">Cargando informe...</span></div>;
   }
   
-  if (!activeGroup) {
+  if (!group) {
       return (
         <div className="flex flex-col items-center justify-center h-full text-center">
             <FileText className="h-16 w-16 text-muted-foreground" />
@@ -380,7 +392,7 @@ export default function AtRiskReportPage() {
        <div className="flex items-center justify-between">
          <div className="flex items-center gap-4">
             <Button asChild variant="outline" size="icon">
-              <Link href={`/reports/${activeGroup.id}`}>
+              <Link href={`/reports/${group.id}`}>
                 <ArrowLeft />
                 <span className="sr-only">Volver a Informes</span>
               </Link>
@@ -388,7 +400,7 @@ export default function AtRiskReportPage() {
             <div>
               <h1 className="text-3xl font-bold">Informe de Estudiantes en Riesgo</h1>
               <p className="text-muted-foreground">
-                  Análisis detallado para el grupo "{activeGroup.subject}".
+                  Análisis detallado para el grupo "{group.subject}".
               </p>
             </div>
          </div>
