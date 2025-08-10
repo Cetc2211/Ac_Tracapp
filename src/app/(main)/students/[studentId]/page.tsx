@@ -454,32 +454,6 @@ export default function StudentProfilePage() {
             </div>
         </div>
         
-        <Card>
-            <CardHeader>
-                <CardTitle>Bitácora de Observaciones</CardTitle>
-            </CardHeader>
-            <CardContent>
-                 {observations.length > 0 ? (
-                    <div className="space-y-4 max-h-48 overflow-y-auto pr-2">
-                        {observations.map(obs => (
-                            <div key={obs.id} className="border-l-4 pl-3 py-1" style={{borderColor: obs.type === 'Mérito' ? 'hsl(var(--chart-2))' : 'hsl(var(--destructive))'}}>
-                                <div className="flex justify-between items-center">
-                                    <p className="font-semibold text-sm">{obs.type}</p>
-                                    <div className="text-xs text-muted-foreground space-x-2">
-                                        <Badge variant="outline" className="text-xs">{getPartialLabel(obs.partialId)}</Badge>
-                                        <span>{format(new Date(obs.date), "dd/MM/yy", { locale: es })}</span>
-                                    </div>
-                                </div>
-                                <p className="text-xs mt-1">{obs.details}</p>
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <p className="text-sm text-center text-muted-foreground py-4">No hay observaciones registradas.</p>
-                )}
-            </CardContent>
-        </Card>
-
         {generatedFeedback && (
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between">

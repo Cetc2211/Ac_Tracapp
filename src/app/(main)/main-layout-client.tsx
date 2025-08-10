@@ -51,7 +51,6 @@ const navItems = [
   { href: '/attendance', icon: CalendarCheck, label: 'Asistencia' },
   { href: '/participations', icon: PenSquare, label: 'Participaciones' },
   { href: '/activities', icon: ClipboardCheck, label: 'Actividades' },
-  { href: '/observations', icon: BookText, label: 'Observaciones' },
   { href: '/reports', icon: FileText, label: 'Informes' },
   { href: '/statistics', icon: BarChart3, label: 'Estadísticas' },
   { href: '/tutors', icon: Contact, label: 'Tutores' },
