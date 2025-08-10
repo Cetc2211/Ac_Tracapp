@@ -1,17 +1,27 @@
-
 'use client';
 
-import Image from 'next/image';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
+  CardTitle,
   CardFooter,
 } from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { ArrowUpRight, BookCopy, Users, AlertTriangle, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Phone, Users, Eye } from 'lucide-react';
-import { Group, Student } from '@/lib/placeholder-data';
+import Link from 'next/link';
+import Image from 'next/image';
+import { useState, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -20,151 +30,325 @@ import {
   DialogDescription,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
 import { useData } from '@/hooks/use-data';
+import type { StudentWithRisk } from '@/hooks/use-data';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
-// Extracted TutorListDialog to be a top-level component.
-const TutorListDialog = ({ group, studentsWithTutors }: { group: Group, studentsWithTutors: Student[] }) => {
-    return (
-        <Dialog>
-            <DialogTrigger asChild>
-                <Button variant="outline" className="w-full" disabled={studentsWithTutors.length === 0}>
-                    <Eye className="mr-2 h-4 w-4" />
-                    Ver Lista de Tutores
-                </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-4xl">
-                <DialogHeader>
-                    <DialogTitle>Tutores del Grupo: {group.subject}</DialogTitle>
-                    <DialogDescription>
-                        Lista completa de estudiantes y la información de contacto de sus tutores.
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="max-h-[60vh] overflow-y-auto">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Estudiante</TableHead>
-                                <TableHead>Tutor</TableHead>
-                                <TableHead>Teléfono del Tutor</TableHead>
-                                <TableHead className="text-right">Acciones</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {studentsWithTutors.map((student) => (
-                                <TableRow key={student.id}>
-                                    <TableCell className="font-medium flex items-center gap-3">
-                                        <Image
-                                            alt="Foto del estudiante"
-                                            className="aspect-square rounded-full object-cover"
-                                            height="40"
-                                            src={student.photo}
-                                            data-ai-hint="student photo"
-                                            width="40"
-                                        />
-                                        {student.name}
-                                    </TableCell>
-                                    <TableCell>{student.tutorName}</TableCell>
-                                    <TableCell>{student.tutorPhone}</TableCell>
-                                    <TableCell className="text-right">
-                                        {student.tutorPhone &&
-                                            <Button variant="outline" size="sm" asChild>
-                                                <a href={`tel:${student.tutorPhone}`}>
-                                                    <Phone className="mr-2 h-4 w-4" />
-                                                    Llamar
-                                                </a>
-                                            </Button>
-                                        }
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </div>
-            </DialogContent>
-        </Dialog>
+export default function DashboardPage() {
+  const { activeStudentsInGroups, groups, atRiskStudents, overallAverageParticipation, groupAverages } = useData();
+  
+  const [searchQuery, setSearchQuery] = useState('');
+  const [studentSearchQuery, setStudentSearchQuery] = useState('');
+  const [isRiskDialogOpen, setIsRiskDialogOpen] = useState(false);
+  const [selectedRiskGroup, setSelectedRiskGroup] = useState('all');
+  
+  const filteredAtRiskStudents = useMemo(() => {
+    const students = selectedRiskGroup === 'all'
+      ? atRiskStudents
+      : atRiskStudents.filter(student => 
+          groups.find(g => g.id === selectedRiskGroup)?.students.some(s => s.id === student.id)
+        );
+
+    if (!searchQuery) return students;
+
+    return students.filter(student =>
+      student.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
-};
+  }, [atRiskStudents, searchQuery, selectedRiskGroup, groups]);
 
 
-export default function TutorsPage() {
-  const { groups } = useData();
+  const filteredStudentsForSearch = useMemo(() => {
+    if (!studentSearchQuery) return [];
+    return activeStudentsInGroups.filter(student =>
+      student.name.toLowerCase().includes(studentSearchQuery.toLowerCase())
+    ).slice(0, 5);
+  }, [activeStudentsInGroups, studentSearchQuery]);
+
 
   return (
     <div className="flex flex-col gap-6">
-       <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Contacto de Tutores</h1>
-            <p className="text-muted-foreground">
-              Lista de estudiantes y la información de contacto de sus tutores, agrupados por asignatura.
+      <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Estudiantes Activos
+            </CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{activeStudentsInGroups.length}</div>
+            <p className="text-xs text-muted-foreground">
+              Total de estudiantes registrados
             </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Grupos Creados</CardTitle>
+            <BookCopy className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{groups.length}</div>
+            <p className="text-xs text-muted-foreground">
+              Total de asignaturas
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Estudiantes en Riesgo
+            </CardTitle>
+            <AlertTriangle className="h-4 w-4 text-destructive" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-destructive">
+              {atRiskStudents.length}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Requieren atención especial (todos los grupos)
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Asistencia Media
+            </CardTitle>
+            <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{overallAverageParticipation}%</div>
+            <p className="text-xs text-muted-foreground">
+              Promedio en todas las clases
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+       <Card>
+        <CardHeader>
+          <h3 className="text-2xl font-semibold leading-none tracking-tight">Buscar Estudiante</h3>
+          <CardDescription>
+            Encuentra rápidamente el perfil de un estudiante por su nombre.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Escribe el nombre del estudiante..."
+              className="pl-8 w-full"
+              value={studentSearchQuery}
+              onChange={(e) => setStudentSearchQuery(e.target.value)}
+            />
           </div>
-        </div>
-
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {groups.map(group => {
-                const studentsWithTutors = group.students.filter(student => student.tutorName && student.tutorPhone);
-                const displayedStudents = studentsWithTutors.slice(0, 3);
-                const remainingStudentsCount = studentsWithTutors.length - displayedStudents.length;
-
-                return (
-                    <Card key={group.id} className="flex flex-col">
-                        <CardHeader>
-                            <h2 className="text-2xl font-semibold leading-none tracking-tight">{group.subject}</h2>
-                            <CardDescription>
-                                {studentsWithTutors.length} de {group.students.length} estudiantes tienen información de tutor.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="flex-grow">
-                            <div className="flex items-center space-x-2">
-                                <div className="flex -space-x-4">
-                                    {displayedStudents.map(student => (
-                                        <Image
-                                            key={student.id}
-                                            alt={student.name}
-                                            className="aspect-square rounded-full object-cover border-2 border-card"
-                                            height="40"
-                                            src={student.photo}
-                                            data-ai-hint="student avatar"
-                                            width="40"
-                                        />
-                                    ))}
-                                </div>
-                                {remainingStudentsCount > 0 && (
-                                    <span className="text-sm text-muted-foreground">
-                                        + {remainingStudentsCount} más
-                                    </span>
-                                )}
-                                 {studentsWithTutors.length === 0 && (
-                                    <p className="text-sm text-muted-foreground">No hay tutores registrados.</p>
-                                )}
-                            </div>
-                        </CardContent>
-                        <CardFooter>
-                           <TutorListDialog group={group} studentsWithTutors={studentsWithTutors} />
-                        </CardFooter>
-                    </Card>
-                )
-            })}
-             {groups.length === 0 && (
-                <Card className="md:col-span-2 lg:col-span-3">
-                    <CardContent className="flex flex-col items-center justify-center text-center p-12 gap-4">
-                        <div className="bg-muted rounded-full p-4">
-                            <Users className="h-12 w-12 text-muted-foreground" />
-                        </div>
-                        <h1 className="text-2xl font-bold">No hay grupos creados</h1>
-                        <p className="text-muted-foreground">No se puede mostrar la información de tutores porque no existen grupos.</p>
-                    </CardContent>
-                </Card>
+          <div className="mt-4 space-y-2">
+            {filteredStudentsForSearch.map(student => (
+              <Link href={`/students/${student.id}`} key={student.id} className="flex items-center gap-4 p-2 rounded-md hover:bg-muted">
+                <Image
+                  alt="Avatar"
+                  className="rounded-full"
+                  height={40}
+                  src={student.photo}
+                  data-ai-hint="student avatar"
+                  style={{
+                    aspectRatio: '40/40',
+                    objectFit: 'cover',
+                  }}
+                  width={40}
+                />
+                <div className="grid gap-1">
+                  <p className="text-sm font-medium leading-none">{student.name}</p>
+                  <p className="text-sm text-muted-foreground">{student.email}</p>
+                </div>
+              </Link>
+            ))}
+            {studentSearchQuery && filteredStudentsForSearch.length === 0 && (
+              <p className="text-sm text-center text-muted-foreground py-4">
+                No se encontraron estudiantes con ese nombre.
+              </p>
             )}
-        </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4 md:gap-8 lg:grid-cols-2 xl:grid-cols-3">
+        <Card className="xl:col-span-2">
+          <CardHeader className="flex flex-row items-center">
+            <div className="grid gap-2">
+              <CardTitle>Grupos Recientes</CardTitle>
+              <CardDescription>
+                Resumen de los grupos y su rendimiento general.
+              </CardDescription>
+            </div>
+            <Button asChild size="sm" className="ml-auto gap-1">
+              <Link href="/groups">
+                Ver Todos
+                <ArrowUpRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Asignatura</TableHead>
+                  <TableHead className="text-center">Estudiantes</TableHead>
+                  <TableHead className="text-right">Promedio Gral.</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {groups.slice(0, 5).map((group) => {
+                  return (
+                    <TableRow key={group.id}>
+                      <TableCell>
+                        <div className="font-medium">{group.subject}</div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {group.students.length}
+                      </TableCell>
+                      <TableCell className="text-right">{(groupAverages[group.id] || 0).toFixed(1)}</TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+        <Card className="flex flex-col">
+          <CardHeader>
+            <CardTitle>Estudiantes con Alertas</CardTitle>
+            <CardDescription>
+              Filtra por grupo para ver los estudiantes que requieren seguimiento.
+            </CardDescription>
+             <Select value={selectedRiskGroup} onValueChange={setSelectedRiskGroup}>
+                <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar grupo..." />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="all">Todos los grupos</SelectItem>
+                    {groups.map(group => (
+                        <SelectItem key={group.id} value={group.id}>{group.subject}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+          </CardHeader>
+          <CardContent className="grid gap-6 flex-grow">
+            {filteredAtRiskStudents.slice(0, 4).map((student) => (
+              <div key={student.id} className="flex items-center gap-4">
+                <Image
+                  alt="Avatar"
+                  className="rounded-full"
+                  height={40}
+                  src={student.photo}
+                  data-ai-hint="student avatar"
+                  style={{
+                    aspectRatio: '40/40',
+                    objectFit: 'cover',
+                  }}
+                  width={40}
+                />
+                <div className="grid gap-1">
+                  <Link href={`/students/${student.id}`} className="text-sm font-medium leading-none hover:underline" onClick={() => isRiskDialogOpen && setIsRiskDialogOpen(false)}>
+                    {student.name}
+                  </Link>
+                  <p className="text-sm text-muted-foreground">{student.calculatedRisk.reason}</p>
+                </div>
+                <div className="ml-auto font-medium">
+                  {student.calculatedRisk.level === 'high' && (
+                    <Badge variant="destructive">Alto Riesgo</Badge>
+                  )}
+                  {student.calculatedRisk.level === 'medium' && (
+                    <Badge variant="secondary" className="bg-amber-400 text-black">
+                      Riesgo Medio
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            ))}
+             {filteredAtRiskStudents.length === 0 && (
+                <p className="text-sm text-center text-muted-foreground">No hay estudiantes con alertas en esta selección.</p>
+            )}
+          </CardContent>
+          {atRiskStudents.length > 0 && (
+            <CardFooter>
+                 <Dialog open={isRiskDialogOpen} onOpenChange={setIsRiskDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="w-full">
+                        Ver todos ({filteredAtRiskStudents.length})
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>Estudiantes en Riesgo</DialogTitle>
+                      <DialogDescription>
+                        Lista de estudiantes que requieren atención especial.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="relative">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            type="search"
+                            placeholder="Buscar estudiante..."
+                            className="pl-8 w-full"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                    <div className="max-h-[50vh] overflow-y-auto space-y-4 pr-2">
+                        {filteredAtRiskStudents.map((student) => (
+                           <div key={student.id} className="flex items-center gap-4 p-2 rounded-md hover:bg-muted">
+                                <Image
+                                alt="Avatar"
+                                className="rounded-full"
+                                height={40}
+                                src={student.photo}
+                                data-ai-hint="student avatar"
+                                style={{
+                                    aspectRatio: '40/40',
+                                    objectFit: 'cover',
+                                }}
+                                width={40}
+                                />
+                                <div className="grid gap-1 flex-grow">
+                                <Link href={`/students/${student.id}`} className="text-sm font-medium leading-none hover:underline" onClick={() => setIsRiskDialogOpen(false)}>
+                                    {student.name}
+                                </Link>
+                                <p className="text-sm text-muted-foreground">{student.calculatedRisk.reason}</p>
+                                </div>
+                                <div className="ml-auto font-medium">
+                                {student.calculatedRisk.level === 'high' && (
+                                    <Badge variant="destructive">Alto Riesgo</Badge>
+                                )}
+                                {student.calculatedRisk.level === 'medium' && (
+                                    <Badge variant="secondary" className="bg-amber-400 text-black">
+                                    Riesgo Medio
+                                    </Badge>
+                                )}
+                                </div>
+                            </div>
+                        ))}
+                        {filteredAtRiskStudents.length === 0 && (
+                            <p className="text-sm text-center text-muted-foreground py-8">
+                                No se encontraron estudiantes con ese nombre.
+                            </p>
+                        )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+            </CardFooter>
+          )}
+        </Card>
+      </div>
     </div>
   );
 }

@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -10,423 +9,346 @@ import {
   CardFooter,
 } from '@/components/ui/card';
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion"
-import { Button } from '@/components/ui/button';
-import Image from 'next/image';
-import Link from 'next/link';
-import { ArrowLeft, Download, FileText, Loader2, Wand2, User, Mail, Phone, Check, X, AlertTriangle, ListChecks, MessageSquare, BadgeInfo, Edit, Save } from 'lucide-react';
-import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
-import { useToast } from '@/hooks/use-toast';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
-import { useData, loadFromLocalStorage } from '@/hooks/use-data';
-import { generateAtRiskStudentRecommendation } from '@/ai/flows/at-risk-student-recommendation';
-import type { AtRiskStudentOutput, AtRiskStudentInput } from '@/ai/flows/at-risk-student-recommendation';
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { useParams } from 'next/navigation';
-import type { EvaluationCriteria, Grades, ParticipationRecord, Activity, ActivityRecord, AttendanceRecord, CalculatedRisk, PartialId } from '@/hooks/use-data';
+import { ArrowUpRight, BookCopy, Users, AlertTriangle, Search } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import Image from 'next/image';
+import { useState, useMemo } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { useData } from '@/hooks/use-data';
+import type { StudentWithRisk } from '@/hooks/use-data';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
-
-type StudentReportData = {
-    id: string;
-    name: string;
-    photo: string;
-    email?: string;
-    tutorName?: string;
-    tutorPhone?: string;
-    riskLevel: 'high' | 'medium';
-    riskReason: string;
-    finalGrade: number;
-    attendance: {
-        p: number;
-        a: number;
-        total: number;
-    };
-    criteriaDetails: { name: string; earned: number; weight: number; }[];
-    observations: [];
-};
-
-
-const AtRiskStudentCard = ({ studentData }: { studentData: StudentReportData }) => {
-    const reportRef = useRef<HTMLDivElement>(null);
-    const { toast } = useToast();
-    const [isGenerating, setIsGenerating] = useState(false);
-    const [aiResponse, setAiResponse] = useState<AtRiskStudentOutput | null>(null);
-    const [isEditing, setIsEditing] = useState(false);
-    const [editedAnalysis, setEditedAnalysis] = useState('');
-    const [editedRecommendations, setEditedRecommendations] = useState('');
-
-    const handleDownloadPdf = () => {
-        const input = reportRef.current;
-        if (input) {
-            toast({ title: 'Generando PDF...', description: 'Esto puede tardar un momento.' });
-            html2canvas(input, { scale: 2, useCORS: true }).then((canvas) => {
-                const imgData = canvas.toDataURL('image/png');
-                const pdf = new jsPDF('p', 'mm', 'a4');
-                const pdfWidth = pdf.internal.pageSize.getWidth();
-                const pdfHeight = pdf.internal.pageSize.getHeight();
-                const ratio = canvas.width / canvas.height;
-                let imgWidth = pdfWidth - 20;
-                let imgHeight = imgWidth / ratio;
-                if (imgHeight > pdfHeight - 20) {
-                    imgHeight = pdfHeight - 20;
-                    imgWidth = imgHeight * ratio;
-                }
-                pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight);
-                pdf.save(`informe_riesgo_${studentData.name.replace(/\s+/g, '_')}.pdf`);
-            });
-        }
-    };
-    
-    const handleGenerateRecommendation = async () => {
-        setIsGenerating(true);
-        setAiResponse(null);
-        setIsEditing(false);
-        try {
-            const input: AtRiskStudentInput = {
-                studentName: studentData.name,
-                riskReason: studentData.riskReason,
-                gradesByGroup: [{
-                    group: 'Grupo Actual',
-                    grade: studentData.finalGrade,
-                    criteriaDetails: studentData.criteriaDetails
-                }],
-                attendance: studentData.attendance,
-                observations: studentData.observations,
-            };
-            const result = await generateAtRiskStudentRecommendation(input);
-            setAiResponse(result);
-        } catch(e) {
-            console.error(e);
-            toast({
-                variant: 'destructive',
-                title: 'Error de IA',
-                description: 'No se pudo generar el análisis. Inténtalo de nuevo.'
-            });
-        } finally {
-            setIsGenerating(false);
-        }
-    }
-    
-    const handleEdit = () => {
-        if(aiResponse) {
-            setEditedAnalysis(aiResponse.analysis);
-            setEditedRecommendations(aiResponse.recommendations.join('\n'));
-            setIsEditing(true);
-        }
-    }
-    
-    const handleSaveEdit = () => {
-        if (aiResponse) {
-            setAiResponse({
-                analysis: editedAnalysis,
-                recommendations: editedRecommendations.split('\n').filter(r => r.trim() !== '')
-            });
-            setIsEditing(false);
-            toast({ title: 'Cambios guardados', description: 'El informe ha sido actualizado.'});
-        }
-    }
-
-    const handleCancelEdit = () => {
-        setIsEditing(false);
-    }
-
-    const attendanceRate = studentData.attendance.total > 0 ? (studentData.attendance.p / studentData.attendance.total) * 100 : 0;
-
-    return (
-        <Card className="overflow-hidden">
-            <div ref={reportRef} className="bg-background">
-                <CardHeader className="bg-muted/30">
-                     <div className="flex flex-col sm:flex-row sm:items-start sm:gap-6">
-                        <Image
-                            src={studentData.photo}
-                            alt={studentData.name}
-                            width={100}
-                            height={100}
-                            className="rounded-full border-4"
-                            style={{borderColor: studentData.riskLevel === 'high' ? 'hsl(var(--destructive))' : 'hsl(var(--chart-4))'}}
-                        />
-                        <div className="pt-2 flex-grow">
-                            <CardTitle className="text-2xl">{studentData.name}</CardTitle>
-                            <div className="flex flex-col items-start mt-1 space-y-1">
-                                 <CardDescription className="flex items-center gap-2">
-                                    {studentData.riskLevel === 'high' 
-                                        ? <Badge variant="destructive">Riesgo Alto</Badge> 
-                                        : <Badge className="bg-amber-500">Riesgo Medio</Badge>
-                                    }
-                                </CardDescription>
-                                <span className="text-xs text-muted-foreground">{studentData.riskReason}</span>
-                            </div>
-                            <div className="text-sm text-muted-foreground mt-2 space-y-1">
-                                <p className="flex items-center gap-2"><Mail className="h-4 w-4"/> {studentData.email || 'No registrado'}</p>
-                                <p className="flex items-center gap-2"><User className="h-4 w-4"/> Tutor: {studentData.tutorName || 'No registrado'}</p>
-                                <p className="flex items-center gap-2"><Phone className="h-4 w-4"/> Tel. Tutor: {studentData.tutorPhone || 'No registrado'}</p>
-                            </div>
-                        </div>
-                    </div>
-                </CardHeader>
-                <CardContent className="p-4 md:p-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                       <div className="space-y-4">
-                           <h4 className="font-semibold flex items-center gap-2"><ListChecks /> Desglose de Calificación</h4>
-                           <div className="p-3 border rounded-md text-sm space-y-2">
-                               {studentData.criteriaDetails.map(c => (
-                                   <div key={c.name} className="flex justify-between items-center">
-                                       <span>{c.name} <span className="text-xs text-muted-foreground">({c.weight}%)</span></span>
-                                       <Badge variant="secondary">{c.earned.toFixed(1)}%</Badge>
-                                   </div>
-                               ))}
-                                <Separator />
-                                <div className="flex justify-between font-bold pt-1">
-                                    <span>Calificación Final:</span>
-                                    <span>{studentData.finalGrade.toFixed(1)}%</span>
-                                </div>
-                           </div>
-                       </div>
-                       <div className="space-y-4">
-                           <h4 className="font-semibold flex items-center gap-2"><AlertTriangle /> Asistencia</h4>
-                            <div className="p-3 border rounded-md text-sm space-y-2">
-                                <div className="flex justify-between"><span>Presente:</span><span className="font-bold flex items-center gap-1 text-green-600"><Check/>{studentData.attendance.p}</span></div>
-                                <div className="flex justify-between"><span>Ausente:</span><span className="font-bold flex items-center gap-1 text-red-600"><X/>{studentData.attendance.a}</span></div>
-                                <Separator />
-                                <div className="flex justify-between font-bold pt-1">
-                                    <span>Tasa de Asistencia:</span>
-                                    <span>{attendanceRate.toFixed(1)}%</span>
-                                </div>
-                            </div>
-                       </div>
-                    </div>
-                     <div className="mt-6 space-y-4">
-                        <h4 className="font-semibold flex items-center gap-2"><MessageSquare /> Observaciones en Bitácora</h4>
-                        <div className="p-3 border rounded-md text-sm text-center text-muted-foreground">
-                            No hay observaciones registradas.
-                        </div>
-                     </div>
-
-                    {aiResponse && (
-                        <div className="mt-6 space-y-4">
-                             <h4 className="font-semibold flex items-center gap-2 text-primary"><BadgeInfo />Análisis y Recomendaciones</h4>
-                              <div className="p-3 border-l-4 border-primary bg-primary/10 rounded-r-md text-sm space-y-4">
-                                {isEditing ? (
-                                    <div className="space-y-4">
-                                        <div>
-                                            <Label htmlFor="edited-analysis" className="font-bold">Análisis de la Situación:</Label>
-                                            <Textarea id="edited-analysis" value={editedAnalysis} onChange={(e) => setEditedAnalysis(e.target.value)} rows={4} />
-                                        </div>
-                                        <div>
-                                            <Label htmlFor="edited-recommendations" className="font-bold">Plan de Acción Recomendado:</Label>
-                                            <Textarea id="edited-recommendations" value={editedRecommendations} onChange={(e) => setEditedRecommendations(e.target.value)} rows={5} placeholder="Una recomendación por línea"/>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <div>
-                                            <h5 className="font-bold">Análisis de la Situación:</h5>
-                                            <p className="mt-1 whitespace-pre-wrap">{aiResponse.analysis}</p>
-                                        </div>
-                                        <div>
-                                            <h5 className="font-bold">Plan de Acción Recomendado:</h5>
-                                            <ul className="list-disc pl-5 mt-2 space-y-1">
-                                                {aiResponse.recommendations.map((rec, i) => (
-                                                    <li key={i}>{rec}</li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        </div>
-                    )}
-                </CardContent>
-            </div>
-
-            <CardFooter className="bg-muted/50 p-3 flex justify-end gap-2">
-                 <Button onClick={handleGenerateRecommendation} disabled={isGenerating || isEditing}>
-                    {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Wand2 className="mr-2 h-4 w-4" />}
-                    {isGenerating ? 'Analizando...' : 'Generar Análisis'}
-                </Button>
-                {aiResponse && (
-                    isEditing ? (
-                        <>
-                            <Button onClick={handleSaveEdit}><Save className="mr-2 h-4 w-4" /> Guardar</Button>
-                            <Button variant="outline" onClick={handleCancelEdit}>Cancelar</Button>
-                        </>
-                    ) : (
-                        <Button variant="secondary" onClick={handleEdit}><Edit className="mr-2 h-4 w-4" /> Editar</Button>
-                    )
-                )}
-                <Button variant="outline" onClick={handleDownloadPdf}>
-                    <Download className="mr-2 h-4 w-4"/> PDF
-                </Button>
-            </CardFooter>
-        </Card>
-    );
-};
-
-
-export default function AtRiskReportPage() {
-  const params = useParams();
-  const groupId = params.groupId as string;
-  const { 
-      groups,
-      calculateFinalGrade, 
-      getStudentRiskLevel,
-      activePartialId,
-  } = useData();
-  const [reportData, setReportData] = useState<StudentReportData[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const group = useMemo(() => groups.find(g => g.id === groupId), [groups, groupId]);
-
-  const getCriteriaDetails = useCallback((studentId: string, criteria: EvaluationCriteria[], grades: Grades, participations: ParticipationRecord, activities: Activity[], activityRecords: ActivityRecord) => {
-    return criteria.map(criterion => {
-        let performanceRatio = 0;
-        if (criterion.name === 'Actividades' || criterion.name === 'Portafolio') {
-            const totalActivities = activities.length;
-            if(totalActivities > 0) {
-                const deliveredActivities = Object.values(activityRecords[studentId] || {}).filter(Boolean).length;
-                performanceRatio = deliveredActivities / totalActivities;
-            }
-        } else if (criterion.name === 'Participación') {
-            const totalParticipations = Object.keys(participations).length;
-            if(totalParticipations > 0) {
-                const studentParticipations = Object.values(participations).filter(p => p[studentId]).length;
-                performanceRatio = studentParticipations / totalParticipations;
-            }
-        } else {
-            performanceRatio = (criterion.expectedValue > 0) ? ((grades[studentId]?.[criterion.id]?.delivered ?? 0) / criterion.expectedValue) : 0;
-        }
-        const earned = performanceRatio * criterion.weight;
-        return { name: criterion.name, earned, weight: criterion.weight };
-    });
-  }, []);
-
-  useEffect(() => {
-    if (group) {
-        const keySuffix = `${group.id}_${activePartialId}`;
-        const criteria = loadFromLocalStorage<EvaluationCriteria[]>(`criteria_${keySuffix}`, []);
-        const grades = loadFromLocalStorage<Grades>(`grades_${keySuffix}`, {});
-        const participations = loadFromLocalStorage<ParticipationRecord>(`participations_${keySuffix}`, {});
-        const activities = loadFromLocalStorage<Activity[]>(`activities_${keySuffix}`, []);
-        const activityRecords = loadFromLocalStorage<ActivityRecord>(`activityRecords_${keySuffix}`, {});
-        const attendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${keySuffix}`, {});
-
-        const atRiskStudentsInGroup = group.students
-            .map(student => {
-                const finalGrade = calculateFinalGrade(student.id, activePartialId, criteria, grades, participations, activities, activityRecords);
-                const riskLevel = getStudentRiskLevel(finalGrade, attendance, student.id);
-                return { ...student, finalGrade, riskLevel };
-            })
-            .filter(student => student.riskLevel.level === 'high' || student.riskLevel.level === 'medium');
-
-      const data = atRiskStudentsInGroup.map(student => {
-        const criteriaDetails = getCriteriaDetails(student.id, criteria, grades, participations, activities, activityRecords);
-
-        const attendanceStats = { p: 0, a: 0, total: 0 };
-        Object.keys(attendance).forEach(date => {
-            if (attendance[date]?.[student.id] !== undefined) {
-                attendanceStats.total++;
-                if (attendance[date][student.id]) attendanceStats.p++; else attendanceStats.a++;
-            }
-        });
-        
-        return {
-          id: student.id,
-          name: student.name,
-          photo: student.photo,
-          email: student.email,
-          tutorName: student.tutorName,
-          tutorPhone: student.tutorPhone,
-          riskLevel: student.riskLevel.level,
-          riskReason: student.riskLevel.reason,
-          finalGrade: student.finalGrade,
-          attendance: attendanceStats,
-          criteriaDetails,
-          observations: [],
-        };
-      });
-
-      setReportData(data);
-    }
-    setIsLoading(false);
-  }, [group, calculateFinalGrade, getStudentRiskLevel, activePartialId, getCriteriaDetails]);
-
-
-  if (isLoading) {
-    return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /> <span className="ml-2">Cargando informe...</span></div>;
-  }
+export default function DashboardPage() {
+  const { activeStudentsInGroups, groups, atRiskStudents, overallAverageParticipation, groupAverages } = useData();
   
-  if (!group) {
-      return (
-        <div className="flex flex-col items-center justify-center h-full text-center">
-            <FileText className="h-16 w-16 text-muted-foreground" />
-            <h2 className="text-xl font-semibold mt-4">No hay un grupo activo</h2>
-            <p className="text-muted-foreground mt-2">Por favor, selecciona un grupo para ver este informe.</p>
-            <Button asChild className="mt-4"><Link href="/groups">Seleccionar Grupo</Link></Button>
-        </div>
-      )
-  }
+  const [searchQuery, setSearchQuery] = useState('');
+  const [studentSearchQuery, setStudentSearchQuery] = useState('');
+  const [isRiskDialogOpen, setIsRiskDialogOpen] = useState(false);
+  const [selectedRiskGroup, setSelectedRiskGroup] = useState('all');
+  
+  const filteredAtRiskStudents = useMemo(() => {
+    const students = selectedRiskGroup === 'all'
+      ? atRiskStudents
+      : atRiskStudents.filter(student => 
+          groups.find(g => g.id === selectedRiskGroup)?.students.some(s => s.id === student.id)
+        );
+
+    if (!searchQuery) return students;
+
+    return students.filter(student =>
+      student.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [atRiskStudents, searchQuery, selectedRiskGroup, groups]);
+
+
+  const filteredStudentsForSearch = useMemo(() => {
+    if (!studentSearchQuery) return [];
+    return activeStudentsInGroups.filter(student =>
+      student.name.toLowerCase().includes(studentSearchQuery.toLowerCase())
+    ).slice(0, 5);
+  }, [activeStudentsInGroups, studentSearchQuery]);
+
 
   return (
     <div className="flex flex-col gap-6">
-       <div className="flex items-center justify-between">
-         <div className="flex items-center gap-4">
-            <Button asChild variant="outline" size="icon">
-              <Link href={`/reports/${group.id}`}>
-                <ArrowLeft />
-                <span className="sr-only">Volver a Informes</span>
+      <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Estudiantes Activos
+            </CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{activeStudentsInGroups.length}</div>
+            <p className="text-xs text-muted-foreground">
+              Total de estudiantes registrados
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Grupos Creados</CardTitle>
+            <BookCopy className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{groups.length}</div>
+            <p className="text-xs text-muted-foreground">
+              Total de asignaturas
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Estudiantes en Riesgo
+            </CardTitle>
+            <AlertTriangle className="h-4 w-4 text-destructive" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-destructive">
+              {atRiskStudents.length}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Requieren atención especial (todos los grupos)
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Asistencia Media
+            </CardTitle>
+            <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{overallAverageParticipation}%</div>
+            <p className="text-xs text-muted-foreground">
+              Promedio en todas las clases
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+       <Card>
+        <CardHeader>
+          <h3 className="text-2xl font-semibold leading-none tracking-tight">Buscar Estudiante</h3>
+          <CardDescription>
+            Encuentra rápidamente el perfil de un estudiante por su nombre.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Escribe el nombre del estudiante..."
+              className="pl-8 w-full"
+              value={studentSearchQuery}
+              onChange={(e) => setStudentSearchQuery(e.target.value)}
+            />
+          </div>
+          <div className="mt-4 space-y-2">
+            {filteredStudentsForSearch.map(student => (
+              <Link href={`/students/${student.id}`} key={student.id} className="flex items-center gap-4 p-2 rounded-md hover:bg-muted">
+                <Image
+                  alt="Avatar"
+                  className="rounded-full"
+                  height={40}
+                  src={student.photo}
+                  data-ai-hint="student avatar"
+                  style={{
+                    aspectRatio: '40/40',
+                    objectFit: 'cover',
+                  }}
+                  width={40}
+                />
+                <div className="grid gap-1">
+                  <p className="text-sm font-medium leading-none">{student.name}</p>
+                  <p className="text-sm text-muted-foreground">{student.email}</p>
+                </div>
+              </Link>
+            ))}
+            {studentSearchQuery && filteredStudentsForSearch.length === 0 && (
+              <p className="text-sm text-center text-muted-foreground py-4">
+                No se encontraron estudiantes con ese nombre.
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4 md:gap-8 lg:grid-cols-2 xl:grid-cols-3">
+        <Card className="xl:col-span-2">
+          <CardHeader className="flex flex-row items-center">
+            <div className="grid gap-2">
+              <CardTitle>Grupos Recientes</CardTitle>
+              <CardDescription>
+                Resumen de los grupos y su rendimiento general.
+              </CardDescription>
+            </div>
+            <Button asChild size="sm" className="ml-auto gap-1">
+              <Link href="/groups">
+                Ver Todos
+                <ArrowUpRight className="h-4 w-4" />
               </Link>
             </Button>
-            <div>
-              <h1 className="text-3xl font-bold">Informe de Estudiantes en Riesgo</h1>
-              <p className="text-muted-foreground">
-                  Análisis detallado para el grupo "{group.subject}".
-              </p>
-            </div>
-         </div>
-      </div>
-      
-       {reportData.length > 0 ? (
-          <Accordion type="single" collapsible className="w-full space-y-4">
-            {reportData.map(student => (
-                 <AccordionItem value={student.id} key={student.id}>
-                    <AccordionTrigger className="p-4 bg-card rounded-lg hover:bg-muted/50 data-[state=open]:rounded-b-none">
-                        <div className="flex items-center gap-4">
-                            <Image src={student.photo} alt={student.name} width={40} height={40} className="rounded-full" />
-                            <div className="text-left">
-                                <p className="font-bold">{student.name}</p>
-                                <p className="text-sm text-muted-foreground">{student.riskReason}</p>
-                            </div>
-                        </div>
-                         {student.riskLevel === 'high' 
-                            ? <Badge variant="destructive">Alto</Badge> 
-                            : <Badge className="bg-amber-500">Medio</Badge>
-                        }
-                    </AccordionTrigger>
-                    <AccordionContent className="border-x border-b rounded-b-lg p-0">
-                       <AtRiskStudentCard studentData={student} />
-                    </AccordionContent>
-                </AccordionItem>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Asignatura</TableHead>
+                  <TableHead className="text-center">Estudiantes</TableHead>
+                  <TableHead className="text-right">Promedio Gral.</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {groups.slice(0, 5).map((group) => {
+                  return (
+                    <TableRow key={group.id}>
+                      <TableCell>
+                        <div className="font-medium">{group.subject}</div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {group.students.length}
+                      </TableCell>
+                      <TableCell className="text-right">{(groupAverages[group.id] || 0).toFixed(1)}</TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+        <Card className="flex flex-col">
+          <CardHeader>
+            <CardTitle>Estudiantes con Alertas</CardTitle>
+            <CardDescription>
+              Filtra por grupo para ver los estudiantes que requieren seguimiento.
+            </CardDescription>
+             <Select value={selectedRiskGroup} onValueChange={setSelectedRiskGroup}>
+                <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar grupo..." />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="all">Todos los grupos</SelectItem>
+                    {groups.map(group => (
+                        <SelectItem key={group.id} value={group.id}>{group.subject}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+          </CardHeader>
+          <CardContent className="grid gap-6 flex-grow">
+            {filteredAtRiskStudents.slice(0, 4).map((student) => (
+              <div key={student.id} className="flex items-center gap-4">
+                <Image
+                  alt="Avatar"
+                  className="rounded-full"
+                  height={40}
+                  src={student.photo}
+                  data-ai-hint="student avatar"
+                  style={{
+                    aspectRatio: '40/40',
+                    objectFit: 'cover',
+                  }}
+                  width={40}
+                />
+                <div className="grid gap-1">
+                  <Link href={`/students/${student.id}`} className="text-sm font-medium leading-none hover:underline" onClick={() => isRiskDialogOpen && setIsRiskDialogOpen(false)}>
+                    {student.name}
+                  </Link>
+                  <p className="text-sm text-muted-foreground">{student.calculatedRisk.reason}</p>
+                </div>
+                <div className="ml-auto font-medium">
+                  {student.calculatedRisk.level === 'high' && (
+                    <Badge variant="destructive">Alto Riesgo</Badge>
+                  )}
+                  {student.calculatedRisk.level === 'medium' && (
+                    <Badge variant="secondary" className="bg-amber-400 text-black">
+                      Riesgo Medio
+                    </Badge>
+                  )}
+                </div>
+              </div>
             ))}
-          </Accordion>
-        ) : (
-            <Card>
-                <CardContent className="p-12 text-center">
-                     <Check className="h-16 w-16 mx-auto text-green-500 bg-green-100 rounded-full p-2" />
-                     <h2 className="text-2xl font-bold mt-4">¡Todo en orden!</h2>
-                     <p className="text-muted-foreground mt-2">No se han identificado estudiantes en riesgo en este grupo.</p>
-                </CardContent>
-            </Card>
-        )}
+             {filteredAtRiskStudents.length === 0 && (
+                <p className="text-sm text-center text-muted-foreground">No hay estudiantes con alertas en esta selección.</p>
+            )}
+          </CardContent>
+          {atRiskStudents.length > 0 && (
+            <CardFooter>
+                 <Dialog open={isRiskDialogOpen} onOpenChange={setIsRiskDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="w-full">
+                        Ver todos ({filteredAtRiskStudents.length})
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>Estudiantes en Riesgo</DialogTitle>
+                      <DialogDescription>
+                        Lista de estudiantes que requieren atención especial.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="relative">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            type="search"
+                            placeholder="Buscar estudiante..."
+                            className="pl-8 w-full"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                    <div className="max-h-[50vh] overflow-y-auto space-y-4 pr-2">
+                        {filteredAtRiskStudents.map((student) => (
+                           <div key={student.id} className="flex items-center gap-4 p-2 rounded-md hover:bg-muted">
+                                <Image
+                                alt="Avatar"
+                                className="rounded-full"
+                                height={40}
+                                src={student.photo}
+                                data-ai-hint="student avatar"
+                                style={{
+                                    aspectRatio: '40/40',
+                                    objectFit: 'cover',
+                                }}
+                                width={40}
+                                />
+                                <div className="grid gap-1 flex-grow">
+                                <Link href={`/students/${student.id}`} className="text-sm font-medium leading-none hover:underline" onClick={() => setIsRiskDialogOpen(false)}>
+                                    {student.name}
+                                </Link>
+                                <p className="text-sm text-muted-foreground">{student.calculatedRisk.reason}</p>
+                                </div>
+                                <div className="ml-auto font-medium">
+                                {student.calculatedRisk.level === 'high' && (
+                                    <Badge variant="destructive">Alto Riesgo</Badge>
+                                )}
+                                {student.calculatedRisk.level === 'medium' && (
+                                    <Badge variant="secondary" className="bg-amber-400 text-black">
+                                    Riesgo Medio
+                                    </Badge>
+                                )}
+                                </div>
+                            </div>
+                        ))}
+                        {filteredAtRiskStudents.length === 0 && (
+                            <p className="text-sm text-center text-muted-foreground py-8">
+                                No se encontraron estudiantes con ese nombre.
+                            </p>
+                        )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+            </CardFooter>
+          )}
+        </Card>
+      </div>
     </div>
   );
 }

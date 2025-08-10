@@ -1,11 +1,12 @@
-
-
 'use client';
 
-import { useState, useMemo } from 'react';
 import {
   Card,
   CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  CardFooter,
 } from '@/components/ui/card';
 import {
   Table,
@@ -15,150 +16,339 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { ArrowUpRight, BookCopy, Users, AlertTriangle, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import Image from 'next/image';
-import { format, parseISO } from 'date-fns';
-import { es } from 'date-fns/locale';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import Image from 'next/image';
+import { useState, useMemo } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { useData } from '@/hooks/use-data';
+import type { StudentWithRisk } from '@/hooks/use-data';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
-export default function ParticipationsPage() {
-  const { activeGroup, partialData, setParticipations } = useData();
-  const { participations, attendance } = partialData;
-  const { toast } = useToast();
-
-  const studentsToDisplay = useMemo(() => {
-    return activeGroup ? [...activeGroup.students].sort((a,b) => a.name.localeCompare(b.name)) : [];
-  }, [activeGroup]);
-
-  const participationDates = useMemo(() => {
-    return Object.keys(participations).sort((a,b) => new Date(b).getTime() - new Date(a).getTime());
-  }, [participations]);
-
-
-  const handleRegisterToday = () => {
-    if (!activeGroup) return;
-    const today = format(new Date(), 'yyyy-MM-dd');
-
-    setParticipations(prev => {
-        const newParticipations = { ...prev };
-        if (!newParticipations[today]) {
-          newParticipations[today] = {};
-        }
-        return newParticipations;
-    });
-  };
+export default function DashboardPage() {
+  const { activeStudentsInGroups, groups, atRiskStudents, overallAverageParticipation, groupAverages } = useData();
   
-  const handleParticipationChange = (studentId: string, date: string, hasParticipated: boolean) => {
-    if (!activeGroup) return;
+  const [searchQuery, setSearchQuery] = useState('');
+  const [studentSearchQuery, setStudentSearchQuery] = useState('');
+  const [isRiskDialogOpen, setIsRiskDialogOpen] = useState(false);
+  const [selectedRiskGroup, setSelectedRiskGroup] = useState('all');
+  
+  const filteredAtRiskStudents = useMemo(() => {
+    const students = selectedRiskGroup === 'all'
+      ? atRiskStudents
+      : atRiskStudents.filter(student => 
+          groups.find(g => g.id === selectedRiskGroup)?.students.some(s => s.id === student.id)
+        );
 
-    if (hasParticipated) {
-      const studentHasAttendance = attendance[date]?.[studentId] === true;
-      if (!studentHasAttendance) {
-        toast({
-          variant: 'destructive',
-          title: 'Incongruencia en el registro',
-          description: 'El estudiante no tiene asistencia registrada para este día.',
-        });
-        return; 
-      }
-    }
-    
-    setParticipations(prev => {
-      const newParticipations = { ...prev };
-      if (!newParticipations[date]) {
-        newParticipations[date] = {};
-      }
-      newParticipations[date][studentId] = hasParticipated;
-      return newParticipations;
-    })
-  };
+    if (!searchQuery) return students;
+
+    return students.filter(student =>
+      student.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [atRiskStudents, searchQuery, selectedRiskGroup, groups]);
+
+
+  const filteredStudentsForSearch = useMemo(() => {
+    if (!studentSearchQuery) return [];
+    return activeStudentsInGroups.filter(student =>
+      student.name.toLowerCase().includes(studentSearchQuery.toLowerCase())
+    ).slice(0, 5);
+  }, [activeStudentsInGroups, studentSearchQuery]);
+
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-             <Button asChild variant="outline" size="icon">
-              <Link href={activeGroup ? `/groups/${activeGroup.id}` : '/groups'}>
-                <ArrowLeft />
-                <span className="sr-only">Regresar</span>
-              </Link>
-            </Button>
-            <div>
-                <h1 className="text-3xl font-bold">Registro de Participaciones</h1>
-                <p className="text-muted-foreground">
-                    {activeGroup 
-                        ? `Grupo: ${activeGroup.subject}` 
-                        : 'Selecciona un grupo para registrar participaciones.'
-                    }
-                </p>
+      <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Estudiantes Activos
+            </CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{activeStudentsInGroups.length}</div>
+            <p className="text-xs text-muted-foreground">
+              Total de estudiantes registrados
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Grupos Creados</CardTitle>
+            <BookCopy className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{groups.length}</div>
+            <p className="text-xs text-muted-foreground">
+              Total de asignaturas
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Estudiantes en Riesgo
+            </CardTitle>
+            <AlertTriangle className="h-4 w-4 text-destructive" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-destructive">
+              {atRiskStudents.length}
             </div>
-        </div>
-        {activeGroup && <Button onClick={handleRegisterToday}>Registrar Participaciones de Hoy</Button>}
+            <p className="text-xs text-muted-foreground">
+              Requieren atención especial (todos los grupos)
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Asistencia Media
+            </CardTitle>
+            <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{overallAverageParticipation}%</div>
+            <p className="text-xs text-muted-foreground">
+              Promedio en todas las clases
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
-      <Card>
-        <CardContent className="p-0">
-          <div className="relative w-full overflow-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[300px] sticky left-0 bg-card z-10">Estudiante</TableHead>
-                  {participationDates.map(date => (
-                    <TableHead key={date} className="text-center">
-                      {format(parseISO(date), 'dd MMM', { locale: es })}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {studentsToDisplay.map(student => (
-                  <TableRow key={student.id}>
-                    <TableCell className="font-medium sticky left-0 bg-card z-10 flex items-center gap-3">
-                       <Image
-                        src={student.photo}
-                        alt={student.name}
-                        width={40}
-                        height={40}
-                        className="rounded-full"
-                      />
-                      {student.name}
-                    </TableCell>
-                    {participationDates.map(date => (
-                      <TableCell key={`${student.id}-${date}`} className="text-center">
-                        <Checkbox 
-                           checked={participations[date]?.[student.id] || false}
-                           onCheckedChange={(checked) => handleParticipationChange(student.id, date, !!checked)}
-                        />
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))}
-                 {studentsToDisplay.length === 0 && (
-                    <TableRow>
-                        <TableCell colSpan={participationDates.length + 1} className="text-center h-24">
-                           {activeGroup 
-                           ? "Este grupo no tiene estudiantes." 
-                           : "No hay un grupo activo. Por favor, selecciona uno en la sección de 'Grupos'."
-                           }
-                        </TableCell>
-                    </TableRow>
-                )}
-                 {participationDates.length === 0 && studentsToDisplay.length > 0 && (
-                    <TableRow>
-                        <TableCell colSpan={1} className="text-center h-24">
-                           Haz clic en "Registrar Participaciones de Hoy" para empezar.
-                        </TableCell>
-                    </TableRow>
-                )}
-              </TableBody>
-            </Table>
+       <Card>
+        <CardHeader>
+          <h3 className="text-2xl font-semibold leading-none tracking-tight">Buscar Estudiante</h3>
+          <CardDescription>
+            Encuentra rápidamente el perfil de un estudiante por su nombre.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Escribe el nombre del estudiante..."
+              className="pl-8 w-full"
+              value={studentSearchQuery}
+              onChange={(e) => setStudentSearchQuery(e.target.value)}
+            />
+          </div>
+          <div className="mt-4 space-y-2">
+            {filteredStudentsForSearch.map(student => (
+              <Link href={`/students/${student.id}`} key={student.id} className="flex items-center gap-4 p-2 rounded-md hover:bg-muted">
+                <Image
+                  alt="Avatar"
+                  className="rounded-full"
+                  height={40}
+                  src={student.photo}
+                  data-ai-hint="student avatar"
+                  style={{
+                    aspectRatio: '40/40',
+                    objectFit: 'cover',
+                  }}
+                  width={40}
+                />
+                <div className="grid gap-1">
+                  <p className="text-sm font-medium leading-none">{student.name}</p>
+                  <p className="text-sm text-muted-foreground">{student.email}</p>
+                </div>
+              </Link>
+            ))}
+            {studentSearchQuery && filteredStudentsForSearch.length === 0 && (
+              <p className="text-sm text-center text-muted-foreground py-4">
+                No se encontraron estudiantes con ese nombre.
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
+
+      <div className="grid gap-4 md:gap-8 lg:grid-cols-2 xl:grid-cols-3">
+        <Card className="xl:col-span-2">
+          <CardHeader className="flex flex-row items-center">
+            <div className="grid gap-2">
+              <CardTitle>Grupos Recientes</CardTitle>
+              <CardDescription>
+                Resumen de los grupos y su rendimiento general.
+              </CardDescription>
+            </div>
+            <Button asChild size="sm" className="ml-auto gap-1">
+              <Link href="/groups">
+                Ver Todos
+                <ArrowUpRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Asignatura</TableHead>
+                  <TableHead className="text-center">Estudiantes</TableHead>
+                  <TableHead className="text-right">Promedio Gral.</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {groups.slice(0, 5).map((group) => {
+                  return (
+                    <TableRow key={group.id}>
+                      <TableCell>
+                        <div className="font-medium">{group.subject}</div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {group.students.length}
+                      </TableCell>
+                      <TableCell className="text-right">{(groupAverages[group.id] || 0).toFixed(1)}</TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+        <Card className="flex flex-col">
+          <CardHeader>
+            <CardTitle>Estudiantes con Alertas</CardTitle>
+            <CardDescription>
+              Filtra por grupo para ver los estudiantes que requieren seguimiento.
+            </CardDescription>
+             <Select value={selectedRiskGroup} onValueChange={setSelectedRiskGroup}>
+                <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar grupo..." />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="all">Todos los grupos</SelectItem>
+                    {groups.map(group => (
+                        <SelectItem key={group.id} value={group.id}>{group.subject}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+          </CardHeader>
+          <CardContent className="grid gap-6 flex-grow">
+            {filteredAtRiskStudents.slice(0, 4).map((student) => (
+              <div key={student.id} className="flex items-center gap-4">
+                <Image
+                  alt="Avatar"
+                  className="rounded-full"
+                  height={40}
+                  src={student.photo}
+                  data-ai-hint="student avatar"
+                  style={{
+                    aspectRatio: '40/40',
+                    objectFit: 'cover',
+                  }}
+                  width={40}
+                />
+                <div className="grid gap-1">
+                  <Link href={`/students/${student.id}`} className="text-sm font-medium leading-none hover:underline" onClick={() => isRiskDialogOpen && setIsRiskDialogOpen(false)}>
+                    {student.name}
+                  </Link>
+                  <p className="text-sm text-muted-foreground">{student.calculatedRisk.reason}</p>
+                </div>
+                <div className="ml-auto font-medium">
+                  {student.calculatedRisk.level === 'high' && (
+                    <Badge variant="destructive">Alto Riesgo</Badge>
+                  )}
+                  {student.calculatedRisk.level === 'medium' && (
+                    <Badge variant="secondary" className="bg-amber-400 text-black">
+                      Riesgo Medio
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            ))}
+             {filteredAtRiskStudents.length === 0 && (
+                <p className="text-sm text-center text-muted-foreground">No hay estudiantes con alertas en esta selección.</p>
+            )}
+          </CardContent>
+          {atRiskStudents.length > 0 && (
+            <CardFooter>
+                 <Dialog open={isRiskDialogOpen} onOpenChange={setIsRiskDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="w-full">
+                        Ver todos ({filteredAtRiskStudents.length})
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>Estudiantes en Riesgo</DialogTitle>
+                      <DialogDescription>
+                        Lista de estudiantes que requieren atención especial.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="relative">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            type="search"
+                            placeholder="Buscar estudiante..."
+                            className="pl-8 w-full"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                    <div className="max-h-[50vh] overflow-y-auto space-y-4 pr-2">
+                        {filteredAtRiskStudents.map((student) => (
+                           <div key={student.id} className="flex items-center gap-4 p-2 rounded-md hover:bg-muted">
+                                <Image
+                                alt="Avatar"
+                                className="rounded-full"
+                                height={40}
+                                src={student.photo}
+                                data-ai-hint="student avatar"
+                                style={{
+                                    aspectRatio: '40/40',
+                                    objectFit: 'cover',
+                                }}
+                                width={40}
+                                />
+                                <div className="grid gap-1 flex-grow">
+                                <Link href={`/students/${student.id}`} className="text-sm font-medium leading-none hover:underline" onClick={() => setIsRiskDialogOpen(false)}>
+                                    {student.name}
+                                </Link>
+                                <p className="text-sm text-muted-foreground">{student.calculatedRisk.reason}</p>
+                                </div>
+                                <div className="ml-auto font-medium">
+                                {student.calculatedRisk.level === 'high' && (
+                                    <Badge variant="destructive">Alto Riesgo</Badge>
+                                )}
+                                {student.calculatedRisk.level === 'medium' && (
+                                    <Badge variant="secondary" className="bg-amber-400 text-black">
+                                    Riesgo Medio
+                                    </Badge>
+                                )}
+                                </div>
+                            </div>
+                        ))}
+                        {filteredAtRiskStudents.length === 0 && (
+                            <p className="text-sm text-center text-muted-foreground py-8">
+                                No se encontraron estudiantes con ese nombre.
+                            </p>
+                        )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+            </CardFooter>
+          )}
+        </Card>
+      </div>
     </div>
   );
 }

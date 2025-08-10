@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -9,518 +8,347 @@ import {
   CardTitle,
   CardFooter,
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { notFound, useParams } from 'next/navigation';
-import Image from 'next/image';
-import { Mail, User, Contact, ArrowLeft, Download, FileText, Loader2, Phone, Wand2, ListChecks, Edit, Save, BookCopy, GraduationCap } from 'lucide-react';
-import { useState, useEffect, useRef } from 'react';
-import { useToast } from '@/hooks/use-toast';
-import { useRouter } from 'next/navigation';
-import { generateStudentFeedback } from '@/ai/flows/student-feedback';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu';
-import { WhatsAppDialog } from '@/components/whatsapp-dialog';
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { ArrowUpRight, BookCopy, Users, AlertTriangle, Search } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import Image from 'next/image';
+import { useState, useMemo } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { useData } from '@/hooks/use-data';
-import { Separator } from '@/components/ui/separator';
-import type { StudentStats, PartialId } from '@/hooks/use-data';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { getPartialLabel } from '@/lib/utils';
-import { cn } from '@/lib/utils';
+import type { StudentWithRisk } from '@/hooks/use-data';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
-
-const WhatsAppIcon = () => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-4 w-4"
-    >
-      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
-    </svg>
-);
-
-
-export default function StudentProfilePage() {
-  const params = useParams();
-  const studentId = params.studentId as string;
-  const router = useRouter();
+export default function DashboardPage() {
+  const { activeStudentsInGroups, groups, atRiskStudents, overallAverageParticipation, groupAverages } = useData();
   
-  const { students, groups, calculateDetailedFinalGrade } = useData();
-  const student = students.find(s => s.id === studentId);
-
-  const [studentStats, setStudentStats] = useState<StudentStats | null>(null);
-  const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(true);
-  const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
-  const [generatedFeedback, setGeneratedFeedback] = useState<{ feedback: string, recommendations: string[] } | null>(null);
-  const reportRef = useRef<HTMLDivElement>(null);
-  const [isWhatsAppDialogOpen, setIsWhatsAppDialogOpen] = useState(false);
-  const [isEditingFeedback, setIsEditingFeedback] = useState(false);
-  const [editedFeedback, setEditedFeedback] = useState('');
-  const [editedRecommendations, setEditedRecommendations] = useState('');
-
-
-  useEffect(() => {
-    if (!student) {
-        setIsLoading(false);
-        return;
-    };
-    
-    try {
-        setIsLoading(true);
-        const studentGroups = groups.filter(g => g.students.some(s => s.id === studentId));
-        
-        const gradesByGroup: StudentStats['gradesByGroup'] = [];
-        let totalGradeSum = 0;
-        let totalPartialsWithGrades = 0;
-        
-        studentGroups.forEach(group => {
-            const partials: PartialId[] = ['p1', 'p2', 'p3'];
-            partials.forEach(partialId => {
-                const { finalGrade, criteriaDetails } = calculateDetailedFinalGrade(studentId, group.id, partialId);
-                
-                if (criteriaDetails.length > 0) {
-                    const groupInfo = {
-                        subject: group.subject,
-                        semester: group.semester || '',
-                        groupName: group.groupName || ''
-                    };
-
-                    gradesByGroup.push({ group: `${group.subject} - ${getPartialLabel(partialId)}`, grade: finalGrade, criteriaDetails, groupInfo });
-                    totalGradeSum += finalGrade;
-                    totalPartialsWithGrades++;
-                }
-            });
-        });
-        
-        const attendanceStats: StudentStats['attendance'] = { p: 0, a: 0, total: 0 };
-        // This attendance calculation needs to be updated to use the centralized data
-        // For now, it's left as is, but a full review should unify it.
-        
-        setStudentStats({
-          averageGrade: totalPartialsWithGrades > 0 ? totalGradeSum / totalPartialsWithGrades : 0,
-          attendance: attendanceStats, // Placeholder
-          gradesByGroup,
-        });
-    } catch (error) {
-      console.error("Failed to load student data", error);
-      toast({ variant: 'destructive', title: 'Error al cargar datos', description: 'No se pudo cargar la información del estudiante.'})
-    } finally {
-        setIsLoading(false);
-    }
-  }, [student, groups, studentId, toast, calculateDetailedFinalGrade]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [studentSearchQuery, setStudentSearchQuery] = useState('');
+  const [isRiskDialogOpen, setIsRiskDialogOpen] = useState(false);
+  const [selectedRiskGroup, setSelectedRiskGroup] = useState('all');
   
-   const handleGenerateFeedback = async () => {
-    if (!student || !studentStats) {
-        toast({ variant: 'destructive', title: 'Datos no disponibles', description: 'Las estadísticas del estudiante aún no están listas.' });
-        return;
-    };
-    setIsGeneratingFeedback(true);
-    setGeneratedFeedback(null);
-    try {
-      const input = {
-        studentName: student.name,
-        gradesByGroup: studentStats.gradesByGroup.map(g => ({ group: g.group, grade: g.grade })),
-        attendance: studentStats.attendance,
-        observations: [],
-      };
-      const result = await generateStudentFeedback(input);
-      setGeneratedFeedback(result);
-      toast({
-        title: 'Retroalimentación Generada',
-        description: 'Las recomendaciones se han copiado al informe del estudiante.',
-      });
-    } catch (error) {
-      console.error("Error generating feedback:", error);
-      toast({
-        variant: 'destructive',
-        title: 'Error de IA',
-        description: 'No se pudo generar la retroalimentación. Inténtalo de nuevo.',
-      });
-    } finally {
-      setIsGeneratingFeedback(false);
-    }
-  };
+  const filteredAtRiskStudents = useMemo(() => {
+    const students = selectedRiskGroup === 'all'
+      ? atRiskStudents
+      : atRiskStudents.filter(student => 
+          groups.find(g => g.id === selectedRiskGroup)?.students.some(s => s.id === student.id)
+        );
 
-  const handleDownloadPdf = () => {
-    const input = reportRef.current;
-    if (input) {
-      toast({ title: 'Generando PDF...', description: 'Esto puede tardar un momento.' });
-      html2canvas(input, { scale: 2, useCORS: true }).then((canvas) => {
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4'); // A4 size page of PDF
-        
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
-        const canvasWidth = canvas.width;
-        const canvasHeight = canvas.height;
-        const ratio = canvasWidth / canvasHeight;
-        
-        let imgWidth = pdfWidth - 20; // 10mm margin on each side
-        let imgHeight = imgWidth / ratio;
-        
-        if (imgHeight > pdfHeight - 20) {
-            imgHeight = pdfHeight - 20; // 10mm margin top and bottom
-            imgWidth = imgHeight * ratio;
-        }
+    if (!searchQuery) return students;
 
-        const x = (pdfWidth - imgWidth) / 2;
-        const y = 10;
-        
-        pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
-        pdf.save(`informe_${student?.name.replace(/\s+/g, '_') || 'estudiante'}.pdf`);
-      });
-    }
-  };
-
-  const handleSendWhatsApp = (target: 'student' | 'tutor') => {
-    if (!student) return;
-
-    let phone: string | null | undefined = null;
-
-    if (target === 'tutor') {
-      phone = student.tutorPhone;
-    } else if (target === 'student') {
-      phone = student.phone;
-    } 
-
-    if (!phone) {
-        toast({ variant: 'destructive', title: 'Número no disponible', description: `No hay un número de teléfono registrado.` });
-        return;
-    }
-    
-    const message = encodeURIComponent(`Hola, le comparto el informe académico de ${student.name}.`);
-    const cleanPhone = phone.replace(/\D/g, '');
-    const url = `https://wa.me/${cleanPhone}?text=${message}`;
-    
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
-
-  const handleEditFeedback = () => {
-    if (generatedFeedback) {
-        setEditedFeedback(generatedFeedback.feedback);
-        setEditedRecommendations(generatedFeedback.recommendations.join('\n'));
-        setIsEditingFeedback(true);
-    }
-  }
-
-  const handleSaveFeedback = () => {
-      if (generatedFeedback) {
-          setGeneratedFeedback({
-              feedback: editedFeedback,
-              recommendations: editedRecommendations.split('\n').filter(r => r.trim() !== '')
-          });
-          setIsEditingFeedback(false);
-          toast({title: 'Retroalimentación actualizada'});
-      }
-  }
-
-  const handleCancelFeedbackEdit = () => {
-      setIsEditingFeedback(false);
-  }
-
-
-  if (isLoading) {
-    return (
-        <div className="flex justify-center items-center h-full">
-            <Loader2 className="h-8 w-8 animate-spin" />
-            <span className="ml-2">Cargando perfil...</span>
-        </div>
+    return students.filter(student =>
+      student.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }
+  }, [atRiskStudents, searchQuery, selectedRiskGroup, groups]);
 
-  if (!student) {
-    notFound();
-  }
 
-  const attendanceRate = studentStats && studentStats.attendance.total > 0 
-    ? (studentStats.attendance.p / studentStats.attendance.total) * 100
-    : 0;
+  const filteredStudentsForSearch = useMemo(() => {
+    if (!studentSearchQuery) return [];
+    return activeStudentsInGroups.filter(student =>
+      student.name.toLowerCase().includes(studentSearchQuery.toLowerCase())
+    ).slice(0, 5);
+  }, [activeStudentsInGroups, studentSearchQuery]);
 
-  
+
   return (
-    <>
-    <WhatsAppDialog
-        open={isWhatsAppDialogOpen}
-        onOpenChange={setIsWhatsAppDialogOpen}
-        studentName={student.name}
-    />
     <div className="flex flex-col gap-6">
-       <Card className="bg-accent/50 print:hidden">
-          <CardHeader>
-            <div className="flex items-center gap-4">
-               <div className="bg-background p-3 rounded-full">
-                  <User className="h-8 w-8 text-primary" />
-               </div>
-               <div>
-                  <h1 className="text-2xl font-bold">{student.name}</h1>
-                  <p className="text-muted-foreground">Informe completo con perfil del estudiante, calificaciones detalladas y asistencia.</p>
-               </div>
-            </div>
+      <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Estudiantes Activos
+            </CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-             <div className="flex items-center gap-2">
-                <Button variant="outline" onClick={() => router.back()}>
-                   <ArrowLeft className="mr-2 h-4 w-4" /> Regresar
-                </Button>
-                <Button variant="outline" onClick={handleDownloadPdf}>
-                  <Download className="mr-2 h-4 w-4" /> Descargar PDF
-                </Button>
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="outline">
-                            <WhatsAppIcon />
-                            <span className="ml-2">Enviar por WhatsApp</span>
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                        {student.tutorPhone && (
-                            <DropdownMenuItem onClick={() => handleSendWhatsApp('tutor')}>
-                                Enviar al Tutor ({student.tutorName})
-                            </DropdownMenuItem>
-                        )}
-                        {student.phone && (
-                            <DropdownMenuItem onClick={() => handleSendWhatsApp('student')}>
-                                Enviar al Estudiante
-                            </DropdownMenuItem>
-                        )}
-                         <DropdownMenuSeparator />
-                         <DropdownMenuItem onSelect={() => setIsWhatsAppDialogOpen(true)}>
-                            Enviar a otro teléfono
-                         </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-             </div>
+            <div className="text-2xl font-bold">{activeStudentsInGroups.length}</div>
+            <p className="text-xs text-muted-foreground">
+              Total de estudiantes registrados
+            </p>
           </CardContent>
-       </Card>
-      
-      <div ref={reportRef} className="flex flex-col gap-6 bg-background p-4 rounded-lg">
-        <h2 className="text-xl font-bold text-center">Informe Individual de Desempeño</h2>
-        <Card>
-            <CardHeader>
-                <CardTitle>Información Personal</CardTitle>
-            </CardHeader>
-            <CardContent className="grid md:grid-cols-3 gap-6 items-start">
-                 <div className="md:col-span-1 flex justify-center">
-                    <Image
-                        alt="Avatar"
-                        className="rounded-full aspect-square object-cover w-48 h-48"
-                        height={192}
-                        src={student.photo}
-                        data-ai-hint="student avatar"
-                        width={192}
-                    />
-                 </div>
-                 <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
-                    <div className="space-y-4">
-                        <div className="flex items-start gap-3">
-                            <User className="h-6 w-6 text-primary mt-1 flex-shrink-0"/>
-                            <div>
-                                <p className="text-sm text-muted-foreground">Nombre Completo:</p>
-                                <p className="font-semibold text-lg">{student.name}</p>
-                            </div>
-                        </div>
-                         <div className="flex items-start gap-3">
-                            <Mail className="h-6 w-6 text-primary mt-1 flex-shrink-0"/>
-                            <div>
-                                <p className="text-sm text-muted-foreground">Email:</p>
-                                <p className="font-semibold">{student.email || 'No registrado'}</p>
-                            </div>
-                        </div>
-                    </div>
-                     <div className="space-y-4">
-                        <div className="flex items-start gap-3">
-                            <User className="h-6 w-6 text-primary mt-1 flex-shrink-0"/>
-                            <div>
-                                <p className="text-sm text-muted-foreground">Tutor:</p>
-                                <p className="font-semibold">{student.tutorName || 'No registrado'}</p>
-                            </div>
-                        </div>
-                        <div className="flex items-start gap-3">
-                            <Phone className="h-6 w-6 text-primary mt-1 flex-shrink-0"/>
-                            <div>
-                                <p className="text-sm text-muted-foreground">Teléfono Tutor:</p>
-                                <p className="font-semibold">{student.tutorPhone || 'No registrado'}</p>
-                            </div>
-                        </div>
-                         <div className="flex items-start gap-3">
-                            <Contact className="h-6 w-6 text-primary mt-1 flex-shrink-0"/>
-                            <div>
-                                <p className="text-sm text-muted-foreground">ID de Estudiante:</p>
-                                <p className="font-semibold">{student.id}</p>
-                            </div>
-                        </div>
-                    </div>
-                 </div>
-            </CardContent>
         </Card>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Resumen de Calificaciones</CardTitle>
-                         <CardDescription>Desglose de calificaciones por materia y promedio semestral.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-4">
-                            {studentStats?.gradesByGroup.map(item => (
-                                <div key={item.group}>
-                                    <div className="flex justify-between items-start p-3 rounded-t-md border bg-muted/50">
-                                        <div>
-                                            <p className="font-semibold flex items-center gap-2"><BookCopy className="h-4 w-4" />{item.group}</p>
-                                            <p className="text-xs text-muted-foreground pl-6">{item.groupInfo.semester} - {item.groupInfo.groupName}</p>
-                                        </div>
-                                    </div>
-                                    <div className='p-3 border-x border-b rounded-b-md text-sm space-y-2'>
-                                        {item.criteriaDetails.map(c => (
-                                           <div key={c.name} className="flex justify-between items-center">
-                                               <span>{c.name} <span className="text-xs text-muted-foreground">({c.weight}%)</span></span>
-                                               <Badge variant="secondary">{c.earned.toFixed(1)}%</Badge>
-                                           </div>
-                                        ))}
-                                         <Separator />
-                                         <div className='flex justify-between pt-2 mt-2 font-bold'>
-                                            <span>Calificación del Parcial:</span>
-                                            <Badge variant={item.grade >= 70 ? "default" : "destructive"} className="text-base">{item.grade.toFixed(1)}%</Badge>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                            {studentStats?.gradesByGroup.length === 0 && (
-                                <p className="text-sm text-center text-muted-foreground py-4">No hay calificaciones registradas.</p>
-                            )}
-                        </div>
-                    </CardContent>
-                </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Grupos Creados</CardTitle>
+            <BookCopy className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{groups.length}</div>
+            <p className="text-xs text-muted-foreground">
+              Total de asignaturas
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Estudiantes en Riesgo
+            </CardTitle>
+            <AlertTriangle className="h-4 w-4 text-destructive" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-destructive">
+              {atRiskStudents.length}
             </div>
-             <div className="space-y-6">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Historial de Asistencia Global</CardTitle>
-                        <CardDescription>Resumen de todos los grupos</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                        <div className="flex justify-between p-2 border-b"><span>Total de Clases Registradas:</span> <span className="font-bold">{studentStats?.attendance.total || 0}</span></div>
-                        <div className="flex justify-between p-2 rounded-md bg-green-100 dark:bg-green-900/50"><span>Presente:</span> <span className="font-bold">{studentStats?.attendance.p || 0}</span></div>
-                        <div className="flex justify-between p-2 rounded-md bg-red-100 dark:bg-red-900/50"><span>Ausente:</span> <span className="font-bold">{studentStats?.attendance.a || 0}</span></div>
-                        <div className="flex justify-between items-center p-3 rounded-md bg-blue-100 dark:bg-blue-900/50 mt-2">
-                            <p className="font-bold text-blue-800 dark:text-blue-300">Tasa de Asistencia:</p>
-                            <Badge className="text-lg bg-blue-600 hover:bg-blue-600">{attendanceRate.toFixed(1)}%</Badge>
-                        </div>
-                    </CardContent>
-                </Card>
-                 <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><GraduationCap /> Promedio General Semestral</CardTitle>
-                        <CardDescription>Calificación final considerando todos los parciales evaluados.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex items-center justify-center p-6">
-                        <Badge 
-                           className={cn(
-                                "text-4xl h-auto px-6 py-3", 
-                                studentStats && studentStats.averageGrade >= 70 ? "bg-primary" : "bg-destructive"
-                            )}
-                        >
-                            {(studentStats?.averageGrade || 0).toFixed(1)}%
-                        </Badge>
-                    </CardContent>
-                </Card>
-            </div>
-        </div>
-        
-        {generatedFeedback && (
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle>Retroalimentación y Plan de Acción</CardTitle>
-                    {!isEditingFeedback && (
-                         <Button variant="secondary" size="sm" onClick={handleEditFeedback}><Edit className="mr-2 h-4 w-4"/> Editar</Button>
-                    )}
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="p-4 bg-muted/50 rounded-md border space-y-4">
-                    {isEditingFeedback ? (
-                        <div className="space-y-4">
-                            <div>
-                                <Label htmlFor="edited-feedback" className="font-bold">Análisis General:</Label>
-                                <Textarea id="edited-feedback" value={editedFeedback} onChange={(e) => setEditedFeedback(e.target.value)} rows={4} />
-                            </div>
-                            <div>
-                                <Label htmlFor="edited-recommendations" className="font-bold">Recomendaciones:</Label>
-                                <Textarea id="edited-recommendations" value={editedRecommendations} onChange={(e) => setEditedRecommendations(e.target.value)} rows={5} placeholder="Una recomendación por línea"/>
-                            </div>
-                            <div className="flex justify-end gap-2">
-                                <Button variant="outline" onClick={handleCancelFeedbackEdit}>Cancelar</Button>
-                                <Button onClick={handleSaveFeedback}><Save className="mr-2 h-4 w-4"/> Guardar Cambios</Button>
-                            </div>
-                        </div>
-                    ) : (
-                        <>
-                            <div>
-                                <h4 className="font-bold">Análisis General:</h4>
-                                <p className="text-sm whitespace-pre-wrap">{generatedFeedback.feedback}</p>
-                            </div>
-                            <Separator/>
-                            <div>
-                                <h4 className="font-bold flex items-center gap-2"><ListChecks /> Recomendaciones:</h4>
-                                <ul className="list-disc pl-5 mt-2 space-y-1 text-sm">
-                                    {generatedFeedback.recommendations.map((rec, i) => (
-                                        <li key={i}>{rec}</li>
-                                    ))}
-                                </ul>
-                            </div>
-                        </>
-                    )}
-                    </div>
-                </CardContent>
-            </Card>
-        )}
-        <CardFooter className="mt-8 pt-6 text-center text-xs text-muted-foreground">
-             <div className="mt-12 pt-12 w-full">
-                <div className="inline-block">
-                    <div className="border-t border-foreground w-48 mx-auto"></div>
-                    <p className="mt-2 font-semibold">Nombre del Docente</p>
-                    <p>Firma del Docente</p>
-                </div>
-            </div>
-        </CardFooter>
+            <p className="text-xs text-muted-foreground">
+              Requieren atención especial (todos los grupos)
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Asistencia Media
+            </CardTitle>
+            <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{overallAverageParticipation}%</div>
+            <p className="text-xs text-muted-foreground">
+              Promedio en todas las clases
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
-       <Card className="print:hidden">
-            <CardHeader>
-                <CardTitle>Generador de Retroalimentación (IA)</CardTitle>
-                <CardDescription>
-                    Analiza el desempeño del estudiante y genera sugerencias. La retroalimentación se añadirá al informe.
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-                <div className="text-center p-4">
-                    <Button onClick={handleGenerateFeedback} disabled={isGeneratingFeedback || !studentStats}>
-                        {isGeneratingFeedback ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                            <Wand2 className="mr-2 h-4 w-4" />
-                        )}
-                        {isGeneratingFeedback ? 'Generando...' : 'Generar y Copiar al Informe'}
-                    </Button>
+       <Card>
+        <CardHeader>
+          <h3 className="text-2xl font-semibold leading-none tracking-tight">Buscar Estudiante</h3>
+          <CardDescription>
+            Encuentra rápidamente el perfil de un estudiante por su nombre.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Escribe el nombre del estudiante..."
+              className="pl-8 w-full"
+              value={studentSearchQuery}
+              onChange={(e) => setStudentSearchQuery(e.target.value)}
+            />
+          </div>
+          <div className="mt-4 space-y-2">
+            {filteredStudentsForSearch.map(student => (
+              <Link href={`/students/${student.id}`} key={student.id} className="flex items-center gap-4 p-2 rounded-md hover:bg-muted">
+                <Image
+                  alt="Avatar"
+                  className="rounded-full"
+                  height={40}
+                  src={student.photo}
+                  data-ai-hint="student avatar"
+                  style={{
+                    aspectRatio: '40/40',
+                    objectFit: 'cover',
+                  }}
+                  width={40}
+                />
+                <div className="grid gap-1">
+                  <p className="text-sm font-medium leading-none">{student.name}</p>
+                  <p className="text-sm text-muted-foreground">{student.email}</p>
                 </div>
-            </CardContent>
+              </Link>
+            ))}
+            {studentSearchQuery && filteredStudentsForSearch.length === 0 && (
+              <p className="text-sm text-center text-muted-foreground py-4">
+                No se encontraron estudiantes con ese nombre.
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4 md:gap-8 lg:grid-cols-2 xl:grid-cols-3">
+        <Card className="xl:col-span-2">
+          <CardHeader className="flex flex-row items-center">
+            <div className="grid gap-2">
+              <CardTitle>Grupos Recientes</CardTitle>
+              <CardDescription>
+                Resumen de los grupos y su rendimiento general.
+              </CardDescription>
+            </div>
+            <Button asChild size="sm" className="ml-auto gap-1">
+              <Link href="/groups">
+                Ver Todos
+                <ArrowUpRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Asignatura</TableHead>
+                  <TableHead className="text-center">Estudiantes</TableHead>
+                  <TableHead className="text-right">Promedio Gral.</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {groups.slice(0, 5).map((group) => {
+                  return (
+                    <TableRow key={group.id}>
+                      <TableCell>
+                        <div className="font-medium">{group.subject}</div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {group.students.length}
+                      </TableCell>
+                      <TableCell className="text-right">{(groupAverages[group.id] || 0).toFixed(1)}</TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
         </Card>
+        <Card className="flex flex-col">
+          <CardHeader>
+            <CardTitle>Estudiantes con Alertas</CardTitle>
+            <CardDescription>
+              Filtra por grupo para ver los estudiantes que requieren seguimiento.
+            </CardDescription>
+             <Select value={selectedRiskGroup} onValueChange={setSelectedRiskGroup}>
+                <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar grupo..." />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="all">Todos los grupos</SelectItem>
+                    {groups.map(group => (
+                        <SelectItem key={group.id} value={group.id}>{group.subject}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+          </CardHeader>
+          <CardContent className="grid gap-6 flex-grow">
+            {filteredAtRiskStudents.slice(0, 4).map((student) => (
+              <div key={student.id} className="flex items-center gap-4">
+                <Image
+                  alt="Avatar"
+                  className="rounded-full"
+                  height={40}
+                  src={student.photo}
+                  data-ai-hint="student avatar"
+                  style={{
+                    aspectRatio: '40/40',
+                    objectFit: 'cover',
+                  }}
+                  width={40}
+                />
+                <div className="grid gap-1">
+                  <Link href={`/students/${student.id}`} className="text-sm font-medium leading-none hover:underline" onClick={() => isRiskDialogOpen && setIsRiskDialogOpen(false)}>
+                    {student.name}
+                  </Link>
+                  <p className="text-sm text-muted-foreground">{student.calculatedRisk.reason}</p>
+                </div>
+                <div className="ml-auto font-medium">
+                  {student.calculatedRisk.level === 'high' && (
+                    <Badge variant="destructive">Alto Riesgo</Badge>
+                  )}
+                  {student.calculatedRisk.level === 'medium' && (
+                    <Badge variant="secondary" className="bg-amber-400 text-black">
+                      Riesgo Medio
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            ))}
+             {filteredAtRiskStudents.length === 0 && (
+                <p className="text-sm text-center text-muted-foreground">No hay estudiantes con alertas en esta selección.</p>
+            )}
+          </CardContent>
+          {atRiskStudents.length > 0 && (
+            <CardFooter>
+                 <Dialog open={isRiskDialogOpen} onOpenChange={setIsRiskDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="w-full">
+                        Ver todos ({filteredAtRiskStudents.length})
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>Estudiantes en Riesgo</DialogTitle>
+                      <DialogDescription>
+                        Lista de estudiantes que requieren atención especial.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="relative">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            type="search"
+                            placeholder="Buscar estudiante..."
+                            className="pl-8 w-full"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                    <div className="max-h-[50vh] overflow-y-auto space-y-4 pr-2">
+                        {filteredAtRiskStudents.map((student) => (
+                           <div key={student.id} className="flex items-center gap-4 p-2 rounded-md hover:bg-muted">
+                                <Image
+                                alt="Avatar"
+                                className="rounded-full"
+                                height={40}
+                                src={student.photo}
+                                data-ai-hint="student avatar"
+                                style={{
+                                    aspectRatio: '40/40',
+                                    objectFit: 'cover',
+                                }}
+                                width={40}
+                                />
+                                <div className="grid gap-1 flex-grow">
+                                <Link href={`/students/${student.id}`} className="text-sm font-medium leading-none hover:underline" onClick={() => setIsRiskDialogOpen(false)}>
+                                    {student.name}
+                                </Link>
+                                <p className="text-sm text-muted-foreground">{student.calculatedRisk.reason}</p>
+                                </div>
+                                <div className="ml-auto font-medium">
+                                {student.calculatedRisk.level === 'high' && (
+                                    <Badge variant="destructive">Alto Riesgo</Badge>
+                                )}
+                                {student.calculatedRisk.level === 'medium' && (
+                                    <Badge variant="secondary" className="bg-amber-400 text-black">
+                                    Riesgo Medio
+                                    </Badge>
+                                )}
+                                </div>
+                            </div>
+                        ))}
+                        {filteredAtRiskStudents.length === 0 && (
+                            <p className="text-sm text-center text-muted-foreground py-8">
+                                No se encontraron estudiantes con ese nombre.
+                            </p>
+                        )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+            </CardFooter>
+          )}
+        </Card>
+      </div>
     </div>
-    </>
   );
+}
