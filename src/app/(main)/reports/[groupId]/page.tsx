@@ -91,6 +91,7 @@ export default function GroupReportPage() {
       let totalPossibleAttendance = 0;
       let totalPresent = 0;
       let totalParticipations = 0;
+      let totalParticipationOpportunities = 0;
       let highRiskStudents = 0;
       let mediumRiskStudents = 0;
 
@@ -120,8 +121,10 @@ export default function GroupReportPage() {
                   return studentSum + (participations[date]?.[student.id] ? 1 : 0);
               }, 0);
           }, 0);
+           totalParticipationOpportunities = group.students.reduce((sum, student) => {
+                return sum + participationDates.filter(date => participations[date].hasOwnProperty(student.id)).length;
+            }, 0);
       }
-      const totalParticipationOpportunities = participationDates.length * studentCount;
       
       setSummary({
           totalStudents: studentCount,

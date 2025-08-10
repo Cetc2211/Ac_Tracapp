@@ -284,7 +284,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         }
         
         const grade = Math.max(0, Math.min(100, finalGrade));
-        return { finalGrade: grade, criteriaDetails };
+        return { finalGrade: grade, criteriaDetails: criteriaDetails };
     }, []);
 
     const calculateFinalGrade = useCallback((
@@ -466,27 +466,31 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     
 
     const atRiskStudents: StudentWithRisk[] = useMemo(() => {
-        const allAtRiskStudents: StudentWithRisk[] = [];
-        if (!activeGroup) return [];
-        
-        const pCriteria = loadFromLocalStorage<EvaluationCriteria[]>(`criteria_${activeGroup.id}_${activePartialId}`, []);
-        const pGrades = loadFromLocalStorage<Grades>(`grades_${activeGroup.id}_${activePartialId}`, {});
-        const pParticipations = loadFromLocalStorage<ParticipationRecord>(`participations_${activeGroup.id}_${activePartialId}`, {});
-        const pActivities = loadFromLocalStorage<Activity[]>(`activities_${activeGroup.id}_${activePartialId}`, []);
-        const pActivityRecords = loadFromLocalStorage<ActivityRecord>(`activityRecords_${activeGroup.id}_${activePartialId}`, {});
-        const pAttendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${activeGroup.id}_${activePartialId}`, {});
+        const allAtRiskStudents = new Map<string, StudentWithRisk>();
 
-        activeGroup.students.forEach(student => {
-            const finalGrade = calculateFinalGrade(student.id, activePartialId, pCriteria, pGrades, pParticipations, pActivities, pActivityRecords);
-            const risk = getStudentRiskLevel(finalGrade, pAttendance, student.id);
-            
-            if (risk.level === 'high' || risk.level === 'medium') {
-                 allAtRiskStudents.push({ ...student, calculatedRisk: risk });
-            }
+        groups.forEach(group => {
+            const keySuffix = `${group.id}_${activePartialId}`;
+            const pCriteria = loadFromLocalStorage<EvaluationCriteria[]>(`criteria_${keySuffix}`, []);
+            const pGrades = loadFromLocalStorage<Grades>(`grades_${keySuffix}`, {});
+            const pParticipations = loadFromLocalStorage<ParticipationRecord>(`participations_${keySuffix}`, {});
+            const pActivities = loadFromLocalStorage<Activity[]>(`activities_${keySuffix}`, []);
+            const pActivityRecords = loadFromLocalStorage<ActivityRecord>(`activityRecords_${keySuffix}`, {});
+            const pAttendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${keySuffix}`, {});
+
+            group.students.forEach(student => {
+                const finalGrade = calculateFinalGrade(student.id, activePartialId, pCriteria, pGrades, pParticipations, pActivities, pActivityRecords);
+                const risk = getStudentRiskLevel(finalGrade, pAttendance, student.id);
+
+                if (risk.level === 'high' || risk.level === 'medium') {
+                    if (!allAtRiskStudents.has(student.id)) {
+                        allAtRiskStudents.set(student.id, { ...student, calculatedRisk: risk });
+                    }
+                }
+            });
         });
 
-        return allAtRiskStudents;
-    }, [activeGroup, calculateFinalGrade, getStudentRiskLevel, activePartialId]);
+        return Array.from(allAtRiskStudents.values());
+    }, [groups, activePartialId, calculateFinalGrade, getStudentRiskLevel]);
     
     
     const overallAverageParticipation = useMemo(() => {
