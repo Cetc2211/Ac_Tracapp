@@ -77,7 +77,12 @@ export default function SettingsPage() {
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);
           if (key) {
-            backupData[key] = JSON.parse(localStorage.getItem(key)!);
+            const value = localStorage.getItem(key)!;
+            try {
+              backupData[key] = JSON.parse(value);
+            } catch (e) {
+              backupData[key] = value;
+            }
           }
         }
         
@@ -127,7 +132,13 @@ export default function SettingsPage() {
                 // Import new data
                 for (const key in backupData) {
                     if (Object.prototype.hasOwnProperty.call(backupData, key)) {
-                        localStorage.setItem(key, JSON.stringify(backupData[key]));
+                        const value = backupData[key];
+                        // If the value from backup is an object/array, stringify it. Otherwise, store as is.
+                        if (typeof value === 'object' && value !== null) {
+                            localStorage.setItem(key, JSON.stringify(value));
+                        } else {
+                            localStorage.setItem(key, value);
+                        }
                     }
                 }
                 
@@ -257,4 +268,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-
