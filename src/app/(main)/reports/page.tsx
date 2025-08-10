@@ -31,19 +31,14 @@ import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { useData } from '@/hooks/use-data';
+import { useData, loadFromLocalStorage } from '@/hooks/use-data';
+import type { EvaluationCriteria } from '@/hooks/use-data';
 
 
 export default function ReportsPage() {
   const { 
     activeGroup, 
-    criteria, 
-    grades, 
-    participations, 
-    attendance, 
-    activities, 
-    activityRecords,
-    allObservations,
+    activePartialId,
     calculateFinalGrade,
     groupAverages,
   } = useData();
@@ -53,16 +48,24 @@ export default function ReportsPage() {
   const quickStats = useMemo(() => {
     if (!activeGroup) return null;
 
+    const keySuffix = `${activeGroup.id}_${activePartialId}`;
+    const pCriteria = loadFromLocalStorage<EvaluationCriteria[]>(`criteria_${keySuffix}`, []);
+    const pGrades = loadFromLocalStorage(`grades_${keySuffix}`, {});
+    const pParticipations = loadFromLocalStorage(`participations_${keySuffix}`, {});
+    const pActivities = loadFromLocalStorage(`activities_${keySuffix}`, []);
+    const pActivityRecords = loadFromLocalStorage(`activityRecords_${keySuffix}`, {});
+    const pAttendance = loadFromLocalStorage(`attendance_${keySuffix}`, {});
+
     const studentCount = activeGroup.students.length;
     
     let presentCount = 0;
     let totalAttendancePossible = 0;
     
     activeGroup.students.forEach(student => {
-        Object.keys(attendance).forEach(date => {
-            if (attendance[date]?.[student.id] !== undefined) {
+        Object.keys(pAttendance).forEach(date => {
+            if (pAttendance[date]?.[student.id] !== undefined) {
                 totalAttendancePossible++;
-                if(attendance[date][student.id]) presentCount++;
+                if(pAttendance[date][student.id]) presentCount++;
             }
         });
     });
@@ -71,8 +74,7 @@ export default function ReportsPage() {
 
     let approvedCount = 0;
     activeGroup.students.forEach(student => {
-        const studentObservations = allObservations[student.id] || [];
-        const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords, studentObservations);
+        const finalGrade = calculateFinalGrade(student.id, activePartialId, pCriteria, pGrades, pParticipations, pActivities, pActivityRecords);
         if (finalGrade >= 70) approvedCount++;
     });
 
@@ -84,39 +86,45 @@ export default function ReportsPage() {
         attendanceRate: parseFloat(attendanceRate.toFixed(1)),
         approvedCount,
         totalAttendanceRecords: presentCount,
-        criteriaCount: criteria.length,
+        criteriaCount: pCriteria.length,
     };
-  }, [activeGroup, attendance, criteria, grades, participations, activities, activityRecords, calculateFinalGrade, allObservations, groupAverages]);
+  }, [activeGroup, calculateFinalGrade, groupAverages, activePartialId]);
 
 
   const handleDownloadCsv = () => {
     if (!activeGroup) return;
+    
+    const keySuffix = `${activeGroup.id}_${activePartialId}`;
+    const pCriteria = loadFromLocalStorage<EvaluationCriteria[]>(`criteria_${keySuffix}`, []);
+    const pGrades = loadFromLocalStorage(`grades_${keySuffix}`, {});
+    const pParticipations = loadFromLocalStorage(`participations_${keySuffix}`, {});
+    const pActivities = loadFromLocalStorage(`activities_${keySuffix}`, []);
+    const pActivityRecords = loadFromLocalStorage(`activityRecords_${keySuffix}`, {});
 
     let csvContent = "data:text/csv;charset=utf-8,";
-    const headers = ["ID Estudiante", "Nombre", ...criteria.map(c => `${c.name} (${c.weight}%)`), "Calificacion Final"];
+    const headers = ["ID Estudiante", "Nombre", ...pCriteria.map(c => `${c.name} (${c.weight}%)`), "Calificacion Final"];
     csvContent += headers.join(",") + "\r\n";
 
     activeGroup.students.forEach(student => {
         const row = [student.id, student.name];
-        const studentObservations = allObservations[student.id] || [];
-        const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords, studentObservations);
+        const finalGrade = calculateFinalGrade(student.id, activePartialId, pCriteria, pGrades, pParticipations, pActivities, pActivityRecords);
         
-        criteria.forEach(criterion => {
+        pCriteria.forEach(criterion => {
             let performanceRatio = 0;
             if (criterion.name === 'Actividades' || criterion.name === 'Portafolio') {
-                const totalActivities = activities.length;
+                const totalActivities = pActivities.length;
                 if (totalActivities > 0) {
-                    const deliveredActivities = Object.values(activityRecords[student.id] || {}).filter(Boolean).length;
+                    const deliveredActivities = Object.values(pActivityRecords[student.id] || {}).filter(Boolean).length;
                     performanceRatio = deliveredActivities / totalActivities;
                 }
             } else if(criterion.name === 'Participación') {
-                 const participationDates = Object.keys(participations);
+                 const participationDates = Object.keys(pParticipations);
                 if (participationDates.length > 0) {
-                    const studentParticipations = Object.values(participations).filter(p => p[student.id]).length;
+                    const studentParticipations = Object.values(pParticipations).filter(p => p[student.id]).length;
                     performanceRatio = studentParticipations / participationDates.length;
                 }
             } else {
-                const gradeDetail = grades[student.id]?.[criterion.id];
+                const gradeDetail = pGrades[student.id]?.[criterion.id];
                 const delivered = gradeDetail?.delivered ?? 0;
                 const expected = criterion.expectedValue;
                 if(expected > 0) {
@@ -290,3 +298,5 @@ export default function ReportsPage() {
     </div>
   );
 }
+
+    
