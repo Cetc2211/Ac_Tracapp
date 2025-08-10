@@ -228,6 +228,9 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         } else {
             setActiveGroupIdState(null);
         }
+        
+        const storedPartialId = loadFromLocalStorage<PartialId>('activePartialId', 'p1');
+        setActivePartialIdState(storedPartialId);
 
         setSettings(loadFromLocalStorage('appSettings', defaultSettings));
         setDataVersion(v => v + 1); // Trigger initial data load for memos
@@ -398,11 +401,13 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         saveToLocalStorage('activeGroupId', groupId);
         // Reset partial to p1 when group changes
         setActivePartialIdState('p1');
+        saveToLocalStorage('activePartialId', 'p1');
         window.dispatchEvent(new Event('storage'));
     };
 
     const setActivePartialId = (partialId: PartialId) => {
         setActivePartialIdState(partialId);
+        saveToLocalStorage('activePartialId', partialId);
     };
 
     const deleteGroup = (groupId: string) => {
