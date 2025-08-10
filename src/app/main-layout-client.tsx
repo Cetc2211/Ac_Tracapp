@@ -42,6 +42,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { SheetTitle } from '@/components/ui/sheet';
 import { useData } from '@/hooks/use-data';
 import { getPartialLabel } from '@/lib/utils';
+import { Toaster } from '@/components/ui/toaster';
 
 
 const navItems = [
@@ -84,97 +85,100 @@ export default function MainLayoutClient({
   }, [settings.theme]);
 
   return (
-    <SidebarProvider>
-      <Sidebar>
-        <SidebarHeader>
-          {isClient ? (
-            <AppLogo name={settings.institutionName} logoUrl={settings.logo} />
-          ) : (
-            <div className="flex items-center gap-4 p-4">
-              <Skeleton className="size-12 rounded-full shrink-0" />
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-[150px]" />
-                <Skeleton className="h-4 w-[100px]" />
+    <>
+      <SidebarProvider>
+        <Sidebar>
+          <SidebarHeader>
+            {isClient ? (
+              <AppLogo name={settings.institutionName} logoUrl={settings.logo} />
+            ) : (
+              <div className="flex items-center gap-4 p-4">
+                <Skeleton className="size-12 rounded-full shrink-0" />
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-[150px]" />
+                  <Skeleton className="h-4 w-[100px]" />
+                </div>
               </div>
-            </div>
-          )}
-        </SidebarHeader>
-        <SidebarContent>
-           {isClient && activeGroup ? (
-                <>
-                  <div className="px-4 py-2">
-                      <p className="text-xs font-semibold text-sidebar-foreground/70 tracking-wider uppercase">Grupo Activo</p>
-                      <div className='space-y-1 mt-1'>
-                        <p className="font-bold text-sidebar-foreground flex items-center gap-2">
-                          <Package className="h-4 w-4"/>
-                          {activeGroup.subject}
-                        </p>
-                         <p className="font-semibold text-sidebar-foreground/80 flex items-center gap-2 text-sm pl-1">
-                          <BookText className="h-4 w-4"/>
-                          {getPartialLabel(activePartialId)}
-                        </p>
-                      </div>
-                  </div>
-                  <Separator className="my-2" />
-                </>
-            ) : isClient ? null : (
-                <>
-                  <div className="px-4 py-2">
-                     <Skeleton className="h-3 w-20 mb-2" />
-                     <Skeleton className="h-4 w-32 mb-1" />
-                     <Skeleton className="h-4 w-24" />
-                  </div>
-                  <Separator className="my-2" />
-                </>
-            )
-          }
-          <SidebarMenu>
-            {navItems.map((item) => (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname.startsWith(item.href)}
-                >
-                  <Link href={item.href}>
-                    <item.icon />
-                    <span>{item.label}</span>
+            )}
+          </SidebarHeader>
+          <SidebarContent>
+            {isClient && activeGroup ? (
+                  <>
+                    <div className="px-4 py-2">
+                        <p className="text-xs font-semibold text-sidebar-foreground/70 tracking-wider uppercase">Grupo Activo</p>
+                        <div className='space-y-1 mt-1'>
+                          <p className="font-bold text-sidebar-foreground flex items-center gap-2">
+                            <Package className="h-4 w-4"/>
+                            {activeGroup.subject}
+                          </p>
+                          <p className="font-semibold text-sidebar-foreground/80 flex items-center gap-2 text-sm pl-1">
+                            <BookText className="h-4 w-4"/>
+                            {getPartialLabel(activePartialId)}
+                          </p>
+                        </div>
+                    </div>
+                    <Separator className="my-2" />
+                  </>
+              ) : isClient ? null : (
+                  <>
+                    <div className="px-4 py-2">
+                      <Skeleton className="h-3 w-20 mb-2" />
+                      <Skeleton className="h-4 w-32 mb-1" />
+                      <Skeleton className="h-4 w-24" />
+                    </div>
+                    <Separator className="my-2" />
+                  </>
+              )
+            }
+            <SidebarMenu>
+              {navItems.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname.startsWith(item.href)}
+                  >
+                    <Link href={item.href}>
+                      <item.icon />
+                      <span>{item.label}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarContent>
+          <SidebarFooter className="flex-col !items-start gap-4">
+            <Separator className="mx-0" />
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname.startsWith('/profile')}>
+                  <Link href="/profile">
+                    <User />
+                    <span>Mi Perfil</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </SidebarContent>
-        <SidebarFooter className="flex-col !items-start gap-4">
-          <Separator className="mx-0" />
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname.startsWith('/profile')}>
-                <Link href="/profile">
-                  <User />
-                  <span>Mi Perfil</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname.startsWith('/settings')}>
-                <Link href="/settings">
-                  <Settings />
-                  <span>Ajustes</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarFooter>
-      </Sidebar>
-      <SidebarInset>
-        <header className="flex h-14 items-center gap-4 border-b bg-card px-4 lg:h-[60px] lg:px-6">
-          <SidebarTrigger className="md:hidden" />
-          <div className="flex w-full items-center justify-end gap-4">
-            <UserNav />
-          </div>
-        </header>
-        <main className="flex-1 p-4 sm:p-6">{children}</main>
-      </SidebarInset>
-    </SidebarProvider>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname.startsWith('/settings')}>
+                  <Link href="/settings">
+                    <Settings />
+                    <span>Ajustes</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarFooter>
+        </Sidebar>
+        <SidebarInset>
+          <header className="flex h-14 items-center gap-4 border-b bg-card px-4 lg:h-[60px] lg:px-6">
+            <SidebarTrigger className="md:hidden" />
+            <div className="flex w-full items-center justify-end gap-4">
+              <UserNav />
+            </div>
+          </header>
+          <main className="flex-1 p-4 sm:p-6">{children}</main>
+        </SidebarInset>
+      </SidebarProvider>
+      <Toaster />
+    </>
   );
 }
