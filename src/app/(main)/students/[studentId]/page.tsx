@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import {
@@ -15,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Student, Group, PartialId } from '@/lib/placeholder-data';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
-import { Mail, User, Contact, ArrowLeft, Download, FileText, Loader2, Phone, Wand2, ListChecks, Edit, Save, BookCopy } from 'lucide-react';
+import { Mail, User, Contact, ArrowLeft, Download, FileText, Loader2, Phone, Wand2, ListChecks, Edit, Save, BookCopy, GraduationCap } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -38,6 +37,7 @@ import type { EvaluationCriteria, Grades, ParticipationRecord, StudentStats, Act
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { getPartialLabel } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 
 
 const WhatsAppIcon = () => (
@@ -428,7 +428,7 @@ export default function StudentProfilePage() {
                     </CardContent>
                 </Card>
             </div>
-             <div>
+             <div className="space-y-6">
                 <Card>
                     <CardHeader>
                         <CardTitle>Historial de Asistencia Global</CardTitle>
@@ -442,6 +442,22 @@ export default function StudentProfilePage() {
                             <p className="font-bold text-blue-800 dark:text-blue-300">Tasa de Asistencia:</p>
                             <Badge className="text-lg bg-blue-600 hover:bg-blue-600">{attendanceRate.toFixed(1)}%</Badge>
                         </div>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><GraduationCap /> Promedio General Semestral</CardTitle>
+                        <CardDescription>Calificación final considerando todos los parciales evaluados.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex items-center justify-center p-6">
+                        <Badge 
+                           className={cn(
+                                "text-4xl h-auto px-6 py-3", 
+                                studentStats && studentStats.averageGrade >= 70 ? "bg-primary" : "bg-destructive"
+                            )}
+                        >
+                            {(studentStats?.averageGrade || 0).toFixed(1)}%
+                        </Badge>
                     </CardContent>
                 </Card>
             </div>
