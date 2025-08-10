@@ -44,14 +44,12 @@ export default function GroupGradesPage() {
   const { 
     activeGroup,
     activePartialId,
-    criteria, 
-    grades, 
+    partialData,
     setGrades,
-    participations,
-    activities,
-    activityRecords,
     calculateFinalGrade,
   } = useData();
+
+  const { criteria, grades, participations, activities, activityRecords } = partialData;
 
   const { toast } = useToast();
 
@@ -221,6 +219,7 @@ export default function GroupGradesPage() {
                   </TableRow>
                 )}
                 {studentsInGroup.length > 0 && criteria.length > 0 && studentsInGroup.map(student => {
+                  
                   return (
                   <TableRow key={student.id}>
                     <TableCell className="font-medium sticky left-0 bg-card z-10 flex items-center gap-2">
@@ -293,7 +292,3 @@ export default function GroupGradesPage() {
     </div>
   );
 }
-
-    
-
-    

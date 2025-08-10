@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useMemo } from 'react';
@@ -24,7 +25,8 @@ import { ArrowLeft } from 'lucide-react';
 import { useData } from '@/hooks/use-data';
 
 export default function AttendancePage() {
-  const { activeGroup, attendance, setAttendance } = useData();
+  const { activeGroup, partialData, setAttendance } = useData();
+  const { attendance } = partialData;
 
   const studentsToDisplay = useMemo(() => {
     return activeGroup ? [...activeGroup.students].sort((a,b) => a.name.localeCompare(b.name)) : [];

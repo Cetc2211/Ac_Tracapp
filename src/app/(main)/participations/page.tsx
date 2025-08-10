@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -25,7 +26,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useData } from '@/hooks/use-data';
 
 export default function ParticipationsPage() {
-  const { activeGroup, participations, setParticipations, attendance } = useData();
+  const { activeGroup, partialData, setParticipations } = useData();
+  const { participations, attendance } = partialData;
   const { toast } = useToast();
 
   const studentsToDisplay = useMemo(() => {

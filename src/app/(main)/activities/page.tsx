@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useRef } from 'react';
@@ -38,11 +39,12 @@ import type { Activity, ActivityRecord, GroupedActivities } from '@/hooks/use-da
 export default function ActivitiesPage() {
   const { 
     activeGroup,
-    activities, 
-    activityRecords, 
+    partialData,
     setActivities, 
     setActivityRecords 
   } = useData();
+
+  const { activities, activityRecords } = partialData;
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newActivityName, setNewActivityName] = useState('');

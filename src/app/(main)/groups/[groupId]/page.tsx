@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Student, Group, StudentObservation, PartialId } from '@/lib/placeholder-data';
+import { Student, Group, PartialId } from '@/lib/placeholder-data';
 import { notFound, useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -72,12 +72,14 @@ export default function GroupDetailsPage() {
     setGroups, 
     setAllStudents, 
     activeGroup, 
-    criteria,
+    partialData,
     atRiskStudents,
     deleteGroup,
     activePartialId,
     setActivePartialId
   } = useData();
+
+  const { criteria } = partialData;
 
   const router = useRouter();
   const { toast } = useToast();

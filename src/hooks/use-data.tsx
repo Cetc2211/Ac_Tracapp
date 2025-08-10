@@ -90,6 +90,15 @@ export type StudentStats = {
     }[];
 };
 
+type PartialData = {
+    criteria: EvaluationCriteria[];
+    grades: Grades;
+    attendance: AttendanceRecord;
+    participations: ParticipationRecord;
+    activities: Activity[];
+    activityRecords: ActivityRecord;
+};
+
 
 // CONTEXT TYPE
 interface DataContextType {
@@ -103,12 +112,7 @@ interface DataContextType {
   activeGroup: Group | null;
   activePartialId: PartialId;
   
-  criteria: EvaluationCriteria[];
-  grades: Grades;
-  attendance: AttendanceRecord;
-  participations: ParticipationRecord;
-  activities: Activity[];
-  activityRecords: ActivityRecord;
+  partialData: PartialData;
 
   groupAverages: {[groupId: string]: number};
   atRiskStudents: StudentWithRisk[];
@@ -194,14 +198,17 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     // Active state
     const [activeGroupId, setActiveGroupIdState] = useState<string | null>(null);
     const [activePartialId, setActivePartialIdState] = useState<PartialId>('p1');
+    const [dataVersion, setDataVersion] = useState(0);
     
     // Data stores for active group
-    const [criteria, setCriteriaState] = useState<EvaluationCriteria[]>([]);
-    const [grades, setGradesState] = useState<Grades>({});
-    const [attendance, setAttendanceState] = useState<AttendanceRecord>({});
-    const [participations, setParticipationsState] = useState<ParticipationRecord>({});
-    const [activities, setActivitiesState] = useState<Activity[]>([]);
-    const [activityRecords, setActivityRecordsState] = useState<ActivityRecord>({});
+    const [partialData, setPartialData] = useState<PartialData>({
+        criteria: [],
+        grades: {},
+        attendance: {},
+        participations: {},
+        activities: [],
+        activityRecords: {},
+    });
     
     // --- INITIAL DATA LOADING ---
     useEffect(() => {
@@ -225,26 +232,29 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         setSettings(loadFromLocalStorage('appSettings', defaultSettings));
     }, []);
     
-    // --- ACTIVE GROUP & PARTIAL DATA LOADING ---
-    useEffect(() => {
+    const loadPartialData = useCallback(() => {
         if(activeGroupId) {
             const keySuffix = `${activeGroupId}_${activePartialId}`;
-            setCriteriaState(loadFromLocalStorage(`criteria_${keySuffix}`, []));
-            setGradesState(loadFromLocalStorage(`grades_${keySuffix}`, {}));
-            setAttendanceState(loadFromLocalStorage(`attendance_${keySuffix}`, {}));
-            setParticipationsState(loadFromLocalStorage(`participations_${keySuffix}`, {}));
-            setActivitiesState(loadFromLocalStorage(`activities_${keySuffix}`, []));
-            setActivityRecordsState(loadFromLocalStorage(`activityRecords_${keySuffix}`, {}));
+            setPartialData({
+                criteria: loadFromLocalStorage(`criteria_${keySuffix}`, []),
+                grades: loadFromLocalStorage(`grades_${keySuffix}`, {}),
+                attendance: loadFromLocalStorage(`attendance_${keySuffix}`, {}),
+                participations: loadFromLocalStorage(`participations_${keySuffix}`, {}),
+                activities: loadFromLocalStorage(`activities_${keySuffix}`, []),
+                activityRecords: loadFromLocalStorage(`activityRecords_${keySuffix}`, {}),
+            });
         } else {
             // Clear data if no group is active
-            setCriteriaState([]);
-            setGradesState({});
-            setAttendanceState({});
-            setParticipationsState({});
-            setActivitiesState([]);
-            setActivityRecordsState({});
+            setPartialData({
+                criteria: [], grades: {}, attendance: {},
+                participations: {}, activities: [], activityRecords: {},
+            });
         }
     }, [activeGroupId, activePartialId]);
+
+    useEffect(() => {
+        loadPartialData();
+    }, [activeGroupId, activePartialId, dataVersion, loadPartialData]);
 
     const calculateDetailedFinalGrade = useCallback((
       studentId: string, 
@@ -327,65 +337,59 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const setGroups = (newGroups: Group[]) => {
         setGroupsState(newGroups);
         saveToLocalStorage('groups', newGroups);
+        setDataVersion(v => v + 1);
     };
 
     const setAllStudents = (newStudents: Student[]) => {
         setAllStudentsState(newStudents);
         saveToLocalStorage('students', newStudents);
+        setDataVersion(v => v + 1);
     };
     
     const setCriteria = (newCriteria: EvaluationCriteria[]) => {
         if (!activeGroupId) return;
         const key = `criteria_${activeGroupId}_${activePartialId}`;
-        setCriteriaState(newCriteria);
         saveToLocalStorage(key, newCriteria);
+        setDataVersion(v => v + 1);
     };
 
     const setGrades = (value: React.SetStateAction<Grades>) => {
         if (!activeGroupId) return;
         const key = `grades_${activeGroupId}_${activePartialId}`;
-        setGradesState(prev => {
-            const newGrades = typeof value === 'function' ? value(prev) : value;
-            saveToLocalStorage(key, newGrades);
-            return newGrades;
-        });
+        const newGrades = typeof value === 'function' ? value(partialData.grades) : value;
+        saveToLocalStorage(key, newGrades);
+        setDataVersion(v => v + 1);
     }
     
     const setAttendance = (value: React.SetStateAction<AttendanceRecord>) => {
         if (!activeGroupId) return;
         const key = `attendance_${activeGroupId}_${activePartialId}`;
-        setAttendanceState(prev => {
-            const newAttendance = typeof value === 'function' ? value(prev) : value;
-            saveToLocalStorage(key, newAttendance);
-            return newAttendance;
-        });
+        const newAttendance = typeof value === 'function' ? value(partialData.attendance) : value;
+        saveToLocalStorage(key, newAttendance);
+        setDataVersion(v => v + 1);
     }
 
     const setParticipations = (value: React.SetStateAction<ParticipationRecord>) => {
         if (!activeGroupId) return;
         const key = `participations_${activeGroupId}_${activePartialId}`;
-        setParticipationsState(prev => {
-            const newParticipations = typeof value === 'function' ? value(prev) : value;
-            saveToLocalStorage(key, newParticipations);
-            return newParticipations;
-        });
+        const newParticipations = typeof value === 'function' ? value(partialData.participations) : value;
+        saveToLocalStorage(key, newParticipations);
+        setDataVersion(v => v + 1);
     }
     
     const setActivities = (newActivities: Activity[]) => {
         if (!activeGroupId) return;
         const key = `activities_${activeGroupId}_${activePartialId}`;
-        setActivitiesState(newActivities);
         saveToLocalStorage(key, newActivities);
+        setDataVersion(v => v + 1);
     }
 
     const setActivityRecords = (value: React.SetStateAction<ActivityRecord>) => {
         if (!activeGroupId) return;
         const key = `activityRecords_${activeGroupId}_${activePartialId}`;
-        setActivityRecordsState(prev => {
-             const newRecords = typeof value === 'function' ? value(prev) : value;
-             saveToLocalStorage(key, newRecords);
-             return newRecords;
-        });
+        const newRecords = typeof value === 'function' ? value(partialData.activityRecords) : value;
+        saveToLocalStorage(key, newRecords);
+        setDataVersion(v => v + 1);
     }
     
     const setActiveGroupId = (groupId: string | null) => {
@@ -524,7 +528,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     return (
         <DataContext.Provider value={{
             students: allStudents, groups, allStudents, activeStudentsInGroups, settings, activeGroup, activePartialId,
-            criteria, grades, attendance, participations, activities, activityRecords,
+            partialData,
             groupAverages, atRiskStudents, overallAverageParticipation,
             setStudents: setAllStudents, setGroups, setAllStudents, setSettings, setActiveGroupId, setActivePartialId,
             setCriteria, setGrades, setAttendance, setParticipations, setActivities, setActivityRecords,
