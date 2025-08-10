@@ -92,7 +92,7 @@ export default function StudentProfilePage() {
         let totalGradeSum = 0;
         
         studentGroups.forEach(group => {
-            const partials: PartialId[] = ['p1', 'p2', 'p3'];
+            const partials: PartialId[] = ['p1', 'p2'];
             partials.forEach(partialId => {
                  const criteria = loadFromLocalStorage<EvaluationCriteria[]>(`criteria_${group.id}_${partialId}`, []);
                 if (criteria.length > 0) { // Only process if there's data for this partial
@@ -126,7 +126,7 @@ export default function StudentProfilePage() {
 
         const attendanceStats = { p: 0, a: 0, total: 0 };
         studentGroups.forEach(group => {
-            const partials: PartialId[] = ['p1', 'p2', 'p3'];
+            const partials: PartialId[] = ['p1', 'p2'];
             partials.forEach(partialId => {
                 const groupAttendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${group.id}_${partialId}`, {});
                 for(const date in groupAttendance){
