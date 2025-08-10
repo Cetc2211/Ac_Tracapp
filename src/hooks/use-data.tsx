@@ -147,7 +147,7 @@ const defaultSettings = {
     theme: "theme-default"
 };
 
-const loadFromLocalStorage = <T,>(key: string, defaultValue: T): T => {
+export const loadFromLocalStorage = <T,>(key: string, defaultValue: T): T => {
   if (typeof window === 'undefined') return defaultValue;
   try {
     const item = window.localStorage.getItem(key);
@@ -409,7 +409,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         
         if (totalDaysForStudent > 0) {
             Object.keys(pAttendance).forEach(date => {
-                if (pAttendance[date][studentId] === false) {
+                if (pAttendance[date]?.[studentId] === false) {
                     absences++;
                 }
             });
@@ -540,3 +540,5 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
+
+    

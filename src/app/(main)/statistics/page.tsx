@@ -20,7 +20,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useData } from '@/hooks/use-data';
+import { useData, loadFromLocalStorage } from '@/hooks/use-data';
 import type { Student, StudentObservation, EvaluationCriteria, Grades, ParticipationRecord, Activity, ActivityRecord, AttendanceRecord } from '@/hooks/use-data';
 
 
@@ -451,3 +451,5 @@ export default function StatisticsPage() {
     </div>
   );
 }
+
+    
