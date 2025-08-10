@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Student, Group, StudentObservation } from '@/lib/placeholder-data';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
-import { Mail, User, Contact, ArrowLeft, Download, FileText, Loader2, Phone, Wand2, ListChecks } from 'lucide-react';
+import { Mail, User, Contact, ArrowLeft, Download, FileText, Loader2, Phone, Wand2, ListChecks, Edit, Save } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -34,6 +34,8 @@ import { WhatsAppDialog } from '@/components/whatsapp-dialog';
 import { useData, loadFromLocalStorage } from '@/hooks/use-data';
 import { Separator } from '@/components/ui/separator';
 import type { EvaluationCriteria, Grades, ParticipationRecord, StudentStats, Activity, ActivityRecord, AttendanceRecord } from '@/hooks/use-data';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 
 
 const WhatsAppIcon = () => (
@@ -70,6 +72,9 @@ export default function StudentProfilePage() {
   const [generatedFeedback, setGeneratedFeedback] = useState<{ feedback: string, recommendations: string[] } | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
   const [isWhatsAppDialogOpen, setIsWhatsAppDialogOpen] = useState(false);
+  const [isEditingFeedback, setIsEditingFeedback] = useState(false);
+  const [editedFeedback, setEditedFeedback] = useState('');
+  const [editedRecommendations, setEditedRecommendations] = useState('');
 
 
   useEffect(() => {
@@ -225,6 +230,29 @@ export default function StudentProfilePage() {
     
     window.open(url, '_blank', 'noopener,noreferrer');
   };
+
+  const handleEditFeedback = () => {
+    if (generatedFeedback) {
+        setEditedFeedback(generatedFeedback.feedback);
+        setEditedRecommendations(generatedFeedback.recommendations.join('\n'));
+        setIsEditingFeedback(true);
+    }
+  }
+
+  const handleSaveFeedback = () => {
+      if (generatedFeedback) {
+          setGeneratedFeedback({
+              feedback: editedFeedback,
+              recommendations: editedRecommendations.split('\n').filter(r => r.trim() !== '')
+          });
+          setIsEditingFeedback(false);
+          toast({title: 'Retroalimentación actualizada'});
+      }
+  }
+
+  const handleCancelFeedbackEdit = () => {
+      setIsEditingFeedback(false);
+  }
 
 
   if (isLoading) {
@@ -442,24 +470,46 @@ export default function StudentProfilePage() {
 
         {generatedFeedback && (
             <Card>
-                <CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle>Retroalimentación y Plan de Acción</CardTitle>
+                    {!isEditingFeedback && (
+                         <Button variant="secondary" size="sm" onClick={handleEditFeedback}><Edit className="mr-2 h-4 w-4"/> Editar</Button>
+                    )}
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="p-4 bg-muted/50 rounded-md border space-y-4">
-                        <div>
-                            <h4 className="font-bold">Análisis General:</h4>
-                            <p className="text-sm whitespace-pre-wrap">{generatedFeedback.feedback}</p>
+                    {isEditingFeedback ? (
+                        <div className="space-y-4">
+                            <div>
+                                <Label htmlFor="edited-feedback" className="font-bold">Análisis General:</Label>
+                                <Textarea id="edited-feedback" value={editedFeedback} onChange={(e) => setEditedFeedback(e.target.value)} rows={4} />
+                            </div>
+                            <div>
+                                <Label htmlFor="edited-recommendations" className="font-bold">Recomendaciones:</Label>
+                                <Textarea id="edited-recommendations" value={editedRecommendations} onChange={(e) => setEditedRecommendations(e.target.value)} rows={5} placeholder="Una recomendación por línea"/>
+                            </div>
+                            <div className="flex justify-end gap-2">
+                                <Button variant="outline" onClick={handleCancelFeedbackEdit}>Cancelar</Button>
+                                <Button onClick={handleSaveFeedback}><Save className="mr-2 h-4 w-4"/> Guardar Cambios</Button>
+                            </div>
                         </div>
-                        <Separator/>
-                        <div>
-                             <h4 className="font-bold flex items-center gap-2"><ListChecks /> Recomendaciones:</h4>
-                             <ul className="list-disc pl-5 mt-2 space-y-1 text-sm">
-                                {generatedFeedback.recommendations.map((rec, i) => (
-                                    <li key={i}>{rec}</li>
-                                ))}
-                            </ul>
-                        </div>
+                    ) : (
+                        <>
+                            <div>
+                                <h4 className="font-bold">Análisis General:</h4>
+                                <p className="text-sm whitespace-pre-wrap">{generatedFeedback.feedback}</p>
+                            </div>
+                            <Separator/>
+                            <div>
+                                <h4 className="font-bold flex items-center gap-2"><ListChecks /> Recomendaciones:</h4>
+                                <ul className="list-disc pl-5 mt-2 space-y-1 text-sm">
+                                    {generatedFeedback.recommendations.map((rec, i) => (
+                                        <li key={i}>{rec}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                        </>
+                    )}
                     </div>
                 </CardContent>
             </Card>
@@ -498,6 +548,3 @@ export default function StudentProfilePage() {
     </div>
     </>
   );
-
-    
-
