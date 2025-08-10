@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -45,6 +46,10 @@ export default function GroupsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
   const [newGroupName, setNewGroupName] = useState('');
+  const [newSemester, setNewSemester] = useState('');
+  const [newGroupNameCode, setNewGroupNameCode] = useState('');
+  const [newFacilitator, setNewFacilitator] = useState('');
+
   const [bulkNames, setBulkNames] = useState('');
   const [bulkEmails, setBulkEmails] = useState('');
   const [bulkPhones, setBulkPhones] = useState('');
@@ -54,11 +59,11 @@ export default function GroupsPage() {
   const { toast } = useToast();
 
   const handleCreateGroup = () => {
-    if (!newGroupName.trim()) {
+    if (!newGroupName.trim() || !newSemester.trim() || !newGroupNameCode.trim() || !newFacilitator.trim()) {
         toast({
             variant: 'destructive',
             title: 'Error',
-            description: 'El nombre de la asignatura es obligatorio.'
+            description: 'Todos los campos de detalles del grupo son obligatorios.'
         });
         return;
     }
@@ -82,6 +87,9 @@ export default function GroupsPage() {
     const newGroup: Group = {
         id: `G${Date.now()}`,
         subject: newGroupName,
+        semester: newSemester,
+        groupName: newGroupNameCode,
+        facilitator: newFacilitator,
         students: studentsForNewGroup,
     };
     
@@ -98,6 +106,9 @@ export default function GroupsPage() {
 
     // Reset form
     setNewGroupName('');
+    setNewSemester('');
+    setNewGroupNameCode('');
+    setNewFacilitator('');
     setBulkNames('');
     setBulkEmails('');
     setBulkPhones('');
@@ -147,14 +158,43 @@ export default function GroupsPage() {
                   </DialogDescription>
               </DialogHeader>
               <div className="grid gap-6 py-4">
-                  <div className="grid gap-2">
-                      <Label htmlFor="group-name">Nombre de la Asignatura*</Label>
-                      <Input 
-                          id="group-name" 
-                          placeholder="Ej. Cálculo Diferencial"
-                          value={newGroupName}
-                          onChange={(e) => setNewGroupName(e.target.value)}
-                      />
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div className="space-y-2 lg:col-span-2">
+                          <Label htmlFor="group-name">Nombre de la Asignatura*</Label>
+                          <Input 
+                              id="group-name" 
+                              placeholder="Ej. Cálculo Diferencial"
+                              value={newGroupName}
+                              onChange={(e) => setNewGroupName(e.target.value)}
+                          />
+                      </div>
+                       <div className="space-y-2">
+                          <Label htmlFor="semester">Semestre*</Label>
+                          <Input 
+                              id="semester" 
+                              placeholder="Ej. Primero"
+                              value={newSemester}
+                              onChange={(e) => setNewSemester(e.target.value)}
+                          />
+                      </div>
+                       <div className="space-y-2">
+                          <Label htmlFor="group-code">Grupo*</Label>
+                          <Input 
+                              id="group-code" 
+                              placeholder="Ej. TSPA"
+                              value={newGroupNameCode}
+                              onChange={(e) => setNewGroupNameCode(e.target.value)}
+                          />
+                      </div>
+                       <div className="space-y-2 lg:col-span-4">
+                          <Label htmlFor="facilitator">Nombre del Facilitador*</Label>
+                          <Input 
+                              id="facilitator" 
+                              placeholder="Ej. Dr. Alberto Rodriguez"
+                              value={newFacilitator}
+                              onChange={(e) => setNewFacilitator(e.target.value)}
+                          />
+                      </div>
                   </div>
                     <div className="grid gap-2">
                       <Label>Añadir Estudiantes al Grupo (Opcional)</Label>
@@ -190,9 +230,11 @@ export default function GroupsPage() {
                     <div className="flex justify-between items-start">
                         <div>
                             <CardTitle className="text-xl">{group.subject}</CardTitle>
-                            <CardDescription className="flex items-center gap-2 pt-2 text-card-foreground-alt/80">
-                                <Users className="h-4 w-4" />
-                                <span>{group.students.length} estudiantes</span>
+                             <CardDescription className="text-card-foreground-alt/80">
+                                {group.semester} - {group.groupName}
+                            </CardDescription>
+                            <CardDescription className="pt-1 text-card-foreground-alt/80">
+                                Facilitador: {group.facilitator}
                             </CardDescription>
                         </div>
                         <Button asChild variant="ghost" size="icon" className="text-card-foreground-alt hover:bg-white/20 hover:text-card-foreground-alt">
@@ -205,6 +247,7 @@ export default function GroupsPage() {
                 </CardHeader>
                 <CardContent className="flex-grow">
                   <div className="text-sm space-y-2">
+                     <div className='flex items-center gap-2'><Users className="h-4 w-4" /> <span className='font-semibold'>Estudiantes:</span> <span className='font-bold'>{group.students.length}</span></div>
                     <div className='flex items-center gap-2'><span className='font-semibold'>Promedio Gral:</span> <span className={`font-bold`}>{average.toFixed(1)}</span></div>
                     <div className='flex items-center gap-2'><span className='font-semibold'>Riesgo Alto:</span> <span className='font-bold flex items-center gap-1'>{highRiskCount > 0 && <AlertTriangle className="h-4 w-4" />} {highRiskCount}</span></div>
                   </div>

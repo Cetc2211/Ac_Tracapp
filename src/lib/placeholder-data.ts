@@ -16,6 +16,9 @@ export type Group = {
   id: string;
   subject: string;
   students: Student[];
+  semester?: string;
+  groupName?: string;
+  facilitator?: string;
 };
 
 export type StudentObservation = {
@@ -41,7 +44,7 @@ export const students: Student[] = [
 ];
 
 export const groups: Group[] = [
-  { id: 'G01', subject: 'Matemáticas Avanzadas', students: students.slice(0, 4) },
-  { id: 'G02', subject: 'Historia del Arte', students: students.slice(2, 6) },
-  { id: 'G03', subject: 'Programación I', students: students.slice(1, 5) },
+  { id: 'G01', subject: 'Matemáticas Avanzadas', students: students.slice(0, 4), semester: 'Tercero', groupName: 'TSPP', facilitator: 'Dr. Alberto Rodriguez' },
+  { id: 'G02', subject: 'Historia del Arte', students: students.slice(2, 6), semester: 'Primero', groupName: 'TAEA', facilitator: 'Dra. María Hernandez' },
+  { id: 'G03', subject: 'Programación I', students: students.slice(1, 5), semester: 'Primero', groupName: 'TSPA', facilitator: 'Ing. Carlos Sanchez' },
 ];

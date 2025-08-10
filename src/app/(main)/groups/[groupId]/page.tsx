@@ -333,7 +333,9 @@ export default function GroupDetailsPage() {
             <div>
             <h1 className="text-3xl font-bold">{activeGroup.subject}</h1>
             <p className="text-muted-foreground">
-                Detalles del grupo y lista de estudiantes.
+                {activeGroup.semester && `Semestre: ${activeGroup.semester} | `} 
+                {activeGroup.groupName && `Grupo: ${activeGroup.groupName} | `}
+                {activeGroup.facilitator && `Facilitador: ${activeGroup.facilitator}`}
             </p>
             </div>
          </div>
