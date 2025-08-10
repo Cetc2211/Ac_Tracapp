@@ -426,12 +426,13 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     // --- GLOBAL CALCULATIONS ---
     const getStudentRiskLevel = useCallback((finalGrade: number, pAttendance: AttendanceRecord, studentId: string): CalculatedRisk => {
+        const safeAttendance = pAttendance || {};
         let absences = 0;
-        const totalDaysForStudent = Object.keys(pAttendance).filter(date => pAttendance[date].hasOwnProperty(studentId)).length;
+        const totalDaysForStudent = Object.keys(safeAttendance).filter(date => safeAttendance[date].hasOwnProperty(studentId)).length;
         
         if (totalDaysForStudent > 0) {
-            Object.keys(pAttendance).forEach(date => {
-                if (pAttendance[date]?.[studentId] === false) {
+            Object.keys(safeAttendance).forEach(date => {
+                if (safeAttendance[date]?.[studentId] === false) {
                     absences++;
                 }
             });

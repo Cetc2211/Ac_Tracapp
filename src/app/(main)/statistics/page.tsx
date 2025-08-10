@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import {
@@ -37,7 +36,6 @@ type GroupStats = {
 type ActiveGroupStats = {
   approvalRate: { approved: number; failed: number; };
   attendanceTotals: { present: number; absent: number; };
-  observationStats: { observations: number, canalizations: number, followUps: number };
   riskDistribution: { low: number, medium: number, high: number };
   topStudents: { name: string, grade: number }[];
   participationDistribution: { name: string, students: number }[];
@@ -61,14 +59,10 @@ export default function StatisticsPage() {
         activeGroup,
         calculateFinalGrade,
         getStudentRiskLevel,
-        criteria,
-        grades,
-        participations,
-        attendance,
-        activities,
-        activityRecords,
+        partialData,
         activePartialId,
     } = useData();
+    const { criteria, grades, participations, attendance, activities, activityRecords } = partialData;
 
     const [stats, setStats] = useState<GroupStats[]>([]);
     const [activeGroupStats, setActiveGroupStats] = useState<ActiveGroupStats | null>(null);
@@ -170,7 +164,6 @@ export default function StatisticsPage() {
             setActiveGroupStats({
                 approvalRate: { approved, failed },
                 attendanceTotals: { present, absent },
-                observationStats: { observations: 0, canalizations: 0, followUps: 0 },
                 riskDistribution,
                 topStudents: studentGrades.slice(0,5).map(s => ({name: s.student.name, grade: parseFloat(s.grade.toFixed(1))})),
                 participationDistribution,
@@ -206,15 +199,7 @@ export default function StatisticsPage() {
         ].filter(item => item.value > 0);
     }, [activeGroupStats]);
     
-    const observationData = useMemo(() => {
-         if (!activeGroupStats) return [];
-         return [
-            { name: 'Observaciones', total: activeGroupStats.observationStats.observations, fill: 'hsl(var(--chart-1))' },
-            { name: 'Canalizaciones', total: activeGroupStats.observationStats.canalizations, fill: 'hsl(var(--chart-2))' },
-            { name: 'Seguimientos', total: activeGroupStats.observationStats.followUps, fill: 'hsl(var(--chart-3))' },
-         ]
-    }, [activeGroupStats]);
-
+  
 
     if (isLoading) {
         return (
@@ -376,23 +361,7 @@ export default function StatisticsPage() {
                     </div>
 
                     <div className="grid gap-6 md:grid-cols-2">
-                        <Card>
-                             <CardHeader>
-                                <CardTitle>Observaciones y Seguimiento</CardTitle>
-                                <CardDescription>Recuento de intervenciones registradas para el grupo.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <ChartContainer config={{}} className="min-h-[300px] w-full">
-                                    <BarChart data={observationData} accessibilityLayer layout="vertical">
-                                        <CartesianGrid horizontal={false} />
-                                        <YAxis dataKey="name" type="category" tickLine={false} tickMargin={10} axisLine={false} />
-                                        <XAxis dataKey="total" type="number" allowDecimals={false}/>
-                                        <ChartTooltip content={<ChartTooltipContent />} />
-                                        <Bar dataKey="total" name="Total" radius={4} />
-                                    </BarChart>
-                                </ChartContainer>
-                            </CardContent>
-                        </Card>
+                        
                         <Card>
                             <CardHeader>
                                 <CardTitle>Mejores Calificaciones</CardTitle>
@@ -410,25 +379,24 @@ export default function StatisticsPage() {
                                 </ChartContainer>
                             </CardContent>
                         </Card>
+                         <Card>
+                            <CardHeader>
+                                <CardTitle>Distribución de Participación en Clase</CardTitle>
+                                <CardDescription>Número de estudiantes por rango de porcentaje de participación.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <ChartContainer config={{}} className="min-h-[300px] w-full">
+                                    <BarChart data={activeGroupStats.participationDistribution} accessibilityLayer>
+                                        <CartesianGrid vertical={false} />
+                                        <XAxis dataKey="name" tickLine={false} tickMargin={10} axisLine={false} />
+                                        <YAxis dataKey="students" allowDecimals={false} />
+                                        <ChartTooltip content={<ChartTooltipContent />} />
+                                        <Bar dataKey="students" name="Estudiantes" fill="hsl(var(--primary))" radius={4} />
+                                    </BarChart>
+                                </ChartContainer>
+                            </CardContent>
+                        </Card>
                     </div>
-
-                     <Card>
-                        <CardHeader>
-                            <CardTitle>Distribución de Participación en Clase</CardTitle>
-                            <CardDescription>Número de estudiantes por rango de porcentaje de participación.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <ChartContainer config={{}} className="min-h-[300px] w-full">
-                                <BarChart data={activeGroupStats.participationDistribution} accessibilityLayer>
-                                    <CartesianGrid vertical={false} />
-                                    <XAxis dataKey="name" tickLine={false} tickMargin={10} axisLine={false} />
-                                    <YAxis dataKey="students" allowDecimals={false} />
-                                    <ChartTooltip content={<ChartTooltipContent />} />
-                                    <Bar dataKey="students" name="Estudiantes" fill="hsl(var(--primary))" radius={4} />
-                                </BarChart>
-                            </ChartContainer>
-                        </CardContent>
-                    </Card>
                 </div>
              ) : (
                 <Card>
@@ -445,7 +413,3 @@ export default function StatisticsPage() {
     </div>
   );
 }
-
-    
-
-    
