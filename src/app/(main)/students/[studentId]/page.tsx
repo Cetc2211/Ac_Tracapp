@@ -31,7 +31,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { WhatsAppDialog } from '@/components/whatsapp-dialog';
-import { useData } from '@/hooks/use-data';
+import { useData, loadFromLocalStorage } from '@/hooks/use-data';
 import { Separator } from '@/components/ui/separator';
 import type { EvaluationCriteria, Grades, ParticipationRecord, StudentStats, Activity, ActivityRecord, AttendanceRecord } from '@/hooks/use-data';
 
@@ -52,17 +52,6 @@ const WhatsAppIcon = () => (
       <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
     </svg>
 );
-
-const loadFromLocalStorage = <T,>(key: string, defaultValue: T): T => {
-  if (typeof window === 'undefined') return defaultValue;
-  try {
-    const item = window.localStorage.getItem(key);
-    return item ? JSON.parse(item) : defaultValue;
-  } catch (error) {
-    console.error(`Error reading from localStorage key “${key}”:`, error);
-    return defaultValue;
-  }
-};
 
 
 export default function StudentProfilePage() {
@@ -388,8 +377,15 @@ export default function StudentProfilePage() {
                                         <p className="font-semibold">{item.group}</p>
                                     </div>
                                     <div className='p-3 border-x border-b rounded-b-md text-sm space-y-2'>
-                                         <div className='flex justify-between pt-2 border-t mt-2'>
-                                            <span className="font-bold">Calificación del Parcial:</span>
+                                        {item.criteriaDetails.map(c => (
+                                           <div key={c.name} className="flex justify-between items-center">
+                                               <span>{c.name} <span className="text-xs text-muted-foreground">({c.weight}%)</span></span>
+                                               <Badge variant="secondary">{c.earned.toFixed(1)}%</Badge>
+                                           </div>
+                                        ))}
+                                         <Separator />
+                                         <div className='flex justify-between pt-2 mt-2 font-bold'>
+                                            <span>Calificación del Parcial:</span>
                                             <Badge variant={item.grade >= 70 ? "default" : "destructive"} className="text-base">{item.grade.toFixed(1)}%</Badge>
                                         </div>
                                     </div>
