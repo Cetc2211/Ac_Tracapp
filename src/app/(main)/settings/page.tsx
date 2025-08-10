@@ -13,17 +13,19 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Image from 'next/image';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { ThemeSwitcher, themes } from '@/components/theme-switcher';
 import { Separator } from '@/components/ui/separator';
 import { useData } from '@/hooks/use-data';
+import { Upload, Download } from 'lucide-react';
 
 export default function SettingsPage() {
-    const { settings, setSettings } = useData();
+    const { settings, setSettings, groups } = useData();
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
     const [isClient, setIsClient] = useState(false);
     const { toast } = useToast();
+    const fileInputRef = useRef<HTMLInputElement>(null);
     
     useEffect(() => {
         setIsClient(true);
@@ -67,8 +69,102 @@ export default function SettingsPage() {
         setSettings(prev => ({ ...prev, theme }));
     };
 
+    const handleExportData = () => {
+      try {
+        const backupData: { [key: string]: any } = {};
+        
+        // Iterate through all localStorage keys
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key) {
+            backupData[key] = JSON.parse(localStorage.getItem(key)!);
+          }
+        }
+        
+        const jsonString = JSON.stringify(backupData, null, 2);
+        const blob = new Blob([jsonString], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        
+        const link = document.createElement("a");
+        link.href = url;
+        const date = new Date().toISOString().split('T')[0];
+        link.download = `academic-tracker-backup-${date}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        toast({
+          title: "Exportación exitosa",
+          description: "Todos los datos de la aplicación han sido guardados.",
+        });
+      } catch (error) {
+        console.error("Error exporting data:", error);
+        toast({
+          variant: "destructive",
+          title: "Error al exportar",
+          description: "No se pudieron exportar los datos.",
+        });
+      }
+    };
+
+    const handleImportData = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const text = e.target?.result;
+                if (typeof text !== 'string') {
+                    throw new Error("File could not be read");
+                }
+                const backupData = JSON.parse(text);
+
+                // Clear existing localStorage
+                localStorage.clear();
+
+                // Import new data
+                for (const key in backupData) {
+                    if (Object.prototype.hasOwnProperty.call(backupData, key)) {
+                        localStorage.setItem(key, JSON.stringify(backupData[key]));
+                    }
+                }
+                
+                toast({
+                    title: "Importación Exitosa",
+                    description: "Los datos han sido restaurados. La aplicación se recargará.",
+                });
+
+                // Reload to apply changes
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+
+            } catch (error) {
+                console.error("Error importing data:", error);
+                toast({
+                    variant: "destructive",
+                    title: "Error al importar",
+                    description: "El archivo de respaldo es inválido o está corrupto.",
+                });
+            } finally {
+                // Reset file input
+                if(fileInputRef.current) {
+                    fileInputRef.current.value = '';
+                }
+            }
+        };
+        reader.readAsText(file);
+    };
+
+    const triggerFileSelect = () => {
+        fileInputRef.current?.click();
+    };
+
+
   if (!isClient) {
-    return null; // O un esqueleto de carga
+    return null;
   }
 
   return (
@@ -128,6 +224,37 @@ export default function SettingsPage() {
           <Button onClick={handleSave}>Guardar Cambios</Button>
         </CardFooter>
       </Card>
+      <Card>
+          <CardHeader>
+              <CardTitle>Copia de Seguridad y Restauración</CardTitle>
+              <CardDescription>
+                  Guarda todos tus datos en un archivo o restaura la aplicación desde uno.
+              </CardDescription>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Button onClick={handleExportData} variant="outline">
+                  <Download className="mr-2 h-4 w-4" />
+                  Exportar Datos (Backup)
+              </Button>
+              <Button onClick={triggerFileSelect} variant="destructive">
+                  <Upload className="mr-2 h-4 w-4" />
+                  Importar Datos (Restaurar)
+              </Button>
+              <input 
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept=".json"
+                onChange={handleImportData}
+              />
+          </CardContent>
+           <CardFooter>
+               <p className="text-xs text-muted-foreground">
+                  La importación reemplazará todos los datos actuales. Asegúrate de tener un respaldo si es necesario.
+              </p>
+           </CardFooter>
+      </Card>
     </div>
   );
 }
+
