@@ -445,6 +445,7 @@ export default function GroupDetailsPage() {
         <TabsList>
             <TabsTrigger value="p1">Primer Parcial</TabsTrigger>
             <TabsTrigger value="p2">Segundo Parcial</TabsTrigger>
+            <TabsTrigger value="p3">Tercer Parcial</TabsTrigger>
         </TabsList>
         <TabsContent value={activePartialId} className="mt-4">
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
