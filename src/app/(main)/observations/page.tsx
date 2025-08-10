@@ -96,8 +96,9 @@ export default function ObservationsPage() {
 
   const studentsWithObservations = useMemo(() => {
     if (!activeGroup) return [];
-    // Filter students who have observations IN THE CURRENT PARTIAL
-    const studentIdsWithObservationsInPartial = new Set();
+    
+    const studentIdsWithObservationsInPartial = new Set<string>();
+    
     Object.entries(allObservations).forEach(([studentId, observations]) => {
       if (observations.some(obs => obs.partialId === activePartialId)) {
         studentIdsWithObservationsInPartial.add(studentId);
