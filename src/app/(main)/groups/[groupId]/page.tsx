@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Student, Group, StudentObservation } from '@/lib/placeholder-data';
+import { Student, Group, StudentObservation, PartialId } from '@/lib/placeholder-data';
 import { notFound, useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -75,6 +75,8 @@ export default function GroupDetailsPage() {
     criteria,
     atRiskStudents,
     deleteGroup,
+    activePartialId,
+    setActivePartialId
   } = useData();
 
   const router = useRouter();
@@ -437,11 +439,12 @@ export default function GroupDetailsPage() {
          </div>
       </div>
       
-      <Tabs defaultValue="p1" className="w-full">
+      <Tabs defaultValue={activePartialId} onValueChange={(value) => setActivePartialId(value as PartialId)} className="w-full">
         <TabsList>
             <TabsTrigger value="p1">Primer Parcial</TabsTrigger>
+            <TabsTrigger value="p2">Segundo Parcial</TabsTrigger>
         </TabsList>
-        <TabsContent value="p1" className="mt-4">
+        <TabsContent value={activePartialId} className="mt-4">
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             <Card className="lg:col-span-2">
                 <CardHeader>
