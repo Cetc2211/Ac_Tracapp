@@ -359,15 +359,15 @@ export default function GroupDetailsPage() {
                     </div>
                      <div className="space-y-2">
                         <Label htmlFor="edit-semester">Semestre</Label>
-                        <Input id="edit-semester" value={editingGroup.semester} onChange={(e) => setEditingGroup({...editingGroup, semester: e.target.value})} />
+                        <Input id="edit-semester" value={editingGroup.semester || ''} onChange={(e) => setEditingGroup({...editingGroup, semester: e.target.value})} />
                     </div>
                      <div className="space-y-2">
                         <Label htmlFor="edit-groupName">Grupo</Label>
-                        <Input id="edit-groupName" value={editingGroup.groupName} onChange={(e) => setEditingGroup({...editingGroup, groupName: e.target.value})} />
+                        <Input id="edit-groupName" value={editingGroup.groupName || ''} onChange={(e) => setEditingGroup({...editingGroup, groupName: e.target.value})} />
                     </div>
                      <div className="space-y-2">
                         <Label htmlFor="edit-facilitator">Facilitador</Label>
-                        <Input id="edit-facilitator" value={editingGroup.facilitator} onChange={(e) => setEditingGroup({...editingGroup, facilitator: e.target.value})} />
+                        <Input id="edit-facilitator" value={editingGroup.facilitator || ''} onChange={(e) => setEditingGroup({...editingGroup, facilitator: e.target.value})} />
                     </div>
                 </div>
                 <DialogFooter>
