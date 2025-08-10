@@ -112,7 +112,7 @@ export default function DashboardPage() {
           <CardContent>
             <div className="text-2xl font-bold">{overallAverageParticipation}%</div>
             <p className="text-xs text-muted-foreground">
-              Promedio en todas las clases y parciales
+              Promedio en todas las clases
             </p>
           </CardContent>
         </Card>
@@ -172,7 +172,7 @@ export default function DashboardPage() {
             <div className="grid gap-2">
               <CardTitle>Grupos Recientes</CardTitle>
               <CardDescription>
-                Resumen de los grupos y su rendimiento en el parcial activo.
+                Resumen de los grupos y su rendimiento general.
               </CardDescription>
             </div>
             <Button asChild size="sm" className="ml-auto gap-1">
@@ -213,7 +213,7 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle>Estudiantes con Alertas</CardTitle>
             <CardDescription>
-              Estudiantes que requieren seguimiento (basado en el parcial activo de cada grupo).
+              Estudiantes que requieren seguimiento (todos los grupos).
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-6 flex-grow">

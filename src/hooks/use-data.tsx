@@ -460,19 +460,33 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     
 
     const atRiskStudents: StudentWithRisk[] = useMemo(() => {
-        if (!activeGroup) return [];
+        const allAtRiskStudents: StudentWithRisk[] = [];
+        const processedStudentIds = new Set<string>();
+    
+        groups.forEach(group => {
+            const pCriteria = loadFromLocalStorage<EvaluationCriteria[]>(`criteria_${group.id}`, []);
+            const pGrades = loadFromLocalStorage<Grades>(`grades_${group.id}`, {});
+            const pParticipations = loadFromLocalStorage<ParticipationRecord>(`participations_${group.id}`, {});
+            const pActivities = loadFromLocalStorage<Activity[]>(`activities_${group.id}`, []);
+            const pActivityRecords = loadFromLocalStorage<ActivityRecord>(`activityRecords_${group.id}`, {});
+            const pAttendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${group.id}`, {});
 
-        const pCriteria = criteria;
-        if (pCriteria.length === 0) return [];
-        
-        return activeGroup.students.map(student => {
-            const studentObs = allObservations[student.id] || [];
-            const finalGrade = calculateFinalGrade(student.id, pCriteria, grades, participations, activities, activityRecords, studentObs);
-            const risk = getStudentRiskLevel(finalGrade, attendance, student.id);
-            return { ...student, calculatedRisk: risk };
-        }).filter(student => student.calculatedRisk.level === 'high' || student.calculatedRisk.level === 'medium');
+            group.students.forEach(student => {
+                if (processedStudentIds.has(student.id)) return;
 
-    }, [activeGroup, criteria, grades, participations, activities, activityRecords, attendance, allObservations, calculateFinalGrade, getStudentRiskLevel]);
+                const studentObs = allObservations[student.id] || [];
+                const finalGrade = calculateFinalGrade(student.id, pCriteria, pGrades, pParticipations, pActivities, pActivityRecords, studentObs);
+                const risk = getStudentRiskLevel(finalGrade, pAttendance, student.id);
+                
+                if (risk.level === 'high' || risk.level === 'medium') {
+                    allAtRiskStudents.push({ ...student, calculatedRisk: risk });
+                    processedStudentIds.add(student.id);
+                }
+            });
+        });
+
+        return allAtRiskStudents;
+    }, [groups, allObservations, calculateFinalGrade, getStudentRiskLevel]);
     
     
     const overallAverageParticipation = useMemo(() => {
