@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -11,7 +12,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Student, Group, StudentObservation, PartialId } from '@/lib/placeholder-data';
+import { Student, Group, PartialId } from '@/lib/placeholder-data';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import { Mail, User, Contact, ArrowLeft, Download, FileText, Loader2, Phone, Wand2, ListChecks, Edit, Save } from 'lucide-react';
@@ -62,11 +63,10 @@ export default function StudentProfilePage() {
   const studentId = params.studentId as string;
   const router = useRouter();
   
-  const { students, groups, allObservations, calculateFinalGrade } = useData();
+  const { students, groups, calculateFinalGrade } = useData();
   const student = students.find(s => s.id === studentId);
 
   const [studentStats, setStudentStats] = useState<StudentStats | null>(null);
-  const [observations, setObservations] = useState<StudentObservation[]>([]);
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
@@ -90,7 +90,6 @@ export default function StudentProfilePage() {
         
         const gradesByGroup: StudentStats['gradesByGroup'] = [];
         let totalGradeSum = 0;
-        const studentObservations: StudentObservation[] = allObservations[studentId] || [];
         
         studentGroups.forEach(group => {
             const partials: PartialId[] = ['p1', 'p2', 'p3'];
@@ -102,7 +101,7 @@ export default function StudentProfilePage() {
                     const activities = loadFromLocalStorage<Activity[]>(`activities_${group.id}_${partialId}`, []);
                     const activityRecords = loadFromLocalStorage<ActivityRecord>(`activityRecords_${group.id}_${partialId}`, {});
                     
-                    const finalGrade = calculateFinalGrade(studentId, partialId, criteria, grades, participations, activities, activityRecords, studentObservations);
+                    const finalGrade = calculateFinalGrade(studentId, partialId, criteria, grades, participations, activities, activityRecords);
 
                     const criteriaDetails = criteria.map(c => {
                         let performanceRatio = 0;
@@ -139,8 +138,6 @@ export default function StudentProfilePage() {
             });
         });
         
-        setObservations(studentObservations.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-        
         setStudentStats({
           averageGrade: studentGroups.length > 0 ? totalGradeSum / studentGroups.length : 0,
           attendance: attendanceStats,
@@ -152,7 +149,7 @@ export default function StudentProfilePage() {
     } finally {
         setIsLoading(false);
     }
-  }, [student, groups, allObservations, studentId, toast, calculateFinalGrade]);
+  }, [student, groups, studentId, toast, calculateFinalGrade]);
   
    const handleGenerateFeedback = async () => {
     if (!student || !studentStats) {
@@ -166,7 +163,7 @@ export default function StudentProfilePage() {
         studentName: student.name,
         gradesByGroup: studentStats.gradesByGroup.map(g => ({ group: g.group, grade: g.grade })),
         attendance: studentStats.attendance,
-        observations: observations.map(o => ({ type: o.type, details: o.details })),
+        observations: [],
       };
       const result = await generateStudentFeedback(input);
       setGeneratedFeedback(result);
@@ -534,3 +531,5 @@ export default function StudentProfilePage() {
     </div>
     </>
   );
+
+    

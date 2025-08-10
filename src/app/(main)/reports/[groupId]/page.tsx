@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -15,7 +16,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, Download, CheckCircle, XCircle, TrendingUp, BarChart, Users, Eye, AlertTriangle, Loader2 } from 'lucide-react';
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { StudentObservation } from '@/lib/placeholder-data';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
@@ -47,7 +47,6 @@ export default function GroupReportPage() {
   const groupId = params.groupId as string;
   const { 
       groups,
-      allObservations,
       calculateFinalGrade,
       getStudentRiskLevel,
       settings,
@@ -97,8 +96,7 @@ export default function GroupReportPage() {
       let mediumRiskStudents = 0;
 
       group.students.forEach(student => {
-        const studentObservations: StudentObservation[] = allObservations[student.id] || [];
-        const finalGrade = calculateFinalGrade(student.id, activePartialId, criteria, grades, participations, activities, activityRecords, studentObservations);
+        const finalGrade = calculateFinalGrade(student.id, activePartialId, criteria, grades, participations, activities, activityRecords);
         
         totalGroupGrade += finalGrade;
         if (finalGrade >= 70) approved++;
@@ -107,21 +105,6 @@ export default function GroupReportPage() {
         if (riskLevel.level === 'high') highRiskStudents++;
         if (riskLevel.level === 'medium') mediumRiskStudents++;
         
-        const partialObservations = studentObservations.filter(o => o.partialId === activePartialId);
-
-        if(partialObservations.length > 0) {
-            studentsWithObservations++;
-            if(partialObservations.some(o => o.requiresCanalization)) canalizedStudents++;
-            if(partialObservations.some(o => o.requiresFollowUp)) {
-                followUpStudents++;
-                const followUpCases = partialObservations.filter(o => o.requiresFollowUp);
-                if (followUpCases.some(c => c.isClosed)) {
-                    improvedStudents++;
-                } else {
-                    stillInObservationStudents++;
-                }
-            }
-        }
         
         Object.keys(attendance).forEach(date => {
             if (attendance[date]?.[student.id] !== undefined) {
@@ -146,11 +129,11 @@ export default function GroupReportPage() {
           groupAverage: studentCount > 0 ? totalGroupGrade / studentCount : 0,
           attendanceRate: totalPossibleAttendance > 0 ? (totalPresent / totalPossibleAttendance) * 100 : 0,
           participationRate: totalParticipationOpportunities > 0 ? (totalParticipations / totalParticipationOpportunities) * 100 : 0,
-          studentsWithObservations: studentsWithObservations,
-          canalizedCount: canalizedStudents,
-          followUpCount: followUpStudents,
-          improvedCount: improvedStudents,
-          stillInObservationCount: stillInObservationStudents,
+          studentsWithObservations: 0,
+          canalizedCount: 0,
+          followUpCount: 0,
+          improvedCount: 0,
+          stillInObservationCount: 0,
           highRiskCount: highRiskStudents,
           mediumRiskCount: mediumRiskStudents,
       });
@@ -160,7 +143,7 @@ export default function GroupReportPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [group, calculateFinalGrade, getStudentRiskLevel, allObservations, activePartialId]);
+  }, [group, calculateFinalGrade, getStudentRiskLevel, activePartialId]);
 
   const handleDownloadPdf = () => {
     const input = reportRef.current;
@@ -332,3 +315,6 @@ export default function GroupReportPage() {
   );
 }
 
+
+
+    

@@ -28,11 +28,12 @@ import { useData } from '@/hooks/use-data';
 import { useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import type { EvaluationCriteria } from '@/hooks/use-data';
+import { getPartialLabel } from '@/lib/utils';
 
 const criterionColors = [
-  'bg-chart-1/10',
-  'bg-chart-2/10',
-  'bg-chart-3/10',
+  'bg-partial-1-bg',
+  'bg-partial-2-bg',
+  'bg-partial-3-bg',
   'bg-chart-4/10',
   'bg-chart-5/10',
 ];
@@ -50,7 +51,6 @@ export default function GroupGradesPage() {
     activities,
     activityRecords,
     calculateFinalGrade,
-    allObservations
   } = useData();
 
   const { toast } = useToast();
@@ -88,7 +88,6 @@ export default function GroupGradesPage() {
     const calculatedGrades: {[studentId: string]: number} = {};
     if (activeGroup) {
       for (const student of activeGroup.students) {
-        const studentObservations = allObservations[student.id] || [];
         calculatedGrades[student.id] = calculateFinalGrade(
           student.id,
           activePartialId,
@@ -96,13 +95,12 @@ export default function GroupGradesPage() {
           grades,
           participations,
           activities,
-          activityRecords,
-          studentObservations
+          activityRecords
         );
       }
     }
     return calculatedGrades;
-  }, [activeGroup, activePartialId, criteria, grades, participations, activities, activityRecords, calculateFinalGrade, allObservations]);
+  }, [activeGroup, activePartialId, criteria, grades, participations, activities, activityRecords, calculateFinalGrade]);
 
   const studentsInGroup = useMemo(() => {
       if (!activeGroup || !activeGroup.students) return [];
@@ -177,7 +175,7 @@ export default function GroupGradesPage() {
             <div>
             <h1 className="text-3xl font-bold">Registrar Calificaciones</h1>
             <p className="text-muted-foreground">
-                Grupo "{activeGroup.subject}".
+                Grupo "{activeGroup.subject}" - {getPartialLabel(activePartialId)}.
             </p>
             </div>
          </div>
@@ -218,16 +216,11 @@ export default function GroupGradesPage() {
                 {studentsInGroup.length > 0 && criteria.length === 0 && (
                   <TableRow>
                       <TableCell colSpan={2} className="text-center h-24">
-                          No has definido criterios de evaluación. <Link href={`/groups/${groupId}/criteria`} className="text-primary underline">Defínelos aquí.</Link>
+                          No has definido criterios de evaluación para este parcial. <Link href={`/groups/${groupId}/criteria`} className="text-primary underline">Defínelos aquí.</Link>
                       </TableCell>
                   </TableRow>
                 )}
                 {studentsInGroup.length > 0 && criteria.length > 0 && studentsInGroup.map(student => {
-                  const studentObservations = allObservations[student.id] || [];
-                  const partialObservations = studentObservations.filter(o => o.partialId === activePartialId);
-                  const merits = partialObservations.filter(o => o.type === 'Mérito').length;
-                  const demerits = partialObservations.filter(o => o.type === 'Demérito').length;
-                  
                   return (
                   <TableRow key={student.id}>
                     <TableCell className="font-medium sticky left-0 bg-card z-10 flex items-center gap-2">
@@ -287,10 +280,6 @@ export default function GroupGradesPage() {
                     <TableCell className="text-center font-bold text-lg sticky right-0 bg-card z-10">
                       <div className="flex items-center justify-center gap-2">
                         <span>{`${(finalGrades[student.id] || 0).toFixed(0)}%`}</span>
-                        <div className="flex flex-col gap-1">
-                          {merits > 0 && <Badge className="bg-green-600 text-white text-xs h-4 w-6 justify-center p-0">+{merits}</Badge>}
-                          {demerits > 0 && <Badge variant="destructive" className="text-xs h-4 w-6 justify-center p-0">-{demerits}</Badge>}
-                        </div>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -304,3 +293,7 @@ export default function GroupGradesPage() {
     </div>
   );
 }
+
+    
+
+    

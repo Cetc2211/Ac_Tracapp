@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -20,7 +21,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, Download, FileText, Loader2, Wand2, User, Mail, Phone, Check, X, AlertTriangle, ListChecks, MessageSquare, BadgeInfo, Edit, Save } from 'lucide-react';
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { StudentObservation } from '@/lib/placeholder-data';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
@@ -53,7 +53,7 @@ type StudentReportData = {
         total: number;
     };
     criteriaDetails: { name: string; earned: number; weight: number; }[];
-    observations: StudentObservation[];
+    observations: [];
 };
 
 
@@ -102,7 +102,7 @@ const AtRiskStudentCard = ({ studentData }: { studentData: StudentReportData }) 
                     criteriaDetails: studentData.criteriaDetails
                 }],
                 attendance: studentData.attendance,
-                observations: studentData.observations.map(o => ({type: o.type, details: o.details})),
+                observations: studentData.observations,
             };
             const result = await generateAtRiskStudentRecommendation(input);
             setAiResponse(result);
@@ -208,23 +208,9 @@ const AtRiskStudentCard = ({ studentData }: { studentData: StudentReportData }) 
                     </div>
                      <div className="mt-6 space-y-4">
                         <h4 className="font-semibold flex items-center gap-2"><MessageSquare /> Observaciones en Bitácora</h4>
-                        {studentData.observations.length > 0 ? (
-                             <div className="p-3 border rounded-md text-sm space-y-3 max-h-40 overflow-y-auto">
-                                {studentData.observations.map(obs => (
-                                    <div key={obs.id} className="border-l-2 pl-2">
-                                        <div className="flex justify-between text-xs">
-                                            <span className="font-bold">{obs.type}</span>
-                                            <span className="text-muted-foreground">{format(new Date(obs.date), "dd MMM yyyy", { locale: es })}</span>
-                                        </div>
-                                        <p className="text-xs mt-1">{obs.details}</p>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="p-3 border rounded-md text-sm text-center text-muted-foreground">
-                                No hay observaciones registradas.
-                            </div>
-                        )}
+                        <div className="p-3 border rounded-md text-sm text-center text-muted-foreground">
+                            No hay observaciones registradas.
+                        </div>
                      </div>
 
                     {aiResponse && (
@@ -295,7 +281,6 @@ export default function AtRiskReportPage() {
       groups,
       calculateFinalGrade, 
       getStudentRiskLevel,
-      allObservations, 
       activePartialId,
   } = useData();
   const [reportData, setReportData] = useState<StudentReportData[]>([]);
@@ -315,10 +300,9 @@ export default function AtRiskReportPage() {
 
         const atRiskStudentsInGroup = group.students
             .map(student => {
-                const studentObservations = allObservations[student.id] || [];
-                const finalGrade = calculateFinalGrade(student.id, activePartialId, criteria, grades, participations, activities, activityRecords, studentObservations);
+                const finalGrade = calculateFinalGrade(student.id, activePartialId, criteria, grades, participations, activities, activityRecords);
                 const riskLevel = getStudentRiskLevel(finalGrade, attendance, student.id);
-                return { ...student, finalGrade, riskLevel, studentObservations };
+                return { ...student, finalGrade, riskLevel };
             })
             .filter(student => student.riskLevel.level === 'high' || student.riskLevel.level === 'medium');
 
@@ -352,8 +336,6 @@ export default function AtRiskReportPage() {
             }
         });
         
-        const partialObservations = student.studentObservations.filter(o => o.partialId === activePartialId);
-
         return {
           id: student.id,
           name: student.name,
@@ -366,14 +348,14 @@ export default function AtRiskReportPage() {
           finalGrade: student.finalGrade,
           attendance: attendanceStats,
           criteriaDetails,
-          observations: partialObservations,
+          observations: [],
         };
       });
 
       setReportData(data);
     }
     setIsLoading(false);
-  }, [group, allObservations, calculateFinalGrade, getStudentRiskLevel, activePartialId]);
+  }, [group, calculateFinalGrade, getStudentRiskLevel, activePartialId]);
 
 
   if (isLoading) {
@@ -445,3 +427,5 @@ export default function AtRiskReportPage() {
     </div>
   );
 }
+
+    

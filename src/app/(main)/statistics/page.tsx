@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -21,7 +22,7 @@ import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useData, loadFromLocalStorage } from '@/hooks/use-data';
-import type { Student, StudentObservation, EvaluationCriteria, Grades, ParticipationRecord, Activity, ActivityRecord, AttendanceRecord, PartialId } from '@/hooks/use-data';
+import type { Student, EvaluationCriteria, Grades, ParticipationRecord, Activity, ActivityRecord, AttendanceRecord, PartialId } from '@/hooks/use-data';
 
 
 type GroupStats = {
@@ -34,7 +35,7 @@ type GroupStats = {
 };
 
 type ActiveGroupStats = {
-  approvalRate: { approved: number; failed: number };
+  approvalRate: { approved: number; failed: number; };
   attendanceTotals: { present: number; absent: number; };
   observationStats: { observations: number, canalizations: number, followUps: number };
   riskDistribution: { low: number, medium: number, high: number };
@@ -66,7 +67,6 @@ export default function StatisticsPage() {
         attendance,
         activities,
         activityRecords,
-        allObservations,
         activePartialId,
     } = useData();
 
@@ -85,8 +85,7 @@ export default function StatisticsPage() {
             const groupActivityRecords = loadFromLocalStorage<ActivityRecord>(`activityRecords_${keySuffix}`, {});
 
             const finalGrades = group.students.map(s => {
-                const studentObservations = allObservations[s.id] || [];
-                return calculateFinalGrade(s.id, activePartialId, groupCriteria, groupGrades, groupParticipations, groupActivities, groupActivityRecords, studentObservations);
+                return calculateFinalGrade(s.id, activePartialId, groupCriteria, groupGrades, groupParticipations, groupActivities, groupActivityRecords);
             });
             const averageGrade = finalGrades.length > 0 ? finalGrades.reduce((a, b) => a + b, 0) / finalGrades.length : 0;
 
@@ -95,8 +94,7 @@ export default function StatisticsPage() {
             const riskLevels = { low: 0, medium: 0, high: 0 };
             
             group.students.forEach(student => {
-                const studentObservations = allObservations[student.id] || [];
-                const studentFinalGrade = calculateFinalGrade(student.id, activePartialId, groupCriteria, groupGrades, groupParticipations, groupActivities, groupActivityRecords, studentObservations);
+                const studentFinalGrade = calculateFinalGrade(student.id, activePartialId, groupCriteria, groupGrades, groupParticipations, groupActivities, groupActivityRecords);
                 const risk = getStudentRiskLevel(studentFinalGrade, groupAttendance, student.id);
                 riskLevels[risk.level]++;
                 
@@ -122,7 +120,7 @@ export default function StatisticsPage() {
             };
         });
 
-    }, [groups, calculateFinalGrade, getStudentRiskLevel, allObservations, activePartialId]);
+    }, [groups, calculateFinalGrade, getStudentRiskLevel, activePartialId]);
     
     useEffect(() => {
         setIsLoading(true);
@@ -131,7 +129,6 @@ export default function StatisticsPage() {
         if (activeGroup) {
             let approved = 0, failed = 0;
             let present = 0, absent = 0;
-            let observationCount = 0, canalizationCount = 0, followUpCount = 0;
             const studentGrades: {student: Student, grade: number}[] = [];
             const riskDistribution = { low: 0, medium: 0, high: 0 };
             const participationDistribution = [
@@ -139,18 +136,12 @@ export default function StatisticsPage() {
             ];
 
             for(const student of activeGroup.students) {
-                const studentObservations = allObservations[student.id] || [];
-                const finalGrade = calculateFinalGrade(student.id, activePartialId, criteria, grades, participations, activities, activityRecords, studentObservations);
+                const finalGrade = calculateFinalGrade(student.id, activePartialId, criteria, grades, participations, activities, activityRecords);
                 studentGrades.push({student, grade: finalGrade});
                 if(finalGrade >= 70) approved++; else failed++;
                 
                 const risk = getStudentRiskLevel(finalGrade, attendance, student.id);
                 riskDistribution[risk.level]++;
-                
-                const partialObservations = studentObservations.filter(o => o.partialId === activePartialId);
-                observationCount += partialObservations.length;
-                canalizationCount += partialObservations.filter(o => o.requiresCanalization).length;
-                followUpCount += partialObservations.filter(o => o.requiresFollowUp).length;
 
                 const totalParticipationClasses = Object.keys(participations).length;
                 if(totalParticipationClasses > 0) {
@@ -179,7 +170,7 @@ export default function StatisticsPage() {
             setActiveGroupStats({
                 approvalRate: { approved, failed },
                 attendanceTotals: { present, absent },
-                observationStats: { observations: observationCount, canalizations: canalizationCount, followUps: followUpCount },
+                observationStats: { observations: 0, canalizations: 0, followUps: 0 },
                 riskDistribution,
                 topStudents: studentGrades.slice(0,5).map(s => ({name: s.student.name, grade: parseFloat(s.grade.toFixed(1))})),
                 participationDistribution,
@@ -188,7 +179,7 @@ export default function StatisticsPage() {
             setActiveGroupStats(null);
         }
         setIsLoading(false);
-    }, [activeGroup, groups, criteria, grades, participations, attendance, activities, activityRecords, allObservations, calculateFinalGrade, getStudentRiskLevel, groupCalculations, activePartialId]);
+    }, [activeGroup, groups, criteria, grades, participations, attendance, activities, activityRecords, calculateFinalGrade, getStudentRiskLevel, groupCalculations, activePartialId]);
 
     const approvalData = useMemo(() => {
         if (!activeGroupStats) return [];
@@ -454,5 +445,7 @@ export default function StatisticsPage() {
     </div>
   );
 }
+
+    
 
     
