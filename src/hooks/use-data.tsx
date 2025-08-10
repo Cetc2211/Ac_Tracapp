@@ -230,6 +230,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         }
 
         setSettings(loadFromLocalStorage('appSettings', defaultSettings));
+        setDataVersion(v => v + 1); // Trigger initial data load for memos
     }, []);
     
     const loadPartialData = useCallback(() => {
@@ -452,15 +453,16 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const groupAverages = useMemo(() => {
         const averages: { [groupId: string]: number } = {};
         groups.forEach(group => {
-            const pCriteria = loadFromLocalStorage<EvaluationCriteria[]>(`criteria_${group.id}_${activePartialId}`, []);
+            const keySuffix = `${group.id}_${activePartialId}`;
+            const pCriteria = loadFromLocalStorage<EvaluationCriteria[]>(`criteria_${keySuffix}`, []);
             if (pCriteria.length === 0) {
                 averages[group.id] = 0;
                 return;
             }
-            const pGrades = loadFromLocalStorage<Grades>(`grades_${group.id}_${activePartialId}`, {});
-            const pParticipations = loadFromLocalStorage<ParticipationRecord>(`participations_${group.id}_${activePartialId}`, {});
-            const pActivities = loadFromLocalStorage<Activity[]>(`activities_${group.id}_${activePartialId}`, []);
-            const pActivityRecords = loadFromLocalStorage<ActivityRecord>(`activityRecords_${group.id}_${activePartialId}`, {});
+            const pGrades = loadFromLocalStorage<Grades>(`grades_${keySuffix}`, {});
+            const pParticipations = loadFromLocalStorage<ParticipationRecord>(`participations_${keySuffix}`, {});
+            const pActivities = loadFromLocalStorage<Activity[]>(`activities_${keySuffix}`, []);
+            const pActivityRecords = loadFromLocalStorage<ActivityRecord>(`activityRecords_${keySuffix}`, {});
             
             const groupGrades = group.students.map(s => {
                 return calculateFinalGrade(s.id, activePartialId, pCriteria, pGrades, pParticipations, pActivities, pActivityRecords);
@@ -470,7 +472,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             averages[group.id] = groupGrades.length > 0 ? total / groupGrades.length : 0;
         });
         return averages;
-    }, [groups, calculateFinalGrade, activePartialId]);
+    }, [groups, calculateFinalGrade, activePartialId, dataVersion]);
     
 
     const atRiskStudents: StudentWithRisk[] = useMemo(() => {
@@ -498,7 +500,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         });
 
         return Array.from(allAtRiskStudents.values());
-    }, [groups, activePartialId, calculateFinalGrade, getStudentRiskLevel]);
+    }, [groups, activePartialId, calculateFinalGrade, getStudentRiskLevel, dataVersion]);
     
     
     const overallAverageParticipation = useMemo(() => {
@@ -522,7 +524,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             });
         });
         return totalPossibleAttendance > 0 ? Math.round((totalPresents / totalPossibleAttendance) * 100) : 100;
-    }, [groups]);
+    }, [groups, dataVersion]);
 
 
     return (
