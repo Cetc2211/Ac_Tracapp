@@ -21,7 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import Image from 'next/image';
 import { Student } from '@/lib/placeholder-data';
-import { Search, Users, BookText, Library } from 'lucide-react';
+import { Search, Users, BookText, Library, PlusCircle } from 'lucide-react';
 import { ObservationDialog } from '@/components/observation-dialog';
 import { StudentObservationLogDialog } from '@/components/student-observation-log-dialog';
 import { useData } from '@/hooks/use-data';
@@ -29,7 +29,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { getPartialLabel } from '@/lib/utils';
 
-const StudentTable = ({ students, onOpenDialog, buttonText, buttonIcon }: { students: Student[], onOpenDialog: (student: Student) => void, buttonText: string, buttonIcon: React.ReactNode }) => {
+const StudentTable = ({ students, onOpenNewDialog, onOpenLogDialog }: { students: Student[], onOpenNewDialog: (student: Student) => void, onOpenLogDialog: (student: Student) => void }) => {
     if (students.length === 0) {
         return (
             <div className="text-center p-12 text-muted-foreground">
@@ -64,10 +64,14 @@ const StudentTable = ({ students, onOpenDialog, buttonText, buttonIcon }: { stud
                     </TableCell>
                     <TableCell className="font-medium">{student.name}</TableCell>
                     <TableCell>{student.id}</TableCell>
-                    <TableCell className="text-right">
-                        <Button variant="outline" size="sm" onClick={() => onOpenDialog(student)}>
-                            {buttonIcon}
-                            {buttonText}
+                    <TableCell className="text-right space-x-2">
+                        <Button variant="outline" size="sm" onClick={() => onOpenLogDialog(student)}>
+                            <Library className="mr-2 h-4 w-4" />
+                            Ver Bitácora
+                        </Button>
+                         <Button size="sm" onClick={() => onOpenNewDialog(student)}>
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Añadir Observación
                         </Button>
                     </TableCell>
                 </TableRow>
@@ -180,17 +184,15 @@ export default function ObservationsPage() {
                     <TabsContent value="all">
                         <StudentTable 
                           students={filteredAllStudents} 
-                          onOpenDialog={handleOpenLogDialog}
-                          buttonText='Ver / Registrar'
-                          buttonIcon={<BookText className="mr-2 h-4 w-4" />}
+                          onOpenNewDialog={handleOpenNewObservationDialog}
+                          onOpenLogDialog={handleOpenLogDialog}
                         />
                     </TabsContent>
                     <TabsContent value="with-observations">
                          <StudentTable 
                           students={filteredStudentsWithObservations} 
-                          onOpenDialog={handleOpenLogDialog}
-                          buttonText='Ver Bitácora'
-                          buttonIcon={<Library className="mr-2 h-4 w-4" />}
+                          onOpenNewDialog={handleOpenNewObservationDialog}
+                          onOpenLogDialog={handleOpenLogDialog}
                         />
                     </TabsContent>
                   </Tabs>
@@ -208,5 +210,3 @@ export default function ObservationsPage() {
     </div>
   );
 }
-
-    
