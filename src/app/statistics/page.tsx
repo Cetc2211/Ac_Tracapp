@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import {
@@ -21,8 +20,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useData } from '@/hooks/use-data';
-import type { Student } from '@/hooks/use-data';
+import { useData, loadFromLocalStorage } from '@/hooks/use-data';
+import type { Student, EvaluationCriteria, Grades, ParticipationRecord, Activity, ActivityRecord, AttendanceRecord, PartialId } from '@/hooks/use-data';
 
 
 type GroupStats = {
@@ -61,10 +60,9 @@ export default function StatisticsPage() {
         calculateFinalGrade,
         getStudentRiskLevel,
         partialData,
-        atRiskStudents,
-        groupAverages
+        activePartialId,
     } = useData();
-    const { attendance, participations } = partialData;
+    const { criteria, grades, participations, attendance, activities, activityRecords } = partialData;
 
     const [stats, setStats] = useState<GroupStats[]>([]);
     const [activeGroupStats, setActiveGroupStats] = useState<ActiveGroupStats | null>(null);
@@ -72,17 +70,29 @@ export default function StatisticsPage() {
 
     const groupCalculations = useMemo(() => {
         return groups.map(group => {
-            const studentCount = group.students.length;
-            const averageGrade = groupAverages[group.id] || 0;
-            
-            const groupAtRisk = atRiskStudents.filter(s => group.students.some(gs => gs.id === s.id));
-            const riskLevels = { low: studentCount - groupAtRisk.length, medium: 0, high: 0 };
-            groupAtRisk.forEach(s => riskLevels[s.calculatedRisk.level]++);
-            
+            const keySuffix = `${group.id}_${activePartialId}`;
+            const groupCriteria = loadFromLocalStorage<EvaluationCriteria[]>(`criteria_${keySuffix}`, []);
+            const groupGrades = loadFromLocalStorage<Grades>(`grades_${keySuffix}`, {});
+            const groupParticipations = loadFromLocalStorage<ParticipationRecord>(`participations_${keySuffix}`, {});
+            const groupAttendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${keySuffix}`, {});
+            const groupActivities = loadFromLocalStorage<Activity[]>(`activities_${keySuffix}`, []);
+            const groupActivityRecords = loadFromLocalStorage<ActivityRecord>(`activityRecords_${keySuffix}`, {});
+
+            const finalGrades = group.students.map(s => {
+                return calculateFinalGrade(s.id, activePartialId, groupCriteria, groupGrades, groupParticipations, groupActivities, groupActivityRecords);
+            });
+            const averageGrade = finalGrades.length > 0 ? finalGrades.reduce((a, b) => a + b, 0) / finalGrades.length : 0;
+
             let totalAttendances = 0;
             let presentAttendances = 0;
+            const riskLevels = { low: 0, medium: 0, high: 0 };
+            
             group.students.forEach(student => {
-                 Object.values(attendance).forEach(dailyRecord => {
+                const studentFinalGrade = calculateFinalGrade(student.id, activePartialId, groupCriteria, groupGrades, groupParticipations, groupActivities, groupActivityRecords);
+                const risk = getStudentRiskLevel(studentFinalGrade, groupAttendance, student.id);
+                riskLevels[risk.level]++;
+                
+                Object.values(groupAttendance).forEach(dailyRecord => {
                     if (dailyRecord.hasOwnProperty(student.id)) {
                         totalAttendances++;
                         if (dailyRecord[student.id]) {
@@ -91,19 +101,20 @@ export default function StatisticsPage() {
                     }
                 });
             });
+
             const attendanceRate = totalAttendances > 0 ? (presentAttendances / totalAttendances) * 100 : 100;
 
             return {
                 id: group.id,
                 subject: group.subject,
-                studentCount,
-                averageGrade,
-                attendanceRate,
+                studentCount: group.students.length,
+                averageGrade: parseFloat(averageGrade.toFixed(1)),
+                attendanceRate: parseFloat(attendanceRate.toFixed(1)),
                 riskLevels
             };
         });
 
-    }, [groups, groupAverages, atRiskStudents, attendance]);
+    }, [groups, calculateFinalGrade, getStudentRiskLevel, activePartialId]);
     
     useEffect(() => {
         setIsLoading(true);
@@ -119,7 +130,7 @@ export default function StatisticsPage() {
             ];
 
             for(const student of activeGroup.students) {
-                const finalGrade = calculateFinalGrade(student.id);
+                const finalGrade = calculateFinalGrade(student.id, activePartialId, criteria, grades, participations, activities, activityRecords);
                 studentGrades.push({student, grade: finalGrade});
                 if(finalGrade >= 70) approved++; else failed++;
                 
@@ -161,7 +172,7 @@ export default function StatisticsPage() {
             setActiveGroupStats(null);
         }
         setIsLoading(false);
-    }, [activeGroup, groups, partialData, calculateFinalGrade, getStudentRiskLevel, groupCalculations]);
+    }, [activeGroup, groups, criteria, grades, participations, attendance, activities, activityRecords, calculateFinalGrade, getStudentRiskLevel, groupCalculations, activePartialId]);
 
     const approvalData = useMemo(() => {
         if (!activeGroupStats) return [];

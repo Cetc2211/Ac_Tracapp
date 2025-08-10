@@ -1,5 +1,4 @@
 
-
 'use client';
 import {
   Card,
@@ -85,7 +84,7 @@ export default function GroupCriteriaPage() {
         return;
     }
 
-    const totalWeight = criteria.reduce((sum, c) => sum + c.weight, 0) + weight;
+    const totalWeight = (criteria || []).reduce((sum, c) => sum + c.weight, 0) + weight;
     if (totalWeight > 100) {
         toast({
             variant: 'destructive',
@@ -102,7 +101,7 @@ export default function GroupCriteriaPage() {
         expectedValue: isSelectedCriterionAutomated ? 0 : expectedValue,
     };
 
-    setCriteria([...criteria, newCriterion]);
+    setCriteria([...(criteria || []), newCriterion]);
     setSelectedName('');
     setCustomName('');
     setSelectedWeight('');
@@ -112,7 +111,7 @@ export default function GroupCriteriaPage() {
   };
   
   const handleRemoveCriterion = (criterionId: string) => {
-    const newCriteria = criteria.filter(c => c.id !== criterionId);
+    const newCriteria = (criteria || []).filter(c => c.id !== criterionId);
     setCriteria(newCriteria);
     toast({ title: 'Criterio Eliminado', description: 'El criterio de evaluación ha sido eliminado.' });
   };
@@ -138,7 +137,7 @@ export default function GroupCriteriaPage() {
         return;
     }
 
-    const otherCriteriaWeight = criteria
+    const otherCriteriaWeight = (criteria || [])
       .filter(c => c.id !== editingCriterion.id)
       .reduce((sum, c) => sum + c.weight, 0);
 
@@ -157,7 +156,7 @@ export default function GroupCriteriaPage() {
         updatedCriterion.expectedValue = 0;
     }
 
-    const updatedCriteria = criteria.map(c => c.id === updatedCriterion.id ? updatedCriterion : c);
+    const updatedCriteria = (criteria || []).map(c => c.id === updatedCriterion.id ? updatedCriterion : c);
     setCriteria(updatedCriteria);
 
     setIsEditDialogOpen(false);
@@ -167,6 +166,7 @@ export default function GroupCriteriaPage() {
 
 
   const totalWeight = useMemo(() => {
+    if (!criteria) return 0;
     return criteria.reduce((sum, c) => sum + c.weight, 0);
   }, [criteria]);
 
@@ -273,14 +273,14 @@ export default function GroupCriteriaPage() {
           
           <h3 className="text-lg font-medium mb-2 mt-6">Lista de Criterios</h3>
           <div className="space-y-2">
-            {criteria.map(criterion => (
+            {criteria && criteria.map(criterion => (
                 <div key={criterion.id} className="flex items-center justify-between p-3 bg-muted rounded-md">
                     <div>
                         <span className="font-medium">{criterion.name}</span>
                         <p className="text-xs text-muted-foreground">
                           {criterion.name === 'Portafolio' || criterion.name === 'Actividades'
-                            ? `${activities.length} entregas esperadas` : 
-                            criterion.name === 'Participación' ? `${Object.keys(participations).length} clases registradas`
+                            ? `${(activities || []).length} entregas esperadas` : 
+                            criterion.name === 'Participación' ? `${Object.keys(participations || {}).length} clases registradas`
                             : `${criterion.expectedValue} es el valor esperado`
                           }
                         </p>
@@ -298,13 +298,13 @@ export default function GroupCriteriaPage() {
                     </div>
                 </div>
             ))}
-            {criteria.length === 0 && (
+            {(!criteria || criteria.length === 0) && (
                 <p className="text-sm text-center text-muted-foreground py-8">No has agregado criterios de evaluación.</p>
             )}
           </div>
         </CardContent>
 
-        {(totalWeight > 0 || criteria.length > 0) && (
+        {(totalWeight > 0 || (criteria && criteria.length > 0)) && (
             <CardHeader className="border-t pt-4 mt-4">
                 <div className="flex justify-end">
                     {totalWeight > 0 && (
