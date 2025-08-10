@@ -53,17 +53,6 @@ const PIE_CHART_COLORS = {
     late: "hsl(var(--chart-4))",
 };
 
-const loadFromLocalStorage = <T,>(key: string, defaultValue: T): T => {
-  if (typeof window === 'undefined') return defaultValue;
-  try {
-    const item = window.localStorage.getItem(key);
-    return item ? JSON.parse(item) : defaultValue;
-  } catch (error) {
-    console.error(`Error reading from localStorage key “${key}”:`, error);
-    return defaultValue;
-  }
-};
-
 
 export default function StatisticsPage() {
     const { 
@@ -299,29 +288,40 @@ export default function StatisticsPage() {
                     </Card>
                     <Card>
                         <CardHeader>
-                        <CardTitle>Distribución de Riesgo por Grupo</CardTitle>
-                        <CardDescription>Comparativa del número de estudiantes en cada nivel de riesgo por grupo.</CardDescription>
+                            <CardTitle>Distribución de Riesgo por Grupo</CardTitle>
+                            <CardDescription>Proporción de estudiantes en cada nivel de riesgo por grupo.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                           <ChartContainer config={{}} className="min-h-[300px] w-full">
-                                <BarChart data={stats} layout="vertical" stackOffset="expand">
-                                    <CartesianGrid horizontal={false} />
-                                    <YAxis 
-                                        type="category"
-                                        dataKey="subject"
-                                        tickLine={false}
-                                        axisLine={false}
-                                        tickMargin={10}
-                                        tickFormatter={(value) => value.slice(0,15)}
-                                    />
-                                    <XAxis type="number" hide={true} />
-                                    <ChartTooltip content={<ChartTooltipContent />} />
-                                    <ChartLegend content={<ChartLegendContent />} />
-                                    <Bar dataKey="riskLevels.low" name="Bajo" stackId="a" fill={PIE_CHART_COLORS.low} radius={[4, 0, 0, 4]}/>
-                                    <Bar dataKey="riskLevels.medium" name="Medio" stackId="a" fill={PIE_CHART_COLORS.medium} />
-                                    <Bar dataKey="riskLevels.high" name="Alto" stackId="a" fill={PIE_CHART_COLORS.high} radius={[0, 4, 4, 0]} />
-                                </BarChart>
-                           </ChartContainer>
+                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {stats.map((groupStats) => {
+                                    const pieData = [
+                                        { name: 'Bajo', value: groupStats.riskLevels.low, fill: PIE_CHART_COLORS.low },
+                                        { name: 'Medio', value: groupStats.riskLevels.medium, fill: PIE_CHART_COLORS.medium },
+                                        { name: 'Alto', value: groupStats.riskLevels.high, fill: PIE_CHART_COLORS.high },
+                                    ].filter(item => item.value > 0);
+                                    
+                                    if (groupStats.studentCount === 0) return null;
+
+                                    return (
+                                        <div key={groupStats.id} className="text-center">
+                                            <h4 className="font-semibold">{groupStats.subject}</h4>
+                                            <ChartContainer config={{}} className="min-h-[200px] w-full">
+                                                <PieChart>
+                                                    <ChartTooltip content={<ChartTooltipContent nameKey="name" hideLabel />} />
+                                                    <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={30} outerRadius={50} paddingAngle={2} startAngle={90} endAngle={450}>
+                                                        {pieData.map((entry) => ( <Cell key={entry.name} fill={entry.fill} /> ))}
+                                                    </Pie>
+                                                </PieChart>
+                                            </ChartContainer>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                             <div className="flex justify-center items-center gap-4 mt-4 text-xs">
+                                <div className="flex items-center gap-1.5"><div className="h-2 w-2 rounded-full" style={{backgroundColor: PIE_CHART_COLORS.low}}></div><span>Bajo</span></div>
+                                <div className="flex items-center gap-1.5"><div className="h-2 w-2 rounded-full" style={{backgroundColor: PIE_CHART_COLORS.medium}}></div><span>Medio</span></div>
+                                <div className="flex items-center gap-1.5"><div className="h-2 w-2 rounded-full" style={{backgroundColor: PIE_CHART_COLORS.high}}></div><span>Alto</span></div>
+                            </div>
                         </CardContent>
                     </Card>
                 </div>
@@ -451,7 +451,3 @@ export default function StatisticsPage() {
     </div>
   );
 }
-
-    
-
-    
