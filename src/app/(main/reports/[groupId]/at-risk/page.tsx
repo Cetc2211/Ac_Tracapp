@@ -20,9 +20,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, Download, FileText, Loader2, Wand2, User, Mail, Phone, Check, X, AlertTriangle, ListChecks, MessageSquare, BadgeInfo, Edit, Save } from 'lucide-react';
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import { StudentObservation } from '@/lib/placeholder-data';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -33,6 +30,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import type { StudentWithRisk, CriteriaDetail } from '@/hooks/use-data';
 
 
 type StudentReportData = {
@@ -50,8 +48,8 @@ type StudentReportData = {
         a: number;
         total: number;
     };
-    criteriaDetails: { name: string; earned: number; weight: number; }[];
-    observations: StudentObservation[];
+    criteriaDetails: CriteriaDetail[];
+    observations: [];
 };
 
 
@@ -100,7 +98,7 @@ const AtRiskStudentCard = ({ studentData }: { studentData: StudentReportData }) 
                     criteriaDetails: studentData.criteriaDetails
                 }],
                 attendance: studentData.attendance,
-                observations: studentData.observations.map(o => ({type: o.type, details: o.details})),
+                observations: [],
             };
             const result = await generateAtRiskStudentRecommendation(input);
             setAiResponse(result);
@@ -206,23 +204,9 @@ const AtRiskStudentCard = ({ studentData }: { studentData: StudentReportData }) 
                     </div>
                      <div className="mt-6 space-y-4">
                         <h4 className="font-semibold flex items-center gap-2"><MessageSquare /> Observaciones en Bitácora</h4>
-                        {studentData.observations.length > 0 ? (
-                             <div className="p-3 border rounded-md text-sm space-y-3 max-h-40 overflow-y-auto">
-                                {studentData.observations.map(obs => (
-                                    <div key={obs.id} className="border-l-2 pl-2">
-                                        <div className="flex justify-between text-xs">
-                                            <span className="font-bold">{obs.type}</span>
-                                            <span className="text-muted-foreground">{format(new Date(obs.date), "dd MMM yyyy", { locale: es })}</span>
-                                        </div>
-                                        <p className="text-xs mt-1">{obs.details}</p>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="p-3 border rounded-md text-sm text-center text-muted-foreground">
-                                No hay observaciones registradas.
-                            </div>
-                        )}
+                        <div className="p-3 border rounded-md text-sm text-center text-muted-foreground">
+                            No hay observaciones registradas.
+                        </div>
                      </div>
 
                     {aiResponse && (
@@ -290,63 +274,32 @@ export default function AtRiskReportPage() {
   const { 
       activeGroup,
       atRiskStudents, 
-      calculateFinalGrade, 
-      allObservations, 
-      criteria,
-      grades,
-      participations,
-      activities,
-      activityRecords,
-      attendance,
+      calculateDetailedFinalGrade, 
+      partialData
   } = useData();
+  const { criteria, grades, participations, activities, activityRecords, attendance } = partialData;
   const [reportData, setReportData] = useState<StudentReportData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
-  const getStudentDetails = useCallback((studentId: string) => {
-        const studentObservations = allObservations[studentId] || [];
-
-        const finalGrade = calculateFinalGrade(studentId, criteria, grades, participations, activities, activityRecords, studentObservations);
-
-        const criteriaDetails: StudentReportData['criteriaDetails'] = criteria.map(criterion => {
-            let performanceRatio = 0;
-            if (criterion.name === 'Actividades' || criterion.name === 'Portafolio') {
-                const totalActivities = activities.length;
-                if(totalActivities > 0) {
-                    const deliveredActivities = Object.values(activityRecords[studentId] || {}).filter(Boolean).length;
-                    performanceRatio = deliveredActivities / totalActivities;
-                }
-            } else if (criterion.name === 'Participación') {
-                const totalParticipations = Object.keys(participations).length;
-                if(totalParticipations > 0) {
-                    const studentParticipations = Object.values(participations).filter(p => p[studentId]).length;
-                    performanceRatio = studentParticipations / totalParticipations;
-                }
-            } else {
-                performanceRatio = (criterion.expectedValue > 0) ? ((grades[studentId]?.[criterion.id]?.delivered ?? 0) / criterion.expectedValue) : 0;
-            }
-            const earned = performanceRatio * criterion.weight;
-            return { name: criterion.name, earned, weight: criterion.weight };
-        });
-
-        const attendanceStats = { p: 0, a: 0, total: 0 };
-        Object.keys(attendance).forEach(date => {
-            if (attendance[date]?.[studentId] !== undefined) {
-                attendanceStats.total++;
-                if (attendance[date][studentId]) attendanceStats.p++; else attendanceStats.a++;
-            }
-        });
-        
-        return { finalGrade, attendance: attendanceStats, criteriaDetails, observations: studentObservations };
-
-  }, [allObservations, calculateFinalGrade, criteria, grades, participations, activities, activityRecords, attendance]);
-
+  
+  const atRiskStudentsInGroup = useMemo(() => {
+    if (!activeGroup) return [];
+    const studentIdsInGroup = new Set(activeGroup.students.map(s => s.id));
+    return atRiskStudents.filter(s => studentIdsInGroup.has(s.id));
+  }, [activeGroup, atRiskStudents]);
 
   useEffect(() => {
-    if (atRiskStudents.length > 0) {
-      const data = atRiskStudents
+    if (activeGroup && atRiskStudentsInGroup.length > 0) {
+      const data = atRiskStudentsInGroup
         .map(student => {
-            const details = getStudentDetails(student.id);
-            if (!details) return null;
+            const {finalGrade, criteriaDetails} = calculateDetailedFinalGrade(student.id);
+
+            const attendanceStats = { p: 0, a: 0, total: 0 };
+            Object.keys(attendance).forEach(date => {
+                if (attendance[date]?.[student.id] !== undefined) {
+                    attendanceStats.total++;
+                    if (attendance[date][student.id]) attendanceStats.p++; else attendanceStats.a++;
+                }
+            });
             
             return {
                 id: student.id,
@@ -357,18 +310,20 @@ export default function AtRiskReportPage() {
                 tutorPhone: student.tutorPhone,
                 riskLevel: student.calculatedRisk.level,
                 riskReason: student.calculatedRisk.reason,
-                finalGrade: details.finalGrade,
-                attendance: details.attendance,
-                criteriaDetails: details.criteriaDetails,
-                observations: details.observations,
+                finalGrade: finalGrade,
+                attendance: attendanceStats,
+                criteriaDetails: criteriaDetails,
+                observations: [],
             };
         })
         .filter((item): item is StudentReportData => item !== null);
       
       setReportData(data);
+    } else {
+        setReportData([]);
     }
     setIsLoading(false);
-  }, [atRiskStudents, getStudentDetails]);
+  }, [atRiskStudentsInGroup, activeGroup, calculateDetailedFinalGrade]);
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /> <span className="ml-2">Cargando informe...</span></div>;
@@ -432,7 +387,7 @@ export default function AtRiskReportPage() {
                 <CardContent className="p-12 text-center">
                      <Check className="h-16 w-16 mx-auto text-green-500 bg-green-100 rounded-full p-2" />
                      <h2 className="text-2xl font-bold mt-4">¡Todo en orden!</h2>
-                     <p className="text-muted-foreground mt-2">No se han identificado estudiantes en riesgo en este grupo.</p>
+                     <p className="text-muted-foreground mt-2">No se han identificado estudiantes en riesgo en este grupo para el parcial actual.</p>
                 </CardContent>
             </Card>
         )}

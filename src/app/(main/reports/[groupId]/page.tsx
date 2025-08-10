@@ -15,7 +15,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, Download, CheckCircle, XCircle, TrendingUp, BarChart, Users, Eye, AlertTriangle, Loader2 } from 'lucide-react';
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { StudentObservation } from '@/lib/placeholder-data';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
@@ -31,11 +30,6 @@ type ReportSummary = {
     groupAverage: number;
     attendanceRate: number;
     participationRate: number;
-    studentsWithObservations: number;
-    canalizedCount: number;
-    followUpCount: number;
-    improvedCount: number;
-    stillInObservationCount: number;
     highRiskCount: number;
     mediumRiskCount: number;
 }
@@ -45,17 +39,13 @@ export default function GroupReportPage() {
   const groupId = params.groupId as string;
   const { 
       groups,
-      allObservations,
-      allAttendances,
-      allParticipations,
-      allGrades,
-      allCriteria,
-      allActivities,
-      allActivityRecords,
       calculateFinalGrade,
       getStudentRiskLevel,
-      settings
+      settings,
+      partialData,
+      atRiskStudents,
   } = useData();
+  const { attendance, participations } = partialData;
   
   const [summary, setSummary] = useState<ReportSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -77,68 +67,43 @@ export default function GroupReportPage() {
 
     setIsLoading(true);
     try {
-      const criteria = allCriteria[`criteria_${group.id}`] || [];
-      const grades = allGrades[group.id] || {};
-      const participations = allParticipations[group.id] || {};
-      const attendance = allAttendances[group.id] || {};
-      const activities = allActivities[group.id] || [];
-      const activityRecords = allActivityRecords[group.id] || {};
-      const observations = allObservations;
-
+      const studentCount = group.students.length;
       let approved = 0;
-      let studentsWithObservations = 0;
-      let canalizedStudents = 0;
-      let followUpStudents = 0;
-      let improvedStudents = 0;
-      let stillInObservationStudents = 0;
       let totalGroupGrade = 0;
       let totalPossibleAttendance = 0;
       let totalPresent = 0;
       let totalParticipations = 0;
       let totalParticipationOpportunities = 0;
-      let highRiskStudents = 0;
-      let mediumRiskStudents = 0;
 
       group.students.forEach(student => {
-        const studentObservations: StudentObservation[] = observations[student.id] || [];
-        const finalGrade = calculateFinalGrade(student.id, criteria, grades, participations, activities, activityRecords, studentObservations);
+        const finalGrade = calculateFinalGrade(student.id);
+        
         totalGroupGrade += finalGrade;
         if (finalGrade >= 70) approved++;
 
-        const riskLevel = getStudentRiskLevel(finalGrade, attendance, student.id);
-        if (riskLevel.level === 'high') highRiskStudents++;
-        if (riskLevel.level === 'medium') mediumRiskStudents++;
-        
-        if(studentObservations.length > 0) {
-            studentsWithObservations++;
-            if(studentObservations.some(o => o.requiresCanalization)) canalizedStudents++;
-            if(studentObservations.some(o => o.requiresFollowUp)) {
-                followUpStudents++;
-                const followUpCases = studentObservations.filter(o => o.requiresFollowUp);
-                if (followUpCases.some(c => c.isClosed)) {
-                    improvedStudents++;
-                } else {
-                    stillInObservationStudents++;
-                }
-            }
-        }
-        
         Object.keys(attendance).forEach(date => {
             if (attendance[date]?.[student.id] !== undefined) {
                 totalPossibleAttendance++;
                 if(attendance[date][student.id]) totalPresent++;
             }
         });
-        
-        Object.keys(participations).forEach(date => {
-            if (Object.prototype.hasOwnProperty.call(participations[date], student.id)) {
-                totalParticipationOpportunities++;
-                if (participations[date]?.[student.id]) totalParticipations++;
-            }
-        })
       });
+
+      const participationDates = Object.keys(participations);
+      if (participationDates.length > 0 && studentCount > 0) {
+          totalParticipations = group.students.reduce((sum, student) => {
+              return sum + participationDates.reduce((studentSum, date) => {
+                  return studentSum + (participations[date]?.[student.id] ? 1 : 0);
+              }, 0);
+          }, 0);
+           totalParticipationOpportunities = group.students.reduce((sum, student) => {
+                return sum + participationDates.filter(date => Object.prototype.hasOwnProperty.call(participations[date], student.id)).length;
+            }, 0);
+      }
       
-      const studentCount = group.students.length;
+      const highRiskCount = atRiskStudents.filter(s => s.calculatedRisk.level === 'high' && group.students.some(gs => gs.id === s.id)).length;
+      const mediumRiskCount = atRiskStudents.filter(s => s.calculatedRisk.level === 'medium' && group.students.some(gs => gs.id === s.id)).length;
+      
       setSummary({
           totalStudents: studentCount,
           approvedCount: approved,
@@ -146,13 +111,8 @@ export default function GroupReportPage() {
           groupAverage: studentCount > 0 ? totalGroupGrade / studentCount : 0,
           attendanceRate: totalPossibleAttendance > 0 ? (totalPresent / totalPossibleAttendance) * 100 : 0,
           participationRate: totalParticipationOpportunities > 0 ? (totalParticipations / totalParticipationOpportunities) * 100 : 0,
-          studentsWithObservations: studentsWithObservations,
-          canalizedCount: canalizedStudents,
-          followUpCount: followUpStudents,
-          improvedCount: improvedStudents,
-          stillInObservationCount: stillInObservationStudents,
-          highRiskCount: highRiskStudents,
-          mediumRiskCount: mediumRiskStudents,
+          highRiskCount: highRiskCount,
+          mediumRiskCount: mediumRiskCount,
       });
 
     } catch (e) {
@@ -160,7 +120,7 @@ export default function GroupReportPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [group, calculateFinalGrade, getStudentRiskLevel, allCriteria, allGrades, allParticipations, allAttendances, allActivities, allActivityRecords, allObservations]);
+  }, [group, calculateFinalGrade, getStudentRiskLevel, partialData, atRiskStudents]);
 
   const handleDownloadPdf = () => {
     const input = reportRef.current;
@@ -296,23 +256,10 @@ export default function GroupReportPage() {
                     </p>
                 )}
 
-                {summary.studentsWithObservations > 0 && (
-                  <p>
-                    En cuanto al seguimiento, se han registrado observaciones en la bitácora para <span className="font-bold text-foreground">{summary.studentsWithObservations} estudiante(s)</span>.
-                    {summary.canalizedCount > 0 && ` De estos, ${summary.canalizedCount} fueron canalizados para atención especial.`}
-                    {summary.followUpCount > 0 && ` Se ha marcado que ${summary.followUpCount} estudiante(s) requieren seguimiento docente.`}
-                    {summary.followUpCount > 0 && (
-                      <>
-                        {` De ellos, ${summary.improvedCount} han mostrado mejoría y ${summary.stillInObservationCount} continúan en observación.`}
-                      </>
-                    )}
-                  </p>
-                )}
-                {summary.studentsWithObservations === 0 && (
-                     <p>
-                        No se han registrado observaciones, canalizaciones o seguimientos para ningún estudiante de este grupo durante el periodo.
-                    </p>
-                )}
+                <p>
+                    No se han registrado observaciones, canalizaciones o seguimientos para ningún estudiante de este grupo durante el periodo.
+                </p>
+
             </div>
 
         </section>
