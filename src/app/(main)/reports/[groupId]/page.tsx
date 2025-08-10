@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import {
@@ -116,8 +115,10 @@ export default function GroupReportPage() {
 
       const participationDates = Object.keys(participations);
       if (participationDates.length > 0 && studentCount > 0) {
-          totalParticipations = participationDates.reduce((sum, date) => {
-              return sum + Object.values(participations[date]).filter(Boolean).length;
+          totalParticipations = group.students.reduce((sum, student) => {
+              return sum + participationDates.reduce((studentSum, date) => {
+                  return studentSum + (participations[date]?.[student.id] ? 1 : 0);
+              }, 0);
           }, 0);
       }
       const totalParticipationOpportunities = participationDates.length * studentCount;
@@ -314,7 +315,3 @@ export default function GroupReportPage() {
     </div>
   );
 }
-
-
-
-    

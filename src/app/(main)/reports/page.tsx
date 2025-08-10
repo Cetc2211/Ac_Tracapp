@@ -32,7 +32,7 @@ import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { useData, loadFromLocalStorage } from '@/hooks/use-data';
-import type { EvaluationCriteria } from '@/hooks/use-data';
+import type { EvaluationCriteria, Grades, ParticipationRecord, Activity, ActivityRecord } from '@/hooks/use-data';
 
 
 export default function ReportsPage() {
@@ -50,10 +50,10 @@ export default function ReportsPage() {
 
     const keySuffix = `${activeGroup.id}_${activePartialId}`;
     const pCriteria = loadFromLocalStorage<EvaluationCriteria[]>(`criteria_${keySuffix}`, []);
-    const pGrades = loadFromLocalStorage(`grades_${keySuffix}`, {});
-    const pParticipations = loadFromLocalStorage(`participations_${keySuffix}`, {});
-    const pActivities = loadFromLocalStorage(`activities_${keySuffix}`, []);
-    const pActivityRecords = loadFromLocalStorage(`activityRecords_${keySuffix}`, {});
+    const pGrades = loadFromLocalStorage<Grades>(`grades_${keySuffix}`, {});
+    const pParticipations = loadFromLocalStorage<ParticipationRecord>(`participations_${keySuffix}`, {});
+    const pActivities = loadFromLocalStorage<Activity[]>(`activities_${keySuffix}`, []);
+    const pActivityRecords = loadFromLocalStorage<ActivityRecord>(`activityRecords_${keySuffix}`, {});
     const pAttendance = loadFromLocalStorage(`attendance_${keySuffix}`, {});
 
     const studentCount = activeGroup.students.length;
@@ -96,10 +96,10 @@ export default function ReportsPage() {
     
     const keySuffix = `${activeGroup.id}_${activePartialId}`;
     const pCriteria = loadFromLocalStorage<EvaluationCriteria[]>(`criteria_${keySuffix}`, []);
-    const pGrades = loadFromLocalStorage(`grades_${keySuffix}`, {});
-    const pParticipations = loadFromLocalStorage(`participations_${keySuffix}`, {});
-    const pActivities = loadFromLocalStorage(`activities_${keySuffix}`, []);
-    const pActivityRecords = loadFromLocalStorage(`activityRecords_${keySuffix}`, {});
+    const pGrades = loadFromLocalStorage<Grades>(`grades_${keySuffix}`, {});
+    const pParticipations = loadFromLocalStorage<ParticipationRecord>(`participations_${keySuffix}`, {});
+    const pActivities = loadFromLocalStorage<Activity[]>(`activities_${keySuffix}`, []);
+    const pActivityRecords = loadFromLocalStorage<ActivityRecord>(`activityRecords_${keySuffix}`, {});
 
     let csvContent = "data:text/csv;charset=utf-8,";
     const headers = ["ID Estudiante", "Nombre", ...pCriteria.map(c => `${c.name} (${c.weight}%)`), "Calificacion Final"];
@@ -298,5 +298,3 @@ export default function ReportsPage() {
     </div>
   );
 }
-
-    

@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import {
@@ -20,7 +19,7 @@ import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, Download, FileText, Loader2, Wand2, User, Mail, Phone, Check, X, AlertTriangle, ListChecks, MessageSquare, BadgeInfo, Edit, Save } from 'lucide-react';
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
@@ -288,6 +287,29 @@ export default function AtRiskReportPage() {
 
   const group = useMemo(() => groups.find(g => g.id === groupId), [groups, groupId]);
 
+  const getCriteriaDetails = useCallback((studentId: string, criteria: EvaluationCriteria[], grades: Grades, participations: ParticipationRecord, activities: Activity[], activityRecords: ActivityRecord) => {
+    return criteria.map(criterion => {
+        let performanceRatio = 0;
+        if (criterion.name === 'Actividades' || criterion.name === 'Portafolio') {
+            const totalActivities = activities.length;
+            if(totalActivities > 0) {
+                const deliveredActivities = Object.values(activityRecords[studentId] || {}).filter(Boolean).length;
+                performanceRatio = deliveredActivities / totalActivities;
+            }
+        } else if (criterion.name === 'Participación') {
+            const totalParticipations = Object.keys(participations).length;
+            if(totalParticipations > 0) {
+                const studentParticipations = Object.values(participations).filter(p => p[studentId]).length;
+                performanceRatio = studentParticipations / totalParticipations;
+            }
+        } else {
+            performanceRatio = (criterion.expectedValue > 0) ? ((grades[studentId]?.[criterion.id]?.delivered ?? 0) / criterion.expectedValue) : 0;
+        }
+        const earned = performanceRatio * criterion.weight;
+        return { name: criterion.name, earned, weight: criterion.weight };
+    });
+  }, []);
+
   useEffect(() => {
     if (group) {
         const keySuffix = `${group.id}_${activePartialId}`;
@@ -307,26 +329,7 @@ export default function AtRiskReportPage() {
             .filter(student => student.riskLevel.level === 'high' || student.riskLevel.level === 'medium');
 
       const data = atRiskStudentsInGroup.map(student => {
-        const criteriaDetails: StudentReportData['criteriaDetails'] = criteria.map(criterion => {
-          let performanceRatio = 0;
-            if (criterion.name === 'Actividades' || criterion.name === 'Portafolio') {
-                const totalActivities = activities.length;
-                if(totalActivities > 0) {
-                    const deliveredActivities = Object.values(activityRecords[student.id] || {}).filter(Boolean).length;
-                    performanceRatio = deliveredActivities / totalActivities;
-                }
-            } else if (criterion.name === 'Participación') {
-                const totalParticipations = Object.keys(participations).length;
-                if(totalParticipations > 0) {
-                    const studentParticipations = Object.values(participations).filter(p => p[student.id]).length;
-                    performanceRatio = studentParticipations / totalParticipations;
-                }
-            } else {
-                performanceRatio = (criterion.expectedValue > 0) ? ((grades[student.id]?.[criterion.id]?.delivered ?? 0) / criterion.expectedValue) : 0;
-            }
-          const earned = performanceRatio * criterion.weight;
-          return { name: criterion.name, earned, weight: criterion.weight };
-        });
+        const criteriaDetails = getCriteriaDetails(student.id, criteria, grades, participations, activities, activityRecords);
 
         const attendanceStats = { p: 0, a: 0, total: 0 };
         Object.keys(attendance).forEach(date => {
@@ -355,7 +358,7 @@ export default function AtRiskReportPage() {
       setReportData(data);
     }
     setIsLoading(false);
-  }, [group, calculateFinalGrade, getStudentRiskLevel, activePartialId]);
+  }, [group, calculateFinalGrade, getStudentRiskLevel, activePartialId, getCriteriaDetails]);
 
 
   if (isLoading) {
@@ -427,5 +430,3 @@ export default function AtRiskReportPage() {
     </div>
   );
 }
-
-    
