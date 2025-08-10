@@ -272,8 +272,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         
         const merits = pStudentObservations.filter(o => o.type === 'Mérito').length;
         const demerits = pStudentObservations.filter(o => o.type === 'Demérito').length;
-        finalGrade += merits;
-        finalGrade -= demerits;
+        finalGrade += (merits * 10);
+        finalGrade -= (demerits * 10);
 
         return Math.max(0, Math.min(100, finalGrade));
     }, []);
@@ -461,8 +461,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     const atRiskStudents: StudentWithRisk[] = useMemo(() => {
         const allAtRiskStudents: StudentWithRisk[] = [];
-        const processedStudentIds = new Set<string>();
-    
+        
         groups.forEach(group => {
             const pCriteria = loadFromLocalStorage<EvaluationCriteria[]>(`criteria_${group.id}`, []);
             const pGrades = loadFromLocalStorage<Grades>(`grades_${group.id}`, {});
@@ -472,15 +471,15 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             const pAttendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${group.id}`, {});
 
             group.students.forEach(student => {
-                if (processedStudentIds.has(student.id)) return;
-
                 const studentObs = allObservations[student.id] || [];
                 const finalGrade = calculateFinalGrade(student.id, pCriteria, pGrades, pParticipations, pActivities, pActivityRecords, studentObs);
                 const risk = getStudentRiskLevel(finalGrade, pAttendance, student.id);
                 
                 if (risk.level === 'high' || risk.level === 'medium') {
-                    allAtRiskStudents.push({ ...student, calculatedRisk: risk });
-                    processedStudentIds.add(student.id);
+                    // Avoid duplicates if a student is in multiple groups
+                    if (!allAtRiskStudents.some(s => s.id === student.id)) {
+                         allAtRiskStudents.push({ ...student, calculatedRisk: risk });
+                    }
                 }
             });
         });
