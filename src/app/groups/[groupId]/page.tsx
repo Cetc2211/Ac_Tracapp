@@ -441,7 +441,7 @@ export default function GroupDetailsPage() {
       </div>
       
       <Tabs defaultValue={activePartialId} onValueChange={(value) => setActivePartialId(value as PartialId)} className="w-full">
-        <TabsList>
+        <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="p1">Primer Parcial</TabsTrigger>
             <TabsTrigger value="p2">Segundo Parcial</TabsTrigger>
             <TabsTrigger value="p3">Tercer Parcial</TabsTrigger>
@@ -683,7 +683,7 @@ export default function GroupDetailsPage() {
                         </Link>
                     </Button>
                     <Button asChild>
-                        <Link href={`/groups/${activeGroup.id}/grades`}>
+                        <Link href={`/grades/${activeGroup.id}/grades`}>
                             <FilePen className="mr-2 h-4 w-4" />
                             Registrar Calificaciones
                         </Link>

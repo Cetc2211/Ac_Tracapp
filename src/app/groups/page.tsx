@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -23,9 +24,14 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useData } from '@/hooks/use-data';
-import { Group, Student } from '@/lib/placeholder-data';
+import { Group } from '@/lib/placeholder-data';
 import { useToast } from '@/hooks/use-toast';
 import { PlusCircle, Users, ArrowRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+const cardColors = [
+  'bg-card-1', 'bg-card-2', 'bg-card-3', 'bg-card-4', 'bg-card-5'
+];
 
 export default function GroupsPage() {
   const { groups, setGroups, setActiveGroupId } = useData();
@@ -146,8 +152,8 @@ export default function GroupsPage() {
 
       {groups.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {groups.map((group) => (
-            <Card key={group.id} className="flex flex-col hover:shadow-lg transition-shadow">
+          {groups.map((group, index) => (
+            <Card key={group.id} className={cn("flex flex-col hover:shadow-lg transition-shadow text-card-foreground-alt", cardColors[index % cardColors.length])}>
               <CardHeader>
                 <CardTitle>{group.subject}</CardTitle>
                 <CardDescription>
@@ -156,16 +162,16 @@ export default function GroupsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex-grow">
-                 <div className="text-sm text-muted-foreground">
+                 <div className="text-sm">
                     <p>Facilitador: {group.facilitator || 'No especificado'}</p>
                  </div>
               </CardContent>
-              <CardFooter className="flex justify-between items-center bg-muted/50 p-4">
+              <CardFooter className="flex justify-between items-center bg-black/20 p-4">
                   <div className="flex items-center text-sm font-medium">
                       <Users className="mr-2 h-4 w-4" />
                       <span>{group.students.length} Estudiante(s)</span>
                   </div>
-                <Button asChild variant="ghost" size="sm" onClick={() => handleCardClick(group.id)}>
+                <Button asChild variant="ghost" size="sm" onClick={() => handleCardClick(group.id)} className="hover:bg-white/20">
                   <Link href={`/groups/${group.id}`}>
                     Administrar
                     <ArrowRight className="ml-2 h-4 w-4" />
