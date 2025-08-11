@@ -595,9 +595,7 @@ export default function GroupDetailsPage() {
                                 />
                             </TableCell>
                             <TableCell className="font-medium">
-                                <Link href={`/students/${student.id}`} className="hover:underline">
-                                    {student.name}
-                                </Link>
+                                {student.name}
                             </TableCell>
                             <TableCell>
                                 {risk.level === 'high' && (
