@@ -41,6 +41,7 @@ export default function StudentProfilePage() {
       groups,
       calculateDetailedFinalGrade,
       allObservations,
+      partialData,
   } = useData();
 
   const [isLogOpen, setIsLogOpen] = useState(false);
@@ -58,58 +59,38 @@ export default function StudentProfilePage() {
   }, [groups, studentId]);
 
   const studentStatsByPartial: StudentStats[] = useMemo(() => {
-    if (!student) return [];
+    if (!student || !studentGroups.length) return [];
     
     const partials: PartialId[] = ['p1', 'p2', 'p3'];
-    const stats: StudentStats[] = [];
+    const relevantStats: StudentStats[] = [];
+    const primaryGroupId = studentGroups[0].id;
 
-    studentGroups.forEach(group => {
-        partials.forEach(partialId => {
-            const gradeDetails = calculateDetailedFinalGrade(student.id, group.id, partialId);
-            const keySuffix = `${group.id}_${partialId}`;
-            const attendance = useData.getState().partialData.attendance;
+    partials.forEach(pId => {
+        const gradeDetails = calculateDetailedFinalGrade(student.id, primaryGroupId, pId);
+        
+        if (gradeDetails.criteriaDetails.length > 0) { // Only show partials with data
+            const keySuffix = `${primaryGroupId}_${pId}`;
+            const attendanceForPartial = loadFromLocalStorage(`attendance_${keySuffix}`, {});
             
             let p = 0, a = 0, total = 0;
-            Object.keys(attendance).forEach(date => {
-                if (attendance[date]?.[student.id] !== undefined) {
+            Object.keys(attendanceForPartial).forEach(date => {
+                if (attendanceForPartial[date]?.[student.id] !== undefined) {
                     total++;
-                    if (attendance[date][student.id]) p++; else a++;
+                    if (attendanceForPartial[date][student.id]) p++; else a++;
                 }
             });
 
-            stats.push({
+            relevantStats.push({
                 ...gradeDetails,
-                partialId: partialId,
+                partialId: pId,
                 attendance: { p, a, total, rate: total > 0 ? (p / total) * 100 : 100 }
             });
-        });
+        }
     });
-    // For simplicity, we are assuming a student is in one group. If in multiple, this would need adjustment.
-    // This logic can be expanded based on requirements.
-    // For now, let's just use the first group's data for all partials.
-    const relevantStats: StudentStats[] = [];
-    if(studentGroups.length > 0) {
-        const primaryGroupId = studentGroups[0].id;
-        partials.forEach(pId => {
-             const gradeDetails = calculateDetailedFinalGrade(student.id, primaryGroupId, pId);
-             if(gradeDetails.criteriaDetails.length > 0) { // Only show partials with data
-                const keySuffix = `${primaryGroupId}_${pId}`;
-                const attendance = useData.getState().partialData.attendance;
-                let p=0, a=0, total=0;
-                Object.keys(attendance).forEach(date => {
-                    if (attendance[date]?.[student.id] !== undefined) {
-                        total++;
-                        if (attendance[date][student.id]) p++; else a++;
-                    }
-                });
-                relevantStats.push({ ...gradeDetails, partialId: pId, attendance: {p,a,total, rate: total > 0 ? (p / total) * 100 : 100} });
-             }
-        });
-    }
 
     return relevantStats;
-
   }, [student, studentGroups, calculateDetailedFinalGrade]);
+
 
   const studentObservations = useMemo(() => {
     return allObservations[studentId] || [];
@@ -316,3 +297,5 @@ export default function StudentProfilePage() {
     </>
   );
 }
+
+    
