@@ -156,7 +156,7 @@ export default function GroupsPage() {
             <Card key={group.id} className={cn("flex flex-col hover:shadow-lg transition-shadow text-card-foreground-alt", cardColors[index % cardColors.length])}>
               <CardHeader>
                 <CardTitle>{group.subject}</CardTitle>
-                <CardDescription>
+                <CardDescription className="text-card-foreground-alt/80">
                   {group.semester && `${group.semester} | `}
                   {group.groupName && `Grupo: ${group.groupName}`}
                 </CardDescription>
