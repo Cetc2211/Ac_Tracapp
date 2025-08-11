@@ -53,6 +53,7 @@ export default function GroupReportPage() {
   const { 
       groups,
       settings,
+      getStudentRiskLevel,
   } = useData();
   
   const [summary, setSummary] = useState<ReportSummary | null>(null);
@@ -103,52 +104,52 @@ export default function GroupReportPage() {
       let totalGroupGrade = 0;
       let totalPossibleAttendance = 0;
       let totalPresent = 0;
-      let totalParticipations = 0;
-      let totalParticipationOpportunities = 0;
-      let highRiskCount = 0;
-      let mediumRiskCount = 0;
-
-      group.students.forEach(student => {
+      
+      const studentGrades = group.students.map(student => {
         let finalGrade = 0;
-        for (const c of criteria) {
-            let performanceRatio = 0;
-             if (c.name === 'Actividades' || c.name === 'Portafolio') {
-                const total = activities.length;
-                if(total > 0) {
-                    const delivered = Object.values(activityRecords[student.id] || {}).filter(Boolean).length;
-                    performanceRatio = delivered / total;
+        if (criteria.length > 0) {
+            for (const c of criteria) {
+                let performanceRatio = 0;
+                 if (c.name === 'Actividades' || c.name === 'Portafolio') {
+                    const total = activities.length;
+                    if(total > 0) {
+                        const delivered = Object.values(activityRecords[student.id] || {}).filter(Boolean).length;
+                        performanceRatio = delivered / total;
+                    }
+                } else if (c.name === 'Participación') {
+                    const participationDates = Object.keys(participations);
+                    const studentParticipationOpportunities = participationDates.filter(date => Object.prototype.hasOwnProperty.call(participations[date], student.id)).length;
+                    if (studentParticipationOpportunities > 0) {
+                        const studentParticipations = Object.values(participations).filter(p => p[student.id]).length;
+                        performanceRatio = studentParticipations / studentParticipationOpportunities;
+                    }
+                } else {
+                    const deliveredValue = grades[student.id]?.[c.id]?.delivered ?? 0;
+                    if(c.expectedValue > 0) {
+                       performanceRatio = deliveredValue / c.expectedValue;
+                    }
                 }
-            } else if (c.name === 'Participación') {
-                const total = Object.keys(participations).length;
-                if(total > 0) {
-                    const participated = Object.values(participations).filter(day => day[student.id]).length;
-                    performanceRatio = participated / total;
-                }
-            } else {
-                const deliveredValue = grades[student.id]?.[c.id]?.delivered ?? 0;
-                if(c.expectedValue > 0) {
-                   performanceRatio = deliveredValue / c.expectedValue;
-                }
+                finalGrade += performanceRatio * c.weight;
             }
-            finalGrade += performanceRatio * c.weight;
         }
-        finalGrade = Math.max(0, Math.min(100, finalGrade));
-        
+        return Math.max(0, Math.min(100, finalGrade));
+      });
+
+      const highRiskStudents = new Set<string>();
+      const mediumRiskStudents = new Set<string>();
+
+      group.students.forEach((student, index) => {
+        const finalGrade = studentGrades[index];
         totalGroupGrade += finalGrade;
         if (finalGrade >= 70) approved++;
 
-        let absences = 0;
-        const totalDaysForStudent = Object.keys(attendance).filter(date => attendance[date].hasOwnProperty(student.id)).length;
-        if(totalDaysForStudent > 0) {
-            Object.keys(attendance).forEach(date => {
-                if (attendance[date]?.[student.id] === false) absences++;
-            });
-        }
-        const absencePercentage = totalDaysForStudent > 0 ? (absences / totalDaysForStudent) * 100 : 0;
-        if (finalGrade < 70 || absencePercentage > 20) highRiskCount++;
-        else if(finalGrade < 80 || absencePercentage > 10) mediumRiskCount++;
+        const risk = getStudentRiskLevel(finalGrade, attendance, student.id);
+        if (risk.level === 'high') highRiskStudents.add(student.id);
+        else if (risk.level === 'medium') mediumRiskStudents.add(student.id);
       });
-
+      
+      let totalParticipations = 0;
+      let totalParticipationOpportunities = 0;
       const participationDates = Object.keys(participations);
       if (participationDates.length > 0 && studentCount > 0) {
           totalParticipations = group.students.reduce((sum, student) => {
@@ -175,10 +176,10 @@ export default function GroupReportPage() {
           approvedCount: approved,
           failedCount: studentCount - approved,
           groupAverage: studentCount > 0 ? totalGroupGrade / studentCount : 0,
-          attendanceRate: totalPossibleAttendance > 0 ? (totalPresent / totalPossibleAttendance) * 100 : 0,
-          participationRate: totalParticipationOpportunities > 0 ? (totalParticipations / totalParticipationOpportunities) * 100 : 0,
-          highRiskCount,
-          mediumRiskCount,
+          attendanceRate: totalPossibleAttendance > 0 ? (totalPresent / totalPossibleAttendance) * 100 : 100,
+          participationRate: totalParticipationOpportunities > 0 ? (totalParticipations / totalParticipationOpportunities) * 100 : 100,
+          highRiskCount: highRiskStudents.size,
+          mediumRiskCount: mediumRiskStudents.size,
       });
 
     } catch (e) {
@@ -186,7 +187,7 @@ export default function GroupReportPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [group, partialId]);
+  }, [group, partialId, groups, getStudentRiskLevel]);
 
   const handleDownloadPdf = () => {
     const input = reportRef.current;
@@ -367,3 +368,5 @@ export default function GroupReportPage() {
     </div>
   );
 }
+
+    
