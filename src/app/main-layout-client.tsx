@@ -35,11 +35,9 @@ import {
   SidebarTrigger,
   SidebarInset,
 } from '@/components/ui/sidebar';
-import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useState, useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { SheetTitle } from '@/components/ui/sheet';
 import { useData } from '@/hooks/use-data';
 import { getPartialLabel } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
@@ -83,6 +81,12 @@ export default function MainLayoutClient({
       document.body.className = defaultSettings.theme;
     }
   }, [settings.theme]);
+
+  const isAuthPage = pathname === '/';
+
+  if (isAuthPage) {
+      return <>{children}</>;
+  }
 
   return (
     <>
