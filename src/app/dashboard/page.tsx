@@ -43,7 +43,7 @@ import {
 } from '@/components/ui/select';
 
 export default function DashboardPage() {
-  const { activeStudentsInGroups, groups, atRiskStudents, overallAverageParticipation, groupAverages } = useData();
+  const { activeStudentsInGroups, groups, atRiskStudents, overallAverageParticipation, groupAverages, activePartialId } = useData();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [studentSearchQuery, setStudentSearchQuery] = useState('');
@@ -105,7 +105,7 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Estudiantes en Riesgo
+              Estudiantes en Riesgo ({activePartialId.toUpperCase()})
             </CardTitle>
             <AlertTriangle className="h-4 w-4 text-destructive" />
           </CardHeader>
@@ -114,7 +114,7 @@ export default function DashboardPage() {
               {atRiskStudents.length}
             </div>
             <p className="text-xs text-muted-foreground">
-              Requieren atención especial (todos los grupos)
+              Requieren atención (parcial activo)
             </p>
           </CardContent>
         </Card>
@@ -204,7 +204,7 @@ export default function DashboardPage() {
                 <TableRow>
                   <TableHead>Asignatura</TableHead>
                   <TableHead className="text-center">Estudiantes</TableHead>
-                  <TableHead className="text-right">Promedio Gral.</TableHead>
+                  <TableHead className="text-right">Promedio Gral. ({activePartialId.toUpperCase()})</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -227,7 +227,7 @@ export default function DashboardPage() {
         </Card>
         <Card className="flex flex-col">
           <CardHeader>
-            <CardTitle>Estudiantes con Alertas</CardTitle>
+            <CardTitle>Estudiantes con Alertas ({activePartialId.toUpperCase()})</CardTitle>
             <CardDescription>
               Filtra por grupo para ver los estudiantes que requieren seguimiento.
             </CardDescription>
@@ -259,7 +259,7 @@ export default function DashboardPage() {
                   width={40}
                 />
                 <div className="grid gap-1">
-                  <Link href={`/students/${student.id}`} className="text-sm font-medium leading-none hover:underline" onClick={() => isRiskDialogOpen && setIsRiskDialogOpen(false)}>
+                  <Link href={`/students/${student.id}`} className="text-sm font-medium leading-none hover:underline">
                     {student.name}
                   </Link>
                   <p className="text-sm text-muted-foreground">{student.calculatedRisk.reason}</p>

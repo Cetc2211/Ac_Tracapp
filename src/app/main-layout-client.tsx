@@ -44,6 +44,7 @@ import { useData } from '@/hooks/use-data';
 import { getPartialLabel } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 
 const navItems = [
@@ -91,6 +92,8 @@ export default function MainLayoutClient({
       return <>{children}</>;
   }
 
+  const isGroupActivePage = activeGroup ? pathname.startsWith(`/groups/${activeGroup.id}`) : false;
+
   return (
     <>
       <SidebarProvider>
@@ -113,14 +116,14 @@ export default function MainLayoutClient({
                   <>
                     <div className="px-4 py-2">
                         <p className="text-xs font-semibold text-sidebar-foreground/70 tracking-wider uppercase">Grupo Activo</p>
-                        <Button asChild variant="ghost" className="h-auto w-full justify-start p-0 mt-1 text-wrap text-left">
+                         <Button asChild variant="ghost" className={cn("h-auto w-full justify-start p-2 mt-1 text-wrap text-left text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground", isGroupActivePage && "bg-sidebar-accent text-sidebar-accent-foreground")}>
                           <Link href={`/groups/${activeGroup.id}`}>
-                            <div className='space-y-1'>
-                              <p className="font-bold text-sidebar-foreground flex items-center gap-2">
+                            <div className='space-y-1 w-full'>
+                              <p className="font-bold flex items-center gap-2">
                                 <Package className="h-4 w-4"/>
                                 {activeGroup.subject}
                               </p>
-                              <p className="font-semibold text-sidebar-foreground/80 flex items-center gap-2 text-sm pl-1">
+                              <p className="font-semibold flex items-center gap-2 text-sm pl-1">
                                 <BookText className="h-4 w-4"/>
                                 {getPartialLabel(activePartialId)}
                                 <ChevronRight className="h-4 w-4 ml-auto"/>
