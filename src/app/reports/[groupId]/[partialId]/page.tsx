@@ -117,7 +117,7 @@ export default function GroupReportPage() {
       group.students.forEach((student, index) => {
         const finalGrade = studentGrades[index];
         totalGroupGrade += finalGrade;
-        if (finalGrade >= 70) approved++;
+        if (finalGrade >= 60) approved++;
 
         const risk = getStudentRiskLevel(finalGrade, attendance, student.id);
         if (risk.level === 'high') highRiskStudents.add(student.id);
@@ -344,3 +344,5 @@ export default function GroupReportPage() {
     </div>
   );
 }
+
+    

@@ -116,7 +116,7 @@ export default function SemesterEvaluationPage() {
                                         {p3 !== undefined ? `${p3.toFixed(1)}%` : 'N/A'}
                                     </TableCell>
                                     <TableCell className="text-center">
-                                        <Badge className={cn("text-base", average >= 70 ? 'bg-primary' : 'bg-destructive')}>{average.toFixed(1)}%</Badge>
+                                        <Badge className={cn("text-base", average >= 60 ? 'bg-primary' : 'bg-destructive')}>{average.toFixed(1)}%</Badge>
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -134,3 +134,5 @@ export default function SemesterEvaluationPage() {
         </div>
     )
 }
+
+    

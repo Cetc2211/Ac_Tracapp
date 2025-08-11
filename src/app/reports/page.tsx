@@ -68,7 +68,7 @@ export default function ReportsPage() {
     let approvedCount = 0;
     activeGroup.students.forEach(student => {
         const finalGrade = calculateFinalGrade(student.id);
-        if (finalGrade >= 70) approvedCount++;
+        if (finalGrade >= 60) approvedCount++;
     });
 
     const groupAverage = groupAverages[activeGroup.id] || 0;
@@ -240,7 +240,7 @@ export default function ReportsPage() {
                 </div>
                 <div className="flex flex-col items-center gap-1">
                     <p className="text-3xl font-bold text-purple-600">{quickStats?.approvedCount}</p>
-                    <p className="text-sm text-muted-foreground">Aprobados (≥70)</p>
+                    <p className="text-sm text-muted-foreground">Aprobados (≥60)</p>
                 </div>
             </CardContent>
         </Card>
@@ -284,3 +284,5 @@ export default function ReportsPage() {
     </div>
   );
 }
+
+    
