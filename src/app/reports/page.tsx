@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import {
@@ -40,7 +39,8 @@ export default function ReportsPage() {
     activeGroup, 
     calculateFinalGrade,
     groupAverages,
-    partialData
+    partialData,
+    activePartialId
   } = useData();
   const { criteria, participations, activities, activityRecords, grades, attendance } = partialData;
 
@@ -172,7 +172,7 @@ export default function ReportsPage() {
               <div>
                 <p className="text-sm font-semibold text-primary flex items-center gap-2"><BookOpenCheck /> Grupo Activo</p>
                 <CardTitle className="text-2xl mt-1">{activeGroup.subject}</CardTitle>
-                <CardDescription>{quickStats?.studentCount} estudiantes • {quickStats?.criteriaCount} criterios de evaluación</CardDescription>
+                <CardDescription>{quickStats?.studentCount} estudiantes • {quickStats?.criteriaCount} criterios de evaluación ({activePartialId})</CardDescription>
               </div>
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">Total de asistencias del grupo:</p>
@@ -190,7 +190,7 @@ export default function ReportsPage() {
                 </CardHeader>
                 <CardFooter>
                     <Button className="w-full" asChild>
-                        <Link href={`/reports/${activeGroup.id}`}>
+                        <Link href={`/reports/${activeGroup.id}/${activePartialId}`}>
                             <Eye className="mr-2 h-4 w-4" /> Vista Previa y Descarga
                         </Link>
                     </Button>
