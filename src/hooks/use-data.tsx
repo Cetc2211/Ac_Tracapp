@@ -435,6 +435,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const setActiveGroupId = (groupId: string | null) => {
         setActiveGroupIdState(groupId);
         saveToLocalStorage('activeGroupId', groupId);
+        // Do not reset partial ID here
         window.dispatchEvent(new Event('storage'));
         setDataVersion(v => v+1);
     };
@@ -540,14 +541,15 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         groups.forEach(group => {
             const keySuffix = `${group.id}_${activePartialId}`;
             const pCriteria = loadFromLocalStorage<EvaluationCriteria[]>(`criteria_${keySuffix}`, []);
-            // If no criteria for this partial, no students can be at risk based on grades
-            if (pCriteria.length === 0 && !Object.keys(loadFromLocalStorage<AttendanceRecord>(`attendance_${keySuffix}`, {})).length) return;
+            const pAttendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${keySuffix}`, {});
+            
+            // If no criteria and no attendance for this partial, students can't be at risk
+            if (pCriteria.length === 0 && Object.keys(pAttendance).length === 0) return;
 
             const pGrades = loadFromLocalStorage<Grades>(`grades_${keySuffix}`, {});
             const pParticipations = loadFromLocalStorage<ParticipationRecord>(`participations_${keySuffix}`, {});
             const pActivities = loadFromLocalStorage<Activity[]>(`activities_${keySuffix}`, []);
             const pActivityRecords = loadFromLocalStorage<ActivityRecord>(`activityRecords_${keySuffix}`, {});
-            const pAttendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${keySuffix}`, {});
 
             group.students.forEach(student => {
                 const finalGrade = calculateFinalGrade(student.id, activePartialId, pCriteria, pGrades, pParticipations, pActivities, pActivityRecords);
