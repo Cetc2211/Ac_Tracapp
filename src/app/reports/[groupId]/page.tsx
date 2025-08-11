@@ -20,8 +20,10 @@ import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { useData } from '@/hooks/use-data';
+import { useData, loadFromLocalStorage } from '@/hooks/use-data';
 import { Skeleton } from '@/components/ui/skeleton';
+import type { EvaluationCriteria, Grades, ParticipationRecord, Activity, ActivityRecord, AttendanceRecord } from '@/hooks/use-data';
+
 
 type ReportSummary = {
     totalStudents: number;
@@ -39,14 +41,12 @@ export default function GroupReportPage() {
   const groupId = params.groupId as string;
   const { 
       groups,
+      settings,
+      activePartialId,
       calculateFinalGrade,
       getStudentRiskLevel,
-      settings,
-      partialData,
       atRiskStudents,
-      activePartialId,
   } = useData();
-  const { attendance, participations } = partialData;
   
   const [summary, setSummary] = useState<ReportSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -69,6 +69,29 @@ export default function GroupReportPage() {
     setIsLoading(true);
     try {
       const studentCount = group.students.length;
+      if (studentCount === 0) {
+          setSummary({
+              totalStudents: 0,
+              approvedCount: 0,
+              failedCount: 0,
+              groupAverage: 0,
+              attendanceRate: 100,
+              participationRate: 100,
+              highRiskCount: 0,
+              mediumRiskCount: 0,
+          });
+          setIsLoading(false);
+          return;
+      }
+      
+      const keySuffix = `${group.id}_${activePartialId}`;
+      const criteria = loadFromLocalStorage<EvaluationCriteria[]>(`criteria_${keySuffix}`, []);
+      const grades = loadFromLocalStorage<Grades>(`grades_${keySuffix}`, {});
+      const participations = loadFromLocalStorage<ParticipationRecord>(`participations_${keySuffix}`, {});
+      const activities = loadFromLocalStorage<Activity[]>(`activities_${keySuffix}`, []);
+      const activityRecords = loadFromLocalStorage<ActivityRecord>(`activityRecords_${keySuffix}`, {});
+      const attendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${keySuffix}`, {});
+
       let approved = 0;
       let totalGroupGrade = 0;
       let totalPossibleAttendance = 0;
@@ -77,8 +100,7 @@ export default function GroupReportPage() {
       let totalParticipationOpportunities = 0;
 
       group.students.forEach(student => {
-        // Corrected to use the activePartialId for accurate report generation
-        const finalGrade = calculateFinalGrade(student.id, activePartialId);
+        const finalGrade = calculateFinalGrade(student.id, activePartialId, criteria, grades, participations, activities, activityRecords);
         
         totalGroupGrade += finalGrade;
         if (finalGrade >= 70) approved++;
@@ -90,7 +112,7 @@ export default function GroupReportPage() {
             }
         });
       });
-
+      
       const participationDates = Object.keys(participations);
       if (participationDates.length > 0 && studentCount > 0) {
           totalParticipations = group.students.reduce((sum, student) => {
@@ -122,7 +144,7 @@ export default function GroupReportPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [group, calculateFinalGrade, getStudentRiskLevel, partialData, atRiskStudents, activePartialId, attendance, participations]);
+  }, [group, calculateFinalGrade, getStudentRiskLevel, atRiskStudents, activePartialId]);
 
   const handleDownloadPdf = () => {
     const input = reportRef.current;
@@ -280,3 +302,5 @@ export default function GroupReportPage() {
     </div>
   );
 }
+
+    
