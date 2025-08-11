@@ -44,6 +44,7 @@ export default function GroupReportPage() {
       settings,
       partialData,
       atRiskStudents,
+      activePartialId,
   } = useData();
   const { attendance, participations } = partialData;
   
@@ -76,7 +77,8 @@ export default function GroupReportPage() {
       let totalParticipationOpportunities = 0;
 
       group.students.forEach(student => {
-        const finalGrade = calculateFinalGrade(student.id);
+        // Corrected to use the activePartialId for accurate report generation
+        const finalGrade = calculateFinalGrade(student.id, activePartialId);
         
         totalGroupGrade += finalGrade;
         if (finalGrade >= 70) approved++;
@@ -120,7 +122,7 @@ export default function GroupReportPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [group, calculateFinalGrade, getStudentRiskLevel, partialData, atRiskStudents]);
+  }, [group, calculateFinalGrade, getStudentRiskLevel, partialData, atRiskStudents, activePartialId, attendance, participations]);
 
   const handleDownloadPdf = () => {
     const input = reportRef.current;
