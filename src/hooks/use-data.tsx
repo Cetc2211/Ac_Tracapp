@@ -352,7 +352,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         }
 
         return Math.max(0, Math.min(100, finalGrade));
-    }, [activeGroupId, activePartialId, partialData, calculateDetailedFinalGrade]);
+    }, [activeGroupId, activePartialId, partialData]);
 
     // --- DERIVED STATE & MEMOS ---
     const activeGroup = useMemo(() => {
@@ -435,9 +435,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const setActiveGroupId = (groupId: string | null) => {
         setActiveGroupIdState(groupId);
         saveToLocalStorage('activeGroupId', groupId);
-        // Reset partial to p1 when group changes
-        setActivePartialIdState('p1');
-        saveToLocalStorage('activePartialId', 'p1');
         window.dispatchEvent(new Event('storage'));
         setDataVersion(v => v+1);
     };
@@ -538,38 +535,32 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     
 
     const atRiskStudents: StudentWithRisk[] = useMemo(() => {
-        const allAtRiskStudents = new Map<string, StudentWithRisk>();
+        const studentsAtRiskInPartial = new Map<string, StudentWithRisk>();
 
         groups.forEach(group => {
-            const partials: PartialId[] = ['p1', 'p2', 'p3'];
-            partials.forEach(partialId => {
-                const keySuffix = `${group.id}_${partialId}`;
-                const pCriteria = loadFromLocalStorage<EvaluationCriteria[]>(`criteria_${keySuffix}`, []);
-                if (pCriteria.length === 0) return;
+            const keySuffix = `${group.id}_${activePartialId}`;
+            const pCriteria = loadFromLocalStorage<EvaluationCriteria[]>(`criteria_${keySuffix}`, []);
+            // If no criteria for this partial, no students can be at risk based on grades
+            if (pCriteria.length === 0 && !Object.keys(loadFromLocalStorage<AttendanceRecord>(`attendance_${keySuffix}`, {})).length) return;
 
-                const pGrades = loadFromLocalStorage<Grades>(`grades_${keySuffix}`, {});
-                const pParticipations = loadFromLocalStorage<ParticipationRecord>(`participations_${keySuffix}`, {});
-                const pActivities = loadFromLocalStorage<Activity[]>(`activities_${keySuffix}`, []);
-                const pActivityRecords = loadFromLocalStorage<ActivityRecord>(`activityRecords_${keySuffix}`, {});
-                const pAttendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${keySuffix}`, {});
+            const pGrades = loadFromLocalStorage<Grades>(`grades_${keySuffix}`, {});
+            const pParticipations = loadFromLocalStorage<ParticipationRecord>(`participations_${keySuffix}`, {});
+            const pActivities = loadFromLocalStorage<Activity[]>(`activities_${keySuffix}`, []);
+            const pActivityRecords = loadFromLocalStorage<ActivityRecord>(`activityRecords_${keySuffix}`, {});
+            const pAttendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${keySuffix}`, {});
 
-                group.students.forEach(student => {
-                    const finalGrade = calculateFinalGrade(student.id, partialId, pCriteria, pGrades, pParticipations, pActivities, pActivityRecords);
-                    const risk = getStudentRiskLevel(finalGrade, pAttendance, student.id);
+            group.students.forEach(student => {
+                const finalGrade = calculateFinalGrade(student.id, activePartialId, pCriteria, pGrades, pParticipations, pActivities, pActivityRecords);
+                const risk = getStudentRiskLevel(finalGrade, pAttendance, student.id);
 
-                    if (risk.level === 'high' || risk.level === 'medium') {
-                        // Prioritize 'high' risk. If student is already marked as high, don't downgrade.
-                        const existingRisk = allAtRiskStudents.get(student.id)?.calculatedRisk.level;
-                        if (existingRisk !== 'high') {
-                             allAtRiskStudents.set(student.id, { ...student, calculatedRisk: risk });
-                        }
-                    }
-                });
+                if (risk.level === 'high' || risk.level === 'medium') {
+                    studentsAtRiskInPartial.set(student.id, { ...student, calculatedRisk: risk });
+                }
             });
         });
 
-        return Array.from(allAtRiskStudents.values());
-    }, [groups, getStudentRiskLevel, dataVersion, calculateFinalGrade]);
+        return Array.from(studentsAtRiskInPartial.values());
+    }, [groups, activePartialId, getStudentRiskLevel, dataVersion, calculateFinalGrade]);
     
     
     const overallAverageParticipation = useMemo(() => {

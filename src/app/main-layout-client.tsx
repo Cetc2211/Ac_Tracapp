@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -16,7 +17,8 @@ import {
   PenSquare,
   FilePen,
   ClipboardCheck,
-  User
+  User,
+  ChevronRight
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -41,6 +43,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useData } from '@/hooks/use-data';
 import { getPartialLabel } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
+import { Button } from '@/components/ui/button';
 
 
 const navItems = [
@@ -110,16 +113,21 @@ export default function MainLayoutClient({
                   <>
                     <div className="px-4 py-2">
                         <p className="text-xs font-semibold text-sidebar-foreground/70 tracking-wider uppercase">Grupo Activo</p>
-                        <div className='space-y-1 mt-1'>
-                          <p className="font-bold text-sidebar-foreground flex items-center gap-2">
-                            <Package className="h-4 w-4"/>
-                            {activeGroup.subject}
-                          </p>
-                          <p className="font-semibold text-sidebar-foreground/80 flex items-center gap-2 text-sm pl-1">
-                            <BookText className="h-4 w-4"/>
-                            {getPartialLabel(activePartialId)}
-                          </p>
-                        </div>
+                        <Button asChild variant="ghost" className="h-auto w-full justify-start p-0 mt-1 text-wrap text-left">
+                          <Link href={`/groups/${activeGroup.id}`}>
+                            <div className='space-y-1'>
+                              <p className="font-bold text-sidebar-foreground flex items-center gap-2">
+                                <Package className="h-4 w-4"/>
+                                {activeGroup.subject}
+                              </p>
+                              <p className="font-semibold text-sidebar-foreground/80 flex items-center gap-2 text-sm pl-1">
+                                <BookText className="h-4 w-4"/>
+                                {getPartialLabel(activePartialId)}
+                                <ChevronRight className="h-4 w-4 ml-auto"/>
+                              </p>
+                            </div>
+                          </Link>
+                        </Button>
                     </div>
                     <Separator className="my-2" />
                   </>
