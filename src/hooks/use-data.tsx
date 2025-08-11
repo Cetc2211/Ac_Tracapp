@@ -3,7 +3,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { Student, Group, PartialId, students as initialStudents, groups as initialGroups } from '@/lib/placeholder-data';
+import { Student, Group, PartialId, students as initialStudents, groups as initialGroups, StudentObservation } from '@/lib/placeholder-data';
 
 // TYPE DEFINITIONS
 export type EvaluationCriteria = {
@@ -106,6 +106,7 @@ interface DataContextType {
   students: Student[];
   groups: Group[];
   allStudents: Student[];
+  allObservations: {[studentId: string]: StudentObservation[]};
   activeStudentsInGroups: Student[];
   settings: { institutionName: string; logo: string; theme: string };
   
@@ -122,6 +123,7 @@ interface DataContextType {
   setStudents: (students: Student[]) => void;
   setGroups: (groups: Group[]) => void;
   setAllStudents: (students: Student[]) => void;
+  setAllObservations: React.Dispatch<React.SetStateAction<{[studentId: string]: StudentObservation[]}>>;
   setSettings: React.Dispatch<React.SetStateAction<{ institutionName: string; logo: string; theme: string; }>>;
   
   setActiveGroupId: (groupId: string | null) => void;
@@ -136,9 +138,10 @@ interface DataContextType {
 
   // Functions
   deleteGroup: (groupId: string) => void;
-  calculateFinalGrade: (studentId: string, forPartialId?: PartialId) => number;
+  calculateFinalGrade: (studentId: string, forPartialId?: PartialId, pCriteria?: EvaluationCriteria[], pGrades?: Grades, pParticipations?: ParticipationRecord, pActivities?: Activity[], pActivityRecords?: ActivityRecord) => number;
   calculateDetailedFinalGrade: (studentId: string, forGroupId?: string, forPartialId?: PartialId) => { finalGrade: number, criteriaDetails: CriteriaDetail[] };
   getStudentRiskLevel: (finalGrade: number, pAttendance: AttendanceRecord, studentId: string) => CalculatedRisk;
+  updateStudentObservation: (studentId: string, observationId: string, updateText: string, isClosing: boolean) => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -176,6 +179,7 @@ const saveToLocalStorage = <T,>(key: string, value: T) => {
 export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
     // Core data
     const [allStudents, setAllStudentsState] = useState<Student[]>([]);
+    const [allObservations, setAllObservations] = useState<{[studentId: string]: StudentObservation[]}>({});
     const [groups, setGroupsState] = useState<Group[]>([]);
     const [settings, setSettings] = useState(defaultSettings);
     
@@ -199,6 +203,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         setAllStudentsState(loadFromLocalStorage<Student[]>('students', initialStudents));
         const loadedGroups = loadFromLocalStorage<Group[]>('groups', initialGroups);
         setGroupsState(loadedGroups);
+        setAllObservations(loadFromLocalStorage<{[studentId: string]: StudentObservation[]}>('allObservations', {}));
         
         const storedActiveGroupId = loadFromLocalStorage<string | null>('activeGroupId', null);
         const activeGroupExists = loadedGroups.some(g => g.id === storedActiveGroupId);
@@ -294,45 +299,50 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         return { finalGrade: grade, criteriaDetails: criteriaDetails };
     }, [activeGroupId, activePartialId]);
 
-    const calculateFinalGrade = useCallback((studentId: string, forPartialId?: PartialId): number => {
+    const calculateFinalGrade = useCallback((studentId: string, forPartialId?: PartialId, pCriteria?: EvaluationCriteria[], pGrades?: Grades, pParticipations?: ParticipationRecord, pActivities?: Activity[], pActivityRecords?: ActivityRecord): number => {
         const partialId = forPartialId || activePartialId;
-        const pData = (partialId === activePartialId) ? partialData : null;
         
-        let pCriteria, pGrades, pParticipations, pActivities, pActivityRecords;
+        let criteria, grades, participations, activities, activityRecords;
 
-        if (pData) {
-            ({ criteria: pCriteria, grades: pGrades, participations: pParticipations, activities: pActivities, activityRecords: pActivityRecords } = pData);
+        if (pCriteria) {
+            criteria = pCriteria;
+            grades = pGrades || {};
+            participations = pParticipations || {};
+            activities = pActivities || [];
+            activityRecords = pActivityRecords || {};
+        } else if(partialId === activePartialId) {
+            ({ criteria, grades, participations, activities, activityRecords } = partialData);
         } else if(activeGroupId) {
              const keySuffix = `${activeGroupId}_${partialId}`;
-            pCriteria = loadFromLocalStorage(`criteria_${keySuffix}`, []);
-            pGrades = loadFromLocalStorage(`grades_${keySuffix}`, {});
-            pParticipations = loadFromLocalStorage(`participations_${keySuffix}`, {});
-            pActivities = loadFromLocalStorage(`activities_${keySuffix}`, []);
-            pActivityRecords = loadFromLocalStorage(`activityRecords_${keySuffix}`, {});
+            criteria = loadFromLocalStorage(`criteria_${keySuffix}`, []);
+            grades = loadFromLocalStorage(`grades_${keySuffix}`, {});
+            participations = loadFromLocalStorage(`participations_${keySuffix}`, {});
+            activities = loadFromLocalStorage(`activities_${keySuffix}`, []);
+            activityRecords = loadFromLocalStorage(`activityRecords_${keySuffix}`, {});
         } else {
             return 0;
         }
         
-        if (!pCriteria || pCriteria.length === 0) return 0;
+        if (!criteria || criteria.length === 0) return 0;
         
         let finalGrade = 0;
-        for (const criterion of pCriteria) {
+        for (const criterion of criteria) {
             let performanceRatio = 0;
              if (criterion.name === 'Actividades' || criterion.name === 'Portafolio') {
-                const totalActivities = pActivities.length;
+                const totalActivities = activities.length;
                 if (totalActivities > 0) {
-                    const deliveredActivities = Object.values(pActivityRecords[studentId] || {}).filter(Boolean).length;
+                    const deliveredActivities = Object.values(activityRecords[studentId] || {}).filter(Boolean).length;
                     performanceRatio = deliveredActivities / totalActivities;
                 }
             } else if (criterion.name === 'Participación') {
-                const participationDates = Object.keys(pParticipations);
-                const studentParticipationOpportunities = participationDates.filter(date => Object.prototype.hasOwnProperty.call(pParticipations[date], studentId)).length;
+                const participationDates = Object.keys(participations);
+                const studentParticipationOpportunities = participationDates.filter(date => Object.prototype.hasOwnProperty.call(participations[date], studentId)).length;
                 if (studentParticipationOpportunities > 0) {
-                    const studentParticipations = Object.values(pParticipations).filter(p => p[studentId]).length;
+                    const studentParticipations = Object.values(participations).filter(p => p[studentId]).length;
                     performanceRatio = studentParticipations / studentParticipationOpportunities;
                 }
             } else {
-                const delivered = pGrades[studentId]?.[criterion.id]?.delivered ?? 0;
+                const delivered = grades[studentId]?.[criterion.id]?.delivered ?? 0;
                 const expected = criterion.expectedValue;
                 if (expected > 0) {
                     performanceRatio = delivered / expected;
@@ -456,6 +466,26 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             setActiveGroupId(null);
         }
     }
+    
+    const updateStudentObservation = (studentId: string, observationId: string, updateText: string, isClosing: boolean) => {
+        setAllObservations(prev => {
+            const studentObservations = prev[studentId] || [];
+            const newObservations = studentObservations.map(obs => {
+                if (obs.id === observationId) {
+                    const newUpdate = { date: new Date().toISOString(), update: updateText };
+                    return {
+                        ...obs,
+                        followUpUpdates: [...obs.followUpUpdates, newUpdate],
+                        isClosed: isClosing,
+                    };
+                }
+                return obs;
+            });
+            const newState = { ...prev, [studentId]: newObservations };
+            saveToLocalStorage('allObservations', newState);
+            return newState;
+        });
+    }
 
     // --- GLOBAL CALCULATIONS ---
     const getStudentRiskLevel = useCallback((finalGrade: number, pAttendance: AttendanceRecord, studentId: string): CalculatedRisk => {
@@ -498,95 +528,48 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             const pActivities = loadFromLocalStorage<Activity[]>(`activities_${keySuffix}`, []);
             const pActivityRecords = loadFromLocalStorage<ActivityRecord>(`activityRecords_${keySuffix}`, {});
             
-            const groupGrades = group.students.map(s => {
-                let finalGrade = 0;
-                for (const criterion of pCriteria) {
-                    let performanceRatio = 0;
-                     if (criterion.name === 'Actividades' || criterion.name === 'Portafolio') {
-                        const totalActivities = pActivities.length;
-                        if (totalActivities > 0) {
-                            const deliveredActivities = Object.values(pActivityRecords[s.id] || {}).filter(Boolean).length;
-                            performanceRatio = deliveredActivities / totalActivities;
-                        }
-                    } else if (criterion.name === 'Participación') {
-                        const participationDates = Object.keys(pParticipations);
-                        const studentParticipationOpportunities = participationDates.filter(date => Object.prototype.hasOwnProperty.call(pParticipations[date], s.id)).length;
-                        if (studentParticipationOpportunities > 0) {
-                            const studentParticipations = Object.values(pParticipations).filter(p => p[s.id]).length;
-                            performanceRatio = studentParticipations / studentParticipationOpportunities;
-                        }
-                    } else {
-                        const delivered = pGrades[s.id]?.[criterion.id]?.delivered ?? 0;
-                        const expected = criterion.expectedValue;
-                        if (expected > 0) {
-                            performanceRatio = delivered / expected;
-                        }
-                    }
-                    finalGrade += performanceRatio * criterion.weight;
-                }
-                return Math.max(0, Math.min(100, finalGrade));
-            });
+            const groupGrades = group.students.map(s => calculateFinalGrade(s.id, activePartialId, pCriteria, pGrades, pParticipations, pActivities, pActivityRecords));
 
             const total = groupGrades.reduce((sum, grade) => sum + grade, 0);
             averages[group.id] = groupGrades.length > 0 ? total / groupGrades.length : 0;
         });
         return averages;
-    }, [groups, activePartialId, dataVersion]);
+    }, [groups, activePartialId, dataVersion, calculateFinalGrade]);
     
 
     const atRiskStudents: StudentWithRisk[] = useMemo(() => {
         const allAtRiskStudents = new Map<string, StudentWithRisk>();
 
         groups.forEach(group => {
-            const keySuffix = `${group.id}_${activePartialId}`;
-            const pCriteria = loadFromLocalStorage<EvaluationCriteria[]>(`criteria_${keySuffix}`, []);
-             if (pCriteria.length === 0) return;
+            const partials: PartialId[] = ['p1', 'p2', 'p3'];
+            partials.forEach(partialId => {
+                const keySuffix = `${group.id}_${partialId}`;
+                const pCriteria = loadFromLocalStorage<EvaluationCriteria[]>(`criteria_${keySuffix}`, []);
+                if (pCriteria.length === 0) return;
 
-            const pGrades = loadFromLocalStorage<Grades>(`grades_${keySuffix}`, {});
-            const pParticipations = loadFromLocalStorage<ParticipationRecord>(`participations_${keySuffix}`, {});
-            const pActivities = loadFromLocalStorage<Activity[]>(`activities_${keySuffix}`, []);
-            const pActivityRecords = loadFromLocalStorage<ActivityRecord>(`activityRecords_${keySuffix}`, {});
-            const pAttendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${keySuffix}`, {});
+                const pGrades = loadFromLocalStorage<Grades>(`grades_${keySuffix}`, {});
+                const pParticipations = loadFromLocalStorage<ParticipationRecord>(`participations_${keySuffix}`, {});
+                const pActivities = loadFromLocalStorage<Activity[]>(`activities_${keySuffix}`, []);
+                const pActivityRecords = loadFromLocalStorage<ActivityRecord>(`activityRecords_${keySuffix}`, {});
+                const pAttendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${keySuffix}`, {});
 
-            group.students.forEach(student => {
-                let finalGrade = 0;
-                for (const criterion of pCriteria) {
-                    let performanceRatio = 0;
-                     if (criterion.name === 'Actividades' || criterion.name === 'Portafolio') {
-                        const totalActivities = pActivities.length;
-                        if (totalActivities > 0) {
-                            const deliveredActivities = Object.values(pActivityRecords[student.id] || {}).filter(Boolean).length;
-                            performanceRatio = deliveredActivities / totalActivities;
-                        }
-                    } else if (criterion.name === 'Participación') {
-                        const participationDates = Object.keys(pParticipations);
-                        const studentParticipationOpportunities = participationDates.filter(date => Object.prototype.hasOwnProperty.call(pParticipations[date], student.id)).length;
-                        if (studentParticipationOpportunities > 0) {
-                            const studentParticipations = Object.values(pParticipations).filter(p => p[student.id]).length;
-                            performanceRatio = studentParticipations / studentParticipationOpportunities;
-                        }
-                    } else {
-                        const delivered = pGrades[student.id]?.[criterion.id]?.delivered ?? 0;
-                        const expected = criterion.expectedValue;
-                        if (expected > 0) {
-                            performanceRatio = delivered / expected;
+                group.students.forEach(student => {
+                    const finalGrade = calculateFinalGrade(student.id, partialId, pCriteria, pGrades, pParticipations, pActivities, pActivityRecords);
+                    const risk = getStudentRiskLevel(finalGrade, pAttendance, student.id);
+
+                    if (risk.level === 'high' || risk.level === 'medium') {
+                        // Prioritize 'high' risk. If student is already marked as high, don't downgrade.
+                        const existingRisk = allAtRiskStudents.get(student.id)?.calculatedRisk.level;
+                        if (existingRisk !== 'high') {
+                             allAtRiskStudents.set(student.id, { ...student, calculatedRisk: risk });
                         }
                     }
-                    finalGrade += performanceRatio * criterion.weight;
-                }
-                finalGrade = Math.max(0, Math.min(100, finalGrade));
-                const risk = getStudentRiskLevel(finalGrade, pAttendance, student.id);
-
-                if (risk.level === 'high' || risk.level === 'medium') {
-                    if (!allAtRiskStudents.has(student.id) || allAtRiskStudents.get(student.id)!.calculatedRisk.level !== 'high') {
-                         allAtRiskStudents.set(student.id, { ...student, calculatedRisk: risk });
-                    }
-                }
+                });
             });
         });
 
         return Array.from(allAtRiskStudents.values());
-    }, [groups, activePartialId, getStudentRiskLevel, dataVersion]);
+    }, [groups, getStudentRiskLevel, dataVersion, calculateFinalGrade]);
     
     
     const overallAverageParticipation = useMemo(() => {
@@ -615,12 +598,12 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     return (
         <DataContext.Provider value={{
-            students: allStudents, groups, allStudents, activeStudentsInGroups, settings, activeGroup, activePartialId,
+            students: allStudents, groups, allStudents, allObservations, activeStudentsInGroups, settings, activeGroup, activePartialId,
             partialData,
             groupAverages, atRiskStudents, overallAverageParticipation,
-            setStudents: setAllStudents, setGroups, setAllStudents, setSettings, setActiveGroupId, setActivePartialId,
+            setStudents: setAllStudents, setGroups, setAllStudents, setAllObservations, setSettings, setActiveGroupId, setActivePartialId,
             setCriteria, setGrades, setAttendance, setParticipations, setActivities, setActivityRecords,
-            deleteGroup, calculateFinalGrade, getStudentRiskLevel, calculateDetailedFinalGrade
+            deleteGroup, calculateFinalGrade, getStudentRiskLevel, calculateDetailedFinalGrade, updateStudentObservation
         }}>
             {children}
         </DataContext.Provider>

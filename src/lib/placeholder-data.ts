@@ -9,7 +9,6 @@ export type Student = {
   tutorName?: string;
   tutorPhone?: string;
   photo: string;
-  riskLevel?: 'low' | 'medium' | 'high';
 };
 
 export type Group = {
@@ -36,12 +35,12 @@ export type StudentObservation = {
 };
 
 export const students: Student[] = [
-  { id: 'S001', name: 'Ana Torres', email: 'ana.torres@example.com', phone: '555-0101', tutorName: 'Miguel Torres', tutorPhone: '555-0201', photo: 'https://placehold.co/100x100.png', riskLevel: 'high' },
-  { id: 'S002', name: 'Luis García', email: 'luis.garcia@example.com', phone: '555-0102', tutorName: 'Elena García', tutorPhone: '555-0202', photo: 'https://placehold.co/100x100.png', riskLevel: 'low' },
-  { id: 'S003', name: 'Carla Rojas', email: 'carla.rojas@example.com', phone: '555-0103', tutorName: 'Fernando Rojas', tutorPhone: '555-0203', photo: 'https://placehold.co/100x100.png', riskLevel: 'medium' },
-  { id: 'S004', name: 'Diego Fernández', email: 'diego.fernandez@example.com', phone: '555-0104', tutorName: 'Sofia Fernández', tutorPhone: '555-0204', photo: 'https://placehold.co/100x100.png', riskLevel: 'low' },
-  { id: 'S005', name: 'Mariana López', email: 'mariana.lopez@example.com', phone: '555-0105', tutorName: 'Javier López', tutorPhone: '555-0205', photo: 'https://placehold.co/100x100.png', riskLevel: 'low' },
-  { id: 'S006', name: 'Jorge Pérez', email: 'jorge.perez@example.com', phone: '555-0106', tutorName: 'Isabel Pérez', tutorPhone: '555-0206', photo: 'https://placehold.co/100x100.png', riskLevel: 'high' },
+  { id: 'S001', name: 'Ana Torres', email: 'ana.torres@example.com', phone: '555-0101', tutorName: 'Miguel Torres', tutorPhone: '555-0201', photo: 'https://placehold.co/100x100.png' },
+  { id: 'S002', name: 'Luis García', email: 'luis.garcia@example.com', phone: '555-0102', tutorName: 'Elena García', tutorPhone: '555-0202', photo: 'https://placehold.co/100x100.png' },
+  { id: 'S003', name: 'Carla Rojas', email: 'carla.rojas@example.com', phone: '555-0103', tutorName: 'Fernando Rojas', tutorPhone: '555-0203', photo: 'https://placehold.co/100x100.png' },
+  { id: 'S004', name: 'Diego Fernández', email: 'diego.fernandez@example.com', phone: '555-0104', tutorName: 'Sofia Fernández', tutorPhone: '555-0204', photo: 'https://placehold.co/100x100.png' },
+  { id: 'S005', name: 'Mariana López', email: 'mariana.lopez@example.com', phone: '555-0105', tutorName: 'Javier López', tutorPhone: '555-0205', photo: 'https://placehold.co/100x100.png' },
+  { id: 'S006', name: 'Jorge Pérez', email: 'jorge.perez@example.com', phone: '555-0106', tutorName: 'Isabel Pérez', tutorPhone: '555-0206', photo: 'https://placehold.co/100x100.png' },
 ];
 
 export const groups: Group[] = [

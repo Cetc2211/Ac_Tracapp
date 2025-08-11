@@ -53,6 +53,7 @@ export default function GroupReportPage() {
   const { 
       groups,
       settings,
+      calculateFinalGrade,
       getStudentRiskLevel,
   } = useData();
   
@@ -106,33 +107,8 @@ export default function GroupReportPage() {
       let totalPresent = 0;
       
       const studentGrades = group.students.map(student => {
-        let finalGrade = 0;
-        if (criteria.length > 0) {
-            for (const c of criteria) {
-                let performanceRatio = 0;
-                 if (c.name === 'Actividades' || c.name === 'Portafolio') {
-                    const total = activities.length;
-                    if(total > 0) {
-                        const delivered = Object.values(activityRecords[student.id] || {}).filter(Boolean).length;
-                        performanceRatio = delivered / total;
-                    }
-                } else if (c.name === 'Participación') {
-                    const participationDates = Object.keys(participations);
-                    const studentParticipationOpportunities = participationDates.filter(date => Object.prototype.hasOwnProperty.call(participations[date], student.id)).length;
-                    if (studentParticipationOpportunities > 0) {
-                        const studentParticipations = Object.values(participations).filter(p => p[student.id]).length;
-                        performanceRatio = studentParticipations / studentParticipationOpportunities;
-                    }
-                } else {
-                    const deliveredValue = grades[student.id]?.[c.id]?.delivered ?? 0;
-                    if(c.expectedValue > 0) {
-                       performanceRatio = deliveredValue / c.expectedValue;
-                    }
-                }
-                finalGrade += performanceRatio * c.weight;
-            }
-        }
-        return Math.max(0, Math.min(100, finalGrade));
+        const finalGrade = calculateFinalGrade(student.id, partialId, criteria, grades, participations, activities, activityRecords);
+        return finalGrade;
       });
 
       const highRiskStudents = new Set<string>();
@@ -187,7 +163,7 @@ export default function GroupReportPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [group, partialId, groups, getStudentRiskLevel]);
+  }, [group, partialId, groups, calculateFinalGrade, getStudentRiskLevel]);
 
   const handleDownloadPdf = () => {
     const input = reportRef.current;
@@ -368,5 +344,3 @@ export default function GroupReportPage() {
     </div>
   );
 }
-
-    

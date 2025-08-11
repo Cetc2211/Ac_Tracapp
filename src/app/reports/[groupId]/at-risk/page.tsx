@@ -33,7 +33,7 @@ import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useParams } from 'next/navigation';
-import type { EvaluationCriteria, Grades, ParticipationRecord, Activity, ActivityRecord, AttendanceRecord, CalculatedRisk, PartialId } from '@/hooks/use-data';
+import type { EvaluationCriteria, Grades, ParticipationRecord, Activity, ActivityRecord, AttendanceRecord, CalculatedRisk, PartialId, StudentObservation } from '@/hooks/use-data';
 
 
 type StudentReportData = {
@@ -52,11 +52,11 @@ type StudentReportData = {
         total: number;
     };
     criteriaDetails: { name: string; earned: number; weight: number; }[];
-    observations: [];
+    observations: StudentObservation[];
 };
 
 
-const AtRiskStudentCard = ({ studentData }: { studentData: StudentReportData }) => {
+const AtRiskStudentCard = ({ studentData, groupSubject }: { studentData: StudentReportData, groupSubject: string }) => {
     const reportRef = useRef<HTMLDivElement>(null);
     const { toast } = useToast();
     const [isGenerating, setIsGenerating] = useState(false);
@@ -96,12 +96,12 @@ const AtRiskStudentCard = ({ studentData }: { studentData: StudentReportData }) 
                 studentName: studentData.name,
                 riskReason: studentData.riskReason,
                 gradesByGroup: [{
-                    group: 'Grupo Actual',
+                    group: groupSubject,
                     grade: studentData.finalGrade,
                     criteriaDetails: studentData.criteriaDetails
                 }],
                 attendance: studentData.attendance,
-                observations: studentData.observations,
+                observations: studentData.observations.map(obs => ({ type: obs.type, details: obs.details })),
             };
             const result = await generateAtRiskStudentRecommendation(input);
             setAiResponse(result);
@@ -120,7 +120,7 @@ const AtRiskStudentCard = ({ studentData }: { studentData: StudentReportData }) 
     const handleEdit = () => {
         if(aiResponse) {
             setEditedAnalysis(aiResponse.analysis);
-            setEditedRecommendations(aiResponse.recommendations.join('\n'));
+            setEditedRecommendations(aiResponse.recommendations.join('\\n'));
             setIsEditing(true);
         }
     }
@@ -129,7 +129,7 @@ const AtRiskStudentCard = ({ studentData }: { studentData: StudentReportData }) 
         if (aiResponse) {
             setAiResponse({
                 analysis: editedAnalysis,
-                recommendations: editedRecommendations.split('\n').filter(r => r.trim() !== '')
+                recommendations: editedRecommendations.split('\\n').filter(r => r.trim() !== '')
             });
             setIsEditing(false);
             toast({ title: 'Cambios guardados', description: 'El informe ha sido actualizado.'});
@@ -140,7 +140,7 @@ const AtRiskStudentCard = ({ studentData }: { studentData: StudentReportData }) 
         setIsEditing(false);
     }
 
-    const attendanceRate = studentData.attendance.total > 0 ? (studentData.attendance.p / studentData.attendance.total) * 100 : 0;
+    const attendanceRate = studentData.attendance.total > 0 ? (studentData.attendance.p / studentData.attendance.total) * 100 : 100;
 
     return (
         <Card className="overflow-hidden">
@@ -207,9 +207,19 @@ const AtRiskStudentCard = ({ studentData }: { studentData: StudentReportData }) 
                     </div>
                      <div className="mt-6 space-y-4">
                         <h4 className="font-semibold flex items-center gap-2"><MessageSquare /> Observaciones en Bitácora</h4>
-                        <div className="p-3 border rounded-md text-sm text-center text-muted-foreground">
-                            No hay observaciones registradas.
-                        </div>
+                         {studentData.observations.length > 0 ? (
+                            <div className="p-3 border rounded-md text-sm space-y-2">
+                                {studentData.observations.map(obs => (
+                                    <div key={obs.id}>
+                                        <p><span className="font-semibold">{obs.type}:</span> {obs.details}</p>
+                                    </div>
+                                ))}
+                            </div>
+                         ) : (
+                            <div className="p-3 border rounded-md text-sm text-center text-muted-foreground">
+                                No hay observaciones registradas.
+                            </div>
+                         )}
                      </div>
 
                     {aiResponse && (
@@ -280,7 +290,7 @@ export default function AtRiskReportPage() {
       groups,
       calculateFinalGrade, 
       getStudentRiskLevel,
-      activePartialId,
+      allObservations,
   } = useData();
   const [reportData, setReportData] = useState<StudentReportData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -312,53 +322,57 @@ export default function AtRiskReportPage() {
 
   useEffect(() => {
     if (group) {
-        const keySuffix = `${group.id}_${activePartialId}`;
-        const criteria = loadFromLocalStorage<EvaluationCriteria[]>(`criteria_${keySuffix}`, []);
-        const grades = loadFromLocalStorage<Grades>(`grades_${keySuffix}`, {});
-        const participations = loadFromLocalStorage<ParticipationRecord>(`participations_${keySuffix}`, {});
-        const activities = loadFromLocalStorage<Activity[]>(`activities_${keySuffix}`, []);
-        const activityRecords = loadFromLocalStorage<ActivityRecord>(`activityRecords_${keySuffix}`, {});
-        const attendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${keySuffix}`, {});
+        const partials: PartialId[] = ['p1', 'p2', 'p3'];
+        const atRiskStudentMap = new Map<string, StudentReportData>();
 
-        const atRiskStudentsInGroup = group.students
-            .map(student => {
-                const finalGrade = calculateFinalGrade(student.id, activePartialId, criteria, grades, participations, activities, activityRecords);
+        partials.forEach(partialId => {
+            const keySuffix = `${group.id}_${partialId}`;
+            const criteria = loadFromLocalStorage<EvaluationCriteria[]>(`criteria_${keySuffix}`, []);
+            const grades = loadFromLocalStorage<Grades>(`grades_${keySuffix}`, {});
+            const participations = loadFromLocalStorage<ParticipationRecord>(`participations_${keySuffix}`, {});
+            const activities = loadFromLocalStorage<Activity[]>(`activities_${keySuffix}`, []);
+            const activityRecords = loadFromLocalStorage<ActivityRecord>(`activityRecords_${keySuffix}`, {});
+            const attendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${keySuffix}`, {});
+
+            group.students.forEach(student => {
+                const finalGrade = calculateFinalGrade(student.id, partialId, criteria, grades, participations, activities, activityRecords);
                 const riskLevel = getStudentRiskLevel(finalGrade, attendance, student.id);
-                return { ...student, finalGrade, riskLevel };
-            })
-            .filter(student => student.riskLevel.level === 'high' || student.riskLevel.level === 'medium');
-
-      const data = atRiskStudentsInGroup.map(student => {
-        const criteriaDetails = getCriteriaDetails(student.id, criteria, grades, participations, activities, activityRecords);
-
-        const attendanceStats = { p: 0, a: 0, total: 0 };
-        Object.keys(attendance).forEach(date => {
-            if (attendance[date]?.[student.id] !== undefined) {
-                attendanceStats.total++;
-                if (attendance[date][student.id]) attendanceStats.p++; else attendanceStats.a++;
-            }
+                
+                if (riskLevel.level === 'high' || riskLevel.level === 'medium') {
+                    const existingEntry = atRiskStudentMap.get(student.id);
+                     if (!existingEntry || riskLevel.level === 'high' || (riskLevel.level === 'medium' && existingEntry.riskLevel !== 'high')) {
+                        const criteriaDetails = getCriteriaDetails(student.id, criteria, grades, participations, activities, activityRecords);
+                        const attendanceStats = { p: 0, a: 0, total: 0 };
+                        Object.keys(attendance).forEach(date => {
+                            if (attendance[date]?.[student.id] !== undefined) {
+                                attendanceStats.total++;
+                                if (attendance[date][student.id]) attendanceStats.p++; else attendanceStats.a++;
+                            }
+                        });
+                        
+                        atRiskStudentMap.set(student.id, {
+                          id: student.id,
+                          name: student.name,
+                          photo: student.photo,
+                          email: student.email,
+                          tutorName: student.tutorName,
+                          tutorPhone: student.tutorPhone,
+                          riskLevel: riskLevel.level,
+                          riskReason: riskLevel.reason,
+                          finalGrade: finalGrade,
+                          attendance: attendanceStats,
+                          criteriaDetails,
+                          observations: (allObservations[student.id] || []).filter(obs => obs.partialId === partialId),
+                        });
+                    }
+                }
+            });
         });
         
-        return {
-          id: student.id,
-          name: student.name,
-          photo: student.photo,
-          email: student.email,
-          tutorName: student.tutorName,
-          tutorPhone: student.tutorPhone,
-          riskLevel: student.riskLevel.level,
-          riskReason: student.riskLevel.reason,
-          finalGrade: student.finalGrade,
-          attendance: attendanceStats,
-          criteriaDetails,
-          observations: [],
-        };
-      });
-
-      setReportData(data);
+        setReportData(Array.from(atRiskStudentMap.values()));
     }
     setIsLoading(false);
-  }, [group, calculateFinalGrade, getStudentRiskLevel, activePartialId, getCriteriaDetails]);
+  }, [group, calculateFinalGrade, getStudentRiskLevel, getCriteriaDetails, allObservations]);
 
 
   if (isLoading) {
@@ -381,7 +395,7 @@ export default function AtRiskReportPage() {
        <div className="flex items-center justify-between">
          <div className="flex items-center gap-4">
             <Button asChild variant="outline" size="icon">
-              <Link href={`/reports/${group.id}`}>
+              <Link href={`/reports`}>
                 <ArrowLeft />
                 <span className="sr-only">Volver a Informes</span>
               </Link>
@@ -413,7 +427,7 @@ export default function AtRiskReportPage() {
                         }
                     </AccordionTrigger>
                     <AccordionContent className="border-x border-b rounded-b-lg p-0">
-                       <AtRiskStudentCard studentData={student} />
+                       <AtRiskStudentCard studentData={student} groupSubject={group.subject}/>
                     </AccordionContent>
                 </AccordionItem>
             ))}
