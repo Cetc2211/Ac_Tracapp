@@ -75,10 +75,12 @@ export default function GroupDetailsPage() {
     atRiskStudents,
     deleteGroup,
     activePartialId,
-    setActivePartialId
+    setActivePartialId,
+    calculateFinalGrade,
+    getStudentRiskLevel,
   } = useData();
 
-  const { criteria } = partialData;
+  const { criteria, attendance } = partialData;
 
   const router = useRouter();
   const { toast } = useToast();
@@ -105,13 +107,11 @@ export default function GroupDetailsPage() {
     if (!activeGroup) return {};
     const riskMap: {[studentId: string]: CalculatedRisk} = {};
     activeGroup.students.forEach(s => {
-      const atRiskInfo = atRiskStudents.find(riskStudent => riskStudent.id === s.id);
-      riskMap[s.id] = atRiskInfo 
-        ? atRiskInfo.calculatedRisk 
-        : { level: 'low', reason: 'Sin riesgo detectado' };
+      const finalGrade = calculateFinalGrade(s.id);
+      riskMap[s.id] = getStudentRiskLevel(finalGrade, attendance, s.id);
     });
     return riskMap;
-  }, [activeGroup, atRiskStudents]);
+  }, [activeGroup, partialData, calculateFinalGrade, getStudentRiskLevel]);
 
   const saveState = (newGroups: Group[], newAllStudents: Student[]) => {
       setGroups(newGroups);
