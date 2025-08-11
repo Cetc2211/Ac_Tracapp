@@ -18,7 +18,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { useData } from '@/hooks/use-data';
+import { useData, loadFromLocalStorage } from '@/hooks/use-data';
 import { Badge } from '@/components/ui/badge';
 import { getPartialLabel } from '@/lib/utils';
 import type { PartialId, StudentObservation } from '@/hooks/use-data';
