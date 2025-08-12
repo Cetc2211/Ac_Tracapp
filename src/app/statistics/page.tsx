@@ -22,6 +22,7 @@ import Link from 'next/link';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useData, loadFromLocalStorage } from '@/hooks/use-data';
 import type { Student, EvaluationCriteria, Grades, ParticipationRecord, Activity, ActivityRecord, AttendanceRecord, PartialId } from '@/hooks/use-data';
+import { getPartialLabel } from '@/lib/utils';
 
 
 type GroupStats = {
@@ -61,6 +62,7 @@ export default function StatisticsPage() {
         getStudentRiskLevel,
         partialData,
         activePartialId,
+        setActivePartialId,
     } = useData();
     const { criteria, grades, participations, attendance, activities, activityRecords } = partialData;
 
@@ -132,7 +134,7 @@ export default function StatisticsPage() {
             for(const student of activeGroup.students) {
                 const finalGrade = calculateFinalGrade(student.id, activePartialId, criteria, grades, participations, activities, activityRecords);
                 studentGrades.push({student, grade: finalGrade});
-                if(finalGrade >= 70) approved++; else failed++;
+                if(finalGrade >= 60) approved++; else failed++;
                 
                 const risk = getStudentRiskLevel(finalGrade, attendance, student.id);
                 riskDistribution[risk.level]++;
@@ -147,7 +149,7 @@ export default function StatisticsPage() {
                     else if (participationRate <= 80) participationDistribution[3].students++;
                     else participationDistribution[4].students++;
                 } else if(activeGroup.students.length > 0) {
-                     participationDistribution[0].students = activeGroup.students.length;
+                     participationDistribution[4].students = activeGroup.students.length;
                 }
             }
             
@@ -220,6 +222,14 @@ export default function StatisticsPage() {
           </p>
         </div>
       </div>
+       <Tabs defaultValue={activePartialId} onValueChange={(value) => setActivePartialId(value as PartialId)} className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="p1">Primer Parcial</TabsTrigger>
+            <TabsTrigger value="p2">Segundo Parcial</TabsTrigger>
+            <TabsTrigger value="p3">Tercer Parcial</TabsTrigger>
+        </TabsList>
+       </Tabs>
+
       <Tabs defaultValue="general">
         <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="general">Visión General</TabsTrigger>
@@ -239,7 +249,7 @@ export default function StatisticsPage() {
                 <div className="space-y-6">
                      <Card>
                         <CardHeader>
-                        <CardTitle>Rendimiento por Grupo</CardTitle>
+                        <CardTitle>Rendimiento por Grupo ({getPartialLabel(activePartialId)})</CardTitle>
                         <CardDescription>Comparativa de la calificación promedio final y la tasa de asistencia entre grupos.</CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -267,7 +277,7 @@ export default function StatisticsPage() {
                     </Card>
                     <Card>
                         <CardHeader>
-                            <CardTitle>Distribución de Riesgo por Grupo</CardTitle>
+                            <CardTitle>Distribución de Riesgo por Grupo ({getPartialLabel(activePartialId)})</CardTitle>
                             <CardDescription>Proporción de estudiantes en cada nivel de riesgo por grupo.</CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -312,7 +322,7 @@ export default function StatisticsPage() {
                     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                         <Card>
                             <CardHeader>
-                                <CardTitle>Riesgo del Grupo</CardTitle>
+                                <CardTitle>Riesgo del Grupo ({getPartialLabel(activePartialId)})</CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <ChartContainer config={{}} className="min-h-[250px] w-full">
@@ -328,7 +338,7 @@ export default function StatisticsPage() {
                         </Card>
                          <Card>
                             <CardHeader>
-                                <CardTitle>Índice de Aprobación</CardTitle>
+                                <CardTitle>Índice de Aprobación ({getPartialLabel(activePartialId)})</CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <ChartContainer config={{}} className="min-h-[250px] w-full">
@@ -344,7 +354,7 @@ export default function StatisticsPage() {
                         </Card>
                          <Card>
                             <CardHeader>
-                                <CardTitle>Índice de Asistencia</CardTitle>
+                                <CardTitle>Índice de Asistencia ({getPartialLabel(activePartialId)})</CardTitle>
                             </CardHeader>
                             <CardContent>
                                  <ChartContainer config={{}} className="min-h-[250px] w-full">
@@ -364,7 +374,7 @@ export default function StatisticsPage() {
                         
                         <Card>
                             <CardHeader>
-                                <CardTitle>Mejores Calificaciones</CardTitle>
+                                <CardTitle>Mejores Calificaciones ({getPartialLabel(activePartialId)})</CardTitle>
                                 <CardDescription>Calificación final de los 5 estudiantes con mejor desempeño.</CardDescription>
                             </CardHeader>
                              <CardContent>
@@ -381,7 +391,7 @@ export default function StatisticsPage() {
                         </Card>
                          <Card>
                             <CardHeader>
-                                <CardTitle>Distribución de Participación en Clase</CardTitle>
+                                <CardTitle>Distribución de Participación en Clase ({getPartialLabel(activePartialId)})</CardTitle>
                                 <CardDescription>Número de estudiantes por rango de porcentaje de participación.</CardDescription>
                             </CardHeader>
                             <CardContent>
