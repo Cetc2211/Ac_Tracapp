@@ -19,7 +19,18 @@ import { useToast } from '@/hooks/use-toast';
 import { ThemeSwitcher, themes } from '@/components/theme-switcher';
 import { Separator } from '@/components/ui/separator';
 import { useData } from '@/hooks/use-data';
-import { Upload, Download } from 'lucide-react';
+import { Upload, Download, RotateCcw } from 'lucide-react';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 export default function SettingsPage() {
     const { settings, setSettings, groups } = useData();
@@ -174,6 +185,17 @@ export default function SettingsPage() {
         fileInputRef.current?.click();
     };
 
+    const handleResetApp = () => {
+        localStorage.clear();
+        toast({
+            title: "Aplicación Restablecida",
+            description: "Todos los datos han sido borrados. La página se recargará."
+        });
+        setTimeout(() => {
+            window.location.reload();
+        }, 1500);
+    }
+
 
   if (!isClient) {
     return null;
@@ -248,7 +270,7 @@ export default function SettingsPage() {
                   <Download className="mr-2 h-4 w-4" />
                   Exportar Datos (Backup)
               </Button>
-              <Button onClick={triggerFileSelect} variant="destructive">
+              <Button onClick={triggerFileSelect}>
                   <Upload className="mr-2 h-4 w-4" />
                   Importar Datos (Restaurar)
               </Button>
@@ -263,6 +285,41 @@ export default function SettingsPage() {
            <CardFooter>
                <p className="text-xs text-muted-foreground">
                   La importación reemplazará todos los datos actuales. Asegúrate de tener un respaldo si es necesario.
+              </p>
+           </CardFooter>
+      </Card>
+       <Card>
+          <CardHeader>
+              <CardTitle className="text-destructive">Zona de Peligro</CardTitle>
+              <CardDescription>
+                  Estas acciones no se pueden deshacer. Úsalas con precaución.
+              </CardDescription>
+          </CardHeader>
+          <CardContent>
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="destructive">
+                            <RotateCcw className="mr-2 h-4 w-4" />
+                            Restablecer Aplicación
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Esta acción borrará permanentemente TODOS los datos de la aplicación, incluyendo grupos, estudiantes, calificaciones y ajustes. Volverá al estado inicial de fábrica.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleResetApp}>Sí, borrar todo</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+          </CardContent>
+           <CardFooter>
+               <p className="text-xs text-muted-foreground">
+                  Si deseas empezar de cero, esta es la opción correcta. Se recomienda exportar tus datos primero.
               </p>
            </CardFooter>
       </Card>
