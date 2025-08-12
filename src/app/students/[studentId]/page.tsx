@@ -13,24 +13,24 @@ import { Button } from '@/components/ui/button';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, Download, User, Mail, Phone, BookCopy, BarChart3, MessageSquare, Briefcase, TrendingUp, TrendingDown, Wand2, Loader2 } from 'lucide-react';
-import { useState, useMemo, useRef } from 'react';
+import { ArrowLeft, Download, User, Mail, Phone, Wand2, Loader2, MessageSquare } from 'lucide-react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useData, loadFromLocalStorage } from '@/hooks/use-data';
 import { Badge } from '@/components/ui/badge';
 import { getPartialLabel } from '@/lib/utils';
-import type { PartialId, StudentObservation } from '@/hooks/use-data';
+import type { PartialId, StudentObservation, EvaluationCriteria, Grades, ParticipationRecord, ActivityRecord, Activity } from '@/hooks/use-data';
 import { StudentObservationLogDialog } from '@/components/student-observation-log-dialog';
 import { WhatsAppDialog } from '@/components/whatsapp-dialog';
 import { generateStudentFeedback } from '@/ai/flows/student-feedback';
 import type { StudentFeedbackInput, StudentFeedbackOutput } from '@/ai/flows/student-feedback';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 type StudentStats = ReturnType<typeof useData>['calculateDetailedFinalGrade'] & {
     partialId: PartialId;
     attendance: { p: number; a: number; total: number; rate: number };
+    observations: StudentObservation[];
 };
 
 export default function StudentProfilePage() {
@@ -43,7 +43,6 @@ export default function StudentProfilePage() {
       calculateDetailedFinalGrade,
       allObservations,
       activePartialId,
-      setActivePartialId
   } = useData();
 
   const [isLogOpen, setIsLogOpen] = useState(false);
@@ -60,35 +59,40 @@ export default function StudentProfilePage() {
     return groups.filter(g => g.students.some(s => s.id === studentId));
   }, [groups, studentId]);
 
-  const activeStats: StudentStats | null = useMemo(() => {
-    if (!student || !studentGroups.length) return null;
+  const studentStatsByPartial: StudentStats[] = useMemo(() => {
+    if (!student || studentGroups.length === 0) return [];
     
     const primaryGroupId = studentGroups[0].id;
-    const gradeDetails = calculateDetailedFinalGrade(student.id, primaryGroupId, activePartialId);
-    
-    const keySuffix = `${primaryGroupId}_${activePartialId}`;
-    const attendanceForPartial = loadFromLocalStorage(`attendance_${keySuffix}`, {});
-    
-    let p = 0, a = 0, total = 0;
-    Object.keys(attendanceForPartial).forEach(date => {
-        if (attendanceForPartial[date]?.[studentId] !== undefined) {
-            total++;
-            if (attendanceForPartial[date][studentId]) p++; else a++;
+    const partials: PartialId[] = ['p1', 'p2', 'p3'];
+    const allStats: StudentStats[] = [];
+
+    partials.forEach(pId => {
+        const gradeDetails = calculateDetailedFinalGrade(student.id, primaryGroupId, pId);
+        if (gradeDetails.criteriaDetails.length > 0) { // Only show partials with data
+            const keySuffix = `${primaryGroupId}_${pId}`;
+            const attendanceForPartial = loadFromLocalStorage<Record<string, Record<string, boolean>>>(`attendance_${keySuffix}`, {});
+            
+            let p = 0, a = 0, total = 0;
+            Object.keys(attendanceForPartial).forEach(date => {
+                if (attendanceForPartial[date]?.[studentId] !== undefined) {
+                    total++;
+                    if (attendanceForPartial[date][studentId]) p++; else a++;
+                }
+            });
+
+            const partialObservations = (allObservations[studentId] || []).filter(obs => obs.partialId === pId);
+
+            allStats.push({
+                ...gradeDetails,
+                partialId: pId,
+                attendance: { p, a, total, rate: total > 0 ? (p / total) * 100 : 100 },
+                observations: partialObservations,
+            });
         }
     });
-
-    return {
-        ...gradeDetails,
-        partialId: activePartialId,
-        attendance: { p, a, total, rate: total > 0 ? (p / total) * 100 : 100 }
-    };
-  }, [student, studentGroups, calculateDetailedFinalGrade, activePartialId, studentId]);
-
-
-  const studentObservations = useMemo(() => {
-    return (allObservations[studentId] || []).filter(obs => obs.partialId === activePartialId);
-  }, [allObservations, studentId, activePartialId]);
-
+    
+    return allStats;
+  }, [student, studentGroups, calculateDetailedFinalGrade, allObservations, studentId]);
 
   const handleDownloadPdf = () => {
     const input = reportRef.current;
@@ -122,7 +126,12 @@ export default function StudentProfilePage() {
   };
 
   const handleGenerateFeedback = async () => {
-      if (!student || !activeStats) return;
+      if (!student) return;
+      const activeStats = studentStatsByPartial.find(s => s.partialId === activePartialId);
+      if (!activeStats) {
+          toast({ variant: 'destructive', title: 'Sin datos', description: `No hay datos para generar feedback en el ${getPartialLabel(activePartialId)}.` });
+          return;
+      }
       setIsGeneratingFeedback(true);
       setGeneratedFeedback(null);
       try {
@@ -133,7 +142,7 @@ export default function StudentProfilePage() {
                   grade: activeStats.finalGrade,
               }],
               attendance: activeStats.attendance,
-              observations: studentObservations.map(obs => ({ type: obs.type, details: obs.details }))
+              observations: activeStats.observations.map(obs => ({ type: obs.type, details: obs.details }))
           };
 
           const feedback = await generateStudentFeedback(inputData);
@@ -144,7 +153,6 @@ export default function StudentProfilePage() {
           setIsGeneratingFeedback(false);
       }
   };
-
 
   if (!student) {
     return notFound();
@@ -205,73 +213,61 @@ export default function StudentProfilePage() {
                 </CardHeader>
             </Card>
 
-            <div className="mt-6">
-                 <Tabs defaultValue={activePartialId} onValueChange={(value) => setActivePartialId(value as PartialId)} className="w-full">
-                    <TabsList className="grid w-full grid-cols-3">
-                        <TabsTrigger value="p1">Primer Parcial</TabsTrigger>
-                        <TabsTrigger value="p2">Segundo Parcial</TabsTrigger>
-                        <TabsTrigger value="p3">Tercer Parcial</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value={activePartialId} className="mt-4">
-                        {activeStats && activeStats.criteriaDetails.length > 0 ? (
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle>Rendimiento Académico</CardTitle>
-                                        <CardDescription>Calificación: <Badge className={activeStats.finalGrade >= 60 ? 'bg-green-500' : 'bg-destructive'}>{activeStats.finalGrade.toFixed(1)}%</Badge></CardDescription>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <h4 className="font-semibold mb-2 text-sm">Desglose de Criterios:</h4>
-                                        <div className="space-y-1 text-sm">
-                                            {activeStats.criteriaDetails.map(c => (
-                                                <div key={c.name} className="flex justify-between">
-                                                    <span>{c.name} <span className="text-xs text-muted-foreground">({c.weight}%)</span></span>
-                                                    <span className="font-medium">{c.earned.toFixed(1)}%</span>
+            <div className="mt-6 space-y-6">
+                {studentStatsByPartial.length > 0 ? (
+                    studentStatsByPartial.map((stats) => (
+                        <Card key={stats.partialId}>
+                            <CardHeader>
+                                <CardTitle>{getPartialLabel(stats.partialId)}</CardTitle>
+                                <CardDescription>Calificación Final: <Badge className={stats.finalGrade >= 60 ? 'bg-green-500' : 'bg-destructive'}>{stats.finalGrade.toFixed(1)}%</Badge> | Asistencia: <Badge variant="secondary">{stats.attendance.rate.toFixed(1)}%</Badge></CardDescription>
+                            </CardHeader>
+                            <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <div>
+                                    <h4 className="font-semibold mb-2 text-sm">Desglose de Criterios:</h4>
+                                    <div className="space-y-1 text-sm p-3 bg-muted/30 rounded-md">
+                                        {stats.criteriaDetails.map(c => (
+                                            <div key={c.name} className="flex justify-between">
+                                                <span>{c.name} <span className="text-xs text-muted-foreground">({c.weight}%)</span></span>
+                                                <span className="font-medium">{c.earned.toFixed(1)}%</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                 <div>
+                                    <h4 className="font-semibold mb-2 text-sm">Observaciones en Bitácora:</h4>
+                                    {stats.observations.length > 0 ? (
+                                        <div className="space-y-2 text-sm max-h-48 overflow-y-auto pr-2">
+                                            {stats.observations.map(obs => (
+                                                 <div key={obs.id} className="p-2 bg-muted/50 rounded-md">
+                                                    <p><span className="font-semibold">{obs.type}:</span> {obs.details}</p>
                                                 </div>
                                             ))}
                                         </div>
-                                    </CardContent>
-                                </Card>
-                                 <Card>
-                                    <CardHeader>
-                                        <CardTitle>Asistencia y Observaciones</CardTitle>
-                                         <CardDescription>Tasa de asistencia del {activeStats.attendance.rate.toFixed(1)}%</CardDescription>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <h4 className="font-semibold mb-2 text-sm">Observaciones en Bitácora:</h4>
-                                        {studentObservations.length > 0 ? (
-                                            <div className="space-y-2 text-sm">
-                                                {studentObservations.map(obs => (
-                                                     <div key={obs.id} className="p-2 bg-muted/50 rounded-md">
-                                                        <p><span className="font-semibold">{obs.type}:</span> {obs.details}</p>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <p className="text-sm text-muted-foreground">No hay observaciones para este parcial.</p>
-                                        )}
-                                    </CardContent>
-                                </Card>
-                            </div>
-                        ) : (
-                             <Card>
-                                <CardContent className="p-12 text-center">
-                                    <h3 className="text-lg font-semibold">Sin datos</h3>
-                                    <p className="text-muted-foreground mt-1">No hay información de calificaciones registrada para este estudiante en el {getPartialLabel(activePartialId)}.</p>
-                                </CardContent>
-                            </Card>
-                        )}
-                    </TabsContent>
-                </Tabs>
+                                    ) : (
+                                        <p className="text-sm text-muted-foreground pt-4 text-center">No hay observaciones para este parcial.</p>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))
+                ) : (
+                     <Card>
+                        <CardContent className="p-12 text-center">
+                            <h3 className="text-lg font-semibold">Sin datos de rendimiento</h3>
+                            <p className="text-muted-foreground mt-1">No hay información de calificaciones registrada para este estudiante en ningún parcial.</p>
+                        </CardContent>
+                    </Card>
+                )}
             </div>
+
              <Card className="mt-6">
                 <CardHeader>
                     <div className="flex justify-between items-center">
                         <div>
                             <CardTitle>Feedback y Recomendaciones con IA</CardTitle>
-                            <CardDescription>Genera un resumen personalizado del rendimiento del estudiante en el parcial activo.</CardDescription>
+                            <CardDescription>Genera un resumen personalizado del rendimiento del estudiante en el <span className='font-bold'>{getPartialLabel(activePartialId)}</span>.</CardDescription>
                         </div>
-                        <Button onClick={handleGenerateFeedback} disabled={isGeneratingFeedback || !activeStats}>
+                        <Button onClick={handleGenerateFeedback} disabled={isGeneratingFeedback}>
                             {isGeneratingFeedback ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Wand2 className="mr-2 h-4 w-4" />}
                             {isGeneratingFeedback ? "Generando..." : "Generar Feedback"}
                         </Button>
@@ -301,5 +297,3 @@ export default function StudentProfilePage() {
     </>
   );
 }
-
-    
