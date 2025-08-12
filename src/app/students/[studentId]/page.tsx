@@ -7,13 +7,12 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, Download, User, Mail, Phone, Wand2, Loader2, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Download, User, Mail, Phone, Wand2, Loader2, MessageSquare, BookText } from 'lucide-react';
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
@@ -26,6 +25,7 @@ import { StudentObservationLogDialog } from '@/components/student-observation-lo
 import { WhatsAppDialog } from '@/components/whatsapp-dialog';
 import { generateStudentFeedback } from '@/ai/flows/student-feedback';
 import type { StudentFeedbackInput, StudentFeedbackOutput } from '@/ai/flows/student-feedback';
+import { Separator } from '@/components/ui/separator';
 
 type StudentStats = ReturnType<typeof useData>['calculateDetailedFinalGrade'] & {
     partialId: PartialId;
@@ -62,37 +62,43 @@ export default function StudentProfilePage() {
   const studentStatsByPartial: StudentStats[] = useMemo(() => {
     if (!student || studentGroups.length === 0) return [];
     
+    // Assume student belongs to one main group for this report context
     const primaryGroupId = studentGroups[0].id;
     const partials: PartialId[] = ['p1', 'p2', 'p3'];
     const allStats: StudentStats[] = [];
 
     partials.forEach(pId => {
         const gradeDetails = calculateDetailedFinalGrade(student.id, primaryGroupId, pId);
-        if (gradeDetails.criteriaDetails.length > 0) { // Only show partials with data
-            const keySuffix = `${primaryGroupId}_${pId}`;
-            const attendanceForPartial = loadFromLocalStorage<Record<string, Record<string, boolean>>>(`attendance_${keySuffix}`, {});
-            
-            let p = 0, a = 0, total = 0;
-            Object.keys(attendanceForPartial).forEach(date => {
-                if (attendanceForPartial[date]?.[studentId] !== undefined) {
-                    total++;
-                    if (attendanceForPartial[date][studentId]) p++; else a++;
-                }
-            });
+        
+        const keySuffix = `${primaryGroupId}_${pId}`;
+        const attendanceForPartial = loadFromLocalStorage<Record<string, Record<string, boolean>>>(`attendance_${keySuffix}`, {});
+        
+        let p = 0, a = 0, total = 0;
+        Object.keys(attendanceForPartial).forEach(date => {
+            if (attendanceForPartial[date]?.[studentId] !== undefined) {
+                total++;
+                if (attendanceForPartial[date][studentId]) p++; else a++;
+            }
+        });
 
-            const partialObservations = (allObservations[studentId] || []).filter(obs => obs.partialId === pId);
+        const partialObservations = (allObservations[studentId] || []).filter(obs => obs.partialId === pId);
 
-            allStats.push({
-                ...gradeDetails,
-                partialId: pId,
-                attendance: { p, a, total, rate: total > 0 ? (p / total) * 100 : 100 },
-                observations: partialObservations,
-            });
-        }
+        allStats.push({
+            ...gradeDetails,
+            partialId: pId,
+            attendance: { p, a, total, rate: total > 0 ? (p / total) * 100 : 100 },
+            observations: partialObservations,
+        });
     });
     
-    return allStats;
+    return allStats.filter(stats => stats.criteriaDetails.length > 0);
   }, [student, studentGroups, calculateDetailedFinalGrade, allObservations, studentId]);
+  
+  const semesterAverage = useMemo(() => {
+    if (studentStatsByPartial.length === 0) return 0;
+    const total = studentStatsByPartial.reduce((sum, stats) => sum + stats.finalGrade, 0);
+    return total / studentStatsByPartial.length;
+  }, [studentStatsByPartial]);
 
   const handleDownloadPdf = () => {
     const input = reportRef.current;
@@ -157,6 +163,8 @@ export default function StudentProfilePage() {
   if (!student) {
     return notFound();
   }
+  
+  const allSemesterObservations = Object.values(allObservations).flat().filter(obs => obs.studentId === studentId);
 
   return (
     <>
@@ -199,6 +207,9 @@ export default function StudentProfilePage() {
                     />
                     <div className="w-full">
                         <CardTitle className="text-3xl">{student.name}</CardTitle>
+                        <p className="text-lg text-muted-foreground font-semibold">
+                            Asignatura: {studentGroups[0]?.subject || 'No asignada'}
+                        </p>
                         <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-4 text-sm text-muted-foreground">
                             <p className="flex items-center gap-2"><Mail className="h-4 w-4 text-primary" /> {student.email || 'No registrado'}</p>
                             <p className="flex items-center gap-2"><Phone className="h-4 w-4 text-primary" /> {student.phone || 'No registrado'}</p>
@@ -213,51 +224,77 @@ export default function StudentProfilePage() {
                 </CardHeader>
             </Card>
 
-            <div className="mt-6 space-y-6">
-                {studentStatsByPartial.length > 0 ? (
-                    studentStatsByPartial.map((stats) => (
-                        <Card key={stats.partialId}>
-                            <CardHeader>
-                                <CardTitle>{getPartialLabel(stats.partialId)}</CardTitle>
-                                <CardDescription>Calificación Final: <Badge className={stats.finalGrade >= 60 ? 'bg-green-500' : 'bg-destructive'}>{stats.finalGrade.toFixed(1)}%</Badge> | Asistencia: <Badge variant="secondary">{stats.attendance.rate.toFixed(1)}%</Badge></CardDescription>
-                            </CardHeader>
-                            <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                <div>
-                                    <h4 className="font-semibold mb-2 text-sm">Desglose de Criterios:</h4>
-                                    <div className="space-y-1 text-sm p-3 bg-muted/30 rounded-md">
-                                        {stats.criteriaDetails.map(c => (
-                                            <div key={c.name} className="flex justify-between">
-                                                <span>{c.name} <span className="text-xs text-muted-foreground">({c.weight}%)</span></span>
-                                                <span className="font-medium">{c.earned.toFixed(1)}%</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                                 <div>
-                                    <h4 className="font-semibold mb-2 text-sm">Observaciones en Bitácora:</h4>
-                                    {stats.observations.length > 0 ? (
-                                        <div className="space-y-2 text-sm max-h-48 overflow-y-auto pr-2">
-                                            {stats.observations.map(obs => (
-                                                 <div key={obs.id} className="p-2 bg-muted/50 rounded-md">
-                                                    <p><span className="font-semibold">{obs.type}:</span> {obs.details}</p>
+            <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+                 <div className="lg:col-span-2 space-y-4">
+                    {studentStatsByPartial.length > 0 ? (
+                        studentStatsByPartial.map((stats, index) => (
+                            <React.Fragment key={stats.partialId}>
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>{getPartialLabel(stats.partialId)}</CardTitle>
+                                        <CardDescription>Calificación Final: <Badge className={stats.finalGrade >= 60 ? 'bg-green-500' : 'bg-destructive'}>{stats.finalGrade.toFixed(1)}%</Badge> | Asistencia: <Badge variant="secondary">{stats.attendance.rate.toFixed(1)}%</Badge></CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <h4 className="font-semibold mb-2 text-sm">Desglose de Criterios:</h4>
+                                        <div className="space-y-1 text-sm p-3 bg-muted/30 rounded-md">
+                                            {stats.criteriaDetails.map(c => (
+                                                <div key={c.name} className="flex justify-between">
+                                                    <span>{c.name} <span className="text-xs text-muted-foreground">({c.weight}%)</span></span>
+                                                    <span className="font-medium">{c.earned.toFixed(1)}%</span>
                                                 </div>
                                             ))}
                                         </div>
-                                    ) : (
-                                        <p className="text-sm text-muted-foreground pt-4 text-center">No hay observaciones para este parcial.</p>
-                                    )}
-                                </div>
+                                    </CardContent>
+                                </Card>
+                                {index < studentStatsByPartial.length - 1 && <Separator />}
+                            </React.Fragment>
+                        ))
+                    ) : (
+                         <Card>
+                            <CardContent className="p-12 text-center">
+                                <h3 className="text-lg font-semibold">Sin datos de rendimiento</h3>
+                                <p className="text-muted-foreground mt-1">No hay información de calificaciones registrada para este estudiante.</p>
                             </CardContent>
                         </Card>
-                    ))
-                ) : (
-                     <Card>
-                        <CardContent className="p-12 text-center">
-                            <h3 className="text-lg font-semibold">Sin datos de rendimiento</h3>
-                            <p className="text-muted-foreground mt-1">No hay información de calificaciones registrada para este estudiante en ningún parcial.</p>
+                    )}
+                 </div>
+
+                 <div className="space-y-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-base">
+                               <BookText className="h-5 w-5" /> Bitácora del Semestre
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                             {allSemesterObservations.length > 0 ? (
+                                <div className="space-y-3 text-sm max-h-64 overflow-y-auto pr-2">
+                                    {allSemesterObservations.map(obs => (
+                                         <div key={obs.id} className="p-2 bg-muted/50 rounded-md">
+                                            <div className="flex justify-between items-center">
+                                                <p className="font-semibold">{obs.type}</p>
+                                                <Badge variant="outline" className="text-xs">{getPartialLabel(obs.partialId)}</Badge>
+                                            </div>
+                                            <p className="text-xs mt-1">{obs.details}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-sm text-muted-foreground text-center py-4">No hay observaciones.</p>
+                            )}
                         </CardContent>
                     </Card>
-                )}
+                     <Card>
+                        <CardHeader>
+                            <CardTitle className="text-base text-center">Calificación Final Semestral</CardTitle>
+                        </CardHeader>
+                        <CardContent className="text-center">
+                             <p className="text-5xl font-bold" style={{ color: semesterAverage >= 60 ? 'hsl(var(--chart-2))' : 'hsl(var(--destructive))' }}>
+                                {semesterAverage.toFixed(1)}%
+                            </p>
+                        </CardContent>
+                    </Card>
+                 </div>
             </div>
 
              <Card className="mt-6">
