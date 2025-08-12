@@ -23,7 +23,7 @@ export type Group = {
 export type StudentObservation = {
     id: string;
     studentId: string;
-    partialId: PartialId; // NEW: Link observation to a partial
+    partialId: PartialId;
     date: string; // ISO date string
     type: 'Problema de conducta' | 'Episodio emocional' | 'Mérito' | 'Demérito' | 'Asesoría académica' | 'Otros' | string;
     details: string;

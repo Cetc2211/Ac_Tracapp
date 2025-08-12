@@ -50,6 +50,7 @@ import { cn } from '@/lib/utils';
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/groups', icon: BookCopy, label: 'Grupos' },
+  { href: '/bitacora', icon: BookText, label: 'Bitácora' },
   { href: '/grades', icon: FilePen, label: 'Calificaciones' },
   { href: '/attendance', icon: CalendarCheck, label: 'Asistencia' },
   { href: '/participations', icon: PenSquare, label: 'Participaciones' },

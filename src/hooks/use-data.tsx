@@ -138,10 +138,11 @@ interface DataContextType {
 
   // Functions
   deleteGroup: (groupId: string) => void;
+  addStudentObservation: (observation: Omit<StudentObservation, 'id' | 'date' | 'followUpUpdates' | 'isClosed'>) => void;
+  updateStudentObservation: (studentId: string, observationId: string, updateText: string, isClosing: boolean) => void;
   calculateFinalGrade: (studentId: string, forPartialId?: PartialId, pCriteria?: EvaluationCriteria[], pGrades?: Grades, pParticipations?: ParticipationRecord, pActivities?: Activity[], pActivityRecords?: ActivityRecord) => number;
   calculateDetailedFinalGrade: (studentId: string, forGroupId?: string, forPartialId?: PartialId) => { finalGrade: number, criteriaDetails: CriteriaDetail[] };
   getStudentRiskLevel: (finalGrade: number, pAttendance: AttendanceRecord, studentId: string) => CalculatedRisk;
-  updateStudentObservation: (studentId: string, observationId: string, updateText: string, isClosing: boolean) => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -435,7 +436,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const setActiveGroupId = (groupId: string | null) => {
         setActiveGroupIdState(groupId);
         saveToLocalStorage('activeGroupId', groupId);
-        // Do not reset partial ID here
         window.dispatchEvent(new Event('storage'));
         setDataVersion(v => v+1);
     };
@@ -464,6 +464,23 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             setActiveGroupId(null);
         }
     }
+    
+    const addStudentObservation = (observation: Omit<StudentObservation, 'id' | 'date' | 'followUpUpdates' | 'isClosed'>) => {
+        const newObservation: StudentObservation = {
+            ...observation,
+            id: `OBS-${Date.now()}`,
+            date: new Date().toISOString(),
+            followUpUpdates: [],
+            isClosed: false,
+        };
+        
+        setAllObservations(prev => {
+            const studentObservations = prev[newObservation.studentId] || [];
+            const newState = { ...prev, [newObservation.studentId]: [...studentObservations, newObservation] };
+            saveToLocalStorage('allObservations', newState);
+            return newState;
+        });
+    };
     
     const updateStudentObservation = (studentId: string, observationId: string, updateText: string, isClosing: boolean) => {
         setAllObservations(prev => {
@@ -596,7 +613,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             groupAverages, atRiskStudents, overallAverageParticipation,
             setStudents: setAllStudents, setGroups, setAllStudents, setAllObservations, setSettings, setActiveGroupId, setActivePartialId,
             setCriteria, setGrades, setAttendance, setParticipations, setActivities, setActivityRecords,
-            deleteGroup, calculateFinalGrade, getStudentRiskLevel, calculateDetailedFinalGrade, updateStudentObservation
+            deleteGroup, addStudentObservation, updateStudentObservation,
+            calculateFinalGrade, getStudentRiskLevel, calculateDetailedFinalGrade,
         }}>
             {children}
         </DataContext.Provider>
