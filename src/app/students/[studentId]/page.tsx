@@ -1,6 +1,7 @@
 
 'use client';
 
+import * as React from 'react';
 import {
   Card,
   CardContent,
@@ -62,7 +63,6 @@ export default function StudentProfilePage() {
   const studentStatsByPartial: StudentStats[] = useMemo(() => {
     if (!student || studentGroups.length === 0) return [];
     
-    // Assume student belongs to one main group for this report context
     const primaryGroupId = studentGroups[0].id;
     const partials: PartialId[] = ['p1', 'p2', 'p3'];
     const allStats: StudentStats[] = [];
@@ -70,28 +70,30 @@ export default function StudentProfilePage() {
     partials.forEach(pId => {
         const gradeDetails = calculateDetailedFinalGrade(student.id, primaryGroupId, pId);
         
-        const keySuffix = `${primaryGroupId}_${pId}`;
-        const attendanceForPartial = loadFromLocalStorage<Record<string, Record<string, boolean>>>(`attendance_${keySuffix}`, {});
-        
-        let p = 0, a = 0, total = 0;
-        Object.keys(attendanceForPartial).forEach(date => {
-            if (attendanceForPartial[date]?.[studentId] !== undefined) {
-                total++;
-                if (attendanceForPartial[date][studentId]) p++; else a++;
-            }
-        });
+        if (gradeDetails.criteriaDetails.length > 0) { // Only show partials with data
+            const keySuffix = `${primaryGroupId}_${pId}`;
+            const attendanceForPartial = loadFromLocalStorage<Record<string, Record<string, boolean>>>(`attendance_${keySuffix}`, {});
+            
+            let p = 0, a = 0, total = 0;
+            Object.keys(attendanceForPartial).forEach(date => {
+                if (attendanceForPartial[date]?.[studentId] !== undefined) {
+                    total++;
+                    if (attendanceForPartial[date][studentId]) p++; else a++;
+                }
+            });
 
-        const partialObservations = (allObservations[studentId] || []).filter(obs => obs.partialId === pId);
+            const partialObservations = (allObservations[studentId] || []).filter(obs => obs.partialId === pId);
 
-        allStats.push({
-            ...gradeDetails,
-            partialId: pId,
-            attendance: { p, a, total, rate: total > 0 ? (p / total) * 100 : 100 },
-            observations: partialObservations,
-        });
+            allStats.push({
+                ...gradeDetails,
+                partialId: pId,
+                attendance: { p, a, total, rate: total > 0 ? (p / total) * 100 : 100 },
+                observations: partialObservations,
+            });
+        }
     });
     
-    return allStats.filter(stats => stats.criteriaDetails.length > 0);
+    return allStats;
   }, [student, studentGroups, calculateDetailedFinalGrade, allObservations, studentId]);
   
   const semesterAverage = useMemo(() => {
