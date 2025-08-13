@@ -178,6 +178,11 @@ const defaultSettings = {
     logo: "",
     theme: "theme-default"
 };
+const defaultProfile = {
+    name: "Usuario",
+    email: "",
+    photoURL: ""
+};
 
 
 // DATA PROVIDER COMPONENT
@@ -273,6 +278,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
           onSnapshot(doc(db, `${prefix}/profile`, 'info'), (snapshot) => {
               if (snapshot.exists()) {
                   setUserProfile(snapshot.data() as UserProfile);
+              } else {
+                  setUserProfile(null);
               }
           }),
         ];

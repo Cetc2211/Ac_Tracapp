@@ -25,7 +25,7 @@ import { AppLogo } from '@/components/app-logo';
 import { Loader2, Clapperboard, Images, Star } from 'lucide-react';
 import Image from 'next/image';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, writeBatch } from 'firebase/firestore';
 
 export default function AuthenticationPage() {
   const [loginEmail, setLoginEmail] = useState('');
@@ -76,19 +76,23 @@ export default function AuthenticationPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, registerEmail, registerPassword);
       const user = userCredential.user;
       
+      const batch = writeBatch(db);
+
       const userProfileRef = doc(db, `users/${user.uid}/profile`, 'info');
-      await setDoc(userProfileRef, {
+      batch.set(userProfileRef, {
         name: registerName.trim(),
         email: user.email,
         photoURL: ""
       });
 
       const settingsDocRef = doc(db, `users/${user.uid}/settings`, 'app');
-      await setDoc(settingsDocRef, {
+      batch.set(settingsDocRef, {
         institutionName: `${registerName.trim()}'s Institution`,
         logo: "",
         theme: "theme-default"
       });
+      
+      await batch.commit();
 
       toast({ title: 'Cuenta Creada', description: '¡Bienvenido! Has sido registrado exitosamente.' });
       router.push('/dashboard');
