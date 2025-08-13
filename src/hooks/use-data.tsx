@@ -239,6 +239,9 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             } else if (activeGroupId && !fetchedGroups.some(g => g.id === activeGroupId)) {
               setActiveGroupIdState(fetchedGroups.length > 0 ? fetchedGroups[0].id : null);
             }
+            if(fetchedGroups.length === 0) {
+              setIsDataLoading(false);
+            }
           }),
           onSnapshot(collection(db, `${prefix}/students`), (snapshot) => {
             const fetchedStudents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
@@ -274,8 +277,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
           }),
         ];
         
-        setIsDataLoading(false);
-
         return () => {
           unsubscribers.forEach(unsub => unsub());
         }
@@ -285,6 +286,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     useEffect(() => {
         if(user && activeGroupId && activePartialId) {
             const prefix = `users/${user.uid}/groups/${activeGroupId}/partials/${activePartialId}`;
+            setIsDataLoading(true);
             const unsubscribers = [
                 onSnapshot(doc(db, prefix, 'data'), (doc) => {
                     const data = doc.data() as Omit<PartialData, 'students'> | undefined;
@@ -297,6 +299,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                         activities: data?.activities || [],
                         activityRecords: data?.activityRecords || {},
                     }));
+                    setIsDataLoading(false);
                 })
             ];
             return () => unsubscribers.forEach(unsub => unsub());
@@ -305,6 +308,9 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 criteria: [], grades: {}, attendance: {},
                 participations: {}, activities: [], activityRecords: {},
             });
+            if(user) { // Only set loading to false if user is logged in but has no active group
+                setIsDataLoading(false);
+            }
         }
     }, [user, activeGroupId, activePartialId]);
     

@@ -76,6 +76,7 @@ export default function AuthenticationPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, registerEmail, registerPassword);
       const user = userCredential.user;
       
+      // Setup user profile
       const userDocRef = doc(db, `users/${user.uid}/profile`, 'info');
       await setDoc(userDocRef, {
           name: registerName.trim(),
@@ -83,6 +84,7 @@ export default function AuthenticationPage() {
           photoURL: ""
       });
 
+      // Setup initial app settings
       const settingsDocRef = doc(db, `users/${user.uid}/settings`, 'app');
       await setDoc(settingsDocRef, {
         institutionName: `${registerName.trim()}'s Institution`,
