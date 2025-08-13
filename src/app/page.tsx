@@ -83,11 +83,11 @@ export default function AuthenticationPage() {
     setIsLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, registerEmail, registerPassword);
+      
       await updateProfile(userCredential.user, { displayName: registerName.trim() });
       
-      // Initialize settings for the new user
       await setDoc(doc(db, `users/${userCredential.user.uid}/settings`, 'app'), {
-        institutionName: "Mi Institución",
+        institutionName: `${registerName.trim()}'s Institution`,
         logo: "",
         theme: "theme-default"
       });

@@ -209,6 +209,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
               setAllStudentsState([]);
               setAllObservations({});
               setActiveGroupIdState(null);
+              setSettingsState(defaultSettings);
             }
         });
         return () => unsubscribe();
@@ -257,9 +258,14 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             }
           }),
         ];
+        
+        // Only set loading to false after initial listeners are set up
+        const timer = setTimeout(() => setIsLoading(false), 500); 
 
-        setIsLoading(false);
-        return () => unsubscribers.forEach(unsub => unsub());
+        return () => {
+          clearTimeout(timer);
+          unsubscribers.forEach(unsub => unsub());
+        }
       }
     }, [user, activeGroupId]);
     
