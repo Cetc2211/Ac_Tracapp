@@ -208,7 +208,7 @@ export default function GroupGradesPage() {
                 {studentsInGroup.length > 0 && criteria.length === 0 && (
                   <TableRow>
                       <TableCell colSpan={2} className="text-center h-24">
-                          No has definido criterios de evaluación para este parcial. <Link href={`/groups/${groupId}/criteria`} className="text-primary underline">Defínelos aquí.</Link>
+                          No has definido criterios de evaluación para este parcial. <Link href={`/grades/${groupId}/criteria`} className="text-primary underline">Defínelos aquí.</Link>
                       </TableCell>
                   </TableRow>
                 )}

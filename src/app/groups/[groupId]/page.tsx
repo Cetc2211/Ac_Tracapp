@@ -501,23 +501,23 @@ export default function GroupDetailsPage() {
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="bulkNames">Nombres*</Label>
-                                        <Textarea id="bulkNames" placeholder="Laura Jimenez\\nCarlos Sanchez" rows={5} value={bulkNames} onChange={(e) => setBulkNames(e.target.value)} />
+                                        <Textarea id="bulkNames" placeholder="Laura Jimenez\nCarlos Sanchez" rows={5} value={bulkNames} onChange={(e) => setBulkNames(e.target.value)} />
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="bulkEmails">Emails</Label>
-                                        <Textarea id="bulkEmails" placeholder="laura.j@example.com\\ncarlos.s@example.com" rows={5} value={bulkEmails} onChange={(e) => setBulkEmails(e.target.value)} />
+                                        <Textarea id="bulkEmails" placeholder="laura.j@example.com\ncarlos.s@example.com" rows={5} value={bulkEmails} onChange={(e) => setBulkEmails(e.target.value)} />
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="bulkPhones">Teléfonos</Label>
-                                        <Textarea id="bulkPhones" placeholder="555-3344\\n555-6677" rows={5} value={bulkPhones} onChange={(e) => setBulkPhones(e.target.value)} />
+                                        <Textarea id="bulkPhones" placeholder="555-3344\n555-6677" rows={5} value={bulkPhones} onChange={(e) => setBulkPhones(e.target.value)} />
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="bulkTutorNames">Nombres de Tutores</Label>
-                                        <Textarea id="bulkTutorNames" placeholder="Ricardo Jimenez\\nMaria Sanchez" rows={5} value={bulkTutorNames} onChange={(e) => setBulkTutorNames(e.target.value)} />
+                                        <Textarea id="bulkTutorNames" placeholder="Ricardo Jimenez\nMaria Sanchez" rows={5} value={bulkTutorNames} onChange={(e) => setBulkTutorNames(e.target.value)} />
                                     </div>
                                     <div className="space-y-2 col-span-2">
                                         <Label htmlFor="bulkTutorPhones">Teléfonos de Tutores</Label>
-                                        <Textarea id="bulkTutorPhones" placeholder="555-3355\\n555-6688" rows={5} value={bulkTutorPhones} onChange={(e) => setBulkTutorPhones(e.target.value)} />
+                                        <Textarea id="bulkTutorPhones" placeholder="555-3355\n555-6688" rows={5} value={bulkTutorPhones} onChange={(e) => setBulkTutorPhones(e.target.value)} />
                                     </div>
                                 </div>
                             </div>
