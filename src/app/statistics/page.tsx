@@ -20,8 +20,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useData } from '@/hooks/use-data';
-import type { Student, PartialId, CalculatedRisk, EvaluationCriteria } from '@/hooks/use-data';
+import { useData, loadFromLocalStorage } from '@/hooks/use-data';
+import type { Student, PartialId, CalculatedRisk, EvaluationCriteria, AttendanceRecord, ParticipationRecord } from '@/hooks/use-data';
 import { getPartialLabel } from '@/lib/utils';
 
 
@@ -63,9 +63,8 @@ export default function StatisticsPage() {
         partialData,
         activePartialId,
         setActivePartialId,
-        groupAverages,
     } = useData();
-    const { criteria, grades, participations, attendance, activities, activityRecords } = partialData;
+    const { attendance, participations } = partialData;
 
     const [isLoading, setIsLoading] = useState(true);
 
@@ -83,7 +82,7 @@ export default function StatisticsPage() {
            const riskLevels: Record<'low' | 'medium' | 'high', number> = { low: 0, medium: 0, high: 0 };
            
            const keySuffix = `${group.id}_${activePartialId}`;
-           const groupAttendance = loadFromLocalStorage<Record<string, Record<string, boolean>>>(`attendance_${keySuffix}`, {});
+           const groupAttendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${keySuffix}`, {});
            
            students.forEach((student, index) => {
                const studentFinalGrade = finalGrades[index];
@@ -166,7 +165,7 @@ export default function StatisticsPage() {
             topStudents: studentGrades.slice(0,5).map(s => ({name: s.student.name, grade: parseFloat(s.grade.toFixed(1))})),
             participationDistribution,
         };
-    }, [activeGroup, activePartialId, calculateFinalGrade, getStudentRiskLevel, partialData]);
+    }, [activeGroup, activePartialId, calculateFinalGrade, getStudentRiskLevel, partialData, attendance, participations]);
 
     const approvalData = useMemo(() => {
         if (!activeGroupStats) return [];
@@ -415,19 +414,3 @@ export default function StatisticsPage() {
     </div>
   );
 }
-
-// Helper function to load data from local storage, needed for stats calculation outside the main provider hook
-function loadFromLocalStorage<T>(key: string, defaultValue: T): T {
-    if (typeof window === 'undefined') {
-        return defaultValue;
-    }
-    try {
-        const item = window.localStorage.getItem(key);
-        return item ? JSON.parse(item) : defaultValue;
-    } catch (error) {
-        console.warn(`Error reading from localStorage key “${key}”:`, error);
-        return defaultValue;
-    }
-}
-
-    

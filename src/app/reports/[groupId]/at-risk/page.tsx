@@ -288,7 +288,7 @@ export default function AtRiskReportPage() {
   const groupId = params.groupId as string;
   const { 
       groups,
-      calculateFinalGrade, 
+      calculateDetailedFinalGrade,
       getStudentRiskLevel,
       allObservations,
   } = useData();
@@ -297,51 +297,21 @@ export default function AtRiskReportPage() {
 
   const group = useMemo(() => groups.find(g => g.id === groupId), [groups, groupId]);
 
-  const getCriteriaDetails = useCallback((studentId: string, criteria: EvaluationCriteria[], grades: Grades, participations: ParticipationRecord, activities: Activity[], activityRecords: ActivityRecord) => {
-    return criteria.map(criterion => {
-        let performanceRatio = 0;
-        if (criterion.name === 'Actividades' || criterion.name === 'Portafolio') {
-            const totalActivities = activities.length;
-            if(totalActivities > 0) {
-                const deliveredActivities = Object.values(activityRecords[studentId] || {}).filter(Boolean).length;
-                performanceRatio = deliveredActivities / totalActivities;
-            }
-        } else if (criterion.name === 'Participación') {
-            const totalParticipations = Object.keys(participations).length;
-            if(totalParticipations > 0) {
-                const studentParticipations = Object.values(participations).filter(p => p[studentId]).length;
-                performanceRatio = studentParticipations / totalParticipations;
-            }
-        } else {
-            performanceRatio = (criterion.expectedValue > 0) ? ((grades[studentId]?.[criterion.id]?.delivered ?? 0) / criterion.expectedValue) : 0;
-        }
-        const earned = performanceRatio * criterion.weight;
-        return { name: criterion.name, earned, weight: criterion.weight };
-    });
-  }, []);
-
   useEffect(() => {
     if (group) {
         const partials: PartialId[] = ['p1', 'p2', 'p3'];
         const atRiskStudentMap = new Map<string, StudentReportData>();
 
         partials.forEach(partialId => {
-            const keySuffix = `${group.id}_${partialId}`;
-            const criteria = loadFromLocalStorage<EvaluationCriteria[]>(`criteria_${keySuffix}`, []);
-            const grades = loadFromLocalStorage<Grades>(`grades_${keySuffix}`, {});
-            const participations = loadFromLocalStorage<ParticipationRecord>(`participations_${keySuffix}`, {});
-            const activities = loadFromLocalStorage<Activity[]>(`activities_${keySuffix}`, []);
-            const activityRecords = loadFromLocalStorage<ActivityRecord>(`activityRecords_${keySuffix}`, {});
-            const attendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${keySuffix}`, {});
+            const attendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${group.id}_${partialId}`, {});
 
             group.students.forEach(student => {
-                const finalGrade = calculateFinalGrade(student.id, partialId, criteria, grades, participations, activities, activityRecords);
+                const { finalGrade, criteriaDetails } = calculateDetailedFinalGrade(student.id, group.id, partialId);
                 const riskLevel = getStudentRiskLevel(finalGrade, attendance, student.id);
                 
                 if (riskLevel.level === 'high' || riskLevel.level === 'medium') {
                     const existingEntry = atRiskStudentMap.get(student.id);
                      if (!existingEntry || riskLevel.level === 'high' || (riskLevel.level === 'medium' && existingEntry.riskLevel !== 'high')) {
-                        const criteriaDetails = getCriteriaDetails(student.id, criteria, grades, participations, activities, activityRecords);
                         const attendanceStats = { p: 0, a: 0, total: 0 };
                         Object.keys(attendance).forEach(date => {
                             if (attendance[date]?.[student.id] !== undefined) {
@@ -372,7 +342,7 @@ export default function AtRiskReportPage() {
         setReportData(Array.from(atRiskStudentMap.values()));
     }
     setIsLoading(false);
-  }, [group, calculateFinalGrade, getStudentRiskLevel, getCriteriaDetails, allObservations]);
+  }, [group, calculateDetailedFinalGrade, getStudentRiskLevel, allObservations]);
 
 
   if (isLoading) {

@@ -67,7 +67,7 @@ export default function ReportsPage() {
 
     let approvedCount = 0;
     activeGroup.students.forEach(student => {
-        const finalGrade = calculateFinalGrade(student.id);
+        const finalGrade = calculateFinalGrade(student.id, activeGroup.id, activePartialId);
         if (finalGrade >= 60) approvedCount++;
     });
 
@@ -81,7 +81,7 @@ export default function ReportsPage() {
         totalAttendanceRecords: presentCount,
         criteriaCount: criteria.length,
     };
-  }, [activeGroup, calculateFinalGrade, groupAverages, partialData]);
+  }, [activeGroup, calculateFinalGrade, groupAverages, partialData, activePartialId]);
 
 
   const handleDownloadCsv = () => {
@@ -93,7 +93,7 @@ export default function ReportsPage() {
 
     activeGroup.students.forEach(student => {
         const row = [student.id, student.name];
-        const finalGrade = calculateFinalGrade(student.id);
+        const finalGrade = calculateFinalGrade(student.id, activeGroup.id, activePartialId);
         
         criteria.forEach(criterion => {
             let performanceRatio = 0;
@@ -284,5 +284,3 @@ export default function ReportsPage() {
     </div>
   );
 }
-
-    

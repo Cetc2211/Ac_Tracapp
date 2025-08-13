@@ -39,7 +39,7 @@ export default function SemesterEvaluationPage() {
             let partialsWithGrades = 0;
 
             partials.forEach(partialId => {
-                const finalGrade = calculateFinalGrade(student.id, partialId);
+                const finalGrade = calculateFinalGrade(student.id, activeGroup.id, partialId);
                 
                 if (finalGrade !== undefined) {
                     partialGrades[partialId] = finalGrade;

@@ -98,12 +98,8 @@ export default function GroupReportPage() {
       }
       
       const keySuffix = `${group.id}_${partialId}`;
-      const criteria = loadFromLocalStorage<EvaluationCriteria[]>(`criteria_${keySuffix}`, []);
-      const grades = loadFromLocalStorage<Grades>(`grades_${keySuffix}`, {});
-      const participations = loadFromLocalStorage<ParticipationRecord>(`participations_${keySuffix}`, {});
-      const activities = loadFromLocalStorage<Activity[]>(`activities_${keySuffix}`, []);
-      const activityRecords = loadFromLocalStorage<ActivityRecord>(`activityRecords_${keySuffix}`, {});
       const attendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${keySuffix}`, {});
+      const participations = loadFromLocalStorage<ParticipationRecord>(`participations_${keySuffix}`, {});
 
       let approved = 0;
       let totalGroupGrade = 0;
@@ -111,7 +107,7 @@ export default function GroupReportPage() {
       let totalPresent = 0;
       
       const studentGrades = group.students.map(student => {
-        const finalGrade = calculateFinalGrade(student.id, partialId, criteria, grades, participations, activities, activityRecords);
+        const finalGrade = calculateFinalGrade(student.id, group.id, partialId);
         return finalGrade;
       });
 
