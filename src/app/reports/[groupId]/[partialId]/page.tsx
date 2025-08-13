@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, Download, CheckCircle, XCircle, TrendingUp, BarChart, Users, Eye, AlertTriangle, Loader2 } from 'lucide-react';
+import { ArrowLeft, Download, CheckCircle, XCircle, TrendingUp, BarChart, Users, Eye, AlertTriangle, Loader2, Wand2 } from 'lucide-react';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -24,7 +24,6 @@ import { useData, loadFromLocalStorage } from '@/hooks/use-data';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { EvaluationCriteria, Grades, ParticipationRecord, Activity, ActivityRecord, AttendanceRecord, PartialId } from '@/hooks/use-data';
 import { getPartialLabel } from '@/lib/utils';
-import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,6 +31,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ChevronDown } from 'lucide-react';
+import { generateReportSummary } from '@/ai/flows/report-summary-generator';
+import { Textarea } from '@/components/ui/textarea';
 
 
 type ReportSummary = {
@@ -58,7 +59,9 @@ export default function GroupReportPage() {
   } = useData();
   
   const [summary, setSummary] = useState<ReportSummary | null>(null);
+  const [reportText, setReportText] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [isGeneratingText, setIsGeneratingText] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -147,7 +150,7 @@ export default function GroupReportPage() {
           });
       });
       
-      setSummary({
+      const reportSummary = {
           totalStudents: studentCount,
           approvedCount: approved,
           failedCount: studentCount - approved,
@@ -156,7 +159,10 @@ export default function GroupReportPage() {
           participationRate: totalParticipationOpportunities > 0 ? (totalParticipations / totalParticipationOpportunities) * 100 : 100,
           highRiskCount: highRiskStudents.size,
           mediumRiskCount: mediumRiskStudents.size,
-      });
+      };
+
+      setSummary(reportSummary);
+      setReportText(`Por medio del presente, se muestran los resultados generales obtenidos durante el parcial actual para el grupo de ${group.subject}, que cuenta con un total de ${reportSummary.totalStudents} estudiante(s).`);
 
     } catch (e) {
       console.error("Failed to generate report data", e);
@@ -195,6 +201,27 @@ export default function GroupReportPage() {
       });
     }
   };
+
+  const handleGenerateText = async () => {
+      if (!summary || !group) return;
+      setIsGeneratingText(true);
+      try {
+        const result = await generateReportSummary({
+            groupName: group.subject,
+            studentCount: summary.totalStudents,
+            averageGrade: summary.groupAverage,
+            approvalRate: summary.totalStudents > 0 ? (summary.approvedCount / summary.totalStudents) * 100 : 0,
+            attendanceRate: summary.attendanceRate,
+            highRiskCount: summary.highRiskCount,
+            mediumRiskCount: summary.mediumRiskCount,
+        });
+        setReportText(result.summary);
+      } catch (e) {
+          toast({ variant: 'destructive', title: 'Error', description: 'No se pudo generar el texto.'});
+      } finally {
+        setIsGeneratingText(false);
+      }
+  }
   
   if (isLoading) {
     return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /> <span className="ml-2">Generando informe...</span></div>;
@@ -240,10 +267,13 @@ export default function GroupReportPage() {
                 </DropdownMenuContent>
             </DropdownMenu>
          </div>
-         <Button onClick={handleDownloadPdf}>
-            <Download className="mr-2 h-4 w-4"/>
-            Descargar Informe
-         </Button>
+         <div className='flex gap-2'>
+            <Button variant="outline">Incluir Gráficas</Button>
+            <Button onClick={handleDownloadPdf}>
+                <Download className="mr-2 h-4 w-4"/>
+                Descargar Informe
+            </Button>
+         </div>
       </div>
 
       <Card ref={reportRef} id="report-content" className="p-4 sm:p-6 md:p-8">
@@ -280,12 +310,19 @@ export default function GroupReportPage() {
         </header>
 
         <section>
-            <h2 className="text-xl font-semibold mb-4">Resumen General del Grupo</h2>
-            <p className="text-muted-foreground leading-relaxed mt-2">
-                Por medio del presente, se muestran los resultados generales obtenidos durante el parcial actual para el grupo 
-                de <span className="font-bold text-foreground">{group.subject}</span>, que cuenta con un total de 
-                <span className="font-bold text-foreground"> {summary.totalStudents} estudiante(s)</span>.
-            </p>
+            <div className='flex justify-between items-center'>
+                <h2 className="text-xl font-semibold mb-4">Resumen General del Grupo</h2>
+                <Button size="sm" onClick={handleGenerateText} disabled={isGeneratingText}>
+                    {isGeneratingText ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Wand2 className="mr-2 h-4 w-4" />}
+                    Generar Redacción con IA
+                </Button>
+            </div>
+            <Textarea 
+                value={reportText}
+                onChange={(e) => setReportText(e.target.value)}
+                className="leading-relaxed mt-2"
+                rows={4}
+            />
 
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 my-6">
                 <Card className="text-center">
@@ -321,20 +358,14 @@ export default function GroupReportPage() {
                         <span className="font-bold text-amber-600"> {summary.mediumRiskCount} estudiante(s)</span> en <span className="font-bold text-amber-600">riesgo medio</span>, basado en su rendimiento y asistencia.
                     </p>
                 )}
-
-                <p>
-                    No se han registrado observaciones, canalizaciones o seguimientos para ningún estudiante de este grupo durante el periodo.
-                </p>
-
             </div>
-
         </section>
 
         <footer className="border-t mt-8 pt-6 text-center text-xs text-muted-foreground">
             <div className="mt-12 pt-12">
                 <div className="inline-block">
                     <div className="border-t border-foreground w-48 mx-auto"></div>
-                    <p className="mt-2 font-semibold">Nombre del Docente</p>
+                    <p className="mt-2 font-semibold">{group.facilitator || 'Docente'}</p>
                     <p>Firma del Docente</p>
                 </div>
             </div>
@@ -344,5 +375,3 @@ export default function GroupReportPage() {
     </div>
   );
 }
-
-    
