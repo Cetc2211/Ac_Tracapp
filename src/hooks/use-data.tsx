@@ -188,8 +188,7 @@ const defaultProfile = {
 // DATA PROVIDER COMPONENT
 export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
-    const [isAuthLoading, setIsAuthLoading] = useState(true);
-    const [isDataLoading, setIsDataLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(true);
     
     // Core data
     const [allStudents, setAllStudentsState] = useState<Student[]>([]);
@@ -214,90 +213,93 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
-            setUser(firebaseUser);
-            setIsAuthLoading(false);
-            if (!firebaseUser) {
-              // Reset state on logout
-              setGroupsState([]);
-              setAllStudentsState([]);
-              setAllObservations({});
-              setActiveGroupIdState(null);
-              setSettingsState(defaultSettings);
-              setUserProfile(null);
-              setIsDataLoading(false);
+            if (firebaseUser) {
+                if (!user || user.uid !== firebaseUser.uid) {
+                    setUser(firebaseUser);
+                }
+            } else {
+                setUser(null);
+                setIsLoading(false);
+                // Reset all state on logout
+                setGroupsState([]);
+                setAllStudentsState([]);
+                setAllObservations({});
+                setActiveGroupIdState(null);
+                setSettingsState(defaultSettings);
+                setUserProfile(null);
+                setPartialData({ criteria: [], grades: {}, attendance: {}, participations: {}, activities: [], activityRecords: {} });
             }
         });
         return () => unsubscribe();
-    }, []);
+    }, [user]);
 
     useEffect(() => {
-        if (user) {
-            setIsDataLoading(true);
-            const prefix = `users/${user.uid}`;
+        if (!user) return;
     
-            const unsubscribers = [
-                onSnapshot(collection(db, `${prefix}/groups`), (snapshot) => {
-                    const fetchedGroups = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Group));
-                    setGroupsState(fetchedGroups);
-                    if (!activeGroupId && fetchedGroups.length > 0) {
-                        setActiveGroupIdState(fetchedGroups[0].id);
-                    } else if (activeGroupId && !fetchedGroups.some(g => g.id === activeGroupId)) {
-                        setActiveGroupIdState(fetchedGroups.length > 0 ? fetchedGroups[0].id : null);
-                    }
-                }),
-                onSnapshot(collection(db, `${prefix}/students`), (snapshot) => {
-                    const fetchedStudents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
-                    setAllStudentsState(fetchedStudents);
-                }),
-                onSnapshot(collection(db, `${prefix}/observations`), (snapshot) => {
-                    const fetchedObservations: {[studentId: string]: StudentObservation[]} = {};
-                    snapshot.docs.forEach(doc => {
-                        const obs = { id: doc.id, ...doc.data() } as StudentObservation;
-                        if (obs.studentId) {
-                            if (!fetchedObservations[obs.studentId]) {
-                                fetchedObservations[obs.studentId] = [];
-                            }
-                            obs.date = (obs.date as unknown as Timestamp).toDate().toISOString();
-                            obs.followUpUpdates = (obs.followUpUpdates || []).map(f => ({...f, date: (f.date as unknown as Timestamp).toDate().toISOString()}));
-                            fetchedObservations[obs.studentId].push(obs);
+        setIsLoading(true);
+        const prefix = `users/${user.uid}`;
+    
+        const unsubscribers = [
+            onSnapshot(collection(db, `${prefix}/groups`), (snapshot) => {
+                const fetchedGroups = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Group));
+                setGroupsState(fetchedGroups);
+                if (!activeGroupId && fetchedGroups.length > 0) {
+                    setActiveGroupIdState(fetchedGroups[0].id);
+                }
+            }),
+            onSnapshot(collection(db, `${prefix}/students`), (snapshot) => {
+                setAllStudentsState(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student)));
+            }),
+            onSnapshot(collection(db, `${prefix}/observations`), (snapshot) => {
+                const fetchedObservations: {[studentId: string]: StudentObservation[]} = {};
+                snapshot.docs.forEach(doc => {
+                    const obs = { id: doc.id, ...doc.data() } as StudentObservation;
+                    if (obs.studentId) {
+                        if (!fetchedObservations[obs.studentId]) {
+                            fetchedObservations[obs.studentId] = [];
                         }
-                    });
-                    setAllObservations(fetchedObservations);
-                }),
-                onSnapshot(doc(db, `${prefix}/settings`, 'app'), (doc) => {
-                    setSettingsState(doc.exists() ? (doc.data() as typeof settings) : defaultSettings);
-                }),
-                onSnapshot(doc(db, `${prefix}/profile`, 'info'), (doc) => {
-                    setUserProfile(doc.exists() ? (doc.data() as UserProfile) : { ...defaultProfile, email: user.email || '' });
-                }),
-            ];
-            
-            // This will handle the loading state more gracefully
-            Promise.all([
-              getDoc(doc(db, `${prefix}/profile`, 'info')),
-              getDoc(doc(db, `${prefix}/settings`, 'app')),
-            ]).then(() => {
-                setIsDataLoading(false);
-            });
+                        if (obs.date && obs.date instanceof Timestamp) {
+                           obs.date = obs.date.toDate().toISOString();
+                        }
+                        obs.followUpUpdates = (obs.followUpUpdates || []).map(f => ({...f, date: f.date && f.date instanceof Timestamp ? f.date.toDate().toISOString() : f.date }));
+                        fetchedObservations[obs.studentId].push(obs);
+                    }
+                });
+                setAllObservations(fetchedObservations);
+            }),
+            onSnapshot(doc(db, `${prefix}/settings`, 'app'), (doc) => {
+                setSettingsState(doc.exists() ? (doc.data() as typeof settings) : defaultSettings);
+            }),
+            onSnapshot(doc(db, `${prefix}/profile`, 'info'), (doc) => {
+                setUserProfile(doc.exists() ? (doc.data() as UserProfile) : { ...defaultProfile, email: user.email || '' });
+            }),
+        ];
     
-            return () => unsubscribers.forEach(unsub => unsub());
-        }
+        // Only set loading to false after initial core data (profile/settings) is checked
+        Promise.all([
+          getDoc(doc(db, `${prefix}/profile`, 'info')),
+          getDoc(doc(db, `${prefix}/settings`, 'app')),
+        ]).finally(() => {
+            setIsLoading(false);
+        });
+    
+        return () => unsubscribers.forEach(unsub => unsub());
+    
     }, [user, activeGroupId]);
     
     useEffect(() => {
         if(user && activeGroupId && activePartialId) {
             const prefix = `users/${user.uid}/groups/${activeGroupId}/partials/${activePartialId}`;
-            const unsub = onSnapshot(doc(db, prefix, 'data'), (doc) => {
-                const data = doc.data() as Omit<PartialData, 'students'> | undefined;
-                setPartialData(prev => ({
-                    ...prev,
+            const unsub = onSnapshot(doc(db, prefix, 'data'), (docSnap) => {
+                const data = docSnap.exists() ? docSnap.data() as PartialData : null;
+                setPartialData({
                     criteria: data?.criteria || [],
                     grades: data?.grades || {},
                     attendance: data?.attendance || {},
                     participations: data?.participations || {},
                     activities: data?.activities || [],
                     activityRecords: data?.activityRecords || {},
-                }));
+                });
             });
             return () => unsub();
         } else {
@@ -540,7 +542,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
 
     const contextValue: DataContextType = {
-        isLoading: isAuthLoading || isDataLoading,
+        isLoading,
         groups, allStudents, allObservations, activeStudentsInGroups, settings, userProfile, activeGroup, activePartialId,
         partialData,
         groupAverages, atRiskStudents, overallAverageParticipation,
