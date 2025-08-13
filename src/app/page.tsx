@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -44,6 +44,26 @@ export default function AuthenticationPage() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
+  
+  // Temporal: Auto-create a test user for verification
+  useEffect(() => {
+    const createTestUser = async () => {
+      try {
+        // Try to sign in silently to check if user exists
+        await signInWithEmailAndPassword(auth, 'test@test.com', 'password');
+      } catch (error: any) {
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+          try {
+            await createUserWithEmailAndPassword(auth, 'test@test.com', 'password');
+            console.log('Test user created successfully.');
+          } catch (creationError) {
+            console.error('Failed to create test user:', creationError);
+          }
+        }
+      }
+    };
+    createTestUser();
+  }, []);
 
   const handleAuthAction = async (action: 'login' | 'signup' | 'google') => {
     if (action === 'google') {
@@ -77,6 +97,7 @@ export default function AuthenticationPage() {
             switch (error.code) {
                 case 'auth/user-not-found':
                 case 'auth/wrong-password':
+                case 'auth/invalid-credential':
                     description = 'Correo o contraseña incorrectos.';
                     break;
                 case 'auth/email-already-in-use':
