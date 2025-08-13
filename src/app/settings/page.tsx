@@ -20,7 +20,6 @@ import { ThemeSwitcher, themes } from '@/components/theme-switcher';
 import { Separator } from '@/components/ui/separator';
 import { useData } from '@/hooks/use-data';
 import { Upload, Download, RotateCcw } from 'lucide-react';
-import { auth } from '@/lib/firebase';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -39,7 +38,6 @@ export default function SettingsPage() {
     const [isClient, setIsClient] = useState(false);
     const { toast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const user = auth.currentUser;
     
     useEffect(() => {
         setIsClient(true);
@@ -51,16 +49,10 @@ export default function SettingsPage() {
       }
     }, [settings.logo, isClient]);
     
-    const userKey = (key: string) => {
-        if (!user) return key;
-        return `${key}_${user.uid}`;
-    };
-
-
     const handleSave = () => {
         const newSettings = { ...settings, logo: logoPreview || '' };
         setSettings(newSettings);
-        localStorage.setItem(userKey('appSettings'), JSON.stringify(newSettings));
+        localStorage.setItem('appSettings', JSON.stringify(newSettings));
         window.dispatchEvent(new Event('storage'));
         toast({
             title: 'Ajustes Guardados',
@@ -89,16 +81,12 @@ export default function SettingsPage() {
     };
 
     const handleExportData = () => {
-      if (!user) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Debes iniciar sesión para exportar datos.'});
-        return;
-      }
       try {
         const backupData: { [key: string]: any } = {};
         
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);
-          if (key?.endsWith(`_${user.uid}`)) {
+          if (key) {
             const value = localStorage.getItem(key)!;
             try {
               backupData[key] = JSON.parse(value);
@@ -115,7 +103,7 @@ export default function SettingsPage() {
         const link = document.createElement("a");
         link.href = url;
         const date = new Date().toISOString().split('T')[0];
-        link.download = `academic-tracker-backup-${user.uid}-${date}.json`;
+        link.download = `academic-tracker-backup-${date}.json`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -137,7 +125,7 @@ export default function SettingsPage() {
 
     const handleImportData = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
-        if (!file || !user) return;
+        if (!file) return;
 
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -149,13 +137,7 @@ export default function SettingsPage() {
                 const backupData = JSON.parse(text);
 
                 // Clear existing user data
-                 for (let i = 0; i < localStorage.length; i++) {
-                    const key = localStorage.key(i);
-                    if (key?.endsWith(`_${user.uid}`)) {
-                        localStorage.removeItem(key);
-                        i--;
-                    }
-                }
+                localStorage.clear();
 
                 // Import new data
                 for (const key in backupData) {
@@ -200,14 +182,7 @@ export default function SettingsPage() {
     };
 
     const handleResetApp = () => {
-        if (!user) return;
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key?.endsWith(`_${user.uid}`)) {
-                localStorage.removeItem(key);
-                i--;
-            }
-        }
+        localStorage.clear();
         toast({
             title: "Datos Restablecidos",
             description: "Todos tus datos han sido borrados. La página se recargará."
@@ -328,7 +303,7 @@ export default function SettingsPage() {
                         <AlertDialogHeader>
                             <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
                             <AlertDialogDescription>
-                                Esta acción borrará permanentemente TODOS tus datos de la aplicación, incluyendo grupos, estudiantes, calificaciones y ajustes de tu cuenta.
+                                Esta acción borrará permanentemente TODOS tus datos de la aplicación, incluyendo grupos, estudiantes, calificaciones y ajustes.
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
