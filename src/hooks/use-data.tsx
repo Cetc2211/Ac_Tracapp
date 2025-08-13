@@ -162,7 +162,7 @@ export const loadFromLocalStorage = <T,>(key: string, defaultValue: T): T => {
   try {
     const item = window.localStorage.getItem(key);
     if (item === null) return defaultValue;
-    if ((key === 'activePartialId' || key.startsWith('activeGroupId')) && !item.startsWith('{') && !item.startsWith('[')) {
+    if ((key.includes('activePartialId') || key.includes('activeGroupId')) && !item.startsWith('{') && !item.startsWith('[')) {
         return item as T;
     }
     return item ? JSON.parse(item) : defaultValue;
@@ -318,12 +318,10 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     // Derived State
     const setActiveGroupId = useCallback((groupId: string | null) => {
-        setActiveGroupIdState(groupId);
         saveToLocalStorage(userKey('activeGroupId'), groupId);
-        setDataVersion(v => v + 1);
+        setActiveGroupIdState(groupId);
     }, [userKey]);
     
-    // Effect to validate activeGroupId when groups change
     useEffect(() => {
         if (isInitialized) {
             const groupExists = groups.some(g => g.id === activeGroupId);
@@ -357,15 +355,13 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }, [groups]);
 
     const setGroups = (newGroups: Group[]) => {
-        setGroupsState(newGroups);
         saveToLocalStorage(userKey('groups'), newGroups);
-        setDataVersion(v => v + 1);
+        setGroupsState(newGroups);
     };
 
     const setAllStudents = (newStudents: Student[]) => {
-        setAllStudentsState(newStudents);
         saveToLocalStorage(userKey('students'), newStudents);
-        setDataVersion(v => v + 1);
+        setAllStudentsState(newStudents);
     };
     
     const setCriteria = (newCriteria: EvaluationCriteria[]) => {
