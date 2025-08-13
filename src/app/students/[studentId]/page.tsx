@@ -107,11 +107,23 @@ export default function StudentProfilePage() {
     return total / studentStatsByPartial.length;
   }, [studentStatsByPartial]);
 
-  const handleDownloadPdf = () => {
-    const input = reportRef.current;
-    if (input) {
-      toast({ title: 'Generando PDF...', description: 'Esto puede tardar un momento.' });
-      html2canvas(input, { scale: 2, useCORS: true }).then((canvas) => {
+  const handleDownloadPdf = async () => {
+    const reportElement = reportRef.current;
+    if (!reportElement) return;
+
+    // Elementos a ocultar
+    const elementsToHide = [
+      document.getElementById(`interactive-buttons-container`),
+      document.getElementById(`interactive-buttons-header`)
+    ].filter(Boolean) as HTMLElement[];
+
+    toast({ title: 'Generando PDF...', description: 'Esto puede tardar un momento.' });
+
+    // Ocultar elementos
+    elementsToHide.forEach(el => el.style.display = 'none');
+
+    try {
+        const canvas = await html2canvas(reportElement, { scale: 2, useCORS: true });
         const imgData = canvas.toDataURL('image/png');
         const pdf = new jsPDF('p', 'mm', 'a4');
         
@@ -121,7 +133,7 @@ export default function StudentProfilePage() {
         const canvasHeight = canvas.height;
         const ratio = canvasWidth / canvasHeight;
         
-        let imgWidth = pdfWidth - 20;
+        let imgWidth = pdfWidth - 20; // con margen
         let imgHeight = imgWidth / ratio;
         
         if (imgHeight > pdfHeight - 20) {
@@ -134,7 +146,17 @@ export default function StudentProfilePage() {
         
         pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
         pdf.save(`informe_${student?.name.replace(/\s+/g, '_') || 'estudiante'}.pdf`);
-      });
+
+    } catch(error) {
+        console.error("Error generating PDF:", error);
+        toast({
+            variant: "destructive",
+            title: "Error al generar PDF",
+            description: "No se pudo crear el archivo. Inténtalo de nuevo."
+        });
+    } finally {
+        // Volver a mostrar los elementos
+        elementsToHide.forEach(el => el.style.display = 'flex');
     }
   };
 
@@ -201,7 +223,7 @@ export default function StudentProfilePage() {
       <WhatsAppDialog studentName={student.name} open={isWhatsAppOpen} onOpenChange={setIsWhatsAppOpen} />
 
       <div className="flex flex-col gap-6">
-        <div className="flex items-center justify-between print:hidden">
+        <div id="interactive-buttons-header" className="flex items-center justify-between print:hidden">
           <div className="flex items-center gap-4">
               <Button asChild variant="outline" size="icon">
               <Link href="/dashboard">
@@ -245,7 +267,7 @@ export default function StudentProfilePage() {
                             <p className="flex items-center gap-2"><User className="h-4 w-4 text-primary" /> Tutor: {student.tutorName || 'No registrado'}</p>
                             <p className="flex items-center gap-2"><Phone className="h-4 w-4 text-primary" /> Tel. Tutor: {student.tutorPhone || 'No registrado'}</p>
                         </div>
-                         <div className="mt-4 flex flex-wrap gap-2 print:hidden">
+                         <div id="interactive-buttons-container" className="mt-4 flex flex-wrap gap-2">
                             <Button variant="outline" size="sm" onClick={() => setIsLogOpen(true)}><MessageSquare className="mr-2"/>Ver Bitácora</Button>
                             <Button variant="secondary" size="sm" onClick={() => setIsWhatsAppOpen(true)}>Enviar informe vía WhatsApp</Button>
                         </div>
@@ -333,7 +355,7 @@ export default function StudentProfilePage() {
                             <CardTitle>Recomendaciones y retroalimentación</CardTitle>
                             <CardDescription>Resumen personalizado del rendimiento del estudiante en el <span className='font-bold'>{getPartialLabel(activePartialId)}</span>.</CardDescription>
                         </div>
-                        <div className="flex gap-2 print:hidden">
+                        <div id="interactive-buttons-container" className="flex gap-2">
                             <Button onClick={handleGenerateFeedback} disabled={isGeneratingFeedback || isEditingFeedback}>
                                 {isGeneratingFeedback ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Wand2 className="mr-2 h-4 w-4" />}
                                 {isGeneratingFeedback ? "Generando..." : "Generar Feedback"}
@@ -399,3 +421,4 @@ export default function StudentProfilePage() {
     </>
   );
 }
+
