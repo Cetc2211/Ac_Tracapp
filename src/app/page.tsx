@@ -28,75 +28,80 @@ import Image from 'next/image';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 
 export default function AuthenticationPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [name, setName] = useState('');
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+
+  const [registerEmail, setRegisterEmail] = useState('');
+  const [registerPassword, setRegisterPassword] = useState('');
+  const [registerConfirmPassword, setRegisterConfirmPassword] = useState('');
+  const [registerName, setRegisterName] = useState('');
+
   const [isLoading, setIsLoading] = useState(false);
 
   const { toast } = useToast();
   const router = useRouter();
   
-  const handleAuthAction = async (action: 'login' | 'register') => {
+  const handleLogin = async () => {
     setIsLoading(true);
-
-    if (action === 'register') {
-      if(password !== confirmPassword) {
-        toast({
-          variant: 'destructive',
-          title: 'Error de Registro',
-          description: 'Las contraseñas no coinciden.',
-        });
-        setIsLoading(false);
-        return;
-      }
-      if(!name.trim()) {
-         toast({
-          variant: 'destructive',
-          title: 'Error de Registro',
-          description: 'El nombre es obligatorio.',
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        await updateProfile(userCredential.user, { displayName: name });
-        toast({
-          title: 'Cuenta Creada',
-          description: '¡Bienvenido! Has sido registrado exitosamente.',
-        });
-        router.push('/dashboard');
-      } catch (error: any) {
-        toast({
-          variant: 'destructive',
-          title: 'Error de Registro',
-          description: error.message,
-        });
-      } finally {
-        setIsLoading(false);
-      }
-
-    } else { // Login
-      try {
-        await signInWithEmailAndPassword(auth, email, password);
-        toast({
-          title: 'Inicio de Sesión Exitoso',
-          description: '¡Bienvenido de nuevo!',
-        });
-        router.push('/dashboard');
-      } catch (error: any) {
-        toast({
-          variant: 'destructive',
-          title: 'Error de Inicio de Sesión',
-          description: 'Las credenciales son incorrectas. Por favor, inténtalo de nuevo.',
-        });
-      } finally {
-        setIsLoading(false);
-      }
+    try {
+      await signInWithEmailAndPassword(auth, loginEmail, loginPassword);
+      toast({
+        title: 'Inicio de Sesión Exitoso',
+        description: '¡Bienvenido de nuevo!',
+      });
+      router.push('/dashboard');
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error de Inicio de Sesión',
+        description: 'Las credenciales son incorrectas. Por favor, inténtalo de nuevo.',
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
+  
+  const handleRegister = async () => {
+    setIsLoading(true);
+    
+    if (registerPassword !== registerConfirmPassword) {
+      toast({
+        variant: 'destructive',
+        title: 'Error de Registro',
+        description: 'Las contraseñas no coinciden.',
+      });
+      setIsLoading(false);
+      return;
+    }
+    if (!registerName.trim()) {
+       toast({
+        variant: 'destructive',
+        title: 'Error de Registro',
+        description: 'El nombre es obligatorio.',
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, registerEmail, registerPassword);
+      await updateProfile(userCredential.user, { displayName: registerName });
+      toast({
+        title: 'Cuenta Creada',
+        description: '¡Bienvenido! Has sido registrado exitosamente.',
+      });
+      router.push('/dashboard');
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error de Registro',
+        description: error.message,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
@@ -124,8 +129,8 @@ export default function AuthenticationPage() {
                     id="login-email"
                     type="email"
                     placeholder="tucorreo@ejemplo.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    value={loginEmail}
+                    onChange={(e) => setLoginEmail(e.target.value)}
                     required
                   />
                 </div>
@@ -134,14 +139,14 @@ export default function AuthenticationPage() {
                   <Input
                     id="login-password"
                     type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
                     required
                   />
                 </div>
               </CardContent>
               <CardFooter>
-                <Button className="w-full" onClick={() => handleAuthAction('login')} disabled={isLoading}>
+                <Button className="w-full" onClick={handleLogin} disabled={isLoading}>
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Iniciar Sesión
                 </Button>
@@ -163,8 +168,8 @@ export default function AuthenticationPage() {
                     id="register-name"
                     type="text"
                     placeholder="Tu nombre completo"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    value={registerName}
+                    onChange={(e) => setRegisterName(e.target.value)}
                     required
                   />
                 </div>
@@ -174,8 +179,8 @@ export default function AuthenticationPage() {
                     id="register-email"
                     type="email"
                     placeholder="tucorreo@ejemplo.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    value={registerEmail}
+                    onChange={(e) => setRegisterEmail(e.target.value)}
                     required
                   />
                 </div>
@@ -184,8 +189,8 @@ export default function AuthenticationPage() {
                   <Input
                     id="register-password"
                     type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    value={registerPassword}
+                    onChange={(e) => setRegisterPassword(e.target.value)}
                     required
                   />
                 </div>
@@ -194,14 +199,14 @@ export default function AuthenticationPage() {
                   <Input
                     id="confirm-password"
                     type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    value={registerConfirmPassword}
+                    onChange={(e) => setRegisterConfirmPassword(e.target.value)}
                     required
                   />
                 </div>
               </CardContent>
               <CardFooter>
-                <Button className="w-full" onClick={() => handleAuthAction('register')} disabled={isLoading}>
+                <Button className="w-full" onClick={handleRegister} disabled={isLoading}>
                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Crear Cuenta
                 </Button>
