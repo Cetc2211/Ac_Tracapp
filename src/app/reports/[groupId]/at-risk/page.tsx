@@ -348,8 +348,10 @@ export default function AtRiskReportPage() {
         setIsLoading(false);
     };
     
-    generateReport();
-  }, [group, calculateDetailedFinalGrade, getStudentRiskLevel, allObservations, fetchPartialData]);
+    if (group && !isDataLoading) {
+      generateReport();
+    }
+  }, [group, calculateDetailedFinalGrade, getStudentRiskLevel, allObservations, fetchPartialData, isDataLoading]);
 
 
   if (isLoading || isDataLoading) {
@@ -414,3 +416,4 @@ export default function AtRiskReportPage() {
     </div>
   );
 }
+
