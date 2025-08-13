@@ -19,7 +19,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { useData } from '@/hooks/use-data';
+import { useData, loadFromLocalStorage } from '@/hooks/use-data';
 import { Badge } from '@/components/ui/badge';
 import { getPartialLabel } from '@/lib/utils';
 import type { PartialId, StudentObservation, EvaluationCriteria, Grades, ParticipationRecord, ActivityRecord, Activity } from '@/hooks/use-data';
@@ -87,13 +87,15 @@ export default function StudentProfilePage() {
         });
 
         const partialObservations = (allObservations[studentId] || []).filter(obs => obs.partialId === pId);
-
-        allStats.push({
-            ...gradeDetails,
-            partialId: pId,
-            attendance: { p, a, total, rate: total > 0 ? (p / total) * 100 : 100 },
-            observations: partialObservations,
-        });
+        
+        if (gradeDetails.criteriaDetails.length > 0) {
+             allStats.push({
+                ...gradeDetails,
+                partialId: pId,
+                attendance: { p, a, total, rate: total > 0 ? (p / total) * 100 : 100 },
+                observations: partialObservations,
+            });
+        }
     });
     
     return allStats;
@@ -196,7 +198,7 @@ export default function StudentProfilePage() {
       if (generatedFeedback) {
           setEditedFeedback({
               feedback: generatedFeedback.feedback,
-              recommendations: generatedFeedback.recommendations.join('\n'),
+              recommendations: generatedFeedback.recommendations.join('\\n'),
           });
           setIsEditingFeedback(true);
       }
@@ -206,7 +208,7 @@ export default function StudentProfilePage() {
     if (generatedFeedback) {
       setGeneratedFeedback({
           feedback: editedFeedback.feedback,
-          recommendations: editedFeedback.recommendations.split('\n').filter(r => r.trim() !== ''),
+          recommendations: editedFeedback.recommendations.split('\\n').filter(r => r.trim() !== ''),
       });
       setIsEditingFeedback(false);
       toast({ title: 'Feedback actualizado' });
@@ -425,5 +427,3 @@ export default function StudentProfilePage() {
     </>
   );
 }
-
-    
