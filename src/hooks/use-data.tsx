@@ -219,8 +219,12 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             setActiveGroupIdState(null);
         }
         
-        const storedPartialId = loadFromLocalStorage<PartialId>('activePartialId', 'p1');
-        setActivePartialIdState(storedPartialId);
+        const storedPartialId = window.localStorage.getItem('activePartialId') as PartialId | null;
+        if (storedPartialId && ['p1', 'p2', 'p3'].includes(storedPartialId)) {
+            setActivePartialIdState(storedPartialId);
+        } else {
+            setActivePartialIdState('p1');
+        }
 
         setSettings(loadFromLocalStorage('appSettings', defaultSettings));
         setDataVersion(v => v + 1); // Trigger initial data load for memos
@@ -442,7 +446,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     const setActivePartialId = (partialId: PartialId) => {
         setActivePartialIdState(partialId);
-        saveToLocalStorage('activePartialId', partialId);
+        window.localStorage.setItem('activePartialId', partialId);
         setDataVersion(v => v+1);
     };
 
