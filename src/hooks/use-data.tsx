@@ -177,7 +177,8 @@ const defaultSettings = {
 // DATA PROVIDER COMPONENT
 export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isAuthLoading, setIsAuthLoading] = useState(true);
+    const [isDataLoading, setIsDataLoading] = useState(true);
     
     // Core data
     const [allStudents, setAllStudentsState] = useState<Student[]>([]);
@@ -202,14 +203,15 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
             setUser(firebaseUser);
+            setIsAuthLoading(false);
             if (!firebaseUser) {
-              setIsLoading(false);
               // Reset state on logout
               setGroupsState([]);
               setAllStudentsState([]);
               setAllObservations({});
               setActiveGroupIdState(null);
               setSettingsState(defaultSettings);
+              setIsDataLoading(false);
             }
         });
         return () => unsubscribe();
@@ -217,7 +219,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     useEffect(() => {
       if(user) {
-        setIsLoading(true);
+        setIsDataLoading(true);
         const prefix = `users/${user.uid}`;
 
         const unsubscribers = [
@@ -259,11 +261,9 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
           }),
         ];
         
-        // Only set loading to false after initial listeners are set up
-        const timer = setTimeout(() => setIsLoading(false), 500); 
+        setIsDataLoading(false);
 
         return () => {
-          clearTimeout(timer);
           unsubscribers.forEach(unsub => unsub());
         }
       }
@@ -527,7 +527,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
 
     const contextValue: DataContextType = {
-        isLoading,
+        isLoading: isAuthLoading || isDataLoading,
         groups, allStudents, allObservations, activeStudentsInGroups, settings, activeGroup, activePartialId,
         partialData,
         groupAverages, atRiskStudents, overallAverageParticipation,

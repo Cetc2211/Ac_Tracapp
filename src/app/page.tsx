@@ -83,10 +83,13 @@ export default function AuthenticationPage() {
     setIsLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, registerEmail, registerPassword);
+      const user = userCredential.user;
+
+      // Update the profile (display name)
+      await updateProfile(user, { displayName: registerName.trim() });
       
-      await updateProfile(userCredential.user, { displayName: registerName.trim() });
-      
-      await setDoc(doc(db, `users/${userCredential.user.uid}/settings`, 'app'), {
+      // Create initial settings document
+      await setDoc(doc(db, `users/${user.uid}/settings`, 'app'), {
         institutionName: `${registerName.trim()}'s Institution`,
         logo: "",
         theme: "theme-default"
@@ -98,10 +101,16 @@ export default function AuthenticationPage() {
       });
       router.push('/dashboard');
     } catch (error: any) {
+      let errorMessage = 'Ocurrió un error inesperado.';
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = 'Este correo electrónico ya está en uso. Por favor, intenta con otro.';
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = 'La contraseña es muy débil. Debe tener al menos 6 caracteres.';
+      }
       toast({
         variant: 'destructive',
         title: 'Error de Registro',
-        description: error.message,
+        description: errorMessage,
       });
     } finally {
       setIsLoading(false);
