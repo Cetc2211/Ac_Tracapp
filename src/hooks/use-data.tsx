@@ -231,93 +231,80 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }, []);
 
     useEffect(() => {
-      if(user) {
-        setIsDataLoading(true);
-        const prefix = `users/${user.uid}`;
-
-        const unsubscribers = [
-          onSnapshot(collection(db, `${prefix}/groups`), (snapshot) => {
-            const fetchedGroups = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Group));
-            setGroupsState(fetchedGroups);
-            if (!activeGroupId && fetchedGroups.length > 0) {
-              setActiveGroupIdState(fetchedGroups[0].id);
-            } else if (activeGroupId && !fetchedGroups.some(g => g.id === activeGroupId)) {
-              setActiveGroupIdState(fetchedGroups.length > 0 ? fetchedGroups[0].id : null);
-            }
-            if(fetchedGroups.length === 0) {
-              setIsDataLoading(false);
-            }
-          }),
-          onSnapshot(collection(db, `${prefix}/students`), (snapshot) => {
-            const fetchedStudents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
-            setAllStudentsState(fetchedStudents);
-          }),
-           onSnapshot(collection(db, `${prefix}/observations`), (snapshot) => {
-             const fetchedObservations: {[studentId: string]: StudentObservation[]} = {};
-             snapshot.docs.forEach(doc => {
-                 const obs = { id: doc.id, ...doc.data() } as StudentObservation;
-                 if (obs.studentId) {
-                   if (!fetchedObservations[obs.studentId]) {
-                     fetchedObservations[obs.studentId] = [];
-                   }
-                   // Convert Firestore Timestamps to ISO strings
-                   obs.date = (obs.date as unknown as Timestamp).toDate().toISOString();
-                   obs.followUpUpdates = (obs.followUpUpdates || []).map(f => ({...f, date: (f.date as unknown as Timestamp).toDate().toISOString()}));
-                   fetchedObservations[obs.studentId].push(obs);
-                 }
-             });
-             setAllObservations(fetchedObservations);
-           }),
-          onSnapshot(doc(db, `${prefix}/settings`, 'app'), (snapshot) => {
-            if (snapshot.exists()) {
-              setSettingsState(snapshot.data() as typeof settings);
-            } else {
-              setSettingsState(defaultSettings);
-            }
-          }),
-          onSnapshot(doc(db, `${prefix}/profile`, 'info'), (snapshot) => {
-              if (snapshot.exists()) {
-                  setUserProfile(snapshot.data() as UserProfile);
-              } else {
-                  setUserProfile(defaultProfile);
-              }
-          }),
-        ];
-        
-        return () => {
-          unsubscribers.forEach(unsub => unsub());
+        if (user) {
+            setIsDataLoading(true);
+            const prefix = `users/${user.uid}`;
+    
+            const unsubscribers = [
+                onSnapshot(collection(db, `${prefix}/groups`), (snapshot) => {
+                    const fetchedGroups = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Group));
+                    setGroupsState(fetchedGroups);
+                    if (!activeGroupId && fetchedGroups.length > 0) {
+                        setActiveGroupIdState(fetchedGroups[0].id);
+                    } else if (activeGroupId && !fetchedGroups.some(g => g.id === activeGroupId)) {
+                        setActiveGroupIdState(fetchedGroups.length > 0 ? fetchedGroups[0].id : null);
+                    }
+                }),
+                onSnapshot(collection(db, `${prefix}/students`), (snapshot) => {
+                    const fetchedStudents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
+                    setAllStudentsState(fetchedStudents);
+                }),
+                onSnapshot(collection(db, `${prefix}/observations`), (snapshot) => {
+                    const fetchedObservations: {[studentId: string]: StudentObservation[]} = {};
+                    snapshot.docs.forEach(doc => {
+                        const obs = { id: doc.id, ...doc.data() } as StudentObservation;
+                        if (obs.studentId) {
+                            if (!fetchedObservations[obs.studentId]) {
+                                fetchedObservations[obs.studentId] = [];
+                            }
+                            obs.date = (obs.date as unknown as Timestamp).toDate().toISOString();
+                            obs.followUpUpdates = (obs.followUpUpdates || []).map(f => ({...f, date: (f.date as unknown as Timestamp).toDate().toISOString()}));
+                            fetchedObservations[obs.studentId].push(obs);
+                        }
+                    });
+                    setAllObservations(fetchedObservations);
+                }),
+                onSnapshot(doc(db, `${prefix}/settings`, 'app'), (doc) => {
+                    setSettingsState(doc.exists() ? (doc.data() as typeof settings) : defaultSettings);
+                }),
+                onSnapshot(doc(db, `${prefix}/profile`, 'info'), (doc) => {
+                    setUserProfile(doc.exists() ? (doc.data() as UserProfile) : { ...defaultProfile, email: user.email || '' });
+                }),
+            ];
+            
+            // This will handle the loading state more gracefully
+            Promise.all([
+              getDoc(doc(db, `${prefix}/profile`, 'info')),
+              getDoc(doc(db, `${prefix}/settings`, 'app')),
+            ]).then(() => {
+                setIsDataLoading(false);
+            });
+    
+            return () => unsubscribers.forEach(unsub => unsub());
         }
-      }
     }, [user, activeGroupId]);
     
     useEffect(() => {
         if(user && activeGroupId && activePartialId) {
             const prefix = `users/${user.uid}/groups/${activeGroupId}/partials/${activePartialId}`;
-            setIsDataLoading(true);
-            const unsubscribers = [
-                onSnapshot(doc(db, prefix, 'data'), (doc) => {
-                    const data = doc.data() as Omit<PartialData, 'students'> | undefined;
-                    setPartialData(prev => ({
-                        ...prev,
-                        criteria: data?.criteria || [],
-                        grades: data?.grades || {},
-                        attendance: data?.attendance || {},
-                        participations: data?.participations || {},
-                        activities: data?.activities || [],
-                        activityRecords: data?.activityRecords || {},
-                    }));
-                    setIsDataLoading(false);
-                })
-            ];
-            return () => unsubscribers.forEach(unsub => unsub());
+            const unsub = onSnapshot(doc(db, prefix, 'data'), (doc) => {
+                const data = doc.data() as Omit<PartialData, 'students'> | undefined;
+                setPartialData(prev => ({
+                    ...prev,
+                    criteria: data?.criteria || [],
+                    grades: data?.grades || {},
+                    attendance: data?.attendance || {},
+                    participations: data?.participations || {},
+                    activities: data?.activities || [],
+                    activityRecords: data?.activityRecords || {},
+                }));
+            });
+            return () => unsub();
         } else {
              setPartialData({
                 criteria: [], grades: {}, attendance: {},
                 participations: {}, activities: [], activityRecords: {},
             });
-            if(user) { // Only set loading to false if user is logged in but has no active group
-                setIsDataLoading(false);
-            }
         }
     }, [user, activeGroupId, activePartialId]);
     
