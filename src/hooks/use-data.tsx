@@ -146,12 +146,13 @@ interface DataContextType {
   setActiveGroupId: (groupId: string | null) => void;
   setActivePartialId: (partialId: PartialId) => void;
   
-  setCriteria: (criteria: EvaluationCriteria[]) => Promise<void>;
-  setGrades: (grades: Grades) => Promise<void>;
-  setAttendance: (attendance: AttendanceRecord) => Promise<void>;
-  setParticipations: (participations: ParticipationRecord) => Promise<void>;
-  setActivities: (activities: Activity[]) => Promise<void>;
-  setActivityRecords: (activityRecords: ActivityRecord) => Promise<void>;
+  setCriteria: (setter: React.SetStateAction<EvaluationCriteria[]>) => Promise<void>;
+  setGrades: (setter: React.SetStateAction<Grades>) => Promise<void>;
+  setAttendance: (setter: React.SetStateAction<AttendanceRecord>) => Promise<void>;
+  setParticipations: (setter: React.SetStateAction<ParticipationRecord>) => Promise<void>;
+  setActivities: (setter: React.SetStateAction<Activity[]>) => Promise<void>;
+  setActivityRecords: (setter: React.SetStateAction<ActivityRecord>) => Promise<void>;
+
 
   // Functions
   deleteGroup: (groupId: string) => Promise<void>;
@@ -293,19 +294,21 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }, [user, activeGroupId, activePartialId]);
 
 
-    const setPartialDataField = async (field: keyof PartialData, value: any) => {
+    const createSetter = <T,>(field: keyof PartialData) => async (setter: React.SetStateAction<T>) => {
         const docRef = getPartialDataDocRef();
         if (docRef) {
-            await setDoc(docRef, { [field]: value }, { merge: true });
+            const currentValue = (partialData as any)[field];
+            const newValue = typeof setter === 'function' ? (setter as (prevState: T) => T)(currentValue) : setter;
+            await setDoc(docRef, { [field]: newValue }, { merge: true });
         }
     };
-
-    const setCriteria = async (criteria: EvaluationCriteria[]) => setPartialDataField('criteria', criteria);
-    const setGrades = async (grades: Grades) => setPartialDataField('grades', grades);
-    const setAttendance = async (attendance: AttendanceRecord) => setPartialDataField('attendance', attendance);
-    const setParticipations = async (participations: ParticipationRecord) => setPartialDataField('participations', participations);
-    const setActivities = async (activities: Activity[]) => setPartialDataField('activities', activities);
-    const setActivityRecords = async (activityRecords: ActivityRecord) => setPartialDataField('activityRecords', activityRecords);
+    
+    const setCriteria = createSetter<EvaluationCriteria[]>('criteria');
+    const setGrades = createSetter<Grades>('grades');
+    const setAttendance = createSetter<AttendanceRecord>('attendance');
+    const setParticipations = createSetter<ParticipationRecord>('participations');
+    const setActivities = createSetter<Activity[]>('activities');
+    const setActivityRecords = createSetter<ActivityRecord>('activityRecords');
 
 
     const calculateDetailedFinalGrade = useCallback((studentId: string, forGroupId?: string, forPartialId?: PartialId): { finalGrade: number, criteriaDetails: CriteriaDetail[] } => {
