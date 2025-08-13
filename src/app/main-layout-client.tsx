@@ -17,7 +17,7 @@ import {
   PenSquare,
   FilePen,
   ClipboardCheck,
-  User,
+  User as UserIcon,
   ChevronRight,
   Loader2
 } from 'lucide-react';
@@ -201,7 +201,7 @@ export default function MainLayoutClient({
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={pathname.startsWith('/profile')}>
                   <Link href="/profile">
-                    <User />
+                    <UserIcon />
                     <span>Mi Perfil</span>
                   </Link>
                 </SidebarMenuButton>
