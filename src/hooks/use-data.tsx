@@ -538,3 +538,5 @@ export const useData = (): DataContextType => {
 
 // Dummy export to satisfy the previous file structure if needed
 export const loadFromLocalStorage = <T,>(key: string, defaultValue: T): T => defaultValue;
+
+    
