@@ -111,15 +111,14 @@ export default function StudentProfilePage() {
     const reportElement = reportRef.current;
     if (!reportElement) return;
 
-    // Elementos a ocultar
-    const elementsToHide = [
-      document.getElementById(`interactive-buttons-container`),
-      document.getElementById(`interactive-buttons-header`)
-    ].filter(Boolean) as HTMLElement[];
+    const headerButtons = document.getElementById('interactive-buttons-header');
+    const cardButtons = document.getElementById('interactive-buttons-container');
+    const feedbackButtons = document.getElementById('feedback-buttons-container');
+    
+    const elementsToHide = [headerButtons, cardButtons, feedbackButtons].filter(Boolean) as HTMLElement[];
 
     toast({ title: 'Generando PDF...', description: 'Esto puede tardar un momento.' });
-
-    // Ocultar elementos
+    
     elementsToHide.forEach(el => el.style.display = 'none');
 
     try {
@@ -155,7 +154,6 @@ export default function StudentProfilePage() {
             description: "No se pudo crear el archivo. Inténtalo de nuevo."
         });
     } finally {
-        // Volver a mostrar los elementos
         elementsToHide.forEach(el => el.style.display = 'flex');
     }
   };
@@ -193,7 +191,7 @@ export default function StudentProfilePage() {
       if (generatedFeedback) {
           setEditedFeedback({
               feedback: generatedFeedback.feedback,
-              recommendations: generatedFeedback.recommendations.join('\\n'),
+              recommendations: generatedFeedback.recommendations.join('\n'),
           });
           setIsEditingFeedback(true);
       }
@@ -203,7 +201,7 @@ export default function StudentProfilePage() {
     if (generatedFeedback) {
       setGeneratedFeedback({
           feedback: editedFeedback.feedback,
-          recommendations: editedFeedback.recommendations.split('\\n').filter(r => r.trim() !== ''),
+          recommendations: editedFeedback.recommendations.split('\n').filter(r => r.trim() !== ''),
       });
       setIsEditingFeedback(false);
       toast({ title: 'Feedback actualizado' });
@@ -223,7 +221,7 @@ export default function StudentProfilePage() {
       <WhatsAppDialog studentName={student.name} open={isWhatsAppOpen} onOpenChange={setIsWhatsAppOpen} />
 
       <div className="flex flex-col gap-6">
-        <div id="interactive-buttons-header" className="flex items-center justify-between print:hidden">
+        <div id="interactive-buttons-header" className="flex items-center justify-between">
           <div className="flex items-center gap-4">
               <Button asChild variant="outline" size="icon">
               <Link href="/dashboard">
@@ -355,7 +353,7 @@ export default function StudentProfilePage() {
                             <CardTitle>Recomendaciones y retroalimentación</CardTitle>
                             <CardDescription>Resumen personalizado del rendimiento del estudiante en el <span className='font-bold'>{getPartialLabel(activePartialId)}</span>.</CardDescription>
                         </div>
-                        <div id="interactive-buttons-container" className="flex gap-2">
+                        <div id="feedback-buttons-container" className="flex gap-2">
                             <Button onClick={handleGenerateFeedback} disabled={isGeneratingFeedback || isEditingFeedback}>
                                 {isGeneratingFeedback ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Wand2 className="mr-2 h-4 w-4" />}
                                 {isGeneratingFeedback ? "Generando..." : "Generar Feedback"}
@@ -421,4 +419,3 @@ export default function StudentProfilePage() {
     </>
   );
 }
-
