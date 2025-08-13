@@ -116,6 +116,11 @@ export type PartialData = {
     activityRecords: ActivityRecord;
 };
 
+export type UserProfile = {
+    name: string;
+    email: string;
+    photoURL: string;
+}
 
 // CONTEXT TYPE
 interface DataContextType {
@@ -126,6 +131,7 @@ interface DataContextType {
   allObservations: {[studentId: string]: StudentObservation[]};
   activeStudentsInGroups: Student[];
   settings: { institutionName: string; logo: string; theme: string };
+  userProfile: UserProfile | null;
   
   activeGroup: Group | null;
   activePartialId: PartialId;
@@ -185,6 +191,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const [allObservations, setAllObservations] = useState<{[studentId: string]: StudentObservation[]}>({});
     const [groups, setGroupsState] = useState<Group[]>([]);
     const [settings, setSettingsState] = useState(defaultSettings);
+    const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     
     // Active state
     const [activeGroupId, setActiveGroupIdState] = useState<string | null>(null);
@@ -211,6 +218,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
               setAllObservations({});
               setActiveGroupIdState(null);
               setSettingsState(defaultSettings);
+              setUserProfile(null);
               setIsDataLoading(false);
             }
         });
@@ -258,6 +266,11 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             } else {
               setSettingsState(defaultSettings);
             }
+          }),
+          onSnapshot(doc(db, `${prefix}/profile`, 'info'), (snapshot) => {
+              if (snapshot.exists()) {
+                  setUserProfile(snapshot.data() as UserProfile);
+              }
           }),
         ];
         
@@ -528,7 +541,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     const contextValue: DataContextType = {
         isLoading: isAuthLoading || isDataLoading,
-        groups, allStudents, allObservations, activeStudentsInGroups, settings, activeGroup, activePartialId,
+        groups, allStudents, allObservations, activeStudentsInGroups, settings, userProfile, activeGroup, activePartialId,
         partialData,
         groupAverages, atRiskStudents, overallAverageParticipation,
         setGroups, setAllStudents, addStudentToGroup, updateStudentInGroup, removeStudentFromGroup, setActiveGroupId, setActivePartialId,

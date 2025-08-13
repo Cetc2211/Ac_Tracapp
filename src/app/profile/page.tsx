@@ -13,13 +13,15 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { auth } from '@/lib/firebase';
-import { updateProfile } from 'firebase/auth';
+import { auth, db } from '@/lib/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { Loader2 } from 'lucide-react';
+import { useData } from '@/hooks/use-data';
 
 export default function ProfilePage() {
+  const { userProfile } = useData();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [avatar, setAvatar] = useState<string | null>(null);
@@ -28,13 +30,12 @@ export default function ProfilePage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    const user = auth.currentUser;
-    if (user) {
-      setName(user.displayName || '');
-      setEmail(user.email || '');
-      setAvatar(user.photoURL);
+    if (userProfile) {
+      setName(userProfile.name || '');
+      setEmail(userProfile.email || '');
+      setAvatar(userProfile.photoURL);
     }
-  }, []);
+  }, [userProfile]);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -86,10 +87,12 @@ export default function ProfilePage() {
 
     setIsSaving(true);
     try {
-      await updateProfile(user, {
-        displayName: name,
+      const profileRef = doc(db, `users/${user.uid}/profile`, 'info');
+      await updateDoc(profileRef, {
+        name: name,
         photoURL: avatar,
       });
+
       toast({
         title: 'Perfil Actualizado',
         description: 'Tu información ha sido guardada exitosamente.',

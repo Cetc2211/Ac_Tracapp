@@ -13,22 +13,14 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { LogOut, Settings, User as UserIcon } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
 import { auth } from '@/lib/firebase';
-import type { User } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
+import { useData } from '@/hooks/use-data';
 
 export function UserNav() {
-  const [user, setUser] = useState<User | null>(null);
   const router = useRouter();
+  const { userProfile } = useData();
 
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
-        setUser(firebaseUser);
-    });
-    return () => unsubscribe();
-  }, []);
-  
   const handleLogout = async () => {
     await auth.signOut();
     router.push('/');
@@ -43,7 +35,7 @@ export function UserNav() {
     return name.substring(0,2).toUpperCase();
   }
   
-  if (!user) {
+  if (!userProfile) {
     return null;
   }
 
@@ -52,17 +44,17 @@ export function UserNav() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-8 w-8">
-            <AvatarImage src={user.photoURL || ''} alt={user.displayName || 'Usuario'} data-ai-hint="user avatar" />
-            <AvatarFallback>{getInitials(user.displayName)}</AvatarFallback>
+            <AvatarImage src={userProfile.photoURL || ''} alt={userProfile.name || 'Usuario'} data-ai-hint="user avatar" />
+            <AvatarFallback>{getInitials(userProfile.name)}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{user.displayName || 'Usuario'}</p>
+            <p className="text-sm font-medium leading-none">{userProfile.name || 'Usuario'}</p>
             <p className="text-xs leading-none text-muted-foreground">
-              {user.email}
+              {userProfile.email}
             </p>
           </div>
         </DropdownMenuLabel>

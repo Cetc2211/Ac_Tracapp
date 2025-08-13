@@ -6,7 +6,6 @@ import { useToast } from '@/hooks/use-toast';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  updateProfile,
 } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
@@ -64,41 +63,34 @@ export default function AuthenticationPage() {
   
   const handleRegister = async () => {
     if (registerPassword !== registerConfirmPassword) {
-      toast({
-        variant: 'destructive',
-        title: 'Error de Registro',
-        description: 'Las contraseñas no coinciden.',
-      });
+      toast({ variant: 'destructive', title: 'Error de Registro', description: 'Las contraseñas no coinciden.' });
       return;
     }
     if (!registerName.trim()) {
-       toast({
-        variant: 'destructive',
-        title: 'Error de Registro',
-        description: 'El nombre es obligatorio.',
-      });
-      return;
+       toast({ variant: 'destructive', title: 'Error de Registro', description: 'El nombre es obligatorio.' });
+       return;
     }
 
     setIsLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, registerEmail, registerPassword);
       const user = userCredential.user;
-
-      // Update the profile (display name)
-      await updateProfile(user, { displayName: registerName.trim() });
       
-      // Create initial settings document
-      await setDoc(doc(db, `users/${user.uid}/settings`, 'app'), {
+      const userDocRef = doc(db, `users/${user.uid}/profile`, 'info');
+      await setDoc(userDocRef, {
+          name: registerName.trim(),
+          email: user.email,
+          photoURL: ""
+      });
+
+      const settingsDocRef = doc(db, `users/${user.uid}/settings`, 'app');
+      await setDoc(settingsDocRef, {
         institutionName: `${registerName.trim()}'s Institution`,
         logo: "",
         theme: "theme-default"
       });
 
-      toast({
-        title: 'Cuenta Creada',
-        description: '¡Bienvenido! Has sido registrado exitosamente.',
-      });
+      toast({ title: 'Cuenta Creada', description: '¡Bienvenido! Has sido registrado exitosamente.' });
       router.push('/dashboard');
     } catch (error: any) {
       let errorMessage = 'Ocurrió un error inesperado.';
@@ -107,11 +99,7 @@ export default function AuthenticationPage() {
       } else if (error.code === 'auth/weak-password') {
         errorMessage = 'La contraseña es muy débil. Debe tener al menos 6 caracteres.';
       }
-      toast({
-        variant: 'destructive',
-        title: 'Error de Registro',
-        description: errorMessage,
-      });
+      toast({ variant: 'destructive', title: 'Error de Registro', description: errorMessage });
     } finally {
       setIsLoading(false);
     }
