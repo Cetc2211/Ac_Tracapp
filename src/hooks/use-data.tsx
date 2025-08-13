@@ -3,6 +3,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import { students as placeholderStudents, groups as placeholderGroups } from '@/lib/placeholder-data';
 import { Student, Group, PartialId, StudentObservation } from '@/lib/placeholder-data';
 
 // TYPE DEFINITIONS
@@ -179,10 +180,10 @@ const saveToLocalStorage = <T,>(key: string, value: T) => {
 // DATA PROVIDER COMPONENT
 export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
     // Core data
-    const [allStudents, setAllStudentsState] = useState<Student[]>([]);
-    const [allObservations, setAllObservations] = useState<{[studentId: string]: StudentObservation[]}>({});
-    const [groups, setGroupsState] = useState<Group[]>([]);
-    const [settings, setSettings] = useState(defaultSettings);
+    const [allStudents, setAllStudentsState] = useState<Student[]>(() => loadFromLocalStorage('students', placeholderStudents));
+    const [allObservations, setAllObservations] = useState<{[studentId: string]: StudentObservation[]}>(() => loadFromLocalStorage('allObservations', {}));
+    const [groups, setGroupsState] = useState<Group[]>(() => loadFromLocalStorage('groups', placeholderGroups));
+    const [settings, setSettings] = useState(() => loadFromLocalStorage('appSettings', defaultSettings));
     
     // Active state
     const [activeGroupId, setActiveGroupIdState] = useState<string | null>(null);
@@ -201,18 +202,13 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     
     // --- INITIAL DATA LOADING ---
     useEffect(() => {
-        setAllStudentsState(loadFromLocalStorage<Student[]>('students', []));
-        const loadedGroups = loadFromLocalStorage<Group[]>('groups', []);
-        setGroupsState(loadedGroups);
-        setAllObservations(loadFromLocalStorage<{[studentId: string]: StudentObservation[]}>('allObservations', {}));
-        
         const storedActiveGroupId = loadFromLocalStorage<string | null>('activeGroupId', null);
-        const activeGroupExists = loadedGroups.some(g => g.id === storedActiveGroupId);
+        const activeGroupExists = groups.some(g => g.id === storedActiveGroupId);
         
         if (storedActiveGroupId && activeGroupExists) {
             setActiveGroupIdState(storedActiveGroupId);
-        } else if (loadedGroups.length > 0) {
-            const newActiveGroupId = loadedGroups[0].id;
+        } else if (groups.length > 0) {
+            const newActiveGroupId = groups[0].id;
             setActiveGroupIdState(newActiveGroupId);
             saveToLocalStorage('activeGroupId', newActiveGroupId);
         } else {
@@ -225,9 +221,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         } else {
             setActivePartialIdState('p1');
         }
-
-        setSettings(loadFromLocalStorage('appSettings', defaultSettings));
-        setDataVersion(v => v + 1); // Trigger initial data load for memos
+        setDataVersion(v => v + 1);
     }, []);
     
     const loadPartialData = useCallback(() => {
