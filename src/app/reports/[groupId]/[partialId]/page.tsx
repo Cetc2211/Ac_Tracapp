@@ -92,6 +92,7 @@ export default function GroupReportPage() {
               highRiskCount: 0,
               mediumRiskCount: 0,
           });
+          setReportText(`Análisis del grupo ${group.subject}.`);
           setIsLoading(false);
           return;
       }
