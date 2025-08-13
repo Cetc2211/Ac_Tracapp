@@ -20,8 +20,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useData, loadFromLocalStorage } from '@/hooks/use-data';
-import type { Student, EvaluationCriteria, Grades, ParticipationRecord, Activity, ActivityRecord, AttendanceRecord, PartialId } from '@/hooks/use-data';
+import { useData } from '@/hooks/use-data';
+import type { Student, PartialId, CalculatedRisk, EvaluationCriteria } from '@/hooks/use-data';
 import { getPartialLabel } from '@/lib/utils';
 
 
@@ -63,118 +63,110 @@ export default function StatisticsPage() {
         partialData,
         activePartialId,
         setActivePartialId,
+        groupAverages,
     } = useData();
     const { criteria, grades, participations, attendance, activities, activityRecords } = partialData;
 
-    const [stats, setStats] = useState<GroupStats[]>([]);
-    const [activeGroupStats, setActiveGroupStats] = useState<ActiveGroupStats | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    const groupCalculations = useMemo(() => {
-        return groups.map(group => {
-            const keySuffix = `${group.id}_${activePartialId}`;
-            const groupCriteria = loadFromLocalStorage<EvaluationCriteria[]>(`criteria_${keySuffix}`, []);
-            const groupGrades = loadFromLocalStorage<Grades>(`grades_${keySuffix}`, {});
-            const groupParticipations = loadFromLocalStorage<ParticipationRecord>(`participations_${keySuffix}`, {});
-            const groupAttendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${keySuffix}`, {});
-            const groupActivities = loadFromLocalStorage<Activity[]>(`activities_${keySuffix}`, []);
-            const groupActivityRecords = loadFromLocalStorage<ActivityRecord>(`activityRecords_${keySuffix}`, {});
+    const stats = useMemo(() => {
+       setIsLoading(true);
+       const allGroupStats = groups.map(group => {
+           const { students } = group;
+           const studentCount = students.length;
+           
+           const finalGrades = students.map(s => calculateFinalGrade(s.id, group.id, activePartialId));
+           const averageGrade = finalGrades.length > 0 ? finalGrades.reduce((a, b) => a + b, 0) / finalGrades.length : 0;
+           
+           let totalAttendances = 0;
+           let presentAttendances = 0;
+           const riskLevels: Record<'low' | 'medium' | 'high', number> = { low: 0, medium: 0, high: 0 };
+           
+           const keySuffix = `${group.id}_${activePartialId}`;
+           const groupAttendance = loadFromLocalStorage<Record<string, Record<string, boolean>>>(`attendance_${keySuffix}`, {});
+           
+           students.forEach(student => {
+               const studentFinalGrade = calculateFinalGrade(student.id, group.id, activePartialId);
+               const risk = getStudentRiskLevel(studentFinalGrade, groupAttendance, student.id);
+               riskLevels[risk.level]++;
+               
+               Object.values(groupAttendance).forEach(dailyRecord => {
+                   if (Object.prototype.hasOwnProperty.call(dailyRecord, student.id)) {
+                       totalAttendances++;
+                       if (dailyRecord[student.id]) {
+                           presentAttendances++;
+                       }
+                   }
+               });
+           });
+           
+           const attendanceRate = totalAttendances > 0 ? (presentAttendances / totalAttendances) * 100 : 100;
+           
+           return {
+               id: group.id,
+               subject: group.subject,
+               studentCount,
+               averageGrade: parseFloat(averageGrade.toFixed(1)),
+               attendanceRate: parseFloat(attendanceRate.toFixed(1)),
+               riskLevels,
+           };
+       });
+       setIsLoading(false);
+       return allGroupStats;
+    }, [groups, activePartialId, calculateFinalGrade, getStudentRiskLevel]);
 
-            const finalGrades = group.students.map(s => {
-                return calculateFinalGrade(s.id, activePartialId, groupCriteria, groupGrades, groupParticipations, groupActivities, groupActivityRecords);
-            });
-            const averageGrade = finalGrades.length > 0 ? finalGrades.reduce((a, b) => a + b, 0) / finalGrades.length : 0;
 
-            let totalAttendances = 0;
-            let presentAttendances = 0;
-            const riskLevels = { low: 0, medium: 0, high: 0 };
+    const activeGroupStats = useMemo(() => {
+        if (!activeGroup) return null;
+
+        let approved = 0, failed = 0;
+        let present = 0, absent = 0;
+        const studentGrades: {student: Student, grade: number}[] = [];
+        const riskDistribution: Record<'low' | 'medium' | 'high', number> = { low: 0, medium: 0, high: 0 };
+        const participationDistribution = [
+            { name: '0-20%', students: 0 }, { name: '21-40%', students: 0 }, { name: '41-60%', students: 0 }, { name: '61-80%', students: 0 }, { name: '81-100%', students: 0 }
+        ];
+
+        for(const student of activeGroup.students) {
+            const finalGrade = calculateFinalGrade(student.id, activeGroup.id, activePartialId);
+            studentGrades.push({student, grade: finalGrade});
+            if(finalGrade >= 60) approved++; else failed++;
             
-            group.students.forEach(student => {
-                const studentFinalGrade = calculateFinalGrade(student.id, activePartialId, groupCriteria, groupGrades, groupParticipations, groupActivities, groupActivityRecords);
-                const risk = getStudentRiskLevel(studentFinalGrade, groupAttendance, student.id);
-                riskLevels[risk.level]++;
-                
-                Object.values(groupAttendance).forEach(dailyRecord => {
-                    if (dailyRecord.hasOwnProperty(student.id)) {
-                        totalAttendances++;
-                        if (dailyRecord[student.id]) {
-                            presentAttendances++;
-                        }
-                    }
-                });
-            });
+            const risk = getStudentRiskLevel(finalGrade, attendance, student.id);
+            riskDistribution[risk.level]++;
 
-            const attendanceRate = totalAttendances > 0 ? (presentAttendances / totalAttendances) * 100 : 100;
-
-            return {
-                id: group.id,
-                subject: group.subject,
-                studentCount: group.students.length,
-                averageGrade: parseFloat(averageGrade.toFixed(1)),
-                attendanceRate: parseFloat(attendanceRate.toFixed(1)),
-                riskLevels
-            };
-        });
-
-    }, [groups, calculateFinalGrade, getStudentRiskLevel, activePartialId]);
-    
-    useEffect(() => {
-        setIsLoading(true);
-        setStats(groupCalculations);
-
-        if (activeGroup) {
-            let approved = 0, failed = 0;
-            let present = 0, absent = 0;
-            const studentGrades: {student: Student, grade: number}[] = [];
-            const riskDistribution = { low: 0, medium: 0, high: 0 };
-            const participationDistribution = [
-                { name: '0-20%', students: 0 }, { name: '21-40%', students: 0 }, { name: '41-60%', students: 0 }, { name: '61-80%', students: 0 }, { name: '81-100%', students: 0 }
-            ];
-
-            for(const student of activeGroup.students) {
-                const finalGrade = calculateFinalGrade(student.id, activePartialId, criteria, grades, participations, activities, activityRecords);
-                studentGrades.push({student, grade: finalGrade});
-                if(finalGrade >= 60) approved++; else failed++;
-                
-                const risk = getStudentRiskLevel(finalGrade, attendance, student.id);
-                riskDistribution[risk.level]++;
-
-                const totalParticipationClasses = Object.keys(participations).length;
-                if(totalParticipationClasses > 0) {
-                    const studentParticipations = Object.values(participations).filter(day => day[student.id]).length;
-                    const participationRate = (studentParticipations / totalParticipationClasses) * 100;
-                    if (participationRate <= 20) participationDistribution[0].students++;
-                    else if (participationRate <= 40) participationDistribution[1].students++;
-                    else if (participationRate <= 60) participationDistribution[2].students++;
-                    else if (participationRate <= 80) participationDistribution[3].students++;
-                    else participationDistribution[4].students++;
-                } else if(activeGroup.students.length > 0) {
-                     participationDistribution[4].students = activeGroup.students.length;
+            const totalParticipationClasses = Object.keys(participations).length;
+            if(totalParticipationClasses > 0) {
+                const studentParticipations = Object.values(participations).filter(day => day[student.id]).length;
+                const participationRate = (studentParticipations / totalParticipationClasses) * 100;
+                if (participationRate <= 20) participationDistribution[0].students++;
+                else if (participationRate <= 40) participationDistribution[1].students++;
+                else if (participationRate <= 60) participationDistribution[2].students++;
+                else if (participationRate <= 80) participationDistribution[3].students++;
+                else participationDistribution[4].students++;
+            } else if(activeGroup.students.length > 0) {
+                 participationDistribution[4].students = activeGroup.students.length;
+            }
+        }
+        
+        Object.values(attendance).forEach(dailyRecord => {
+            for (const studentId of activeGroup.students.map(s => s.id)) {
+                if (Object.prototype.hasOwnProperty.call(dailyRecord, studentId)) {
+                    if (dailyRecord[studentId]) present++; else absent++;
                 }
             }
-            
-            Object.values(attendance).forEach(dailyRecord => {
-                for (const studentId of activeGroup.students.map(s => s.id)) {
-                    if (dailyRecord.hasOwnProperty(studentId)) {
-                        if (dailyRecord[studentId]) present++; else absent++;
-                    }
-                }
-            });
+        });
 
-            studentGrades.sort((a,b) => b.grade - a.grade);
+        studentGrades.sort((a,b) => b.grade - a.grade);
 
-            setActiveGroupStats({
-                approvalRate: { approved, failed },
-                attendanceTotals: { present, absent },
-                riskDistribution,
-                topStudents: studentGrades.slice(0,5).map(s => ({name: s.student.name, grade: parseFloat(s.grade.toFixed(1))})),
-                participationDistribution,
-            });
-        } else {
-            setActiveGroupStats(null);
-        }
-        setIsLoading(false);
-    }, [activeGroup, groups, criteria, grades, participations, attendance, activities, activityRecords, calculateFinalGrade, getStudentRiskLevel, groupCalculations, activePartialId]);
+        return {
+            approvalRate: { approved, failed },
+            attendanceTotals: { present, absent },
+            riskDistribution,
+            topStudents: studentGrades.slice(0,5).map(s => ({name: s.student.name, grade: parseFloat(s.grade.toFixed(1))})),
+            participationDistribution,
+        };
+    }, [activeGroup, activePartialId, calculateFinalGrade, getStudentRiskLevel, partialData]);
 
     const approvalData = useMemo(() => {
         if (!activeGroupStats) return [];
@@ -422,4 +414,18 @@ export default function StatisticsPage() {
       </Tabs>
     </div>
   );
+}
+
+// Helper function to load data from local storage, needed for stats calculation outside the main provider hook
+function loadFromLocalStorage<T>(key: string, defaultValue: T): T {
+    if (typeof window === 'undefined') {
+        return defaultValue;
+    }
+    try {
+        const item = window.localStorage.getItem(key);
+        return item ? JSON.parse(item) : defaultValue;
+    } catch (error) {
+        console.warn(`Error reading from localStorage key “${key}”:`, error);
+        return defaultValue;
+    }
 }
