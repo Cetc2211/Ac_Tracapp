@@ -359,7 +359,7 @@ export default function StudentProfilePage() {
                                     <Label htmlFor="editedRecommendations" className="font-bold">Recomendaciones:</Label>
                                     <Textarea id="editedRecommendations" value={editedFeedback.recommendations} onChange={(e) => setEditedFeedback(prev => ({...prev, recommendations: e.target.value}))} rows={5} />
                                 </div>
-                                <div className="flex justify-end gap-2 print:hidden">
+                                <div className="flex justify-end gap-2">
                                     <Button variant="outline" onClick={() => setIsEditingFeedback(false)}>Cancelar</Button>
                                     <Button onClick={handleSaveFeedback}>
                                         <Save className="mr-2 h-4 w-4"/> Guardar Cambios
