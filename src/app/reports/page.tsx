@@ -32,6 +32,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { useData } from '@/hooks/use-data';
 import type { EvaluationCriteria, Grades, ParticipationRecord, Activity, ActivityRecord } from '@/hooks/use-data';
+import { useToast } from '@/hooks/use-toast';
 
 
 export default function ReportsPage() {
@@ -40,14 +41,16 @@ export default function ReportsPage() {
     calculateFinalGrade,
     groupAverages,
     partialData,
-    activePartialId
+    activePartialId,
+    isLoading,
   } = useData();
   const { criteria, participations, activities, activityRecords, grades, attendance } = partialData;
 
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const { toast } = useToast();
 
   const quickStats = useMemo(() => {
-    if (!activeGroup) return null;
+    if (!activeGroup || isLoading) return null;
 
     const studentCount = activeGroup.students.length;
     
@@ -81,7 +84,7 @@ export default function ReportsPage() {
         totalAttendanceRecords: presentCount,
         criteriaCount: criteria.length,
     };
-  }, [activeGroup, calculateFinalGrade, groupAverages, partialData, activePartialId]);
+  }, [activeGroup, calculateFinalGrade, groupAverages, partialData, activePartialId, isLoading, attendance, criteria]);
 
 
   const handleDownloadCsv = () => {
@@ -132,6 +135,7 @@ export default function ReportsPage() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    toast({title: 'CSV Generado', description: 'La descarga de calificaciones ha comenzado.'});
   };
   
   const handleStudentChange = (studentId: string) => {
@@ -139,6 +143,14 @@ export default function ReportsPage() {
       setSelectedStudent(student || null);
   }
   
+  if (isLoading) {
+      return (
+        <div className="flex justify-center items-center h-full">
+            <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      )
+  }
+
   if (!activeGroup) {
       return (
         <div className="flex flex-col gap-6">

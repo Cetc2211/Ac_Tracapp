@@ -19,10 +19,10 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { useData, loadFromLocalStorage } from '@/hooks/use-data';
+import { useData } from '@/hooks/use-data';
 import { Badge } from '@/components/ui/badge';
 import { getPartialLabel } from '@/lib/utils';
-import type { PartialId, StudentObservation, EvaluationCriteria, Grades, ParticipationRecord, ActivityRecord, Activity } from '@/hooks/use-data';
+import type { PartialId, StudentObservation, EvaluationCriteria, Grades, ParticipationRecord, ActivityRecord, Activity, PartialData } from '@/hooks/use-data';
 import { StudentObservationLogDialog } from '@/components/student-observation-log-dialog';
 import { WhatsAppDialog } from '@/components/whatsapp-dialog';
 import { generateStudentFeedback } from '@/ai/flows/student-feedback';
@@ -46,7 +46,8 @@ export default function StudentProfilePage() {
       groups,
       calculateDetailedFinalGrade,
       allObservations,
-      activePartialId,
+      isLoading,
+      fetchPartialData,
   } = useData();
 
   const [isLogOpen, setIsLogOpen] = useState(false);
@@ -55,6 +56,8 @@ export default function StudentProfilePage() {
   const [generatedFeedback, setGeneratedFeedback] = useState<StudentFeedbackOutput | null>(null);
   const [isEditingFeedback, setIsEditingFeedback] = useState(false);
   const [editedFeedback, setEditedFeedback] = useState<{feedback: string, recommendations: string}>({feedback: '', recommendations: ''});
+  const [studentStatsByPartial, setStudentStatsByPartial] = useState<StudentStats[]>([]);
+  const [isCalculatingStats, setIsCalculatingStats] = useState(true);
   
   const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -65,39 +68,48 @@ export default function StudentProfilePage() {
     return groups.filter(g => g.students.some(s => s.id === studentId));
   }, [groups, studentId]);
 
-  const studentStatsByPartial: StudentStats[] = useMemo(() => {
-    if (!student || studentGroups.length === 0) return [];
-    
-    const partials: PartialId[] = ['p1', 'p2', 'p3'];
-    const allStats: StudentStats[] = [];
+  useEffect(() => {
+    const calculateStats = async () => {
+        if (!student || studentGroups.length === 0) {
+            setIsCalculatingStats(false);
+            return;
+        }
+        
+        setIsCalculatingStats(true);
+        const partials: PartialId[] = ['p1', 'p2', 'p3'];
+        const allStats: StudentStats[] = [];
 
-    partials.forEach(pId => {
-        const primaryGroupId = studentGroups[0].id;
-        const gradeDetails = calculateDetailedFinalGrade(student.id, primaryGroupId, pId);
-        
-        const keySuffix = `${primaryGroupId}_${pId}`;
-        const attendanceForPartial = loadFromLocalStorage<Record<string, Record<string, boolean>>>(`attendance_${keySuffix}`, {});
-        
-        let p = 0, a = 0, total = 0;
-        Object.keys(attendanceForPartial).forEach(date => {
-            if (attendanceForPartial[date]?.[studentId] !== undefined) {
-                total++;
-                if (attendanceForPartial[date][studentId]) p++; else a++;
-            }
-        });
+        for (const pId of partials) {
+            const primaryGroupId = studentGroups[0].id;
+            const partialData = await fetchPartialData(primaryGroupId, pId);
+            const gradeDetails = calculateDetailedFinalGrade(student.id, primaryGroupId, pId, partialData);
+            
+            let p = 0, a = 0, total = 0;
+            Object.keys(partialData.attendance).forEach(date => {
+                if (partialData.attendance[date]?.[studentId] !== undefined) {
+                    total++;
+                    if (partialData.attendance[date][studentId]) p++; else a++;
+                }
+            });
 
-        const partialObservations = (allObservations[studentId] || []).filter(obs => obs.partialId === pId);
+            const partialObservations = (allObservations[studentId] || []).filter(obs => obs.partialId === pId);
+            
+            allStats.push({
+                ...gradeDetails,
+                partialId: pId,
+                attendance: { p, a, total, rate: total > 0 ? (p / total) * 100 : 100 },
+                observations: partialObservations,
+            });
+        }
         
-        allStats.push({
-            ...gradeDetails,
-            partialId: pId,
-            attendance: { p, a, total, rate: total > 0 ? (p / total) * 100 : 100 },
-            observations: partialObservations,
-        });
-    });
+        setStudentStatsByPartial(allStats);
+        setIsCalculatingStats(false);
+    }
     
-    return allStats;
-  }, [student, studentGroups, calculateDetailedFinalGrade, allObservations, studentId]);
+    if(!isLoading) {
+        calculateStats();
+    }
+  }, [student, studentGroups, calculateDetailedFinalGrade, allObservations, studentId, isLoading, fetchPartialData]);
   
   const semesterAverage = useMemo(() => {
     if (studentStatsByPartial.length === 0) return 0;
@@ -226,6 +238,15 @@ export default function StudentProfilePage() {
       toast({ title: 'Feedback actualizado' });
     }
   };
+  
+  if (isLoading || isCalculatingStats) {
+      return (
+        <div className="flex justify-center items-center h-full">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <span className="ml-2">Cargando perfil del estudiante...</span>
+        </div>
+      )
+  }
   
   if (!student) {
     return notFound();
@@ -447,4 +468,3 @@ export default function StudentProfilePage() {
     </>
   );
 }
-

@@ -25,15 +25,15 @@ import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { useData, loadFromLocalStorage } from '@/hooks/use-data';
+import { useData } from '@/hooks/use-data';
 import { generateAtRiskStudentRecommendation } from '@/ai/flows/at-risk-student-recommendation';
 import type { AtRiskStudentOutput, AtRiskStudentInput } from '@/ai/flows/at-risk-student-recommendation';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { useParams } from 'next/navigation';
-import type { EvaluationCriteria, Grades, ParticipationRecord, Activity, ActivityRecord, AttendanceRecord, CalculatedRisk, PartialId, StudentObservation } from '@/hooks/use-data';
+import { useParams, notFound } from 'next/navigation';
+import type { PartialData, Student, PartialId, StudentObservation, EvaluationCriteria, Grades, ParticipationRecord, ActivityRecord, Activity, AttendanceRecord, CalculatedRisk } from '@/hooks/use-data';
 
 
 type StudentReportData = {
@@ -291,6 +291,8 @@ export default function AtRiskReportPage() {
       calculateDetailedFinalGrade,
       getStudentRiskLevel,
       allObservations,
+      isLoading: isDataLoading,
+      fetchPartialData,
   } = useData();
   const [reportData, setReportData] = useState<StudentReportData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -298,66 +300,64 @@ export default function AtRiskReportPage() {
   const group = useMemo(() => groups.find(g => g.id === groupId), [groups, groupId]);
 
   useEffect(() => {
-    if (group) {
-        const partials: PartialId[] = ['p1', 'p2', 'p3'];
-        const atRiskStudentMap = new Map<string, StudentReportData>();
+    const generateReport = async () => {
+        if (group) {
+            setIsLoading(true);
+            const partials: PartialId[] = ['p1', 'p2', 'p3'];
+            const atRiskStudentMap = new Map<string, StudentReportData>();
 
-        partials.forEach(partialId => {
-            const attendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${group.id}_${partialId}`, {});
+            for (const partialId of partials) {
+                const partialData = await fetchPartialData(group.id, partialId);
 
-            group.students.forEach(student => {
-                const { finalGrade, criteriaDetails } = calculateDetailedFinalGrade(student.id, group.id, partialId);
-                const riskLevel = getStudentRiskLevel(finalGrade, attendance, student.id);
-                
-                if (riskLevel.level === 'high' || riskLevel.level === 'medium') {
-                    const existingEntry = atRiskStudentMap.get(student.id);
-                     if (!existingEntry || riskLevel.level === 'high' || (riskLevel.level === 'medium' && existingEntry.riskLevel !== 'high')) {
-                        const attendanceStats = { p: 0, a: 0, total: 0 };
-                        Object.keys(attendance).forEach(date => {
-                            if (attendance[date]?.[student.id] !== undefined) {
-                                attendanceStats.total++;
-                                if (attendance[date][student.id]) attendanceStats.p++; else attendanceStats.a++;
-                            }
-                        });
-                        
-                        atRiskStudentMap.set(student.id, {
-                          id: student.id,
-                          name: student.name,
-                          photo: student.photo,
-                          email: student.email,
-                          tutorName: student.tutorName,
-                          tutorPhone: student.tutorPhone,
-                          riskLevel: riskLevel.level,
-                          riskReason: riskLevel.reason,
-                          finalGrade: finalGrade,
-                          attendance: attendanceStats,
-                          criteriaDetails,
-                          observations: (allObservations[student.id] || []).filter(obs => obs.partialId === partialId),
-                        });
+                for (const student of group.students) {
+                    const { finalGrade, criteriaDetails } = calculateDetailedFinalGrade(student.id, group.id, partialId, partialData);
+                    const riskLevel = getStudentRiskLevel(finalGrade, partialData.attendance, student.id);
+                    
+                    if (riskLevel.level === 'high' || riskLevel.level === 'medium') {
+                        const existingEntry = atRiskStudentMap.get(student.id);
+                        if (!existingEntry || riskLevel.level === 'high' || (riskLevel.level === 'medium' && existingEntry.riskLevel !== 'high')) {
+                            const attendanceStats = { p: 0, a: 0, total: 0 };
+                            Object.keys(partialData.attendance).forEach(date => {
+                                if (partialData.attendance[date]?.[student.id] !== undefined) {
+                                    attendanceStats.total++;
+                                    if (partialData.attendance[date][student.id]) attendanceStats.p++; else attendanceStats.a++;
+                                }
+                            });
+                            
+                            atRiskStudentMap.set(student.id, {
+                              id: student.id,
+                              name: student.name,
+                              photo: student.photo,
+                              email: student.email,
+                              tutorName: student.tutorName,
+                              tutorPhone: student.tutorPhone,
+                              riskLevel: riskLevel.level,
+                              riskReason: riskLevel.reason,
+                              finalGrade: finalGrade,
+                              attendance: attendanceStats,
+                              criteriaDetails,
+                              observations: (allObservations[student.id] || []).filter(obs => obs.partialId === partialId),
+                            });
+                        }
                     }
                 }
-            });
-        });
-        
-        setReportData(Array.from(atRiskStudentMap.values()));
-    }
-    setIsLoading(false);
-  }, [group, calculateDetailedFinalGrade, getStudentRiskLevel, allObservations]);
+            }
+            
+            setReportData(Array.from(atRiskStudentMap.values()));
+        }
+        setIsLoading(false);
+    };
+    
+    generateReport();
+  }, [group, calculateDetailedFinalGrade, getStudentRiskLevel, allObservations, fetchPartialData]);
 
 
-  if (isLoading) {
+  if (isLoading || isDataLoading) {
     return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /> <span className="ml-2">Cargando informe...</span></div>;
   }
   
   if (!group) {
-      return (
-        <div className="flex flex-col items-center justify-center h-full text-center">
-            <FileText className="h-16 w-16 text-muted-foreground" />
-            <h2 className="text-xl font-semibold mt-4">No hay un grupo activo</h2>
-            <p className="text-muted-foreground mt-2">Por favor, selecciona un grupo para ver este informe.</p>
-            <Button asChild className="mt-4"><Link href="/groups">Seleccionar Grupo</Link></Button>
-        </div>
-      )
+      return notFound();
   }
 
   return (

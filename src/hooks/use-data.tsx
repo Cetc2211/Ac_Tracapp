@@ -107,7 +107,7 @@ export type StudentStats = {
     }[];
 };
 
-type PartialData = {
+export type PartialData = {
     criteria: EvaluationCriteria[];
     grades: Grades;
     attendance: AttendanceRecord;
@@ -158,9 +158,10 @@ interface DataContextType {
   deleteGroup: (groupId: string) => Promise<void>;
   addStudentObservation: (observation: Omit<StudentObservation, 'id' | 'date' | 'followUpUpdates' | 'isClosed'>) => Promise<void>;
   updateStudentObservation: (studentId: string, observationId: string, updateText: string, isClosing: boolean) => Promise<void>;
-  calculateFinalGrade: (studentId: string, forGroupId?: string, forPartialId?: PartialId) => number;
-  calculateDetailedFinalGrade: (studentId: string, forGroupId?: string, forPartialId?: PartialId) => { finalGrade: number, criteriaDetails: CriteriaDetail[] };
+  calculateFinalGrade: (studentId: string, forGroupId?: string, forPartialId?: PartialId, forPartialData?: PartialData) => number;
+  calculateDetailedFinalGrade: (studentId: string, forGroupId?: string, forPartialId?: PartialId, forPartialData?: PartialData) => { finalGrade: number, criteriaDetails: CriteriaDetail[] };
   getStudentRiskLevel: (finalGrade: number, pAttendance: AttendanceRecord, studentId: string) => CalculatedRisk;
+  fetchPartialData: (groupId: string, partialId: PartialId) => Promise<PartialData>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -242,7 +243,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                    }
                    // Convert Firestore Timestamps to ISO strings
                    obs.date = (obs.date as unknown as Timestamp).toDate().toISOString();
-                   obs.followUpUpdates = obs.followUpUpdates.map(f => ({...f, date: (f.date as unknown as Timestamp).toDate().toISOString()}));
+                   obs.followUpUpdates = (obs.followUpUpdates || []).map(f => ({...f, date: (f.date as unknown as Timestamp).toDate().toISOString()}));
                    fetchedObservations[obs.studentId].push(obs);
                  }
              });
@@ -287,6 +288,16 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             });
         }
     }, [user, activeGroupId, activePartialId]);
+    
+    const fetchPartialData = useCallback(async (groupId: string, partialId: PartialId): Promise<PartialData> => {
+        if (!user) return { criteria: [], grades: {}, attendance: {}, participations: {}, activities: [], activityRecords: {} };
+        const docRef = doc(db, `users/${user.uid}/groups/${groupId}/partials/${partialId}`, 'data');
+        const docSnap = await getDoc(docRef);
+        if(docSnap.exists()){
+            return docSnap.data() as PartialData;
+        }
+        return { criteria: [], grades: {}, attendance: {}, participations: {}, activities: [], activityRecords: {} };
+    }, [user]);
 
     const getPartialDataDocRef = useCallback(() => {
         if (!user || !activeGroupId) return null;
@@ -311,31 +322,32 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const setActivityRecords = createSetter<ActivityRecord>('activityRecords');
 
 
-    const calculateDetailedFinalGrade = useCallback((studentId: string, forGroupId?: string, forPartialId?: PartialId): { finalGrade: number, criteriaDetails: CriteriaDetail[] } => {
+    const calculateDetailedFinalGrade = useCallback((studentId: string, forGroupId?: string, forPartialId?: PartialId, forPartialData?: PartialData): { finalGrade: number, criteriaDetails: CriteriaDetail[] } => {
+        const data = forPartialData || partialData;
         const groupId = forGroupId || activeGroupId;
         if (!groupId) return { finalGrade: 0, criteriaDetails: [] };
         
         let finalGrade = 0;
         const criteriaDetails: CriteriaDetail[] = [];
         
-        for (const criterion of partialData.criteria) {
+        for (const criterion of data.criteria) {
             let performanceRatio = 0;
 
              if (criterion.name === 'Actividades' || criterion.name === 'Portafolio') {
-                const totalActivities = partialData.activities.length;
+                const totalActivities = data.activities.length;
                 if (totalActivities > 0) {
-                    const deliveredActivities = Object.values(partialData.activityRecords[studentId] || {}).filter(Boolean).length;
+                    const deliveredActivities = Object.values(data.activityRecords[studentId] || {}).filter(Boolean).length;
                     performanceRatio = deliveredActivities / totalActivities;
                 }
             } else if (criterion.name === 'Participación') {
-                const participationDates = Object.keys(partialData.participations);
-                const studentParticipationOpportunities = participationDates.filter(date => Object.prototype.hasOwnProperty.call(partialData.participations[date], studentId)).length;
+                const participationDates = Object.keys(data.participations);
+                const studentParticipationOpportunities = participationDates.filter(date => Object.prototype.hasOwnProperty.call(data.participations[date], studentId)).length;
                 if (studentParticipationOpportunities > 0) {
-                    const studentParticipations = Object.values(partialData.participations).filter(p => p[studentId]).length;
+                    const studentParticipations = Object.values(data.participations).filter(p => p[studentId]).length;
                     performanceRatio = studentParticipations / studentParticipationOpportunities;
                 }
             } else {
-                const delivered = partialData.grades[studentId]?.[criterion.id]?.delivered ?? 0;
+                const delivered = data.grades[studentId]?.[criterion.id]?.delivered ?? 0;
                 const expected = criterion.expectedValue;
                 if (expected > 0) {
                     performanceRatio = delivered / expected;
@@ -350,8 +362,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         return { finalGrade: grade, criteriaDetails: criteriaDetails };
     }, [partialData, activeGroupId]);
 
-    const calculateFinalGrade = useCallback((studentId: string, forGroupId?: string, forPartialId?: PartialId): number => {
-        return calculateDetailedFinalGrade(studentId, forGroupId, forPartialId).finalGrade;
+    const calculateFinalGrade = useCallback((studentId: string, forGroupId?: string, forPartialId?: PartialId, forPartialData?: PartialData): number => {
+        return calculateDetailedFinalGrade(studentId, forGroupId, forPartialId, forPartialData).finalGrade;
     }, [calculateDetailedFinalGrade]);
 
     // Derived State
@@ -442,7 +454,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
       if (obsDoc.exists()) {
           const currentData = obsDoc.data() as StudentObservation;
           const newUpdate = { date: serverTimestamp(), update: updateText };
-          const updatedUpdates = [...currentData.followUpUpdates, newUpdate];
+          const updatedUpdates = [...(currentData.followUpUpdates || []), newUpdate];
           await updateDoc(docRef, {
               followUpUpdates: updatedUpdates,
               isClosed: isClosing,
@@ -490,8 +502,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         groups.forEach(group => {
             group.students.forEach(student => {
                 const finalGrade = calculateFinalGrade(student.id, group.id, activePartialId);
-                // We need attendance for the specific partial, this might be tricky with the current structure
-                // For simplicity, we'll use the active partial's attendance
                 const risk = getStudentRiskLevel(finalGrade, partialData.attendance, student.id);
 
                 if (risk.level === 'high' || risk.level === 'medium') {
@@ -519,6 +529,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         setCriteria, setGrades, setAttendance, setParticipations, setActivities, setActivityRecords,
         deleteGroup, addStudentObservation, updateStudentObservation,
         calculateFinalGrade, getStudentRiskLevel, calculateDetailedFinalGrade,
+        fetchPartialData,
     };
 
     return (
@@ -535,8 +546,3 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
-
-// Dummy export to satisfy the previous file structure if needed
-export const loadFromLocalStorage = <T,>(key: string, defaultValue: T): T => defaultValue;
-
-    

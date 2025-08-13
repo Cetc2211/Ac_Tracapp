@@ -20,9 +20,9 @@ import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { useData, loadFromLocalStorage } from '@/hooks/use-data';
+import { useData } from '@/hooks/use-data';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { EvaluationCriteria, Grades, ParticipationRecord, Activity, ActivityRecord, AttendanceRecord, PartialId } from '@/hooks/use-data';
+import type { PartialId } from '@/hooks/use-data';
 import { getPartialLabel } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -56,11 +56,13 @@ export default function GroupReportPage() {
       settings,
       calculateFinalGrade,
       getStudentRiskLevel,
+      partialData,
+      isLoading: isDataLoading
   } = useData();
+  const { attendance, participations } = partialData;
   
   const [summary, setSummary] = useState<ReportSummary | null>(null);
   const [reportText, setReportText] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
   const [isGeneratingText, setIsGeneratingText] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
@@ -73,12 +75,10 @@ export default function GroupReportPage() {
   const group = useMemo(() => groups.find(g => g.id === groupId), [groups, groupId]);
 
   useEffect(() => {
-    if (!group || !partialId) {
-        setIsLoading(false);
+    if (!group || !partialId || isDataLoading) {
         return;
     }
 
-    setIsLoading(true);
     try {
       const studentCount = group.students.length;
       if (studentCount === 0) {
@@ -93,14 +93,9 @@ export default function GroupReportPage() {
               mediumRiskCount: 0,
           });
           setReportText(`Análisis del grupo ${group.subject}.`);
-          setIsLoading(false);
           return;
       }
       
-      const keySuffix = `${group.id}_${partialId}`;
-      const attendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${keySuffix}`, {});
-      const participations = loadFromLocalStorage<ParticipationRecord>(`participations_${keySuffix}`, {});
-
       let approved = 0;
       let totalGroupGrade = 0;
       let totalPossibleAttendance = 0;
@@ -163,10 +158,8 @@ export default function GroupReportPage() {
 
     } catch (e) {
       console.error("Failed to generate report data", e);
-    } finally {
-      setIsLoading(false);
     }
-  }, [group, partialId, groups, calculateFinalGrade, getStudentRiskLevel]);
+  }, [group, partialId, calculateFinalGrade, getStudentRiskLevel, isDataLoading, attendance, participations]);
 
   const handleDownloadPdf = () => {
     const input = reportRef.current;
@@ -220,11 +213,11 @@ export default function GroupReportPage() {
       }
   }
   
-  if (isLoading) {
+  if (isDataLoading || !summary) {
     return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /> <span className="ml-2">Generando informe...</span></div>;
   }
 
-  if (!group || !summary) {
+  if (!group) {
     return notFound();
   }
 
