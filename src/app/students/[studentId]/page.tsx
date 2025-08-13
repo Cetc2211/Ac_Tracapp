@@ -88,14 +88,12 @@ export default function StudentProfilePage() {
 
         const partialObservations = (allObservations[studentId] || []).filter(obs => obs.partialId === pId);
         
-        if (gradeDetails.criteriaDetails.length > 0) {
-             allStats.push({
-                ...gradeDetails,
-                partialId: pId,
-                attendance: { p, a, total, rate: total > 0 ? (p / total) * 100 : 100 },
-                observations: partialObservations,
-            });
-        }
+        allStats.push({
+            ...gradeDetails,
+            partialId: pId,
+            attendance: { p, a, total, rate: total > 0 ? (p / total) * 100 : 100 },
+            observations: partialObservations,
+        });
     });
     
     return allStats;
@@ -103,8 +101,10 @@ export default function StudentProfilePage() {
   
   const semesterAverage = useMemo(() => {
     if (studentStatsByPartial.length === 0) return 0;
-    const total = studentStatsByPartial.reduce((sum, stats) => sum + stats.finalGrade, 0);
-    return total / studentStatsByPartial.length;
+    const partialsWithGrades = studentStatsByPartial.filter(s => s.criteriaDetails.length > 0);
+    if(partialsWithGrades.length === 0) return 0;
+    const total = partialsWithGrades.reduce((sum, stats) => sum + stats.finalGrade, 0);
+    return total / partialsWithGrades.length;
   }, [studentStatsByPartial]);
 
   const handleDownloadPdf = async () => {
@@ -166,32 +166,44 @@ export default function StudentProfilePage() {
   };
 
   const handleGenerateFeedback = async () => {
-      if (!student || !activePartialId) return;
-      const activeStats = studentStatsByPartial.find(s => s.partialId === activePartialId);
-      if (!activeStats) {
-          toast({ variant: 'destructive', title: 'Sin datos', description: `No hay datos para generar feedback en el ${getPartialLabel(activePartialId)}.` });
-          return;
-      }
-      setIsGeneratingFeedback(true);
-      setGeneratedFeedback(null);
-      try {
-          const inputData: StudentFeedbackInput = {
-              studentName: student.name,
-              gradesByGroup: [{
-                  group: studentGroups[0].subject,
-                  grade: activeStats.finalGrade,
-              }],
-              attendance: activeStats.attendance,
-              observations: activeStats.observations.map(obs => ({ type: obs.type, details: obs.details }))
-          };
+    if (!student) return;
 
-          const feedback = await generateStudentFeedback(inputData);
-          setGeneratedFeedback(feedback);
-      } catch (error) {
-          toast({ variant: 'destructive', title: 'Error de IA', description: 'No se pudo generar el feedback.' });
-      } finally {
-          setIsGeneratingFeedback(false);
-      }
+    const partialsWithData = studentStatsByPartial
+      .filter(s => s.criteriaDetails.length > 0)
+      .sort((a, b) => parseInt(b.partialId.slice(1)) - parseInt(a.partialId.slice(1)));
+
+    const dataToUse = partialsWithData.length > 0 ? partialsWithData[0] : null;
+
+    if (!dataToUse) {
+      toast({
+        variant: 'destructive',
+        title: 'Sin datos',
+        description: 'No hay datos de ningún parcial para generar feedback.',
+      });
+      return;
+    }
+
+    toast({ title: `Generando feedback...`, description: `Usando datos de: ${getPartialLabel(dataToUse.partialId)}` });
+    setIsGeneratingFeedback(true);
+    setGeneratedFeedback(null);
+    try {
+      const inputData: StudentFeedbackInput = {
+        studentName: student.name,
+        gradesByGroup: [{
+          group: studentGroups.find(g => g.students.some(s => s.id === studentId))?.subject || 'Clase',
+          grade: dataToUse.finalGrade,
+        }],
+        attendance: dataToUse.attendance,
+        observations: dataToUse.observations.map(obs => ({ type: obs.type, details: obs.details })),
+      };
+
+      const feedback = await generateStudentFeedback(inputData);
+      setGeneratedFeedback(feedback);
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Error de IA', description: 'No se pudo generar el feedback.' });
+    } finally {
+      setIsGeneratingFeedback(false);
+    }
   };
 
   const handleEditFeedback = () => {
@@ -221,6 +233,7 @@ export default function StudentProfilePage() {
   
   const allSemesterObservations = Object.values(allObservations).flat().filter(obs => obs.studentId === studentId);
   const facilitatorName = studentGroups[0]?.facilitator || 'Docente';
+  const hasAnyDataForFeedback = studentStatsByPartial.some(s => s.criteriaDetails.length > 0);
 
   return (
     <>
@@ -282,7 +295,8 @@ export default function StudentProfilePage() {
 
             <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-4">
-                    {studentStatsByPartial.length > 0 ? studentStatsByPartial.map((stats, index) => (
+                    {studentStatsByPartial.map((stats, index) => (
+                        stats.criteriaDetails.length > 0 &&
                         <Card key={stats.partialId}>
                             <CardHeader>
                                 <CardTitle>{getPartialLabel(stats.partialId)}</CardTitle>
@@ -292,25 +306,22 @@ export default function StudentProfilePage() {
                             </CardHeader>
                             <CardContent>
                                 <h4 className="font-semibold mb-2 text-sm">Desglose de Criterios:</h4>
-                                {stats.criteriaDetails.length > 0 ? (
-                                    <div className="space-y-1 text-sm p-3 bg-muted/30 rounded-md">
-                                        {stats.criteriaDetails.map(c => (
-                                            <div key={c.name} className="flex justify-between">
-                                                <span>{c.name} <span className="text-xs text-muted-foreground">({c.weight}%)</span></span>
-                                                <span className="font-medium">{c.earned.toFixed(1)}%</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <p className="text-sm text-muted-foreground text-center py-4">No hay criterios de evaluación para este parcial.</p>
-                                )}
+                                <div className="space-y-1 text-sm p-3 bg-muted/30 rounded-md">
+                                    {stats.criteriaDetails.map(c => (
+                                        <div key={c.name} className="flex justify-between">
+                                            <span>{c.name} <span className="text-xs text-muted-foreground">({c.weight}%)</span></span>
+                                            <span className="font-medium">{c.earned.toFixed(1)}%</span>
+                                        </div>
+                                    ))}
+                                </div>
                             </CardContent>
                         </Card>
-                    )) : (
+                    ))}
+                    {studentStatsByPartial.filter(s => s.criteriaDetails.length > 0).length === 0 && (
                         <Card>
                             <CardContent className="p-12 text-center">
                                 <h3 className="text-lg font-semibold">Sin datos de rendimiento</h3>
-                                <p className="text-muted-foreground mt-1">No hay información de calificaciones registrada para este estudiante.</p>
+                                <p className="text-muted-foreground mt-1">No hay información de calificaciones registrada para este estudiante en ningún parcial.</p>
                             </CardContent>
                         </Card>
                     )}
@@ -359,10 +370,10 @@ export default function StudentProfilePage() {
                     <div className="flex justify-between items-center">
                         <div>
                             <CardTitle>Recomendaciones y retroalimentación</CardTitle>
-                            <CardDescription>Resumen personalizado del rendimiento del estudiante en el <span className='font-bold'>{getPartialLabel(activePartialId)}</span>.</CardDescription>
+                            <CardDescription>Resumen personalizado del rendimiento del estudiante.</CardDescription>
                         </div>
                         <div id="feedback-buttons-container" className="flex gap-2">
-                            <Button onClick={handleGenerateFeedback} disabled={isGeneratingFeedback || isEditingFeedback}>
+                            <Button onClick={handleGenerateFeedback} disabled={isGeneratingFeedback || isEditingFeedback || !hasAnyDataForFeedback}>
                                 {isGeneratingFeedback ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Wand2 className="mr-2 h-4 w-4" />}
                                 {isGeneratingFeedback ? "Generando..." : "Generar Feedback"}
                             </Button>
@@ -375,7 +386,7 @@ export default function StudentProfilePage() {
                         </div>
                     </div>
                 </CardHeader>
-                {generatedFeedback && (
+                {generatedFeedback ? (
                     <CardContent>
                         {isEditingFeedback ? (
                             <div className="p-4 border rounded-md space-y-4">
@@ -411,6 +422,15 @@ export default function StudentProfilePage() {
                             </div>
                         )}
                     </CardContent>
+                ) : (
+                    !hasAnyDataForFeedback && (
+                         <CardContent>
+                            <div className="text-center text-sm text-destructive bg-destructive/10 p-4 rounded-md">
+                                <p className="font-bold">Sin datos</p>
+                                <p>No hay datos para generar feedback en el.</p>
+                            </div>
+                         </CardContent>
+                    )
                 )}
                 <CardFooter>
                     <div className="w-full mt-12 pt-12 text-center text-sm">
@@ -427,3 +447,4 @@ export default function StudentProfilePage() {
     </>
   );
 }
+
