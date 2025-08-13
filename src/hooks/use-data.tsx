@@ -159,7 +159,7 @@ export const loadFromLocalStorage = <T,>(key: string, defaultValue: T): T => {
     const item = window.localStorage.getItem(key);
     if (item === null) return defaultValue;
     // Handle special cases for simple strings that shouldn't be parsed
-    if (key === 'activePartialId' && !item.startsWith('{') && !item.startsWith('[')) {
+    if ((key === 'activePartialId' || key === 'activeGroupId') && !item.startsWith('{') && !item.startsWith('[')) {
         return item as T;
     }
     return item ? JSON.parse(item) : defaultValue;
@@ -191,14 +191,14 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }, []);
 
     // Core data
-    const [allStudents, setAllStudentsState] = useState<Student[]>(() => loadFromLocalStorage('students', []));
-    const [allObservations, setAllObservations] = useState<{[studentId: string]: StudentObservation[]}>(() => loadFromLocalStorage('allObservations', {}));
-    const [groups, setGroupsState] = useState<Group[]>(() => loadFromLocalStorage('groups', []));
-    const [settings, setSettings] = useState(() => loadFromLocalStorage('appSettings', defaultSettings));
+    const [allStudents, setAllStudentsState] = useState<Student[]>([]);
+    const [allObservations, setAllObservations] = useState<{[studentId: string]: StudentObservation[]}>({});
+    const [groups, setGroupsState] = useState<Group[]>([]);
+    const [settings, setSettings] = useState(defaultSettings);
     
     // Active state
-    const [activeGroupId, setActiveGroupIdState] = useState<string | null>(() => loadFromLocalStorage('activeGroupId', null));
-    const [activePartialId, setActivePartialIdState] = useState<PartialId>(() => loadFromLocalStorage('activePartialId', 'p1'));
+    const [activeGroupId, setActiveGroupIdState] = useState<string | null>(null);
+    const [activePartialId, setActivePartialIdState] = useState<PartialId>('p1');
     const [dataVersion, setDataVersion] = useState(0);
     
     // Data stores for active group
@@ -210,21 +210,29 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         activities: [],
         activityRecords: {},
     });
-    
+
+    // Initial data load from localStorage
     useEffect(() => {
-      if (!isInitialized) return;
+        if (isInitialized) {
+            setAllStudentsState(loadFromLocalStorage('students', []));
+            setAllObservations(loadFromLocalStorage('allObservations', {}));
+            const loadedGroups = loadFromLocalStorage('groups', []);
+            setGroupsState(loadedGroups);
+            setSettings(loadFromLocalStorage('appSettings', defaultSettings));
+            const loadedActiveGroupId = loadFromLocalStorage('activeGroupId', null);
+            
+            if (loadedActiveGroupId && loadedGroups.some((g: Group) => g.id === loadedActiveGroupId)) {
+                setActiveGroupIdState(loadedActiveGroupId);
+            } else if (loadedGroups.length > 0) {
+                setActiveGroupIdState(loadedGroups[0].id);
+            } else {
+                setActiveGroupIdState(null);
+            }
 
-      const activeGroupExists = groups.some(g => g.id === activeGroupId);
-      if (!activeGroupExists && groups.length > 0) {
-        const newActiveGroupId = groups[0].id;
-        setActiveGroupIdState(newActiveGroupId);
-        saveToLocalStorage('activeGroupId', newActiveGroupId);
-      } else if (groups.length === 0) {
-        setActiveGroupIdState(null);
-        saveToLocalStorage('activeGroupId', null);
-      }
-    }, [isInitialized, groups, activeGroupId]);
-
+            setActivePartialIdState(loadFromLocalStorage('activePartialId', 'p1'));
+            setDataVersion(v => v + 1); // Trigger first data load
+        }
+    }, [isInitialized]);
     
     const loadPartialData = useCallback(() => {
         if(activeGroupId) {
@@ -238,6 +246,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 activityRecords: loadFromLocalStorage(`activityRecords_${keySuffix}`, {}),
             });
         } else {
+             // If no active group, clear partial data
             setPartialData({
                 criteria: [], grades: {}, attendance: {},
                 participations: {}, activities: [], activityRecords: {},
@@ -250,10 +259,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             loadPartialData();
         }
     }, [dataVersion, loadPartialData, isInitialized]);
-
-    const calculateFinalGrade = useCallback((studentId: string, forGroupId: string, forPartialId: PartialId): number => {
-        return calculateDetailedFinalGrade(studentId, forGroupId, forPartialId).finalGrade;
-    }, []);
 
     const calculateDetailedFinalGrade = useCallback((studentId: string, forGroupId: string, forPartialId: PartialId): { finalGrade: number, criteriaDetails: CriteriaDetail[] } => {
         const keySuffix = `${forGroupId}_${forPartialId}`;
@@ -300,6 +305,10 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         const grade = Math.max(0, Math.min(100, finalGrade));
         return { finalGrade: grade, criteriaDetails: criteriaDetails };
     }, []);
+
+    const calculateFinalGrade = useCallback((studentId: string, forGroupId: string, forPartialId: PartialId): number => {
+        return calculateDetailedFinalGrade(studentId, forGroupId, forPartialId).finalGrade;
+    }, [calculateDetailedFinalGrade]);
 
     const activeGroup = useMemo(() => {
         return groups.find(g => g.id === activeGroupId) || null;
@@ -405,7 +414,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         });
 
         if (activeGroupId === groupId) {
-            setActiveGroupId(null);
+            setActiveGroupId(newGroups.length > 0 ? newGroups[0].id : null);
         }
     }
     
