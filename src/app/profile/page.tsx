@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -17,36 +16,36 @@ import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
-
-type UserProfile = {
-    name: string;
-    email: string;
-}
+import { auth } from '@/lib/firebase';
+import { updateProfile } from 'firebase/auth';
+import { Loader2 } from 'lucide-react';
 
 export default function ProfilePage() {
-    const [profile, setProfile] = useState<UserProfile>({ name: '', email: '' });
+    const [name, setName] = useState('');
+    const [email, setEmail] = useState('');
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-    const [isClient, setIsClient] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
     const { toast } = useToast();
+    
+    const user = auth.currentUser;
 
     useEffect(() => {
-        setIsClient(true);
-        const savedProfileInfo = JSON.parse(localStorage.getItem('userProfileInfo') || '{}');
-        const savedAvatar = localStorage.getItem('userAvatar');
+        if (user) {
+            setName(user.displayName || '');
+            setEmail(user.email || '');
+            setAvatarPreview(user.photoURL || 'https://placehold.co/100x100.png');
+        }
+    }, [user]);
 
-        setProfile({
-            name: savedProfileInfo.name || "John Doe",
-            email: savedProfileInfo.email || "john.doe@example.com"
-        });
-        setAvatarPreview(savedAvatar || "https://placehold.co/100x100.png");
-    }, []);
-
-    const handleSave = () => {
+    const handleSave = async () => {
+        if (!user) return;
+        setIsLoading(true);
+        
         try {
-            localStorage.setItem('userProfileInfo', JSON.stringify(profile));
-            if(avatarPreview) localStorage.setItem('userAvatar', avatarPreview);
-            
-            window.dispatchEvent(new Event('storage')); 
+            await updateProfile(user, {
+                displayName: name,
+                photoURL: avatarPreview
+            });
             
             toast({
                 title: 'Perfil Guardado',
@@ -57,15 +56,13 @@ export default function ProfilePage() {
             toast({
                 variant: 'destructive',
                 title: 'Error al guardar',
-                description: 'No se pudo guardar el perfil. El almacenamiento podría estar lleno.'
+                description: 'No se pudo actualizar el perfil.'
             });
+        } finally {
+            setIsLoading(false);
         }
     };
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { id, value } = e.target;
-        setProfile(prev => ({ ...prev, [id]: value }));
-    };
 
     const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -104,8 +101,13 @@ export default function ProfilePage() {
         }
     };
 
-  if (!isClient) {
-    return null;
+  if (!user) {
+    return (
+        <div className="flex h-screen w-full items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <span className="ml-2">Cargando perfil...</span>
+        </div>
+    );
   }
 
   return (
@@ -147,8 +149,8 @@ export default function ProfilePage() {
             <Label htmlFor="name">Nombre Completo</Label>
             <Input
               id="name"
-              value={profile.name}
-              onChange={handleInputChange}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
             />
           </div>
            <div className="space-y-2">
@@ -156,13 +158,19 @@ export default function ProfilePage() {
             <Input
               id="email"
               type="email"
-              value={profile.email}
-              onChange={handleInputChange}
+              value={email}
+              disabled
             />
+             <p className="text-xs text-muted-foreground">
+              El correo electrónico no se puede cambiar.
+            </p>
           </div>
         </CardContent>
         <CardFooter className="border-t px-6 py-4">
-          <Button onClick={handleSave}>Guardar Cambios</Button>
+          <Button onClick={handleSave} disabled={isLoading}>
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+            Guardar Cambios
+          </Button>
         </CardFooter>
       </Card>
     </div>

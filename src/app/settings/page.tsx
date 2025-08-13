@@ -20,6 +20,7 @@ import { ThemeSwitcher, themes } from '@/components/theme-switcher';
 import { Separator } from '@/components/ui/separator';
 import { useData } from '@/hooks/use-data';
 import { Upload, Download, RotateCcw } from 'lucide-react';
+import { auth } from '@/lib/firebase';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -33,11 +34,12 @@ import {
 } from '@/components/ui/alert-dialog';
 
 export default function SettingsPage() {
-    const { settings, setSettings, groups } = useData();
+    const { settings, setSettings } = useData();
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
     const [isClient, setIsClient] = useState(false);
     const { toast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const user = auth.currentUser;
     
     useEffect(() => {
         setIsClient(true);
@@ -48,12 +50,17 @@ export default function SettingsPage() {
         setLogoPreview(settings.logo);
       }
     }, [settings.logo, isClient]);
+    
+    const userKey = (key: string) => {
+        if (!user) return key;
+        return `${key}_${user.uid}`;
+    };
 
 
     const handleSave = () => {
         const newSettings = { ...settings, logo: logoPreview || '' };
         setSettings(newSettings);
-        localStorage.setItem('appSettings', JSON.stringify(newSettings));
+        localStorage.setItem(userKey('appSettings'), JSON.stringify(newSettings));
         window.dispatchEvent(new Event('storage'));
         toast({
             title: 'Ajustes Guardados',
@@ -82,13 +89,16 @@ export default function SettingsPage() {
     };
 
     const handleExportData = () => {
+      if (!user) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Debes iniciar sesión para exportar datos.'});
+        return;
+      }
       try {
         const backupData: { [key: string]: any } = {};
         
-        // Iterate through all localStorage keys
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);
-          if (key) {
+          if (key?.endsWith(`_${user.uid}`)) {
             const value = localStorage.getItem(key)!;
             try {
               backupData[key] = JSON.parse(value);
@@ -105,7 +115,7 @@ export default function SettingsPage() {
         const link = document.createElement("a");
         link.href = url;
         const date = new Date().toISOString().split('T')[0];
-        link.download = `academic-tracker-backup-${date}.json`;
+        link.download = `academic-tracker-backup-${user.uid}-${date}.json`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -113,7 +123,7 @@ export default function SettingsPage() {
         
         toast({
           title: "Exportación exitosa",
-          description: "Todos los datos de la aplicación han sido guardados.",
+          description: "Tus datos han sido guardados.",
         });
       } catch (error) {
         console.error("Error exporting data:", error);
@@ -127,7 +137,7 @@ export default function SettingsPage() {
 
     const handleImportData = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
-        if (!file) return;
+        if (!file || !user) return;
 
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -138,14 +148,19 @@ export default function SettingsPage() {
                 }
                 const backupData = JSON.parse(text);
 
-                // Clear existing localStorage
-                localStorage.clear();
+                // Clear existing user data
+                 for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key?.endsWith(`_${user.uid}`)) {
+                        localStorage.removeItem(key);
+                        i--;
+                    }
+                }
 
                 // Import new data
                 for (const key in backupData) {
                     if (Object.prototype.hasOwnProperty.call(backupData, key)) {
                         const value = backupData[key];
-                        // If the value from backup is an object/array, stringify it. Otherwise, store as is.
                         if (typeof value === 'object' && value !== null) {
                             localStorage.setItem(key, JSON.stringify(value));
                         } else {
@@ -172,7 +187,6 @@ export default function SettingsPage() {
                     description: "El archivo de respaldo es inválido o está corrupto.",
                 });
             } finally {
-                // Reset file input
                 if(fileInputRef.current) {
                     fileInputRef.current.value = '';
                 }
@@ -186,10 +200,17 @@ export default function SettingsPage() {
     };
 
     const handleResetApp = () => {
-        localStorage.clear();
+        if (!user) return;
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key?.endsWith(`_${user.uid}`)) {
+                localStorage.removeItem(key);
+                i--;
+            }
+        }
         toast({
-            title: "Aplicación Restablecida",
-            description: "Todos los datos han sido borrados. La página se recargará."
+            title: "Datos Restablecidos",
+            description: "Todos tus datos han sido borrados. La página se recargará."
         });
         setTimeout(() => {
             window.location.reload();
@@ -268,11 +289,11 @@ export default function SettingsPage() {
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Button onClick={handleExportData} variant="outline">
                   <Download className="mr-2 h-4 w-4" />
-                  Exportar Datos (Backup)
+                  Exportar Mis Datos
               </Button>
               <Button onClick={triggerFileSelect}>
                   <Upload className="mr-2 h-4 w-4" />
-                  Importar Datos (Restaurar)
+                  Importar Mis Datos
               </Button>
               <input 
                 type="file"
@@ -284,7 +305,7 @@ export default function SettingsPage() {
           </CardContent>
            <CardFooter>
                <p className="text-xs text-muted-foreground">
-                  La importación reemplazará todos los datos actuales. Asegúrate de tener un respaldo si es necesario.
+                  La importación reemplazará todos tus datos actuales. Asegúrate de tener un respaldo si es necesario.
               </p>
            </CardFooter>
       </Card>
@@ -300,19 +321,19 @@ export default function SettingsPage() {
                     <AlertDialogTrigger asChild>
                         <Button variant="destructive">
                             <RotateCcw className="mr-2 h-4 w-4" />
-                            Restablecer Aplicación
+                            Restablecer Mis Datos
                         </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                         <AlertDialogHeader>
                             <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
                             <AlertDialogDescription>
-                                Esta acción borrará permanentemente TODOS los datos de la aplicación, incluyendo grupos, estudiantes, calificaciones y ajustes. Volverá al estado inicial de fábrica.
+                                Esta acción borrará permanentemente TODOS tus datos de la aplicación, incluyendo grupos, estudiantes, calificaciones y ajustes de tu cuenta.
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleResetApp}>Sí, borrar todo</AlertDialogAction>
+                            <AlertDialogAction onClick={handleResetApp}>Sí, borrar mis datos</AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>

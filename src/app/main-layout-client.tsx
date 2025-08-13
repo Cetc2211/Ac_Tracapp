@@ -18,10 +18,11 @@ import {
   FilePen,
   ClipboardCheck,
   User,
-  ChevronRight
+  ChevronRight,
+  Loader2
 } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 import { AppLogo } from '@/components/app-logo';
 import { UserNav } from '@/components/user-nav';
@@ -45,6 +46,8 @@ import { getPartialLabel } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { auth } from '@/lib/firebase';
+import type { User as FirebaseUser } from 'firebase/auth';
 
 
 const navItems = [
@@ -74,26 +77,56 @@ export default function MainLayoutClient({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { settings, activeGroup, activePartialId } = useData();
   const [isClient, setIsClient] = useState(false);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   
   useEffect(() => {
     setIsClient(true);
-    // Apply theme from settings
     if (settings.theme) {
       document.body.className = settings.theme;
     } else {
       document.body.className = defaultSettings.theme;
     }
   }, [settings.theme]);
+  
+   useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
+      setUser(firebaseUser);
+      setAuthLoading(false);
+      if (!firebaseUser && pathname !== '/') {
+        router.push('/');
+      }
+    });
+    return () => unsubscribe();
+  }, [pathname, router]);
 
   const isAuthPage = pathname === '/';
+  
+  if (authLoading) {
+    return (
+        <div className="flex h-screen w-full items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <span className="ml-2">Verificando autenticación...</span>
+        </div>
+    );
+  }
 
-  if (isAuthPage) {
+  if (isAuthPage && !user) {
       return <>{children}</>;
   }
 
-  const isGroupActivePage = activeGroup ? pathname.startsWith(`/groups/${activeGroup.id}`) : false;
+  if (isAuthPage && user) {
+    router.push('/dashboard');
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Redirigiendo...</span>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -117,7 +150,7 @@ export default function MainLayoutClient({
                   <>
                     <div className="px-4 py-2">
                         <p className="text-xs font-semibold text-sidebar-foreground/70 tracking-wider uppercase">Grupo Activo</p>
-                         <Button asChild variant="ghost" className={cn("h-auto w-full justify-start p-2 mt-1 text-wrap text-left text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground", isGroupActivePage && "bg-sidebar-accent text-sidebar-accent-foreground")}>
+                         <Button asChild variant="ghost" className={cn("h-auto w-full justify-start p-2 mt-1 text-wrap text-left text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground")}>
                           <Link href={`/groups/${activeGroup.id}`}>
                             <div className='space-y-1 w-full'>
                               <p className="font-bold flex items-center gap-2">

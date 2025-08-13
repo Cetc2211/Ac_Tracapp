@@ -11,15 +11,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { LogOut, Settings, User as UserIcon } from 'lucide-react';
+import { LogOut, Settings, User } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { auth } from '@/lib/firebase';
-import type { User } from 'firebase/auth';
+import type { User as FirebaseUser } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 
 export function UserNav() {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -70,7 +70,7 @@ export function UserNav() {
         <DropdownMenuGroup>
           <Link href="/profile">
             <DropdownMenuItem>
-              <UserIcon className="mr-2 h-4 w-4" />
+              <User className="mr-2 h-4 w-4" />
               <span>Perfil</span>
             </DropdownMenuItem>
           </Link>
