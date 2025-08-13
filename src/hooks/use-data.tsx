@@ -209,19 +209,9 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         if (typeof window !== 'undefined') {
             setAllStudentsState(loadFromLocalStorage('students', []));
             setAllObservations(loadFromLocalStorage('allObservations', {}));
-            const loadedGroups = loadFromLocalStorage('groups', []);
-            setGroupsState(loadedGroups);
+            setGroupsState(loadFromLocalStorage('groups', []));
             setSettings(loadFromLocalStorage('appSettings', defaultSettings));
-            const loadedActiveGroupId = loadFromLocalStorage('activeGroupId', null);
-            
-            if (loadedActiveGroupId && loadedGroups.some((g: Group) => g.id === loadedActiveGroupId)) {
-                setActiveGroupIdState(loadedActiveGroupId);
-            } else if (loadedGroups.length > 0) {
-                setActiveGroupIdState(loadedGroups[0].id);
-            } else {
-                setActiveGroupIdState(null);
-            }
-
+            setActiveGroupIdState(loadFromLocalStorage('activeGroupId', null));
             setActivePartialIdState(loadFromLocalStorage('activePartialId', 'p1'));
             setIsInitialized(true);
         }
@@ -303,7 +293,13 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }, [calculateDetailedFinalGrade]);
 
     const activeGroup = useMemo(() => {
-        return groups.find(g => g.id === activeGroupId) || null;
+        if (!activeGroupId) return null;
+        const group = groups.find(g => g.id === activeGroupId);
+        if (!group) {
+             setActiveGroupId(groups.length > 0 ? groups[0].id : null);
+             return groups.length > 0 ? groups[0] : null;
+        }
+        return group;
     }, [groups, activeGroupId]);
 
     const activeStudentsInGroups = useMemo(() => {
@@ -449,15 +445,14 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     const getStudentRiskLevel = useCallback((finalGrade: number, pAttendance: AttendanceRecord, studentId: string): CalculatedRisk => {
         const safeAttendance = pAttendance || {};
+        const studentAttendanceDays = Object.keys(safeAttendance).filter(date => Object.prototype.hasOwnProperty.call(safeAttendance[date], studentId));
+        const totalDaysForStudent = studentAttendanceDays.length;
+
         let absences = 0;
-        const totalDaysForStudent = Object.keys(safeAttendance).filter(date => safeAttendance[date].hasOwnProperty(studentId)).length;
-        
         if (totalDaysForStudent > 0) {
-            Object.keys(safeAttendance).forEach(date => {
-                if (safeAttendance[date]?.[studentId] === false) {
-                    absences++;
-                }
-            });
+            absences = studentAttendanceDays.reduce((count, date) => {
+                return safeAttendance[date][studentId] === false ? count + 1 : count;
+            }, 0);
         }
         
         const absencePercentage = totalDaysForStudent > 0 ? (absences / totalDaysForStudent) * 100 : 0;
