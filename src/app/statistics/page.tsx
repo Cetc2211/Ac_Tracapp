@@ -85,8 +85,8 @@ export default function StatisticsPage() {
            const keySuffix = `${group.id}_${activePartialId}`;
            const groupAttendance = loadFromLocalStorage<Record<string, Record<string, boolean>>>(`attendance_${keySuffix}`, {});
            
-           students.forEach(student => {
-               const studentFinalGrade = calculateFinalGrade(student.id, group.id, activePartialId);
+           students.forEach((student, index) => {
+               const studentFinalGrade = finalGrades[index];
                const risk = getStudentRiskLevel(studentFinalGrade, groupAttendance, student.id);
                riskLevels[risk.level]++;
                
@@ -429,3 +429,5 @@ function loadFromLocalStorage<T>(key: string, defaultValue: T): T {
         return defaultValue;
     }
 }
+
+    
