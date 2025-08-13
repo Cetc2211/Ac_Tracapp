@@ -59,7 +59,7 @@ const navItems = [
   { href: '/semester-evaluation', icon: Presentation, label: 'Eva. Semestral' },
   { href: '/reports', icon: FileText, label: 'Informes' },
   { href: '/statistics', icon: BarChart3, label: 'Estadísticas' },
-  { href: '/tutors', icon: Contact, label: 'Tutores' },
+  { href: '/contact', icon: Contact, label: 'Contacto y Soporte' },
 ];
 
 const defaultSettings = {
