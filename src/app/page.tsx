@@ -47,24 +47,13 @@ export default function AuthenticationPage() {
   const handleLogin = async () => {
     setIsLoading(true);
     try {
-        await signInWithEmailAndPassword(auth, email, password);
-        toast({ title: 'Éxito', description: 'Has accedido correctamente.' });
-        router.push('/dashboard');
+      await signInWithEmailAndPassword(auth, email, password);
+      toast({ title: 'Éxito', description: 'Has accedido correctamente.' });
+      router.push('/dashboard');
     } catch (error: any) {
-        if (error.code === 'auth/invalid-credential' && email === 'test@test.com' && password === 'password') {
-            try {
-                await createUserWithEmailAndPassword(auth, email, password);
-                await signInWithEmailAndPassword(auth, email, password);
-                toast({ title: 'Éxito', description: 'Cuenta de prueba creada. Has accedido correctamente.' });
-                router.push('/dashboard');
-            } catch (creationError: any) {
-                toast({ variant: 'destructive', title: 'Error de creación', description: creationError.message });
-            }
-        } else {
-            toast({ variant: 'destructive', title: 'Error de autenticación', description: 'Correo o contraseña incorrectos.' });
-        }
+      toast({ variant: 'destructive', title: 'Error de autenticación', description: 'Correo o contraseña incorrectos. Si eres un nuevo usuario, usa la pestaña "Crear Cuenta".' });
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -89,7 +78,7 @@ export default function AuthenticationPage() {
             await createUserWithEmailAndPassword(auth, email, password);
         }
         
-        toast({ title: 'Éxito', description: 'Has accedido correctamente.' });
+        toast({ title: 'Éxito', description: 'Cuenta creada y has accedido correctamente.' });
         router.push('/dashboard');
         
     } catch (error: any) {
@@ -97,7 +86,7 @@ export default function AuthenticationPage() {
         if (error.code) {
             switch (error.code) {
                 case 'auth/email-already-in-use':
-                    description = 'Este correo electrónico ya está registrado.';
+                    description = 'Este correo electrónico ya está registrado. Intenta iniciar sesión.';
                     break;
                 case 'auth/weak-password':
                     description = 'La contraseña debe tener al menos 6 caracteres.';
@@ -116,7 +105,8 @@ export default function AuthenticationPage() {
     }
   };
 
-  const isFormInvalid = !email || !password || isLoading;
+  const isLoginFormInvalid = !email || !password || isLoading;
+  const isSignupFormInvalid = isLoginFormInvalid || !confirmPassword || isLoading;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
@@ -145,7 +135,7 @@ export default function AuthenticationPage() {
                             <Label htmlFor="login-password">Contraseña</Label>
                             <Input id="login-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
                         </div>
-                        <Button className="w-full" onClick={handleLogin} disabled={isFormInvalid}>
+                        <Button className="w-full" onClick={handleLogin} disabled={isLoginFormInvalid}>
                             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Iniciar Sesión
                         </Button>
@@ -163,7 +153,7 @@ export default function AuthenticationPage() {
                             <Label htmlFor="confirm-password">Confirmar Contraseña</Label>
                             <Input id="confirm-password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
                         </div>
-                        <Button className="w-full" onClick={() => handleAuthAction('signup')} disabled={isFormInvalid || !confirmPassword}>
+                        <Button className="w-full" onClick={() => handleAuthAction('signup')} disabled={isSignupFormInvalid}>
                             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Crear Cuenta
                         </Button>
@@ -188,5 +178,3 @@ export default function AuthenticationPage() {
     </div>
   );
 }
-
-    
