@@ -279,7 +279,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
               if (snapshot.exists()) {
                   setUserProfile(snapshot.data() as UserProfile);
               } else {
-                  setUserProfile(null);
+                  setUserProfile(defaultProfile);
               }
           }),
         ];
