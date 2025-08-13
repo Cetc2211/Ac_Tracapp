@@ -23,6 +23,7 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useData } from '@/hooks/use-data';
+import { AttendanceRandomizer } from '@/components/attendance-randomizer';
 
 export default function ParticipationsPage() {
   const { activeGroup, partialData, setParticipations } = useData();
@@ -96,7 +97,10 @@ export default function ParticipationsPage() {
                 </p>
             </div>
         </div>
-        {activeGroup && <Button onClick={handleRegisterToday}>Registrar Participaciones de Hoy</Button>}
+        <div className="flex items-center gap-2">
+            {activeGroup && <AttendanceRandomizer students={studentsToDisplay} variant="outline" />}
+            {activeGroup && <Button onClick={handleRegisterToday}>Registrar Participaciones de Hoy</Button>}
+        </div>
       </div>
 
       <Card>
