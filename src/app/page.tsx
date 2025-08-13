@@ -1,14 +1,13 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,28 +43,37 @@ export default function AuthenticationPage() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
-  
-  // Temporal: Auto-create a test user for verification
-  useEffect(() => {
-    const createTestUser = async () => {
-      try {
-        // Try to sign in silently to check if user exists
-        await signInWithEmailAndPassword(auth, 'test@test.com', 'password');
-      } catch (error: any) {
-        if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
-          try {
-            await createUserWithEmailAndPassword(auth, 'test@test.com', 'password');
-            console.log('Test user created successfully.');
-          } catch (creationError) {
-            console.error('Failed to create test user:', creationError);
-          }
-        }
-      }
-    };
-    createTestUser();
-  }, []);
 
-  const handleAuthAction = async (action: 'login' | 'signup' | 'google') => {
+  const handleLogin = async () => {
+    setIsLoading(true);
+    try {
+        await signInWithEmailAndPassword(auth, email, password);
+        toast({ title: 'Éxito', description: 'Has accedido correctamente.' });
+        router.push('/dashboard');
+    } catch (error: any) {
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+             // If user does not exist, and it's the test user, create it and log in.
+            if (email === 'test@test.com' && password === 'password') {
+                try {
+                    await createUserWithEmailAndPassword(auth, email, password);
+                    await signInWithEmailAndPassword(auth, email, password);
+                    toast({ title: 'Éxito', description: 'Cuenta de prueba creada. Has accedido correctamente.' });
+                    router.push('/dashboard');
+                } catch (creationError: any) {
+                    toast({ variant: 'destructive', title: 'Error de creación', description: creationError.message });
+                }
+            } else {
+                 toast({ variant: 'destructive', title: 'Error de autenticación', description: 'Correo o contraseña incorrectos.' });
+            }
+        } else {
+            toast({ variant: 'destructive', title: 'Error de autenticación', description: error.message });
+        }
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
+  const handleAuthAction = async (action: 'signup' | 'google') => {
     if (action === 'google') {
         setIsGoogleLoading(true);
     } else {
@@ -84,8 +92,6 @@ export default function AuthenticationPage() {
             await signInWithPopup(auth, provider);
         } else if (action === 'signup') {
             await createUserWithEmailAndPassword(auth, email, password);
-        } else {
-            await signInWithEmailAndPassword(auth, email, password);
         }
         
         toast({ title: 'Éxito', description: 'Has accedido correctamente.' });
@@ -95,11 +101,6 @@ export default function AuthenticationPage() {
         let description = 'Ocurrió un error inesperado.';
         if (error.code) {
             switch (error.code) {
-                case 'auth/user-not-found':
-                case 'auth/wrong-password':
-                case 'auth/invalid-credential':
-                    description = 'Correo o contraseña incorrectos.';
-                    break;
                 case 'auth/email-already-in-use':
                     description = 'Este correo electrónico ya está registrado.';
                     break;
@@ -149,7 +150,7 @@ export default function AuthenticationPage() {
                             <Label htmlFor="login-password">Contraseña</Label>
                             <Input id="login-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
                         </div>
-                        <Button className="w-full" onClick={() => handleAuthAction('login')} disabled={isFormInvalid}>
+                        <Button className="w-full" onClick={handleLogin} disabled={isFormInvalid}>
                             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Iniciar Sesión
                         </Button>
