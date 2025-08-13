@@ -19,7 +19,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { useData, loadFromLocalStorage } from '@/hooks/use-data';
+import { useData } from '@/hooks/use-data';
 import { Badge } from '@/components/ui/badge';
 import { getPartialLabel } from '@/lib/utils';
 import type { PartialId, StudentObservation, EvaluationCriteria, Grades, ParticipationRecord, ActivityRecord, Activity } from '@/hooks/use-data';
@@ -68,34 +68,32 @@ export default function StudentProfilePage() {
   const studentStatsByPartial: StudentStats[] = useMemo(() => {
     if (!student || studentGroups.length === 0) return [];
     
-    const primaryGroupId = studentGroups[0].id;
     const partials: PartialId[] = ['p1', 'p2', 'p3'];
     const allStats: StudentStats[] = [];
 
     partials.forEach(pId => {
+        const primaryGroupId = studentGroups[0].id;
         const gradeDetails = calculateDetailedFinalGrade(student.id, primaryGroupId, pId);
         
-        if (gradeDetails.criteriaDetails.length > 0) { // Only show partials with data
-            const keySuffix = `${primaryGroupId}_${pId}`;
-            const attendanceForPartial = loadFromLocalStorage<Record<string, Record<string, boolean>>>(`attendance_${keySuffix}`, {});
-            
-            let p = 0, a = 0, total = 0;
-            Object.keys(attendanceForPartial).forEach(date => {
-                if (attendanceForPartial[date]?.[studentId] !== undefined) {
-                    total++;
-                    if (attendanceForPartial[date][studentId]) p++; else a++;
-                }
-            });
+        const keySuffix = `${primaryGroupId}_${pId}`;
+        const attendanceForPartial = loadFromLocalStorage<Record<string, Record<string, boolean>>>(`attendance_${keySuffix}`, {});
+        
+        let p = 0, a = 0, total = 0;
+        Object.keys(attendanceForPartial).forEach(date => {
+            if (attendanceForPartial[date]?.[studentId] !== undefined) {
+                total++;
+                if (attendanceForPartial[date][studentId]) p++; else a++;
+            }
+        });
 
-            const partialObservations = (allObservations[studentId] || []).filter(obs => obs.partialId === pId);
+        const partialObservations = (allObservations[studentId] || []).filter(obs => obs.partialId === pId);
 
-            allStats.push({
-                ...gradeDetails,
-                partialId: pId,
-                attendance: { p, a, total, rate: total > 0 ? (p / total) * 100 : 100 },
-                observations: partialObservations,
-            });
-        }
+        allStats.push({
+            ...gradeDetails,
+            partialId: pId,
+            attendance: { p, a, total, rate: total > 0 ? (p / total) * 100 : 100 },
+            observations: partialObservations,
+        });
     });
     
     return allStats;
@@ -166,7 +164,7 @@ export default function StudentProfilePage() {
   };
 
   const handleGenerateFeedback = async () => {
-      if (!student) return;
+      if (!student || !activePartialId) return;
       const activeStats = studentStatsByPartial.find(s => s.partialId === activePartialId);
       if (!activeStats) {
           toast({ variant: 'destructive', title: 'Sin datos', description: `No hay datos para generar feedback en el ${getPartialLabel(activePartialId)}.` });
@@ -281,39 +279,40 @@ export default function StudentProfilePage() {
             </Card>
 
             <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-                 <div className="lg:col-span-2 space-y-4">
-                    {studentStatsByPartial.length > 0 ? (
-                        studentStatsByPartial.map((stats, index) => (
-                            <React.Fragment key={stats.partialId}>
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle>{getPartialLabel(stats.partialId)}</CardTitle>
-                                        <CardDescription>Calificación Final: <Badge className={stats.finalGrade >= 60 ? 'bg-green-500' : 'bg-destructive'}>{stats.finalGrade.toFixed(1)}%</Badge> | Asistencia: <Badge variant="secondary">{stats.attendance.rate.toFixed(1)}%</Badge></CardDescription>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <h4 className="font-semibold mb-2 text-sm">Desglose de Criterios:</h4>
-                                        <div className="space-y-1 text-sm p-3 bg-muted/30 rounded-md">
-                                            {stats.criteriaDetails.map(c => (
-                                                <div key={c.name} className="flex justify-between">
-                                                    <span>{c.name} <span className="text-xs text-muted-foreground">({c.weight}%)</span></span>
-                                                    <span className="font-medium">{c.earned.toFixed(1)}%</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                                {index < studentStatsByPartial.length - 1 && <Separator />}
-                            </React.Fragment>
-                        ))
-                    ) : (
-                         <Card>
+                <div className="lg:col-span-2 space-y-4">
+                    {studentStatsByPartial.length > 0 ? studentStatsByPartial.map((stats, index) => (
+                        <Card key={stats.partialId}>
+                            <CardHeader>
+                                <CardTitle>{getPartialLabel(stats.partialId)}</CardTitle>
+                                <CardDescription>
+                                    Calificación Final: <Badge className={stats.finalGrade >= 60 ? 'bg-green-500' : 'bg-destructive'}>{stats.finalGrade.toFixed(1)}%</Badge> | Asistencia: <Badge variant="secondary">{stats.attendance.rate.toFixed(1)}%</Badge>
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <h4 className="font-semibold mb-2 text-sm">Desglose de Criterios:</h4>
+                                {stats.criteriaDetails.length > 0 ? (
+                                    <div className="space-y-1 text-sm p-3 bg-muted/30 rounded-md">
+                                        {stats.criteriaDetails.map(c => (
+                                            <div key={c.name} className="flex justify-between">
+                                                <span>{c.name} <span className="text-xs text-muted-foreground">({c.weight}%)</span></span>
+                                                <span className="font-medium">{c.earned.toFixed(1)}%</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground text-center py-4">No hay criterios de evaluación para este parcial.</p>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )) : (
+                        <Card>
                             <CardContent className="p-12 text-center">
                                 <h3 className="text-lg font-semibold">Sin datos de rendimiento</h3>
                                 <p className="text-muted-foreground mt-1">No hay información de calificaciones registrada para este estudiante.</p>
                             </CardContent>
                         </Card>
                     )}
-                 </div>
+                </div>
 
                  <div className="space-y-6">
                     <Card>
@@ -426,3 +425,5 @@ export default function StudentProfilePage() {
     </>
   );
 }
+
+    
