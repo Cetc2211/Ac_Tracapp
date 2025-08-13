@@ -80,7 +80,7 @@ export default function BitacoraPage() {
     setRequiresFollowUp(false);
   };
   
-  const handleAddObservation = () => {
+  const handleAddObservation = async () => {
     const finalObservationType = observationType === 'Otros' ? customObservationType.trim() : observationType;
     const finalCanalizationTarget = canalizationTarget === 'Otros' ? customCanalizationTarget.trim() : canalizationTarget;
     
@@ -93,23 +93,31 @@ export default function BitacoraPage() {
       return;
     }
     
-    addStudentObservation({
-      studentId: selectedStudent.id,
-      partialId,
-      type: finalObservationType,
-      details,
-      requiresCanalization,
-      canalizationTarget: requiresCanalization ? finalCanalizationTarget : undefined,
-      requiresFollowUp,
-    });
-    
-    toast({
-      title: 'Observación registrada',
-      description: `Se ha añadido una nueva entrada en la bitácora para ${selectedStudent.name}.`,
-    });
-    
-    resetForm();
-    setSelectedStudent(null);
+    try {
+        await addStudentObservation({
+          studentId: selectedStudent.id,
+          partialId,
+          type: finalObservationType,
+          details,
+          requiresCanalization,
+          canalizationTarget: requiresCanalization ? finalCanalizationTarget : undefined,
+          requiresFollowUp,
+        });
+        
+        toast({
+          title: 'Observación registrada',
+          description: `Se ha añadido una nueva entrada en la bitácora para ${selectedStudent.name}.`,
+        });
+        
+        resetForm();
+        setSelectedStudent(null);
+    } catch(e) {
+        toast({
+          variant: 'destructive',
+          title: 'Error al registrar',
+          description: 'No se pudo guardar la observación. Inténtalo de nuevo.',
+        });
+    }
   };
 
   if (!activeGroup) {

@@ -23,16 +23,23 @@ import { Label } from './ui/label';
 import { Badge } from './ui/badge';
 import { ScrollArea } from './ui/scroll-area';
 import { getPartialLabel } from '@/lib/utils';
+import { generateObservationRecommendation } from '@/ai/flows/student-observation-recommendation';
+import type { ObservationRecommendationInput, ObservationRecommendationOutput } from '@/ai/flows/student-observation-recommendation';
+import { Loader2, Wand2 } from 'lucide-react';
 
-interface StudentObservationLogDialogProps {
-  student: Student | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+
+interface ObservationItemProps {
+  observation: StudentObservation;
+  onUpdate: (observationId: string, updateText: string, isClosing: boolean) => void;
+  studentName: string;
 }
 
-const ObservationItem = ({ observation, onUpdate }: { observation: StudentObservation, onUpdate: (observationId: string, updateText: string, isClosing: boolean) => void }) => {
+const ObservationItem = ({ observation, onUpdate, studentName }: ObservationItemProps) => {
     const [updateText, setUpdateText] = useState('');
     const [isClosingCase, setIsClosingCase] = useState(false);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [aiResponse, setAiResponse] = useState<ObservationRecommendationOutput | null>(null);
+    const { toast } = useToast();
 
     const handleSaveUpdate = () => {
         if (!updateText.trim()) return;
@@ -40,6 +47,26 @@ const ObservationItem = ({ observation, onUpdate }: { observation: StudentObserv
         setUpdateText('');
         setIsClosingCase(false);
     };
+
+    const handleGenerateRecommendation = async () => {
+      setIsGenerating(true);
+      setAiResponse(null);
+      try {
+        const input: ObservationRecommendationInput = {
+          studentName,
+          observationType: observation.type,
+          initialObservation: observation.details,
+          followUpUpdates: observation.followUpUpdates.map(f => ({ date: f.date, update: f.update })),
+        };
+        const result = await generateObservationRecommendation(input);
+        setAiResponse(result);
+      } catch (e) {
+        toast({ variant: 'destructive', title: 'Error', description: 'No se pudo generar la recomendación.' });
+      } finally {
+        setIsGenerating(false);
+      }
+    };
+
 
     return (
       <div className={`border-l-4 pl-3 py-2 ${observation.isClosed ? 'opacity-60' : ''}`} style={{borderColor: observation.type === 'Mérito' ? 'hsl(var(--chart-2))' : 'hsl(var(--destructive))'}}>
@@ -68,6 +95,19 @@ const ObservationItem = ({ observation, onUpdate }: { observation: StudentObserv
                 </div>
             )}
             
+            {aiResponse && (
+              <div className="mt-3 space-y-2 border-t pt-3">
+                <div className="p-2 border-l-2 border-primary bg-primary/10 rounded-r-md text-xs space-y-2">
+                  <h5 className="font-bold">Análisis IA:</h5>
+                  <p>{aiResponse.analysis}</p>
+                  <h5 className="font-bold">Recomendaciones IA:</h5>
+                  <ul className="list-disc pl-4">
+                    {aiResponse.recommendations.map((rec, i) => <li key={i}>{rec}</li>)}
+                  </ul>
+                </div>
+              </div>
+            )}
+
             {observation.requiresFollowUp && !observation.isClosed && (
                 <div className="mt-3 space-y-2 border-t pt-3">
                     <Textarea 
@@ -82,12 +122,24 @@ const ObservationItem = ({ observation, onUpdate }: { observation: StudentObserv
                             <Checkbox id={`close-${observation.id}`} checked={isClosingCase} onCheckedChange={(checked) => setIsClosingCase(!!checked)} />
                             <Label htmlFor={`close-${observation.id}`} className="text-xs font-normal">Marcar caso como cerrado</Label>
                         </div>
-                        <Button size="sm" onClick={handleSaveUpdate} disabled={!updateText.trim()}>Guardar Seguimiento</Button>
+                         <div className='flex items-center gap-2'>
+                           <Button size="sm" variant="outline" onClick={handleGenerateRecommendation} disabled={isGenerating}>
+                                {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Wand2 className="mr-2 h-4 w-4"/>}
+                                IA
+                            </Button>
+                           <Button size="sm" onClick={handleSaveUpdate} disabled={!updateText.trim()}>Guardar Seguimiento</Button>
+                         </div>
                     </div>
                 </div>
             )}
         </div>
     )
+}
+
+interface StudentObservationLogDialogProps {
+  student: Student | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 export function StudentObservationLogDialog({ student, open, onOpenChange }: StudentObservationLogDialogProps) {
@@ -104,13 +156,21 @@ export function StudentObservationLogDialog({ student, open, onOpenChange }: Stu
     }
   }, [student, allObservations, open]);
 
-  const handleUpdate = (observationId: string, updateText: string, isClosing: boolean) => {
+  const handleUpdate = async (observationId: string, updateText: string, isClosing: boolean) => {
     if (!student) return;
-    updateStudentObservation(student.id, observationId, updateText, isClosing);
-    toast({
-      title: 'Seguimiento Actualizado',
-      description: `Se ha añadido una nueva actualización para ${student.name}.`,
-    });
+    try {
+      await updateStudentObservation(student.id, observationId, updateText, isClosing);
+      toast({
+        title: 'Seguimiento Actualizado',
+        description: `Se ha añadido una nueva actualización para ${student.name}.`,
+      });
+    } catch(e) {
+      toast({
+        variant: 'destructive',
+        title: 'Error al actualizar',
+        description: 'No se pudo guardar el seguimiento.',
+      });
+    }
   };
 
   if (!student) return null;
@@ -129,7 +189,7 @@ export function StudentObservationLogDialog({ student, open, onOpenChange }: Stu
              {observations.length > 0 ? (
                 <div className="space-y-4">
                     {observations.map(obs => (
-                        <ObservationItem key={obs.id} observation={obs} onUpdate={handleUpdate} />
+                        <ObservationItem key={obs.id} observation={obs} onUpdate={handleUpdate} studentName={student.name} />
                     ))}
                 </div>
             ) : (
