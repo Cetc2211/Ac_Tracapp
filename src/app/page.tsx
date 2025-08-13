@@ -62,15 +62,12 @@ export default function AuthenticationPage() {
   };
   
   const handleRegister = async () => {
-    setIsLoading(true);
-    
     if (registerPassword !== registerConfirmPassword) {
       toast({
         variant: 'destructive',
         title: 'Error de Registro',
         description: 'Las contraseñas no coinciden.',
       });
-      setIsLoading(false);
       return;
     }
     if (!registerName.trim()) {
@@ -79,13 +76,14 @@ export default function AuthenticationPage() {
         title: 'Error de Registro',
         description: 'El nombre es obligatorio.',
       });
-      setIsLoading(false);
       return;
     }
 
+    setIsLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, registerEmail, registerPassword);
-      await updateProfile(userCredential.user, { displayName: registerName });
+      await updateProfile(userCredential.user, { displayName: registerName.trim() });
+      
       toast({
         title: 'Cuenta Creada',
         description: '¡Bienvenido! Has sido registrado exitosamente.',
