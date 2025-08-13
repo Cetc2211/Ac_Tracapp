@@ -3,7 +3,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { students as placeholderStudents, groups as placeholderGroups } from '@/lib/placeholder-data';
+import { generateInitialData } from '@/lib/placeholder-data';
 import { Student, Group, PartialId, StudentObservation } from '@/lib/placeholder-data';
 
 // TYPE DEFINITIONS
@@ -159,6 +159,11 @@ export const loadFromLocalStorage = <T,>(key: string, defaultValue: T): T => {
   if (typeof window === 'undefined') return defaultValue;
   try {
     const item = window.localStorage.getItem(key);
+    if (item === null) return defaultValue;
+    // Handle special cases for simple strings that shouldn't be parsed
+    if (key === 'activePartialId' && !item.startsWith('{') && !item.startsWith('[')) {
+        return item as T;
+    }
     return item ? JSON.parse(item) : defaultValue;
   } catch (error) {
     console.error(`Error reading from localStorage key “${key}”:`, error);
@@ -179,10 +184,31 @@ const saveToLocalStorage = <T,>(key: string, value: T) => {
 
 // DATA PROVIDER COMPONENT
 export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
+    // --- INITIAL DATA LOADING ---
+    const [isInitialized, setIsInitialized] = useState(false);
+    
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const hasBeenInitialized = localStorage.getItem('appInitialized');
+            if (!hasBeenInitialized) {
+                const initialData = generateInitialData();
+                Object.keys(initialData).forEach(key => {
+                    if (key === 'activePartialId') {
+                        localStorage.setItem(key, initialData[key]);
+                    } else {
+                        saveToLocalStorage(key, initialData[key]);
+                    }
+                });
+                localStorage.setItem('appInitialized', 'true');
+            }
+            setIsInitialized(true);
+        }
+    }, []);
+
     // Core data
-    const [allStudents, setAllStudentsState] = useState<Student[]>(() => loadFromLocalStorage('students', placeholderStudents));
+    const [allStudents, setAllStudentsState] = useState<Student[]>(() => loadFromLocalStorage('students', []));
     const [allObservations, setAllObservations] = useState<{[studentId: string]: StudentObservation[]}>(() => loadFromLocalStorage('allObservations', {}));
-    const [groups, setGroupsState] = useState<Group[]>(() => loadFromLocalStorage('groups', placeholderGroups));
+    const [groups, setGroupsState] = useState<Group[]>(() => loadFromLocalStorage('groups', []));
     const [settings, setSettings] = useState(() => loadFromLocalStorage('appSettings', defaultSettings));
     
     // Active state
@@ -200,8 +226,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         activityRecords: {},
     });
     
-    // --- INITIAL DATA LOADING ---
     useEffect(() => {
+        if (!isInitialized) return;
         const storedActiveGroupId = loadFromLocalStorage<string | null>('activeGroupId', null);
         const activeGroupExists = groups.some(g => g.id === storedActiveGroupId);
         
@@ -222,7 +248,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             setActivePartialIdState('p1');
         }
         setDataVersion(v => v + 1);
-    }, []);
+    }, [isInitialized, groups]);
     
     const loadPartialData = useCallback(() => {
         if(activeGroupId) {
@@ -245,8 +271,10 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }, [activeGroupId, activePartialId]);
 
     useEffect(() => {
-        loadPartialData();
-    }, [dataVersion, loadPartialData]);
+        if(isInitialized) {
+            loadPartialData();
+        }
+    }, [dataVersion, loadPartialData, isInitialized]);
 
     const calculateDetailedFinalGrade = useCallback((studentId: string, forGroupId?: string, forPartialId?: PartialId): { finalGrade: number, criteriaDetails: CriteriaDetail[] } => {
         const groupId = forGroupId || activeGroupId;
@@ -604,6 +632,10 @@ return newState;
     }, [groups, dataVersion]);
 
 
+    if (!isInitialized) {
+        return <div className="flex h-screen w-full items-center justify-center">Cargando...</div>;
+    }
+
     return (
         <DataContext.Provider value={{
             students: allStudents, groups, allStudents, allObservations, activeStudentsInGroups, settings, activeGroup, activePartialId,
@@ -626,3 +658,4 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
+

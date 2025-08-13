@@ -57,3 +57,97 @@ export const groups: Group[] = [
   { id: 'G03', subject: 'Programación I', students: students.slice(1, 5), semester: 'Primero', groupName: 'TSPA', facilitator: 'Ing. Carlos Sanchez' },
   { id: 'G04', subject: 'Ciencias Sociales', students: socialSciencesStudents, semester: 'Quinto', groupName: 'TSPC', facilitator: 'Lic. Gabriela Mistral' },
 ];
+
+// DATA GENERATION
+const generatePartialData = (group: Group, partialId: PartialId) => {
+    let criteria, grades = {}, attendance = {}, participations = {}, activities = [], activityRecords = {};
+    
+    switch(partialId) {
+        case 'p1':
+            criteria = [
+                { id: 'C1', name: 'Examen', weight: 40, expectedValue: 10 },
+                { id: 'C2', name: 'Actividades', weight: 30, expectedValue: 0 },
+                { id: 'C3', name: 'Participación', weight: 30, expectedValue: 0 },
+            ];
+            activities = [
+                {id: 'A1', name: 'Tarea 1', dueDate: '2024-02-15', programmedDate: '2024-02-01'},
+                {id: 'A2', name: 'Tarea 2', dueDate: '2024-03-01', programmedDate: '2024-02-20'},
+            ];
+            attendance = {
+                '2024-02-10': group.students.reduce((acc, s) => ({...acc, [s.id]: Math.random() > 0.1}), {}),
+                '2024-02-17': group.students.reduce((acc, s) => ({...acc, [s.id]: Math.random() > 0.2}), {}),
+            };
+            participations = {
+                '2024-02-10': group.students.reduce((acc, s) => ({...acc, [s.id]: Math.random() > 0.5}), {}),
+            };
+            activityRecords = group.students.reduce((acc, s) => ({...acc, [s.id]: {'A1': Math.random() > 0.2, 'A2': Math.random() > 0.3 }}), {});
+            grades = group.students.reduce((acc, s) => ({...acc, [s.id]: {'C1': { delivered: Math.floor(Math.random() * 5) + 5 }} }), {});
+            break;
+        case 'p2':
+            criteria = [
+                { id: 'C4', name: 'Proyecto', weight: 50, expectedValue: 100 },
+                { id: 'C5', name: 'Actividades', weight: 30, expectedValue: 0 },
+                { id: 'C6', name: 'Portafolio', weight: 20, expectedValue: 0 },
+            ];
+             activities = [
+                {id: 'A3', name: 'Avance Proyecto', dueDate: '2024-04-10', programmedDate: '2024-04-01'},
+            ];
+            attendance = {
+                '2024-04-05': group.students.reduce((acc, s) => ({...acc, [s.id]: Math.random() > 0.1}), {}),
+                '2024-04-12': group.students.reduce((acc, s) => ({...acc, [s.id]: Math.random() > 0.1}), {}),
+            };
+            participations = {
+                '2024-04-12': group.students.reduce((acc, s) => ({...acc, [s.id]: Math.random() > 0.6}), {}),
+            };
+            activityRecords = group.students.reduce((acc, s) => ({...acc, [s.id]: {'A3': Math.random() > 0.1 }}), {});
+            grades = group.students.reduce((acc, s) => ({...acc, [s.id]: {'C4': { delivered: Math.floor(Math.random() * 20) + 75 }} }), {});
+            break;
+        case 'p3':
+            criteria = [
+                { id: 'C7', name: 'Examen Final', weight: 60, expectedValue: 10 },
+                { id: 'C8', name: 'Proyecto Final', weight: 40, expectedValue: 100 },
+            ];
+            activities = [];
+             attendance = {
+                '2024-06-01': group.students.reduce((acc, s) => ({...acc, [s.id]: true }), {}),
+                '2024-06-08': group.students.reduce((acc, s) => ({...acc, [s.id]: Math.random() > 0.05 }), {}),
+            };
+            grades = group.students.reduce((acc, s) => ({...acc, [s.id]: {
+                'C7': { delivered: Math.floor(Math.random() * 6) + 4 },
+                'C8': { delivered: Math.floor(Math.random() * 15) + 85 },
+            }}), {});
+            break;
+    }
+    return { criteria, grades, attendance, participations, activities, activityRecords };
+}
+
+export const generateInitialData = () => {
+    const data: {[key: string]: any} = {
+        groups: groups,
+        students: students,
+        allObservations: {},
+        appSettings: {
+            institutionName: "Academic Tracker",
+            logo: "",
+            theme: "theme-default"
+        },
+        activeGroupId: groups.length > 0 ? groups[0].id : null,
+        activePartialId: 'p1',
+    };
+
+    const partials: PartialId[] = ['p1', 'p2', 'p3'];
+    groups.forEach(group => {
+        partials.forEach(pId => {
+            const { criteria, grades, attendance, participations, activities, activityRecords } = generatePartialData(group, pId);
+            const keySuffix = `${group.id}_${pId}`;
+            data[`criteria_${keySuffix}`] = criteria;
+            data[`grades_${keySuffix}`] = grades;
+            data[`attendance_${keySuffix}`] = attendance;
+            data[`participations_${keySuffix}`] = participations;
+            data[`activities_${keySuffix}`] = activities;
+            data[`activityRecords_${keySuffix}`] = activityRecords;
+        });
+    });
+
+    return data;
+}
