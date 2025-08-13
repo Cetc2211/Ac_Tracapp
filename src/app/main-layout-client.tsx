@@ -22,7 +22,7 @@ import {
   Loader2
 } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 
 import { AppLogo } from '@/components/app-logo';
 import { UserNav } from '@/components/user-nav';
@@ -46,9 +46,6 @@ import { getPartialLabel } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { auth } from '@/lib/firebase';
-import type { User as FirebaseUser } from 'firebase/auth';
-
 
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -77,11 +74,8 @@ export default function MainLayoutClient({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
   const { settings, activeGroup, activePartialId } = useData();
   const [isClient, setIsClient] = useState(false);
-  const [user, setUser] = useState<FirebaseUser | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
   
   useEffect(() => {
     setIsClient(true);
@@ -91,42 +85,6 @@ export default function MainLayoutClient({
       document.body.className = defaultSettings.theme;
     }
   }, [settings.theme]);
-  
-   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
-      setUser(firebaseUser);
-      setAuthLoading(false);
-      if (!firebaseUser && pathname !== '/') {
-        router.push('/');
-      }
-    });
-    return () => unsubscribe();
-  }, [pathname, router]);
-
-  const isAuthPage = pathname === '/';
-  
-  if (authLoading) {
-    return (
-        <div className="flex h-screen w-full items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin" />
-            <span className="ml-2">Verificando autenticación...</span>
-        </div>
-    );
-  }
-
-  if (isAuthPage && !user) {
-      return <>{children}</>;
-  }
-
-  if (isAuthPage && user) {
-    router.push('/dashboard');
-    return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-        <span className="ml-2">Redirigiendo...</span>
-      </div>
-    );
-  }
 
   return (
     <>
