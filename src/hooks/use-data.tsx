@@ -1,9 +1,10 @@
 
-
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { Student, Group, PartialId, StudentObservation } from '@/lib/placeholder-data';
+import { auth } from '@/lib/firebase';
+import type { User } from 'firebase/auth';
 
 
 // TYPE DEFINITIONS
@@ -183,7 +184,8 @@ const saveToLocalStorage = <T,>(key: string, value: T) => {
 
 // DATA PROVIDER COMPONENT
 export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
-    const [isInitialized, setIsInitialized] = useState(false);
+    const [user, setUser] = useState<User | null>(null);
+    const [isAuthLoaded, setIsAuthLoaded] = useState(false);
     
     // Core data
     const [allStudents, setAllStudentsState] = useState<Student[]>([]);
@@ -205,20 +207,39 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         activities: [],
         activityRecords: {},
     });
-
-     useEffect(() => {
-        setAllStudentsState(loadFromLocalStorage('students', []));
-        setAllObservations(loadFromLocalStorage('allObservations', {}));
-        setGroupsState(loadFromLocalStorage('groups', []));
-        setSettings(loadFromLocalStorage('appSettings', defaultSettings));
-        setActiveGroupIdState(loadFromLocalStorage('activeGroupId', null));
-        setActivePartialIdState(loadFromLocalStorage('activePartialId', 'p1'));
-        setIsInitialized(true);
+    
+    useEffect(() => {
+        const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
+            setUser(firebaseUser);
+            setIsAuthLoaded(true);
+        });
+        return () => unsubscribe();
     }, []);
+
+    const getKeyPrefix = useCallback(() => {
+        return user ? `user_${user.uid}` : 'local';
+    }, [user]);
+    
+    const loadData = useCallback(() => {
+        const prefix = getKeyPrefix();
+        setAllStudentsState(loadFromLocalStorage(`${prefix}_students`, []));
+        setAllObservations(loadFromLocalStorage(`${prefix}_allObservations`, {}));
+        setGroupsState(loadFromLocalStorage(`${prefix}_groups`, []));
+        setSettings(loadFromLocalStorage(`${prefix}_appSettings`, defaultSettings));
+        setActiveGroupIdState(loadFromLocalStorage(`${prefix}_activeGroupId`, null));
+        setActivePartialIdState(loadFromLocalStorage(`${prefix}_activePartialId`, 'p1'));
+    }, [getKeyPrefix]);
+
+    useEffect(() => {
+        if (isAuthLoaded) {
+            loadData();
+        }
+    }, [isAuthLoaded, user, loadData]);
     
     const loadPartialData = useCallback(() => {
+        const prefix = getKeyPrefix();
         if (activeGroupId) {
-            const keySuffix = `${activeGroupId}_${activePartialId}`;
+            const keySuffix = `${prefix}_${activeGroupId}_${activePartialId}`;
             setPartialData({
                 criteria: loadFromLocalStorage(`criteria_${keySuffix}`, []),
                 grades: loadFromLocalStorage(`grades_${keySuffix}`, {}),
@@ -233,21 +254,22 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 participations: {}, activities: [], activityRecords: {},
             });
         }
-    }, [activeGroupId, activePartialId]);
+    }, [activeGroupId, activePartialId, getKeyPrefix]);
 
 
     useEffect(() => {
-        if(isInitialized) {
+        if(isAuthLoaded) {
             loadPartialData();
         }
-    }, [isInitialized, dataVersion, activeGroupId, activePartialId, loadPartialData]);
+    }, [isAuthLoaded, dataVersion, activeGroupId, activePartialId, loadPartialData]);
 
     const calculateDetailedFinalGrade = useCallback((studentId: string, forGroupId?: string, forPartialId?: PartialId): { finalGrade: number, criteriaDetails: CriteriaDetail[] } => {
         const groupId = forGroupId || activeGroupId;
         const partialId = forPartialId || activePartialId;
         if (!groupId || !partialId) return { finalGrade: 0, criteriaDetails: [] };
-
-        const keySuffix = `${groupId}_${partialId}`;
+        
+        const prefix = getKeyPrefix();
+        const keySuffix = `${prefix}_${groupId}_${partialId}`;
         const pCriteria = loadFromLocalStorage<EvaluationCriteria[]>(`criteria_${keySuffix}`, []);
         
         if (!pCriteria || pCriteria.length === 0) return { finalGrade: 0, criteriaDetails: [] };
@@ -290,7 +312,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         
         const grade = Math.max(0, Math.min(100, finalGrade));
         return { finalGrade: grade, criteriaDetails: criteriaDetails };
-    }, [activeGroupId, activePartialId]);
+    }, [activeGroupId, activePartialId, getKeyPrefix]);
 
     const calculateFinalGrade = useCallback((studentId: string, forGroupId?: string, forPartialId?: PartialId): number => {
         return calculateDetailedFinalGrade(studentId, forGroupId, forPartialId).finalGrade;
@@ -298,18 +320,19 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     // Derived State
     const setActiveGroupId = useCallback((groupId: string | null) => {
-        saveToLocalStorage('activeGroupId', groupId);
+        const prefix = getKeyPrefix();
+        saveToLocalStorage(`${prefix}_activeGroupId`, groupId);
         setActiveGroupIdState(groupId);
-    }, []);
+    }, [getKeyPrefix]);
     
     useEffect(() => {
-        if (isInitialized && groups.length > 0) {
+        if (isAuthLoaded && groups.length > 0) {
             const groupExists = groups.some(g => g.id === activeGroupId);
             if (!activeGroupId || !groupExists) {
                 setActiveGroupId(groups[0].id);
             }
         }
-    }, [groups, activeGroupId, isInitialized, setActiveGroupId]);
+    }, [groups, activeGroupId, isAuthLoaded, setActiveGroupId]);
 
 
     const activeGroup = useMemo(() => {
@@ -333,25 +356,29 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }, [groups]);
 
     const setGroups = (newGroups: Group[]) => {
-        saveToLocalStorage('groups', newGroups);
+        const prefix = getKeyPrefix();
+        saveToLocalStorage(`${prefix}_groups`, newGroups);
         setGroupsState(newGroups);
     };
 
     const setAllStudents = (newStudents: Student[]) => {
-        saveToLocalStorage('students', newStudents);
+        const prefix = getKeyPrefix();
+        saveToLocalStorage(`${prefix}_students`, newStudents);
         setAllStudentsState(newStudents);
     };
     
     const setCriteria = (newCriteria: EvaluationCriteria[]) => {
         if (!activeGroupId) return;
-        const key = `criteria_${activeGroupId}_${activePartialId}`;
+        const prefix = getKeyPrefix();
+        const key = `criteria_${prefix}_${activeGroupId}_${activePartialId}`;
         saveToLocalStorage(key, newCriteria);
         setDataVersion(v => v + 1);
     };
 
     const setGrades = (value: React.SetStateAction<Grades>) => {
         if (!activeGroupId) return;
-        const key = `grades_${activeGroupId}_${activePartialId}`;
+        const prefix = getKeyPrefix();
+        const key = `grades_${prefix}_${activeGroupId}_${activePartialId}`;
         const newGrades = typeof value === 'function' ? value(partialData.grades) : value;
         saveToLocalStorage(key, newGrades);
         setDataVersion(v => v + 1);
@@ -359,7 +386,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     
     const setAttendance = (value: React.SetStateAction<AttendanceRecord>) => {
         if (!activeGroupId) return;
-        const key = `attendance_${activeGroupId}_${activePartialId}`;
+        const prefix = getKeyPrefix();
+        const key = `attendance_${prefix}_${activeGroupId}_${activePartialId}`;
         const newAttendance = typeof value === 'function' ? value(partialData.attendance) : value;
         saveToLocalStorage(key, newAttendance);
         setDataVersion(v => v + 1);
@@ -367,7 +395,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     const setParticipations = (value: React.SetStateAction<ParticipationRecord>) => {
         if (!activeGroupId) return;
-        const key = `participations_${activeGroupId}_${activePartialId}`;
+        const prefix = getKeyPrefix();
+        const key = `participations_${prefix}_${activeGroupId}_${activePartialId}`;
         const newParticipations = typeof value === 'function' ? value(partialData.participations) : value;
         saveToLocalStorage(key, newParticipations);
         setDataVersion(v => v + 1);
@@ -375,22 +404,25 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     
     const setActivities = (newActivities: Activity[]) => {
         if (!activeGroupId) return;
-        const key = `activities_${activeGroupId}_${activePartialId}`;
+        const prefix = getKeyPrefix();
+        const key = `activities_${prefix}_${activeGroupId}_${activePartialId}`;
         saveToLocalStorage(key, newActivities);
         setDataVersion(v => v + 1);
     }
 
     const setActivityRecords = (value: React.SetStateAction<ActivityRecord>) => {
         if (!activeGroupId) return;
-        const key = `activityRecords_${activeGroupId}_${activePartialId}`;
+        const prefix = getKeyPrefix();
+        const key = `activityRecords_${prefix}_${activeGroupId}_${activePartialId}`;
         const newRecords = typeof value === 'function' ? value(partialData.activityRecords) : value;
         saveToLocalStorage(key, newRecords);
         setDataVersion(v => v + 1);
     }
     
     const setActivePartialId = (partialId: PartialId) => {
+        const prefix = getKeyPrefix();
         setActivePartialIdState(partialId);
-        saveToLocalStorage('activePartialId', partialId);
+        saveToLocalStorage(`${prefix}_activePartialId`, partialId);
     };
 
     const deleteGroup = (groupId: string) => {
@@ -401,9 +433,10 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         const keysToRemove = [
             'criteria', 'grades', 'attendance', 'participations', 'activities', 'activityRecords'
         ];
+        const prefix = getKeyPrefix();
         partials.forEach(p => {
             keysToRemove.forEach(k => {
-                localStorage.removeItem(`${k}_${groupId}_${p}`);
+                localStorage.removeItem(`${k}_${prefix}_${groupId}_${p}`);
             });
         });
 
@@ -424,7 +457,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         setAllObservations(prev => {
             const studentObservations = prev[newObservation.studentId] || [];
             const newState = { ...prev, [newObservation.studentId]: [...studentObservations, newObservation] };
-            saveToLocalStorage('allObservations', newState);
+            const prefix = getKeyPrefix();
+            saveToLocalStorage(`${prefix}_allObservations`, newState);
             return newState;
         });
     };
@@ -444,7 +478,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 return obs;
             });
             const newState = { ...prev, [studentId]: newObservations };
-            saveToLocalStorage('allObservations', newState);
+            const prefix = getKeyPrefix();
+            saveToLocalStorage(`${prefix}_allObservations`, newState);
             return newState;
         });
     }
@@ -486,9 +521,9 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     
     const atRiskStudents: StudentWithRisk[] = useMemo(() => {
         const studentsAtRiskInPartial = new Map<string, StudentWithRisk>();
-
+        const prefix = getKeyPrefix();
         groups.forEach(group => {
-            const pAttendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${group.id}_${activePartialId}`, {});
+            const pAttendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${prefix}_${group.id}_${activePartialId}`, {});
             group.students.forEach(student => {
                 const finalGrade = calculateFinalGrade(student.id, group.id, activePartialId);
                 const risk = getStudentRiskLevel(finalGrade, pAttendance, student.id);
@@ -500,17 +535,18 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         });
 
         return Array.from(studentsAtRiskInPartial.values());
-    }, [groups, activePartialId, getStudentRiskLevel, calculateFinalGrade]);
+    }, [groups, activePartialId, getStudentRiskLevel, calculateFinalGrade, getKeyPrefix]);
     
     
     const overallAverageParticipation = useMemo(() => {
         let totalPossibleAttendance = 0;
         let totalPresents = 0;
         const partials: PartialId[] = ['p1', 'p2', 'p3'];
+        const prefix = getKeyPrefix();
         
         groups.forEach(group => {
             partials.forEach(p => {
-                const groupAttendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${group.id}_${p}`, {});
+                const groupAttendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${prefix}_${group.id}_${p}`, {});
                 group.students.forEach(student => {
                     Object.keys(groupAttendance).forEach(date => {
                         if (groupAttendance[date]?.[student.id] !== undefined) {
@@ -524,10 +560,10 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             });
         });
         return totalPossibleAttendance > 0 ? Math.round((totalPresents / totalPossibleAttendance) * 100) : 100;
-    }, [groups]);
+    }, [groups, getKeyPrefix]);
 
 
-    if (!isInitialized) {
+    if (!isAuthLoaded) {
         return <div className="flex h-screen w-full items-center justify-center">Cargando...</div>;
     }
 

@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import {
@@ -22,7 +21,7 @@ import {
   Loader2
 } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 import { AppLogo } from '@/components/app-logo';
 import { UserNav } from '@/components/user-nav';
@@ -46,6 +45,8 @@ import { getPartialLabel } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { auth } from '@/lib/firebase';
+import type { User } from 'firebase/auth';
 
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -74,8 +75,25 @@ export default function MainLayoutClient({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { settings, activeGroup, activePartialId } = useData();
   const [isClient, setIsClient] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
+      if (firebaseUser) {
+        setUser(firebaseUser);
+      } else {
+        setUser(null);
+        router.push('/');
+      }
+      setIsAuthLoading(false);
+    });
+    
+    return () => unsubscribe();
+  }, [router]);
   
   useEffect(() => {
     setIsClient(true);
@@ -85,6 +103,15 @@ export default function MainLayoutClient({
       document.body.className = defaultSettings.theme;
     }
   }, [settings.theme]);
+  
+  if (isAuthLoading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <Loader2 className="mr-2 h-8 w-8 animate-spin" />
+        <span>Verificando sesión...</span>
+      </div>
+    );
+  }
 
   return (
     <>
