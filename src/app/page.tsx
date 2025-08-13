@@ -51,22 +51,17 @@ export default function AuthenticationPage() {
         toast({ title: 'Éxito', description: 'Has accedido correctamente.' });
         router.push('/dashboard');
     } catch (error: any) {
-        if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
-             // If user does not exist, and it's the test user, create it and log in.
-            if (email === 'test@test.com' && password === 'password') {
-                try {
-                    await createUserWithEmailAndPassword(auth, email, password);
-                    await signInWithEmailAndPassword(auth, email, password);
-                    toast({ title: 'Éxito', description: 'Cuenta de prueba creada. Has accedido correctamente.' });
-                    router.push('/dashboard');
-                } catch (creationError: any) {
-                    toast({ variant: 'destructive', title: 'Error de creación', description: creationError.message });
-                }
-            } else {
-                 toast({ variant: 'destructive', title: 'Error de autenticación', description: 'Correo o contraseña incorrectos.' });
+        if (error.code === 'auth/invalid-credential' && email === 'test@test.com' && password === 'password') {
+            try {
+                await createUserWithEmailAndPassword(auth, email, password);
+                await signInWithEmailAndPassword(auth, email, password);
+                toast({ title: 'Éxito', description: 'Cuenta de prueba creada. Has accedido correctamente.' });
+                router.push('/dashboard');
+            } catch (creationError: any) {
+                toast({ variant: 'destructive', title: 'Error de creación', description: creationError.message });
             }
         } else {
-            toast({ variant: 'destructive', title: 'Error de autenticación', description: error.message });
+            toast({ variant: 'destructive', title: 'Error de autenticación', description: 'Correo o contraseña incorrectos.' });
         }
     } finally {
         setIsLoading(false);
@@ -193,3 +188,5 @@ export default function AuthenticationPage() {
     </div>
   );
 }
+
+    
