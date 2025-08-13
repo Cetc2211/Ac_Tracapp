@@ -16,11 +16,11 @@ import {
   ChartLegendContent
 } from "@/components/ui/chart"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Pie, PieChart, Cell } from "recharts"
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useData, loadFromLocalStorage } from '@/hooks/use-data';
+import { useData } from '@/hooks/use-data';
 import type { Student, PartialId, CalculatedRisk, EvaluationCriteria, AttendanceRecord, ParticipationRecord } from '@/hooks/use-data';
 import { getPartialLabel } from '@/lib/utils';
 
@@ -56,6 +56,7 @@ const PIE_CHART_COLORS = {
 
 export default function StatisticsPage() {
     const { 
+        isLoading,
         groups,
         activeGroup,
         calculateFinalGrade,
@@ -65,55 +66,6 @@ export default function StatisticsPage() {
         setActivePartialId,
     } = useData();
     const { attendance, participations } = partialData;
-
-    const [isLoading, setIsLoading] = useState(true);
-
-    const stats = useMemo(() => {
-       setIsLoading(true);
-       const allGroupStats = groups.map(group => {
-           const { students } = group;
-           const studentCount = students.length;
-           
-           const finalGrades = students.map(s => calculateFinalGrade(s.id, group.id, activePartialId));
-           const averageGrade = finalGrades.length > 0 ? finalGrades.reduce((a, b) => a + b, 0) / finalGrades.length : 0;
-           
-           let totalAttendances = 0;
-           let presentAttendances = 0;
-           const riskLevels: Record<'low' | 'medium' | 'high', number> = { low: 0, medium: 0, high: 0 };
-           
-           const keySuffix = `${group.id}_${activePartialId}`;
-           const groupAttendance = loadFromLocalStorage<AttendanceRecord>(`attendance_${keySuffix}`, {});
-           
-           students.forEach((student, index) => {
-               const studentFinalGrade = finalGrades[index];
-               const risk = getStudentRiskLevel(studentFinalGrade, groupAttendance, student.id);
-               riskLevels[risk.level]++;
-               
-               Object.values(groupAttendance).forEach(dailyRecord => {
-                   if (Object.prototype.hasOwnProperty.call(dailyRecord, student.id)) {
-                       totalAttendances++;
-                       if (dailyRecord[student.id]) {
-                           presentAttendances++;
-                       }
-                   }
-               });
-           });
-           
-           const attendanceRate = totalAttendances > 0 ? (presentAttendances / totalAttendances) * 100 : 100;
-           
-           return {
-               id: group.id,
-               subject: group.subject,
-               studentCount,
-               averageGrade: parseFloat(averageGrade.toFixed(1)),
-               attendanceRate: parseFloat(attendanceRate.toFixed(1)),
-               riskLevels,
-           };
-       });
-       setIsLoading(false);
-       return allGroupStats;
-    }, [groups, activePartialId, calculateFinalGrade, getStudentRiskLevel]);
-
 
     const activeGroupStats = useMemo(() => {
         if (!activeGroup) return null;
@@ -221,92 +173,10 @@ export default function StatisticsPage() {
         </TabsList>
        </Tabs>
 
-      <Tabs defaultValue="general">
-        <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="general">Visión General</TabsTrigger>
+      <Tabs defaultValue="activeGroup">
+        <TabsList className="grid w-full grid-cols-1">
             <TabsTrigger value="activeGroup" disabled={!activeGroupStats}>Grupo Activo: {activeGroup?.subject || ''}</TabsTrigger>
         </TabsList>
-        <TabsContent value="general" className="mt-6">
-            {stats.length === 0 ? (
-                 <Card>
-                    <CardContent className="flex flex-col items-center justify-center text-center p-12 gap-4">
-                        <CardTitle>No hay datos suficientes</CardTitle>
-                        <CardDescription>
-                            No hay grupos creados para generar estadísticas. <Link href="/groups" className="text-primary underline">Crea un grupo</Link> para empezar.
-                        </CardDescription>
-                    </CardContent>
-                </Card>
-            ) : (
-                <div className="space-y-6">
-                     <Card>
-                        <CardHeader>
-                        <CardTitle>Rendimiento por Grupo ({getPartialLabel(activePartialId)})</CardTitle>
-                        <CardDescription>Comparativa de la calificación promedio final y la tasa de asistencia entre grupos.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                        <ChartContainer config={{}} className="min-h-[300px] w-full">
-                                <BarChart data={stats} accessibilityLayer>
-                                    <CartesianGrid vertical={false} />
-                                    <XAxis
-                                        dataKey="subject"
-                                        tickLine={false}
-                                        tickMargin={10}
-                                        axisLine={false}
-                                        tickFormatter={(value) => value.slice(0, 10)}
-                                    />
-                                    <YAxis 
-                                        domain={[0, 100]}
-                                        tickFormatter={(value) => `${value}%`}
-                                    />
-                                    <ChartTooltip content={<ChartTooltipContent />} />
-                                    <ChartLegend content={<ChartLegendContent />} />
-                                    <Bar dataKey="averageGrade" name="Promedio Gral." fill="hsl(var(--chart-2))" radius={4} />
-                                    <Bar dataKey="attendanceRate" name="Asistencia" fill="hsl(var(--chart-4))" radius={4} />
-                                </BarChart>
-                            </ChartContainer>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Distribución de Riesgo por Grupo ({getPartialLabel(activePartialId)})</CardTitle>
-                            <CardDescription>Proporción de estudiantes en cada nivel de riesgo por grupo.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {stats.map((groupStats) => {
-                                    const pieData = [
-                                        { name: 'Bajo', value: groupStats.riskLevels.low, fill: PIE_CHART_COLORS.low },
-                                        { name: 'Medio', value: groupStats.riskLevels.medium, fill: PIE_CHART_COLORS.medium },
-                                        { name: 'Alto', value: groupStats.riskLevels.high, fill: PIE_CHART_COLORS.high },
-                                    ].filter(item => item.value > 0);
-                                    
-                                    if (groupStats.studentCount === 0) return null;
-
-                                    return (
-                                        <div key={groupStats.id} className="text-center">
-                                            <h4 className="font-semibold">{groupStats.subject}</h4>
-                                            <ChartContainer config={{}} className="min-h-[200px] w-full">
-                                                <PieChart>
-                                                    <ChartTooltip content={<ChartTooltipContent nameKey="name" hideLabel />} />
-                                                    <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={30} outerRadius={50} paddingAngle={2} startAngle={90} endAngle={450}>
-                                                        {pieData.map((entry) => ( <Cell key={entry.name} fill={entry.fill} /> ))}
-                                                    </Pie>
-                                                </PieChart>
-                                            </ChartContainer>
-                                        </div>
-                                    )
-                                })}
-                            </div>
-                             <div className="flex justify-center items-center gap-4 mt-4 text-xs">
-                                <div className="flex items-center gap-1.5"><div className="h-2 w-2 rounded-full" style={{backgroundColor: PIE_CHART_COLORS.low}}></div><span>Bajo</span></div>
-                                <div className="flex items-center gap-1.5"><div className="h-2 w-2 rounded-full" style={{backgroundColor: PIE_CHART_COLORS.medium}}></div><span>Medio</span></div>
-                                <div className="flex items-center gap-1.5"><div className="h-2 w-2 rounded-full" style={{backgroundColor: PIE_CHART_COLORS.high}}></div><span>Alto</span></div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-            )}
-        </TabsContent>
         <TabsContent value="activeGroup" className="mt-6">
              {activeGroupStats ? (
                 <div className="space-y-6">
