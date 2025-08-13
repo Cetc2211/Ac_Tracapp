@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -7,12 +8,13 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, Download, User, Mail, Phone, Wand2, Loader2, MessageSquare, BookText } from 'lucide-react';
+import { ArrowLeft, Download, User, Mail, Phone, Wand2, Loader2, MessageSquare, BookText, Edit, Save } from 'lucide-react';
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
@@ -26,6 +28,8 @@ import { WhatsAppDialog } from '@/components/whatsapp-dialog';
 import { generateStudentFeedback } from '@/ai/flows/student-feedback';
 import type { StudentFeedbackInput, StudentFeedbackOutput } from '@/ai/flows/student-feedback';
 import { Separator } from '@/components/ui/separator';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 
 type StudentStats = ReturnType<typeof useData>['calculateDetailedFinalGrade'] & {
     partialId: PartialId;
@@ -49,6 +53,8 @@ export default function StudentProfilePage() {
   const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false);
   const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
   const [generatedFeedback, setGeneratedFeedback] = useState<StudentFeedbackOutput | null>(null);
+  const [isEditingFeedback, setIsEditingFeedback] = useState(false);
+  const [editedFeedback, setEditedFeedback] = useState<{analysis: string, recommendations: string}>({analysis: '', recommendations: ''});
   
   const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -161,11 +167,31 @@ export default function StudentProfilePage() {
       }
   };
 
+  const handleEditFeedback = () => {
+      if (generatedFeedback) {
+          setEditedFeedback({
+              analysis: generatedFeedback.analysis,
+              recommendations: generatedFeedback.recommendations.join('\\n'),
+          });
+          setIsEditingFeedback(true);
+      }
+  };
+
+  const handleSaveFeedback = () => {
+      setGeneratedFeedback({
+          analysis: editedFeedback.analysis,
+          recommendations: editedFeedback.recommendations.split('\\n').filter(r => r.trim() !== ''),
+      });
+      setIsEditingFeedback(false);
+      toast({ title: 'Feedback actualizado' });
+  };
+  
   if (!student) {
     return notFound();
   }
   
   const allSemesterObservations = Object.values(allObservations).flat().filter(obs => obs.studentId === studentId);
+  const facilitatorName = studentGroups[0]?.facilitator || 'Docente';
 
   return (
     <>
@@ -173,7 +199,7 @@ export default function StudentProfilePage() {
       <WhatsAppDialog studentName={student.name} open={isWhatsAppOpen} onOpenChange={setIsWhatsAppOpen} />
 
       <div className="flex flex-col gap-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between print:hidden">
           <div className="flex items-center gap-4">
               <Button asChild variant="outline" size="icon">
               <Link href="/dashboard">
@@ -217,9 +243,9 @@ export default function StudentProfilePage() {
                             <p className="flex items-center gap-2"><User className="h-4 w-4 text-primary" /> Tutor: {student.tutorName || 'No registrado'}</p>
                             <p className="flex items-center gap-2"><Phone className="h-4 w-4 text-primary" /> Tel. Tutor: {student.tutorPhone || 'No registrado'}</p>
                         </div>
-                         <div className="mt-4 flex flex-wrap gap-2">
+                         <div className="mt-4 flex flex-wrap gap-2 print:hidden">
                             <Button variant="outline" size="sm" onClick={() => setIsLogOpen(true)}><MessageSquare className="mr-2"/>Ver Bitácora</Button>
-                            <Button variant="secondary" size="sm" onClick={() => setIsWhatsAppOpen(true)}>Contactar Tutor</Button>
+                            <Button variant="secondary" size="sm" onClick={() => setIsWhatsAppOpen(true)}>Enviar informe vía WhatsApp</Button>
                         </div>
                     </div>
                 </CardHeader>
@@ -303,32 +329,68 @@ export default function StudentProfilePage() {
                     <div className="flex justify-between items-center">
                         <div>
                             <CardTitle>Recomendaciones y retroalimentación</CardTitle>
-                            <CardDescription>Genera un resumen personalizado del rendimiento del estudiante en el <span className='font-bold'>{getPartialLabel(activePartialId)}</span>.</CardDescription>
+                            <CardDescription>Resumen personalizado del rendimiento del estudiante en el <span className='font-bold'>{getPartialLabel(activePartialId)}</span>.</CardDescription>
                         </div>
-                        <Button onClick={handleGenerateFeedback} disabled={isGeneratingFeedback}>
-                            {isGeneratingFeedback ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Wand2 className="mr-2 h-4 w-4" />}
-                            {isGeneratingFeedback ? "Generando..." : "Generar Feedback"}
-                        </Button>
+                        <div className="flex gap-2 print:hidden">
+                            <Button onClick={handleGenerateFeedback} disabled={isGeneratingFeedback || isEditingFeedback}>
+                                {isGeneratingFeedback ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Wand2 className="mr-2 h-4 w-4" />}
+                                {isGeneratingFeedback ? "Generando..." : "Generar Feedback"}
+                            </Button>
+                            {generatedFeedback && !isEditingFeedback && (
+                                <Button variant="secondary" onClick={handleEditFeedback}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Editar
+                                </Button>
+                            )}
+                        </div>
                     </div>
                 </CardHeader>
                 {generatedFeedback && (
                     <CardContent>
-                        <div className="p-4 border-l-4 border-primary bg-primary/10 rounded-r-md space-y-4">
-                            <div>
-                                <h4 className="font-bold">Feedback General:</h4>
-                                <p className="text-sm">{generatedFeedback.feedback}</p>
+                        {isEditingFeedback ? (
+                            <div className="p-4 border rounded-md space-y-4">
+                                <div className='space-y-2'>
+                                    <Label htmlFor="editedAnalysis" className="font-bold">Análisis de la Situación:</Label>
+                                    <Textarea id="editedAnalysis" value={editedFeedback.analysis} onChange={(e) => setEditedFeedback(prev => ({...prev, analysis: e.target.value}))} rows={4} />
+                                </div>
+                                <div className='space-y-2'>
+                                    <Label htmlFor="editedRecommendations" className="font-bold">Recomendaciones:</Label>
+                                    <Textarea id="editedRecommendations" value={editedFeedback.recommendations} onChange={(e) => setEditedFeedback(prev => ({...prev, recommendations: e.target.value}))} rows={5} />
+                                </div>
+                                <div className="flex justify-end gap-2 print:hidden">
+                                    <Button variant="outline" onClick={() => setIsEditingFeedback(false)}>Cancelar</Button>
+                                    <Button onClick={handleSaveFeedback}>
+                                        <Save className="mr-2 h-4 w-4"/> Guardar Cambios
+                                    </Button>
+                                </div>
                             </div>
-                            <div>
-                                <h4 className="font-bold">Recomendaciones:</h4>
-                                <ul className="list-disc pl-5 mt-2 space-y-1 text-sm">
-                                    {generatedFeedback.recommendations.map((rec, i) => (
-                                        <li key={i}>{rec}</li>
-                                    ))}
-                                </ul>
+                        ) : (
+                            <div className="p-4 border-l-4 border-primary bg-primary/10 rounded-r-md space-y-4">
+                                <div>
+                                    <h4 className="font-bold">Feedback General:</h4>
+                                    <p className="text-sm">{generatedFeedback.feedback}</p>
+                                </div>
+                                <div>
+                                    <h4 className="font-bold">Recomendaciones:</h4>
+                                    <ul className="list-disc pl-5 mt-2 space-y-1 text-sm">
+                                        {generatedFeedback.recommendations.map((rec, i) => (
+                                            <li key={i}>{rec}</li>
+                                        ))}
+                                    </ul>
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </CardContent>
                 )}
+                <CardFooter>
+                    <div className="w-full mt-12 pt-12 text-center text-sm">
+                        <div className="inline-block">
+                            <div className="border-t border-foreground w-48 mx-auto"></div>
+                            <p className="mt-2 font-semibold">{facilitatorName}</p>
+                            <p className="text-muted-foreground">Firma del Docente</p>
+                        </div>
+                    </div>
+                </CardFooter>
             </Card>
         </div>
       </div>
