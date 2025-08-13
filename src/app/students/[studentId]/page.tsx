@@ -111,15 +111,20 @@ export default function StudentProfilePage() {
     const reportElement = reportRef.current;
     if (!reportElement) return;
 
-    const headerButtons = document.getElementById('interactive-buttons-header');
-    const cardButtons = document.getElementById('interactive-buttons-container');
-    const feedbackButtons = document.getElementById('feedback-buttons-container');
-    
-    const elementsToHide = [headerButtons, cardButtons, feedbackButtons].filter(Boolean) as HTMLElement[];
+    const idsToHide = [
+        'interactive-buttons-header', 
+        'interactive-buttons-card', 
+        'feedback-buttons-container'
+    ];
+    const elementsToHide: HTMLElement[] = idsToHide.map(id => document.getElementById(id)).filter(Boolean) as HTMLElement[];
+    const originalDisplays = new Map<HTMLElement, string>();
 
     toast({ title: 'Generando PDF...', description: 'Esto puede tardar un momento.' });
-    
-    elementsToHide.forEach(el => el.style.display = 'none');
+
+    elementsToHide.forEach(el => {
+        originalDisplays.set(el, el.style.display);
+        el.style.display = 'none';
+    });
 
     try {
         const canvas = await html2canvas(reportElement, { scale: 2, useCORS: true });
@@ -154,7 +159,9 @@ export default function StudentProfilePage() {
             description: "No se pudo crear el archivo. Inténtalo de nuevo."
         });
     } finally {
-        elementsToHide.forEach(el => el.style.display = 'flex');
+        elementsToHide.forEach(el => {
+            el.style.display = originalDisplays.get(el) || '';
+        });
     }
   };
 
@@ -265,7 +272,7 @@ export default function StudentProfilePage() {
                             <p className="flex items-center gap-2"><User className="h-4 w-4 text-primary" /> Tutor: {student.tutorName || 'No registrado'}</p>
                             <p className="flex items-center gap-2"><Phone className="h-4 w-4 text-primary" /> Tel. Tutor: {student.tutorPhone || 'No registrado'}</p>
                         </div>
-                         <div id="interactive-buttons-container" className="mt-4 flex flex-wrap gap-2">
+                         <div id="interactive-buttons-card" className="mt-4 flex flex-wrap gap-2">
                             <Button variant="outline" size="sm" onClick={() => setIsLogOpen(true)}><MessageSquare className="mr-2"/>Ver Bitácora</Button>
                             <Button variant="secondary" size="sm" onClick={() => setIsWhatsAppOpen(true)}>Enviar informe vía WhatsApp</Button>
                         </div>
