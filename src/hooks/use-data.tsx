@@ -323,12 +323,10 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }, [userKey]);
     
     useEffect(() => {
-        if (isInitialized) {
+        if (isInitialized && groups.length > 0) {
             const groupExists = groups.some(g => g.id === activeGroupId);
-            if (activeGroupId && !groupExists) {
-                setActiveGroupId(groups.length > 0 ? groups[0].id : null);
-            } else if (!activeGroupId && groups.length > 0) {
-                setActiveGroupId(groups[0].id)
+            if (!activeGroupId || !groupExists) {
+                setActiveGroupId(groups[0].id);
             }
         }
     }, [groups, activeGroupId, isInitialized, setActiveGroupId]);
