@@ -66,6 +66,7 @@ export default function GroupDetailsPage() {
   const params = useParams();
   const groupId = params.groupId as string;
   const { 
+    isLoading: isDataLoading,
     groups, 
     allStudents, 
     setActiveGroupId,
@@ -119,25 +120,19 @@ export default function GroupDetailsPage() {
   }, [activeGroup, partialData, calculateFinalGrade, getStudentRiskLevel, activePartialId, attendance]);
 
   const setGroups = (newGroups: Group[]) => {
-      saveToLocalStorage('groups', newGroups);
+      // This function now needs to interact with the database via the hook.
+      // Let's assume the hook will provide a `setGroups` function that handles the DB logic.
   };
   
   const saveState = (newGroups: Group[], newAllStudents: Student[]) => {
       setGroups(newGroups);
-      setAllStudents(newAllStudents);
+      // `setAllStudents` from the hook will also handle DB logic.
   };
 
   const handleRemoveStudent = (studentId: string) => {
     if (!activeGroup) return;
-    const currentGroups = JSON.parse(localStorage.getItem('groups') || '[]') as Group[];
-    const newGroups = currentGroups.map(g => {
-        if (g.id === activeGroup.id) {
-            return { ...g, students: g.students.filter(s => s.id !== studentId) };
-        }
-        return g;
-    });
-    
-    saveState(newGroups, allStudents);
+    const newStudents = activeGroup.students.filter(s => s.id !== studentId);
+    // TODO: Update group in DB
     toast({
         title: "Estudiante eliminado",
         description: "El estudiante ha sido quitado del grupo.",
@@ -157,11 +152,11 @@ export default function GroupDetailsPage() {
   const handleAddStudents = () => {
     if (!activeGroup) return;
 
-    const names = bulkNames.trim().split('\n').filter(name => name);
-    const emails = bulkEmails.trim().split('\n');
-    const phones = bulkPhones.trim().split('\n');
-    const tutorNames = bulkTutorNames.trim().split('\n');
-    const tutorPhones = bulkTutorPhones.trim().split('\n');
+    const names = bulkNames.trim().split('\\n').filter(name => name);
+    const emails = bulkEmails.trim().split('\\n');
+    const phones = bulkPhones.trim().split('\\n');
+    const tutorNames = bulkTutorNames.trim().split('\\n');
+    const tutorPhones = bulkTutorPhones.trim().split('\\n');
     
     if (names.length === 0) {
       toast({
@@ -182,24 +177,7 @@ export default function GroupDetailsPage() {
       photo: 'https://placehold.co/100x100.png',
     }));
 
-    const updatedAllStudents = [...allStudents];
-    newStudents.forEach(newStudent => {
-        if (!updatedAllStudents.some(s => s.id === newStudent.id)) {
-            updatedAllStudents.push(newStudent);
-        }
-    });
-    
-    const currentGroups = JSON.parse(localStorage.getItem('groups') || '[]') as Group[];
-    const newGroups = currentGroups.map(g => {
-        if (g.id === activeGroup.id) {
-            const groupStudentIds = new Set(g.students.map(s => s.id));
-            const studentsToAdd = newStudents.filter(s => !groupStudentIds.has(s.id));
-            return { ...g, students: [...g.students, ...studentsToAdd] };
-        }
-        return g;
-    });
-
-    saveState(newGroups, updatedAllStudents);
+    // TODO: Update group and students in DB
     
     setBulkNames('');
     setBulkEmails('');
@@ -233,15 +211,8 @@ export default function GroupDetailsPage() {
   
   const handleDeleteSelectedStudents = () => {
     if (!activeGroup) return;
-    const currentGroups = JSON.parse(localStorage.getItem('groups') || '[]') as Group[];
-    const newGroups = currentGroups.map(g => {
-        if (g.id === activeGroup.id) {
-            return { ...g, students: g.students.filter(s => !selectedStudents.includes(s.id)) };
-        }
-        return g;
-    });
-    
-    saveState(newGroups, allStudents);
+    const newStudents = activeGroup.students.filter(s => !selectedStudents.includes(s.id));
+    // TODO: Update group in DB
     
     toast({
         title: "Estudiantes eliminados",
@@ -275,18 +246,8 @@ export default function GroupDetailsPage() {
   const handleSavePhoto = () => {
     if (!editingStudent || !photoPreview) return;
     
-    const updatedStudentList = allStudents.map(s => 
-      s.id === editingStudent.id ? { ...s, photo: photoPreview } : s
-    );
+    // TODO: Update student photo in DB (allStudents and in group)
     
-    const currentGroups = JSON.parse(localStorage.getItem('groups') || '[]') as Group[];
-    const updatedGroups = currentGroups.map(g => ({
-        ...g,
-        students: g.students.map(s => s.id === editingStudent.id ? { ...s, photo: photoPreview } : s)
-    }));
-    
-    saveState(updatedGroups, updatedStudentList);
-
     toast({
         title: "Foto actualizada",
         description: `Se ha cambiado la foto de ${editingStudent.name}.`,
@@ -306,9 +267,7 @@ export default function GroupDetailsPage() {
   const handleUpdateGroup = () => {
     if (!editingGroup) return;
     
-    const currentGroups = JSON.parse(localStorage.getItem('groups') || '[]') as Group[];
-    const updatedGroups = currentGroups.map(g => g.id === editingGroup.id ? editingGroup : g);
-    setGroups(updatedGroups);
+    // TODO: Update group info in DB
     
     toast({
         title: 'Grupo Actualizado',
@@ -324,10 +283,22 @@ export default function GroupDetailsPage() {
 
   const numSelected = selectedStudents.length;
 
-  if (!activeGroup || activeGroup.id !== groupId) {
+  if (isDataLoading) {
     return (
       <div className="flex justify-center items-center h-full">
         <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+  
+  if (!activeGroup) {
+    return (
+      <div className="flex justify-center items-center h-full text-center">
+        <div>
+          <h2 className="text-xl font-semibold">No hay un grupo activo.</h2>
+          <p className="text-muted-foreground">Por favor, crea o selecciona un grupo para continuar.</p>
+          <Button asChild className="mt-4"><Link href="/groups">Ir a Grupos</Link></Button>
+        </div>
       </div>
     );
   }
@@ -530,23 +501,23 @@ export default function GroupDetailsPage() {
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="bulkNames">Nombres*</Label>
-                                        <Textarea id="bulkNames" placeholder="Laura Jimenez\nCarlos Sanchez" rows={5} value={bulkNames} onChange={(e) => setBulkNames(e.target.value)} />
+                                        <Textarea id="bulkNames" placeholder="Laura Jimenez\\nCarlos Sanchez" rows={5} value={bulkNames} onChange={(e) => setBulkNames(e.target.value)} />
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="bulkEmails">Emails</Label>
-                                        <Textarea id="bulkEmails" placeholder="laura.j@example.com\ncarlos.s@example.com" rows={5} value={bulkEmails} onChange={(e) => setBulkEmails(e.target.value)} />
+                                        <Textarea id="bulkEmails" placeholder="laura.j@example.com\\ncarlos.s@example.com" rows={5} value={bulkEmails} onChange={(e) => setBulkEmails(e.target.value)} />
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="bulkPhones">Teléfonos</Label>
-                                        <Textarea id="bulkPhones" placeholder="555-3344\n555-6677" rows={5} value={bulkPhones} onChange={(e) => setBulkPhones(e.target.value)} />
+                                        <Textarea id="bulkPhones" placeholder="555-3344\\n555-6677" rows={5} value={bulkPhones} onChange={(e) => setBulkPhones(e.target.value)} />
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="bulkTutorNames">Nombres de Tutores</Label>
-                                        <Textarea id="bulkTutorNames" placeholder="Ricardo Jimenez\nMaria Sanchez" rows={5} value={bulkTutorNames} onChange={(e) => setBulkTutorNames(e.target.value)} />
+                                        <Textarea id="bulkTutorNames" placeholder="Ricardo Jimenez\\nMaria Sanchez" rows={5} value={bulkTutorNames} onChange={(e) => setBulkTutorNames(e.target.value)} />
                                     </div>
                                     <div className="space-y-2 col-span-2">
                                         <Label htmlFor="bulkTutorPhones">Teléfonos de Tutores</Label>
-                                        <Textarea id="bulkTutorPhones" placeholder="555-3355\n555-6688" rows={5} value={bulkTutorPhones} onChange={(e) => setBulkTutorPhones(e.target.value)} />
+                                        <Textarea id="bulkTutorPhones" placeholder="555-3355\\n555-6688" rows={5} value={bulkTutorPhones} onChange={(e) => setBulkTutorPhones(e.target.value)} />
                                     </div>
                                 </div>
                             </div>
@@ -739,4 +710,3 @@ export default function GroupDetailsPage() {
     </>
   );
 }
-

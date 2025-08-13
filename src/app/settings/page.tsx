@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -19,7 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ThemeSwitcher, themes } from '@/components/theme-switcher';
 import { Separator } from '@/components/ui/separator';
 import { useData } from '@/hooks/use-data';
-import { Upload, Download, RotateCcw } from 'lucide-react';
+import { Upload, Download, RotateCcw, Loader2 } from 'lucide-react';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -31,38 +30,45 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { auth, db } from '@/lib/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 
 export default function SettingsPage() {
-    const { settings, setSettings } = useData();
+    const { settings, isLoading, setSettings: setSettingsInDb } = useData();
+    const [localSettings, setLocalSettings] = useState(settings);
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
-    const [isClient, setIsClient] = useState(false);
     const { toast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isSaving, setIsSaving] = useState(false);
     
     useEffect(() => {
-        setIsClient(true);
-    }, []);
-
-    useEffect(() => {
-      if(isClient) {
+        setLocalSettings(settings);
         setLogoPreview(settings.logo);
-      }
-    }, [settings.logo, isClient]);
+    }, [settings]);
     
-    const handleSave = () => {
-        const newSettings = { ...settings, logo: logoPreview || '' };
-        setSettings(newSettings);
-        localStorage.setItem('appSettings', JSON.stringify(newSettings));
-        window.dispatchEvent(new Event('storage'));
-        toast({
-            title: 'Ajustes Guardados',
-            description: 'La información ha sido actualizada.',
-        });
+    const handleSave = async () => {
+        if (!auth.currentUser) {
+            toast({variant: "destructive", title: "Error", description: "Debes iniciar sesión."});
+            return;
+        }
+        setIsSaving(true);
+        const newSettings = { ...localSettings, logo: logoPreview || '' };
+        try {
+          await setDoc(doc(db, `users/${auth.currentUser.uid}/settings`, 'app'), newSettings);
+          toast({
+              title: 'Ajustes Guardados',
+              description: 'La información ha sido actualizada.',
+          });
+        } catch (e) {
+          toast({variant: "destructive", title: "Error", description: "No se pudieron guardar los ajustes."})
+        } finally {
+          setIsSaving(false);
+        }
     };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { id, value } = e.target;
-        setSettings(prev => ({ ...prev, [id]: value }));
+        setLocalSettings(prev => ({ ...prev, [id]: value }));
     };
 
     const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -77,104 +83,31 @@ export default function SettingsPage() {
     };
     
     const handleThemeChange = (theme: string) => {
-        setSettings(prev => ({ ...prev, theme }));
+        setLocalSettings(prev => ({ ...prev, theme }));
+        document.body.className = theme;
     };
 
     const handleExportData = () => {
-      try {
-        const backupData: { [key: string]: any } = {};
-        
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key) {
-            const value = localStorage.getItem(key)!;
-            try {
-              backupData[key] = JSON.parse(value);
-            } catch (e) {
-              backupData[key] = value;
-            }
-          }
-        }
-        
-        const jsonString = JSON.stringify(backupData, null, 2);
-        const blob = new Blob([jsonString], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        
-        const link = document.createElement("a");
-        link.href = url;
-        const date = new Date().toISOString().split('T')[0];
-        link.download = `academic-tracker-backup-${date}.json`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        
-        toast({
-          title: "Exportación exitosa",
-          description: "Tus datos han sido guardados.",
-        });
-      } catch (error) {
-        console.error("Error exporting data:", error);
-        toast({
-          variant: "destructive",
-          title: "Error al exportar",
-          description: "No se pudieron exportar los datos.",
-        });
-      }
+      // This needs to be reimplemented to fetch all data from Firestore,
+      // which is a complex operation and best handled by a backend/cloud function.
+      // For now, we'll disable it or show a message.
+      toast({
+        title: "Función no disponible",
+        description: "La exportación de datos desde la nube se añadirá en una futura actualización."
+      });
     };
 
     const handleImportData = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const text = e.target?.result;
-                if (typeof text !== 'string') {
-                    throw new Error("File could not be read");
-                }
-                const backupData = JSON.parse(text);
-
-                // Clear existing user data
-                localStorage.clear();
-
-                // Import new data
-                for (const key in backupData) {
-                    if (Object.prototype.hasOwnProperty.call(backupData, key)) {
-                        const value = backupData[key];
-                        if (typeof value === 'object' && value !== null) {
-                            localStorage.setItem(key, JSON.stringify(value));
-                        } else {
-                            localStorage.setItem(key, value);
-                        }
-                    }
-                }
-                
-                toast({
-                    title: "Importación Exitosa",
-                    description: "Los datos han sido restaurados. La aplicación se recargará.",
-                });
-
-                // Reload to apply changes
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1500);
-
-            } catch (error) {
-                console.error("Error importing data:", error);
-                toast({
-                    variant: "destructive",
-                    title: "Error al importar",
-                    description: "El archivo de respaldo es inválido o está corrupto.",
-                });
-            } finally {
-                if(fileInputRef.current) {
-                    fileInputRef.current.value = '';
-                }
-            }
-        };
-        reader.readAsText(file);
+        // This is also a complex and potentially dangerous operation.
+        // It would require careful data validation and merging.
+        // Disabling for now.
+         toast({
+          title: "Función no disponible",
+          description: "La importación de datos a la nube se añadirá en una futura actualización."
+        });
+        if(fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
     };
 
     const triggerFileSelect = () => {
@@ -182,19 +115,16 @@ export default function SettingsPage() {
     };
 
     const handleResetApp = () => {
-        localStorage.clear();
+        // This should now delete all data for the current user from Firestore.
+        // This is a very destructive action and requires careful implementation.
         toast({
-            title: "Datos Restablecidos",
-            description: "Todos tus datos han sido borrados. La página se recargará."
+            title: "Función no disponible",
+            description: "El reseteo de datos se implementará próximamente."
         });
-        setTimeout(() => {
-            window.location.reload();
-        }, 1500);
     }
 
-
-  if (!isClient) {
-    return null;
+  if (isLoading && !settings.institutionName) {
+    return <div className="flex h-full w-full items-center justify-center"><Loader2 className="mr-2 h-8 w-8 animate-spin" /> Cargando...</div>;
   }
 
   return (
@@ -217,7 +147,7 @@ export default function SettingsPage() {
             <Label htmlFor="institutionName">Nombre de la Institución</Label>
             <Input
               id="institutionName"
-              value={settings.institutionName}
+              value={localSettings.institutionName}
               onChange={handleInputChange}
             />
           </div>
@@ -248,25 +178,28 @@ export default function SettingsPage() {
             </CardDescription>
         </CardHeader>
          <CardContent>
-            <ThemeSwitcher selectedTheme={settings.theme} onThemeChange={handleThemeChange} />
+            <ThemeSwitcher selectedTheme={localSettings.theme} onThemeChange={handleThemeChange} />
         </CardContent>
         <CardFooter className="border-t px-6 py-4">
-          <Button onClick={handleSave}>Guardar Cambios</Button>
+          <Button onClick={handleSave} disabled={isSaving}>
+            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+            Guardar Cambios
+          </Button>
         </CardFooter>
       </Card>
       <Card>
           <CardHeader>
               <CardTitle>Copia de Seguridad y Restauración</CardTitle>
               <CardDescription>
-                  Guarda todos tus datos en un archivo o restaura la aplicación desde uno.
+                  Guarda todos tus datos en un archivo o restaura la aplicación desde uno. (Funcionalidad deshabilitada temporalmente)
               </CardDescription>
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Button onClick={handleExportData} variant="outline">
+              <Button onClick={handleExportData} variant="outline" disabled>
                   <Download className="mr-2 h-4 w-4" />
                   Exportar Mis Datos
               </Button>
-              <Button onClick={triggerFileSelect}>
+              <Button onClick={triggerFileSelect} disabled>
                   <Upload className="mr-2 h-4 w-4" />
                   Importar Mis Datos
               </Button>
@@ -280,7 +213,7 @@ export default function SettingsPage() {
           </CardContent>
            <CardFooter>
                <p className="text-xs text-muted-foreground">
-                  La importación reemplazará todos tus datos actuales. Asegúrate de tener un respaldo si es necesario.
+                  La importación/exportación masiva de datos en la nube requiere una implementación cuidadosa y estará disponible en el futuro.
               </p>
            </CardFooter>
       </Card>
@@ -294,7 +227,7 @@ export default function SettingsPage() {
           <CardContent>
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
-                        <Button variant="destructive">
+                        <Button variant="destructive" disabled>
                             <RotateCcw className="mr-2 h-4 w-4" />
                             Restablecer Mis Datos
                         </Button>
@@ -315,7 +248,7 @@ export default function SettingsPage() {
           </CardContent>
            <CardFooter>
                <p className="text-xs text-muted-foreground">
-                  Si deseas empezar de cero, esta es la opción correcta. Se recomienda exportar tus datos primero.
+                  Esta función eliminará todos tus datos en la nube. Estará disponible próximamente.
               </p>
            </CardFooter>
       </Card>

@@ -26,23 +26,26 @@ import { Label } from '@/components/ui/label';
 import { useData } from '@/hooks/use-data';
 import { Group } from '@/lib/placeholder-data';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, Users, ArrowRight } from 'lucide-react';
+import { PlusCircle, Users, ArrowRight, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { doc, setDoc } from 'firebase/firestore';
+import { db, auth } from '@/lib/firebase';
 
 const cardColors = [
   'bg-card-1', 'bg-card-2', 'bg-card-3', 'bg-card-4', 'bg-card-5'
 ];
 
 export default function GroupsPage() {
-  const { groups, setGroups, setActiveGroupId } = useData();
+  const { groups, setActiveGroupId, isLoading } = useData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [newGroupSubject, setNewGroupSubject] = useState('');
   const [newGroupSemester, setNewGroupSemester] = useState('');
   const [newGroupGroupName, setNewGroupGroupName] = useState('');
   const [newGroupFacilitator, setNewGroupFacilitator] = useState('');
   const { toast } = useToast();
 
-  const handleCreateGroup = () => {
+  const handleCreateGroup = async () => {
     if (!newGroupSubject.trim()) {
       toast({
         variant: 'destructive',
@@ -51,32 +54,52 @@ export default function GroupsPage() {
       });
       return;
     }
+    if (!auth.currentUser) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Debes iniciar sesión.' });
+        return;
+    }
 
+    setIsSubmitting(true);
+    const id = `G${Date.now()}`;
     const newGroup: Group = {
-      id: `G${Date.now()}`,
+      id,
       subject: newGroupSubject.trim(),
       semester: newGroupSemester.trim(),
       groupName: newGroupGroupName.trim(),
       facilitator: newGroupFacilitator.trim(),
       students: [],
     };
+    
+    try {
+        await setDoc(doc(db, `users/${auth.currentUser.uid}/groups`, id), newGroup);
+        toast({
+          title: 'Grupo Creado',
+          description: `El grupo "${newGroup.subject}" ha sido creado exitosamente.`,
+        });
 
-    setGroups([...groups, newGroup]);
-    toast({
-      title: 'Grupo Creado',
-      description: `El grupo "${newGroup.subject}" ha sido creado exitosamente.`,
-    });
-
-    // Reset form and close dialog
-    setNewGroupSubject('');
-    setNewGroupSemester('');
-    setNewGroupGroupName('');
-    setNewGroupFacilitator('');
-    setIsDialogOpen(false);
+        // Reset form and close dialog
+        setNewGroupSubject('');
+        setNewGroupSemester('');
+        setNewGroupGroupName('');
+        setNewGroupFacilitator('');
+        setIsDialogOpen(false);
+    } catch (e) {
+        toast({ variant: 'destructive', title: 'Error al crear', description: 'No se pudo guardar el grupo.' });
+    } finally {
+        setIsSubmitting(false);
+    }
   };
   
   const handleCardClick = (groupId: string) => {
     setActiveGroupId(groupId);
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-full">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
   }
 
   return (
@@ -141,10 +164,13 @@ export default function GroupsPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isSubmitting}>
                 Cancelar
               </Button>
-              <Button onClick={handleCreateGroup}>Crear Grupo</Button>
+              <Button onClick={handleCreateGroup} disabled={isSubmitting}>
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                Crear Grupo
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
