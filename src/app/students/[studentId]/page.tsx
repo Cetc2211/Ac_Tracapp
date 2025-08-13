@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -303,7 +302,7 @@ export default function StudentProfilePage() {
                 <CardHeader>
                     <div className="flex justify-between items-center">
                         <div>
-                            <CardTitle>Feedback y Recomendaciones con IA</CardTitle>
+                            <CardTitle>Recomendaciones y retroalimentación</CardTitle>
                             <CardDescription>Genera un resumen personalizado del rendimiento del estudiante en el <span className='font-bold'>{getPartialLabel(activePartialId)}</span>.</CardDescription>
                         </div>
                         <Button onClick={handleGenerateFeedback} disabled={isGeneratingFeedback}>
