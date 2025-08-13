@@ -675,7 +675,7 @@ export default function GroupDetailsPage() {
                         </Link>
                     </Button>
                     <Button asChild variant="outline">
-                        <Link href={`/groups/${activeGroup.id}/criteria`}>
+                        <Link href={`/grades/${activeGroup.id}/criteria`}>
                             <Edit className="mr-2 h-4 w-4" />
                             Gestionar Criterios
                         </Link>
