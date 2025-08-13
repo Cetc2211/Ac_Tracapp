@@ -171,7 +171,7 @@ export const loadFromLocalStorage = <T,>(key: string, defaultValue: T): T => {
 const saveToLocalStorage = <T,>(key: string, value: T) => {
   if (typeof window === 'undefined') return;
   try {
-    const item = JSON.stringify(value);
+    const item = typeof value === 'string' ? value : JSON.stringify(value);
     window.localStorage.setItem(key, item);
   } catch (error) {
     console.warn(`Error writing to localStorage key “${key}”:`, error);
@@ -206,15 +206,13 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     // Initial data load from localStorage
     useEffect(() => {
-        if (typeof window !== 'undefined') {
-            setAllStudentsState(loadFromLocalStorage('students', []));
-            setAllObservations(loadFromLocalStorage('allObservations', {}));
-            setGroupsState(loadFromLocalStorage('groups', []));
-            setSettings(loadFromLocalStorage('appSettings', defaultSettings));
-            setActiveGroupIdState(loadFromLocalStorage('activeGroupId', null));
-            setActivePartialIdState(loadFromLocalStorage('activePartialId', 'p1'));
-            setIsInitialized(true);
-        }
+        setAllStudentsState(loadFromLocalStorage('students', []));
+        setAllObservations(loadFromLocalStorage('allObservations', {}));
+        setGroupsState(loadFromLocalStorage('groups', []));
+        setSettings(loadFromLocalStorage('appSettings', defaultSettings));
+        setActiveGroupIdState(loadFromLocalStorage('activeGroupId', null));
+        setActivePartialIdState(loadFromLocalStorage('activePartialId', 'p1'));
+        setIsInitialized(true);
     }, []);
     
     const loadPartialData = useCallback(() => {
@@ -292,15 +290,32 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         return calculateDetailedFinalGrade(studentId, forGroupId, forPartialId).finalGrade;
     }, [calculateDetailedFinalGrade]);
 
+    // Derived State
+    const setActiveGroupId = useCallback((groupId: string | null) => {
+        setActiveGroupIdState(groupId);
+        saveToLocalStorage('activeGroupId', groupId);
+        window.dispatchEvent(new Event('storage'));
+    }, []);
+    
+    // Effect to validate activeGroupId when groups change
+    useEffect(() => {
+        if (isInitialized) {
+            const groupExists = groups.some(g => g.id === activeGroupId);
+            if (activeGroupId && !groupExists) {
+                const newActiveId = groups.length > 0 ? groups[0].id : null;
+                setActiveGroupId(newActiveId);
+            } else if (!activeGroupId && groups.length > 0) {
+                 setActiveGroupId(groups[0].id);
+            }
+        }
+    }, [groups, activeGroupId, isInitialized, setActiveGroupId]);
+
+
     const activeGroup = useMemo(() => {
         if (!activeGroupId) return null;
-        const group = groups.find(g => g.id === activeGroupId);
-        if (!group) {
-             setActiveGroupId(groups.length > 0 ? groups[0].id : null);
-             return groups.length > 0 ? groups[0] : null;
-        }
-        return group;
+        return groups.find(g => g.id === activeGroupId) || null;
     }, [groups, activeGroupId]);
+
 
     const activeStudentsInGroups = useMemo(() => {
         const studentSet = new Set<Student>();
@@ -374,17 +389,9 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         setDataVersion(v => v + 1);
     }
     
-    const setActiveGroupId = (groupId: string | null) => {
-        setActiveGroupIdState(groupId);
-        saveToLocalStorage('activeGroupId', groupId);
-        window.dispatchEvent(new Event('storage'));
-        setDataVersion(v => v+1);
-    };
-
     const setActivePartialId = (partialId: PartialId) => {
         setActivePartialIdState(partialId);
         saveToLocalStorage('activePartialId', partialId);
-        setDataVersion(v => v+1);
     };
 
     const deleteGroup = (groupId: string) => {
@@ -476,7 +483,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             averages[group.id] = groupGrades.length > 0 ? total / groupGrades.length : 0;
         });
         return averages;
-    }, [groups, activePartialId, dataVersion, calculateFinalGrade]);
+    }, [groups, activePartialId, calculateFinalGrade]);
     
     const atRiskStudents: StudentWithRisk[] = useMemo(() => {
         const studentsAtRiskInPartial = new Map<string, StudentWithRisk>();
@@ -494,7 +501,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         });
 
         return Array.from(studentsAtRiskInPartial.values());
-    }, [groups, activePartialId, getStudentRiskLevel, dataVersion, calculateFinalGrade]);
+    }, [groups, activePartialId, getStudentRiskLevel, calculateFinalGrade]);
     
     
     const overallAverageParticipation = useMemo(() => {
@@ -518,7 +525,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             });
         });
         return totalPossibleAttendance > 0 ? Math.round((totalPresents / totalPossibleAttendance) * 100) : 100;
-    }, [groups, dataVersion]);
+    }, [groups]);
 
 
     if (!isInitialized) {
