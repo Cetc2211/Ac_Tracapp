@@ -54,7 +54,7 @@ export default function StudentProfilePage() {
   const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
   const [generatedFeedback, setGeneratedFeedback] = useState<StudentFeedbackOutput | null>(null);
   const [isEditingFeedback, setIsEditingFeedback] = useState(false);
-  const [editedFeedback, setEditedFeedback] = useState<{analysis: string, recommendations: string}>({analysis: '', recommendations: ''});
+  const [editedFeedback, setEditedFeedback] = useState<{feedback: string, recommendations: string}>({feedback: '', recommendations: ''});
   
   const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -170,7 +170,7 @@ export default function StudentProfilePage() {
   const handleEditFeedback = () => {
       if (generatedFeedback) {
           setEditedFeedback({
-              analysis: generatedFeedback.analysis,
+              feedback: generatedFeedback.feedback,
               recommendations: generatedFeedback.recommendations.join('\\n'),
           });
           setIsEditingFeedback(true);
@@ -178,12 +178,14 @@ export default function StudentProfilePage() {
   };
 
   const handleSaveFeedback = () => {
+    if (generatedFeedback) {
       setGeneratedFeedback({
-          analysis: editedFeedback.analysis,
+          feedback: editedFeedback.feedback,
           recommendations: editedFeedback.recommendations.split('\\n').filter(r => r.trim() !== ''),
       });
       setIsEditingFeedback(false);
       toast({ title: 'Feedback actualizado' });
+    }
   };
   
   if (!student) {
@@ -350,8 +352,8 @@ export default function StudentProfilePage() {
                         {isEditingFeedback ? (
                             <div className="p-4 border rounded-md space-y-4">
                                 <div className='space-y-2'>
-                                    <Label htmlFor="editedAnalysis" className="font-bold">Análisis de la Situación:</Label>
-                                    <Textarea id="editedAnalysis" value={editedFeedback.analysis} onChange={(e) => setEditedFeedback(prev => ({...prev, analysis: e.target.value}))} rows={4} />
+                                    <Label htmlFor="editedFeedback" className="font-bold">Feedback General:</Label>
+                                    <Textarea id="editedFeedback" value={editedFeedback.feedback} onChange={(e) => setEditedFeedback(prev => ({...prev, feedback: e.target.value}))} rows={4} />
                                 </div>
                                 <div className='space-y-2'>
                                     <Label htmlFor="editedRecommendations" className="font-bold">Recomendaciones:</Label>
