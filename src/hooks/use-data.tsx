@@ -216,7 +216,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }, []);
     
     const loadPartialData = useCallback(() => {
-        if(activeGroupId) {
+        if (activeGroupId) {
             const keySuffix = `${activeGroupId}_${activePartialId}`;
             setPartialData({
                 criteria: loadFromLocalStorage(`criteria_${keySuffix}`, []),
@@ -227,12 +227,13 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 activityRecords: loadFromLocalStorage(`activityRecords_${keySuffix}`, {}),
             });
         } else {
-            setPartialData({
+             setPartialData({
                 criteria: [], grades: {}, attendance: {},
                 participations: {}, activities: [], activityRecords: {},
             });
         }
     }, [activeGroupId, activePartialId]);
+
 
     useEffect(() => {
         if(isInitialized) {
@@ -294,7 +295,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const setActiveGroupId = useCallback((groupId: string | null) => {
         setActiveGroupIdState(groupId);
         saveToLocalStorage('activeGroupId', groupId);
-        window.dispatchEvent(new Event('storage'));
+        setDataVersion(v => v + 1);
     }, []);
     
     // Effect to validate activeGroupId when groups change
@@ -302,10 +303,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         if (isInitialized) {
             const groupExists = groups.some(g => g.id === activeGroupId);
             if (activeGroupId && !groupExists) {
-                const newActiveId = groups.length > 0 ? groups[0].id : null;
-                setActiveGroupId(newActiveId);
-            } else if (!activeGroupId && groups.length > 0) {
-                 setActiveGroupId(groups[0].id);
+                setActiveGroupId(groups.length > 0 ? groups[0].id : null);
             }
         }
     }, [groups, activeGroupId, isInitialized, setActiveGroupId]);

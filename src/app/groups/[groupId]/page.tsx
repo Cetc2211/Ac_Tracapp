@@ -68,18 +68,17 @@ export default function GroupDetailsPage() {
   const { 
     groups, 
     allStudents, 
-    setGroups, 
+    setActiveGroupId,
     setAllStudents, 
     activeGroup, 
     partialData,
-    atRiskStudents,
     deleteGroup,
     activePartialId,
     setActivePartialId,
     calculateFinalGrade,
     getStudentRiskLevel,
   } = useData();
-
+  
   const { criteria, attendance } = partialData;
 
   const router = useRouter();
@@ -103,16 +102,26 @@ export default function GroupDetailsPage() {
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   
+  useEffect(() => {
+    if (groupId) {
+      setActiveGroupId(groupId);
+    }
+  }, [groupId, setActiveGroupId]);
+
   const studentRiskLevels = useMemo(() => {
     if (!activeGroup) return {};
     const riskMap: {[studentId: string]: CalculatedRisk} = {};
     activeGroup.students.forEach(s => {
-      const finalGrade = calculateFinalGrade(s.id);
+      const finalGrade = calculateFinalGrade(s.id, activeGroup.id, activePartialId);
       riskMap[s.id] = getStudentRiskLevel(finalGrade, attendance, s.id);
     });
     return riskMap;
-  }, [activeGroup, partialData, calculateFinalGrade, getStudentRiskLevel]);
+  }, [activeGroup, partialData, calculateFinalGrade, getStudentRiskLevel, activePartialId, attendance]);
 
+  const setGroups = (newGroups: Group[]) => {
+      saveToLocalStorage('groups', newGroups);
+  };
+  
   const saveState = (newGroups: Group[], newAllStudents: Student[]) => {
       setGroups(newGroups);
       setAllStudents(newAllStudents);
@@ -120,7 +129,8 @@ export default function GroupDetailsPage() {
 
   const handleRemoveStudent = (studentId: string) => {
     if (!activeGroup) return;
-    const newGroups = groups.map(g => {
+    const currentGroups = JSON.parse(localStorage.getItem('groups') || '[]') as Group[];
+    const newGroups = currentGroups.map(g => {
         if (g.id === activeGroup.id) {
             return { ...g, students: g.students.filter(s => s.id !== studentId) };
         }
@@ -178,8 +188,9 @@ export default function GroupDetailsPage() {
             updatedAllStudents.push(newStudent);
         }
     });
-
-    const newGroups = groups.map(g => {
+    
+    const currentGroups = JSON.parse(localStorage.getItem('groups') || '[]') as Group[];
+    const newGroups = currentGroups.map(g => {
         if (g.id === activeGroup.id) {
             const groupStudentIds = new Set(g.students.map(s => s.id));
             const studentsToAdd = newStudents.filter(s => !groupStudentIds.has(s.id));
@@ -222,7 +233,8 @@ export default function GroupDetailsPage() {
   
   const handleDeleteSelectedStudents = () => {
     if (!activeGroup) return;
-    const newGroups = groups.map(g => {
+    const currentGroups = JSON.parse(localStorage.getItem('groups') || '[]') as Group[];
+    const newGroups = currentGroups.map(g => {
         if (g.id === activeGroup.id) {
             return { ...g, students: g.students.filter(s => !selectedStudents.includes(s.id)) };
         }
@@ -267,7 +279,8 @@ export default function GroupDetailsPage() {
       s.id === editingStudent.id ? { ...s, photo: photoPreview } : s
     );
     
-    const updatedGroups = groups.map(g => ({
+    const currentGroups = JSON.parse(localStorage.getItem('groups') || '[]') as Group[];
+    const updatedGroups = currentGroups.map(g => ({
         ...g,
         students: g.students.map(s => s.id === editingStudent.id ? { ...s, photo: photoPreview } : s)
     }));
@@ -293,7 +306,8 @@ export default function GroupDetailsPage() {
   const handleUpdateGroup = () => {
     if (!editingGroup) return;
     
-    const updatedGroups = groups.map(g => g.id === editingGroup.id ? editingGroup : g);
+    const currentGroups = JSON.parse(localStorage.getItem('groups') || '[]') as Group[];
+    const updatedGroups = currentGroups.map(g => g.id === editingGroup.id ? editingGroup : g);
     setGroups(updatedGroups);
     
     toast({
@@ -310,7 +324,7 @@ export default function GroupDetailsPage() {
 
   const numSelected = selectedStudents.length;
 
-  if (!activeGroup) {
+  if (!activeGroup || activeGroup.id !== groupId) {
     return (
       <div className="flex justify-center items-center h-full">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -725,3 +739,4 @@ export default function GroupDetailsPage() {
     </>
   );
 }
+
