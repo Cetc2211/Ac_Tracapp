@@ -3,7 +3,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { Student, Group, PartialId, students as initialStudents, groups as initialGroups, StudentObservation } from '@/lib/placeholder-data';
+import { Student, Group, PartialId, StudentObservation } from '@/lib/placeholder-data';
 
 // TYPE DEFINITIONS
 export type EvaluationCriteria = {
@@ -201,8 +201,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     
     // --- INITIAL DATA LOADING ---
     useEffect(() => {
-        setAllStudentsState(loadFromLocalStorage<Student[]>('students', initialStudents));
-        const loadedGroups = loadFromLocalStorage<Group[]>('groups', initialGroups);
+        setAllStudentsState(loadFromLocalStorage<Student[]>('students', []));
+        const loadedGroups = loadFromLocalStorage<Group[]>('groups', []);
         setGroupsState(loadedGroups);
         setAllObservations(loadFromLocalStorage<{[studentId: string]: StudentObservation[]}>('allObservations', {}));
         
@@ -502,7 +502,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             });
             const newState = { ...prev, [studentId]: newObservations };
             saveToLocalStorage('allObservations', newState);
-            return newState;
+return newState;
         });
     }
 
