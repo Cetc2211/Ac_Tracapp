@@ -8,7 +8,7 @@ import {
   signInWithEmailAndPassword,
   updateProfile,
 } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import {
   Card,
@@ -26,6 +26,7 @@ import { AppLogo } from '@/components/app-logo';
 import { Loader2, Clapperboard, Images, Star } from 'lucide-react';
 import Image from 'next/image';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+import { doc, setDoc } from 'firebase/firestore';
 
 export default function AuthenticationPage() {
   const [loginEmail, setLoginEmail] = useState('');
@@ -84,6 +85,13 @@ export default function AuthenticationPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, registerEmail, registerPassword);
       await updateProfile(userCredential.user, { displayName: registerName.trim() });
       
+      // Initialize settings for the new user
+      await setDoc(doc(db, `users/${userCredential.user.uid}/settings`, 'app'), {
+        institutionName: "Mi Institución",
+        logo: "",
+        theme: "theme-default"
+      });
+
       toast({
         title: 'Cuenta Creada',
         description: '¡Bienvenido! Has sido registrado exitosamente.',
