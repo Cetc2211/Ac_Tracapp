@@ -216,6 +216,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             if (firebaseUser) {
                 if (!user || user.uid !== firebaseUser.uid) {
                     setUser(firebaseUser);
+                } else {
+                    setIsLoading(false);
                 }
             } else {
                 setUser(null);
@@ -275,7 +277,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             }),
         ];
     
-        // Only set loading to false after initial core data (profile/settings) is checked
         Promise.all([
           getDoc(doc(db, `${prefix}/profile`, 'info')),
           getDoc(doc(db, `${prefix}/settings`, 'app')),
