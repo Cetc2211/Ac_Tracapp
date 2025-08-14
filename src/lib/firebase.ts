@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getAuth, Auth } from 'firebase/auth';
+import { getFirestore, Firestore } from 'firebase/firestore';
 
 const firebaseConfig = {
   "projectId": "academic-tracker-qeoxi",
@@ -13,8 +13,8 @@ const firebaseConfig = {
 };
 
 let app: FirebaseApp;
-let auth: ReturnType<typeof getAuth>;
-let db: ReturnType<typeof getFirestore>;
+let auth: Auth;
+let db: Firestore;
 
 const initializeFirebase = (): Promise<void> => {
     return new Promise((resolve, reject) => {
@@ -28,6 +28,7 @@ const initializeFirebase = (): Promise<void> => {
             db = getFirestore(app);
             resolve();
         } catch (error) {
+            console.error("Firebase initialization failed", error);
             reject(error);
         }
     });

@@ -18,15 +18,12 @@ export default function RootLayout({
   const [isFirebaseReady, setIsFirebaseReady] = useState(false);
 
   useEffect(() => {
-    // initializeFirebase() devuelve una promesa, asegurando que podamos esperar
-    // a que la inicialización esté completa.
     initializeFirebase()
       .then(() => {
         setIsFirebaseReady(true);
       })
       .catch((error) => {
         console.error("Firebase initialization failed:", error);
-        // Opcionalmente, mostrar un estado de error al usuario
       });
   }, []);
 
