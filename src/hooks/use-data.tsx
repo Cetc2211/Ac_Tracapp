@@ -189,21 +189,19 @@ const ensureInitialUserData = async (user: User) => {
     const settingsDocRef = doc(db, `users/${user.uid}/settings`, 'app');
     
     const profileSnap = await getDoc(userProfileRef);
-    const settingsSnap = await getDoc(settingsDocRef);
     
-    if (!profileSnap.exists() || !settingsSnap.exists()) {
+    if (!profileSnap.exists()) {
         const batch = writeBatch(db);
         
-        if (!profileSnap.exists()) {
-            const pendingName = localStorage.getItem('pending_registration_name');
-            batch.set(userProfileRef, {
-                name: pendingName || user.email?.split('@')[0] || "Usuario",
-                email: user.email,
-                photoURL: user.photoURL || ""
-            });
-            if(pendingName) localStorage.removeItem('pending_registration_name');
-        }
-
+        const pendingName = localStorage.getItem('pending_registration_name');
+        batch.set(userProfileRef, {
+            name: pendingName || user.email?.split('@')[0] || "Usuario",
+            email: user.email,
+            photoURL: user.photoURL || ""
+        });
+        if(pendingName) localStorage.removeItem('pending_registration_name');
+        
+        const settingsSnap = await getDoc(settingsDocRef);
         if (!settingsSnap.exists()) {
             batch.set(settingsDocRef, defaultSettings);
         }
@@ -241,9 +239,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
-            setIsLoading(true);
             if (firebaseUser) {
-                await ensureInitialUserData(firebaseUser);
                 setUser(firebaseUser);
             } else {
                  setUser(null);
@@ -265,6 +261,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             setIsLoading(false);
             return;
         }
+        
+        setIsLoading(true);
 
         const prefix = `users/${user.uid}`;
         const unsubscribers = [
@@ -302,10 +300,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             onSnapshot(doc(db, `${prefix}/profile`, 'info'), (doc) => {
                 if (doc.exists()) {
                      setUserProfile(doc.data() as UserProfile);
-                } else {
-                     setUserProfile(defaultProfile);
                 }
-                setIsLoading(false);
+                setIsLoading(false); // We can stop loading here as profile is crucial
             }),
              onSnapshot(doc(db, `${prefix}/settings`, 'app'), (doc) => {
                 if (doc.exists()) {
@@ -316,6 +312,9 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             }),
         ];
         
+        // This is the crucial part for new user registration
+        ensureInitialUserData(user);
+
         return () => unsubscribers.forEach(unsub => unsub());
     
     }, [user, activeGroupId]);
@@ -600,5 +599,3 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
-
-    

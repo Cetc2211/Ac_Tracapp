@@ -7,7 +7,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import {
   Card,
@@ -25,6 +25,7 @@ import { AppLogo } from '@/components/app-logo';
 import { Loader2, Clapperboard, Images, Star } from 'lucide-react';
 import Image from 'next/image';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+import { setDoc, doc } from 'firebase/firestore';
 
 export default function AuthenticationPage() {
   const [loginEmail, setLoginEmail] = useState('');
@@ -73,14 +74,12 @@ export default function AuthenticationPage() {
     
     setIsRegistering(true);
     try {
-      // Set the pending name in localStorage BEFORE creating the user.
-      // The useData hook will pick this up on first load after registration.
+      // The onAuthStateChanged listener in useData will handle the profile creation.
+      // We just need to store the name temporarily so the hook can pick it up.
       localStorage.setItem('pending_registration_name', registerName.trim());
 
       await createUserWithEmailAndPassword(auth, registerEmail, registerPassword);
       
-      // The onAuthStateChanged listener in useData will handle the rest.
-      // We just need to redirect.
       toast({ title: 'Cuenta Creada', description: '¡Bienvenido! Redirigiendo al dashboard...' });
       router.push('/dashboard');
 
@@ -263,5 +262,3 @@ export default function AuthenticationPage() {
     </div>
   );
 }
-
-    
