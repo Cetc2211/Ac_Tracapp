@@ -230,10 +230,14 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }, []);
 
     useEffect(() => {
-        if (!user) return;
-    
+        if (!user) {
+            setIsLoading(false);
+            return;
+        }
+
+        setIsLoading(true);
         const prefix = `users/${user.uid}`;
-    
+
         const unsubscribers = [
             onSnapshot(collection(db, `${prefix}/groups`), (snapshot) => {
                 const fetchedGroups = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Group));
@@ -241,7 +245,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 if (!activeGroupId && fetchedGroups.length > 0) {
                     setActiveGroupIdState(fetchedGroups[0].id);
                 }
-                setIsLoading(false);
             }),
             onSnapshot(collection(db, `${prefix}/students`), (snapshot) => {
                 setAllStudentsState(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student)));
@@ -267,15 +270,29 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 if (doc.exists()) {
                      setUserProfile(doc.data() as UserProfile);
                 } else {
-                     setUserProfile({ ...defaultProfile, email: user.email || '' });
+                     // If profile doc doesn't exist for a logged-in user, create it.
+                     const newProfile = { name: user.displayName || "Nuevo Usuario", email: user.email || "", photoURL: user.photoURL || "" };
+                     setDoc(doc.ref, newProfile);
+                     setUserProfile(newProfile);
                 }
             }),
              onSnapshot(doc(db, `${prefix}/settings`, 'app'), (doc) => {
                 if (doc.exists()) {
                     setSettingsState(doc.data() as typeof settings);
+                } else {
+                    setDoc(doc.ref, defaultSettings);
+                    setSettingsState(defaultSettings);
                 }
             }),
         ];
+
+        // A one-time check to ensure all initial data is loaded before setting isLoading to false
+        const checkInitialLoad = async () => {
+            await getDoc(doc(db, `${prefix}/profile`, 'info'));
+            await getDoc(doc(db, `${prefix}/settings`, 'app'));
+            setIsLoading(false);
+        };
+        checkInitialLoad();
         
         return () => unsubscribers.forEach(unsub => unsub());
     

@@ -16,17 +16,18 @@ import Link from 'next/link';
 import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useData } from '@/hooks/use-data';
+import { Skeleton } from './ui/skeleton';
 
 export function UserNav() {
   const router = useRouter();
-  const { userProfile } = useData();
+  const { userProfile, isLoading } = useData();
 
   const handleLogout = async () => {
     await auth.signOut();
     router.push('/');
   }
 
-  const getInitials = (name: string | null) => {
+  const getInitials = (name: string | null | undefined) => {
     if(!name) return 'U';
     const names = name.split(' ');
     if (names.length > 1) {
@@ -35,26 +36,30 @@ export function UserNav() {
     return name.substring(0,2).toUpperCase();
   }
   
-  if (!userProfile) {
-    return null;
+  if (isLoading) {
+    return <Skeleton className="h-8 w-8 rounded-full" />;
   }
+  
+  const displayName = userProfile?.name || "Usuario";
+  const displayEmail = userProfile?.email || "";
+  const displayPhoto = userProfile?.photoURL || "";
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-8 w-8">
-            <AvatarImage src={userProfile.photoURL || ''} alt={userProfile.name || 'Usuario'} data-ai-hint="user avatar" />
-            <AvatarFallback>{getInitials(userProfile.name)}</AvatarFallback>
+            <AvatarImage src={displayPhoto} alt={displayName} data-ai-hint="user avatar" />
+            <AvatarFallback>{getInitials(displayName)}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{userProfile.name || 'Usuario'}</p>
+            <p className="text-sm font-medium leading-none">{displayName}</p>
             <p className="text-xs leading-none text-muted-foreground">
-              {userProfile.email}
+              {displayEmail}
             </p>
           </div>
         </DropdownMenuLabel>
