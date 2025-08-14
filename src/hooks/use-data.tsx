@@ -183,32 +183,51 @@ const defaultProfile = {
     email: "",
     photoURL: ""
 };
-
 const ensureInitialUserData = async (user: User) => {
+    // Asegurarse de que el usuario esté autenticado antes de intentar escribir en Firestore
+    if (!user) {
+        console.warn("ensureInitialUserData called without an authenticated user.");
+        return;
+    }
+
     const userProfileRef = doc(db, `users/${user.uid}/profile`, 'info');
     const settingsDocRef = doc(db, `users/${user.uid}/settings`, 'app');
-    
-    const profileSnap = await getDoc(userProfileRef);
-    
-    if (!profileSnap.exists()) {
-        const batch = writeBatch(db);
-        
-        const pendingName = localStorage.getItem('pending_registration_name');
-        batch.set(userProfileRef, {
-            name: pendingName || user.email?.split('@')[0] || "Usuario",
-            email: user.email,
-            photoURL: user.photoURL || ""
-        });
-        if(pendingName) localStorage.removeItem('pending_registration_name');
-        
-        const settingsSnap = await getDoc(settingsDocRef);
-        if (!settingsSnap.exists()) {
-            batch.set(settingsDocRef, defaultSettings);
+
+    try {
+        const profileSnap = await getDoc(userProfileRef);
+
+        if (!profileSnap.exists()) {
+            const batch = writeBatch(db);
+
+            const pendingName = localStorage.getItem('pending_registration_name');
+            batch.set(userProfileRef, {
+                name: pendingName || user.email?.split('@')[0] || "Usuario",
+                email: user.email,
+                photoURL: user.photoURL || ""
+            });
+            if(pendingName) localStorage.removeItem('pending_registration_name');
+
+            const settingsSnap = await getDoc(settingsDocRef);
+            if (!settingsSnap.exists()) {
+                batch.set(settingsDocRef, defaultSettings);
+            }
+
+            try {
+                await batch.commit();
+                console.log(`Initial user data successfully written for user: ${user.uid}`);
+            } catch (batchError) {
+                console.error(`Error committing batch for user ${user.uid}:`, batchError);
+                // Aquí podrías añadir lógica adicional, como reintentar o notificar al usuario
+            }
+        } else {
+             console.log(`User profile already exists for user: ${user.uid}. Skipping initial data write.`);
         }
-        
-        await batch.commit();
+    } catch (getError) {
+        console.error(`Error fetching user profile or settings for user ${user.uid}:`, getError);
+        // Manejar errores al obtener documentos (aunque menos probable que fallen por permisos en este escenario)
     }
 };
+
 
 
 // DATA PROVIDER COMPONENT
@@ -240,6 +259,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
             if (firebaseUser) {
+                await ensureInitialUserData(firebaseUser); // Ensure data *after* auth state is confirmed
                 setUser(firebaseUser);
             } else {
                  setUser(null);
@@ -311,9 +331,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 }
             }),
         ];
-        
-        // This is the crucial part for new user registration
-        ensureInitialUserData(user);
 
         return () => unsubscribers.forEach(unsub => unsub());
     
