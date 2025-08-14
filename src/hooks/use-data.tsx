@@ -20,6 +20,7 @@ import {
   serverTimestamp,
   Timestamp
 } from 'firebase/firestore';
+import { setupNewUser } from '@/ai/flows/user-setup';
 
 
 // TYPE DEFINITIONS
@@ -178,56 +179,42 @@ const defaultSettings = {
     logo: "",
     theme: "theme-default"
 };
-const defaultProfile = {
-    name: "Usuario",
-    email: "",
-    photoURL: ""
-};
+
 const ensureInitialUserData = async (user: User) => {
-    // Asegurarse de que el usuario esté autenticado antes de intentar escribir en Firestore
     if (!user) {
-        console.warn("ensureInitialUserData called without an authenticated user.");
+        console.warn("ensureInitialUserData called without a user.");
         return;
     }
 
     const userProfileRef = doc(db, `users/${user.uid}/profile`, 'info');
-    const settingsDocRef = doc(db, `users/${user.uid}/settings`, 'app');
 
     try {
         const profileSnap = await getDoc(userProfileRef);
 
         if (!profileSnap.exists()) {
-            const batch = writeBatch(db);
-
+            console.log(`No profile found for new user ${user.uid}. Creating initial data via server-side flow.`);
             const pendingName = localStorage.getItem('pending_registration_name');
-            batch.set(userProfileRef, {
-                name: pendingName || user.email?.split('@')[0] || "Usuario",
-                email: user.email,
-                photoURL: user.photoURL || ""
+            
+            const result = await setupNewUser({
+                userId: user.uid,
+                email: user.email ?? undefined,
+                displayName: pendingName ?? user.displayName ?? undefined,
+                photoURL: user.photoURL ?? undefined,
             });
-            if(pendingName) localStorage.removeItem('pending_registration_name');
 
-            const settingsSnap = await getDoc(settingsDocRef);
-            if (!settingsSnap.exists()) {
-                batch.set(settingsDocRef, defaultSettings);
-            }
+            if (pendingName) localStorage.removeItem('pending_registration_name');
 
-            try {
-                await batch.commit();
-                console.log(`Initial user data successfully written for user: ${user.uid}`);
-            } catch (batchError) {
-                console.error(`Error committing batch for user ${user.uid}:`, batchError);
-                // Aquí podrías añadir lógica adicional, como reintentar o notificar al usuario
+            if (!result.success) {
+                console.error("Server-side flow to create initial user data failed.");
+                // Optionally, notify the user that setup failed and they should retry.
+            } else {
+                 console.log("Server-side flow successfully initiated user data creation.");
             }
-        } else {
-             console.log(`User profile already exists for user: ${user.uid}. Skipping initial data write.`);
         }
-    } catch (getError) {
-        console.error(`Error fetching user profile or settings for user ${user.uid}:`, getError);
-        // Manejar errores al obtener documentos (aunque menos probable que fallen por permisos en este escenario)
+    } catch (error) {
+        console.error(`Error in ensureInitialUserData for user ${user.uid}:`, error);
     }
 };
-
 
 
 // DATA PROVIDER COMPONENT
@@ -259,8 +246,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
             if (firebaseUser) {
-                await ensureInitialUserData(firebaseUser); // Ensure data *after* auth state is confirmed
                 setUser(firebaseUser);
+                await ensureInitialUserData(firebaseUser);
             } else {
                  setUser(null);
                  setGroupsState([]);
@@ -321,7 +308,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 if (doc.exists()) {
                      setUserProfile(doc.data() as UserProfile);
                 }
-                setIsLoading(false); // We can stop loading here as profile is crucial
+                // We don't set loading to false here, to ensure all initial data streams are ready.
             }),
              onSnapshot(doc(db, `${prefix}/settings`, 'app'), (doc) => {
                 if (doc.exists()) {
@@ -329,6 +316,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 } else {
                      setSettingsState(defaultSettings);
                 }
+                setIsLoading(false); // Considered loaded after settings are checked.
             }),
         ];
 
