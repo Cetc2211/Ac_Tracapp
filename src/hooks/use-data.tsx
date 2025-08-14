@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
@@ -19,6 +20,7 @@ import {
   serverTimestamp,
   Timestamp
 } from 'firebase/firestore';
+import { setupNewUser } from '@/ai/flows/user-setup';
 
 
 // TYPE DEFINITIONS
@@ -179,51 +181,28 @@ const defaultSettings = {
 };
 
 const ensureInitialUserData = async (user: User) => {
-    // Asegurarse de que el usuario esté autenticado antes de intentar escribir en Firestore
     if (!user) {
-        console.warn("ensureInitialUserData called without an authenticated user.");
+        console.warn("ensureInitialUserData called without a user.");
         return;
     }
 
-    // Añadir un pequeño retardo para dar tiempo a que el estado de autenticación se propague
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Retardo de 1 segundo
-
     const userProfileRef = doc(db, `users/${user.uid}/profile`, 'info');
-    const settingsDocRef = doc(db, `users/${user.uid}/settings`, 'app');
-
+    
     try {
         const profileSnap = await getDoc(userProfileRef);
-
         if (!profileSnap.exists()) {
-            console.log(`Profile does not exist for ${user.uid}. Creating initial data...`);
-            const batch = writeBatch(db);
-
+            console.log(`User data not found for ${user.uid}. Invoking setup flow...`);
             const pendingName = localStorage.getItem('pending_registration_name');
-            batch.set(userProfileRef, {
-                name: pendingName || user.email?.split('@')[0] || "Usuario",
-                email: user.email,
-                photoURL: user.photoURL || ""
+            await setupNewUser({
+                userId: user.uid,
+                email: user.email || '',
+                displayName: pendingName || user.displayName || '',
+                photoURL: user.photoURL || '',
             });
             if(pendingName) localStorage.removeItem('pending_registration_name');
-
-            const settingsSnap = await getDoc(settingsDocRef);
-            if (!settingsSnap.exists()) {
-                batch.set(settingsDocRef, defaultSettings);
-            }
-
-            try {
-                await batch.commit();
-                console.log(`Initial user data successfully written for user: ${user.uid}`);
-            } catch (batchError) {
-                console.error(`Error committing batch for user ${user.uid}:`, batchError);
-                // Aquí podrías añadir lógica adicional, como reintentar o notificar al usuario
-            }
-        } else {
-             console.log(`User profile already exists for user: ${user.uid}. Skipping initial data write.`);
         }
-    } catch (getError) {
-        console.error(`Error fetching user profile or settings for user ${user.uid}:`, getError);
-        // Manejar errores al obtener documentos (aunque menos probable que fallen por permisos en este escenario)
+    } catch (error) {
+        console.error("Error in ensureInitialUserData:", error);
     }
 };
 
