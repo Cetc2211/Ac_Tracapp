@@ -4,9 +4,9 @@ import './globals.css';
 import { DataProvider } from '@/hooks/use-data';
 import MainLayoutClient from './main-layout-client';
 import { usePathname } from 'next/navigation';
-import { useState, useEffect } from 'react';
-import { initializeFirebase } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
 import { Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 export default function RootLayout({
   children,
@@ -15,19 +15,22 @@ export default function RootLayout({
 }) {
   const pathname = usePathname();
   const isAuthPage = pathname === '/';
-  const [isFirebaseReady, setIsFirebaseReady] = useState(false);
+  const [isAuthReady, setIsAuthReady] = useState(false);
 
   useEffect(() => {
-    initializeFirebase()
-      .then(() => {
-        setIsFirebaseReady(true);
-      })
-      .catch((error) => {
-        console.error("Firebase initialization failed:", error);
-      });
+    // onAuthStateChanged returns an unsubscriber
+    const unsubscribe = auth.onAuthStateChanged(user => {
+      // This callback runs when the initial auth state is determined.
+      // At this point, we know Firebase is initialized and we can proceed.
+      setIsAuthReady(true);
+    });
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
   }, []);
 
-  if (!isFirebaseReady) {
+
+  if (!isAuthReady) {
     return (
         <html lang="es">
             <body>
