@@ -76,7 +76,7 @@ export default function MainLayoutClient({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { settings, activeGroup, activePartialId } = useData();
+  const { settings, activeGroup, activePartialId, isLoading: isDataLoading } = useData();
   const [isClient, setIsClient] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
@@ -104,7 +104,7 @@ export default function MainLayoutClient({
     }
   }, [settings.theme]);
   
-  if (isAuthLoading) {
+  if (isAuthLoading || isDataLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <Loader2 className="mr-2 h-8 w-8 animate-spin" />

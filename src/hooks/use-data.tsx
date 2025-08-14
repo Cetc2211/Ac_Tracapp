@@ -184,6 +184,34 @@ const defaultProfile = {
     photoURL: ""
 };
 
+const ensureInitialUserData = async (user: User) => {
+    const userProfileRef = doc(db, `users/${user.uid}/profile`, 'info');
+    const settingsDocRef = doc(db, `users/${user.uid}/settings`, 'app');
+    
+    const profileSnap = await getDoc(userProfileRef);
+    const settingsSnap = await getDoc(settingsDocRef);
+    
+    if (!profileSnap.exists() || !settingsSnap.exists()) {
+        const batch = writeBatch(db);
+        
+        if (!profileSnap.exists()) {
+            const pendingName = localStorage.getItem('pending_registration_name');
+            batch.set(userProfileRef, {
+                name: pendingName || user.email?.split('@')[0] || "Usuario",
+                email: user.email,
+                photoURL: user.photoURL || ""
+            });
+            if(pendingName) localStorage.removeItem('pending_registration_name');
+        }
+
+        if (!settingsSnap.exists()) {
+            batch.set(settingsDocRef, defaultSettings);
+        }
+        
+        await batch.commit();
+    }
+};
+
 
 // DATA PROVIDER COMPONENT
 export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
@@ -212,9 +240,12 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     });
     
     useEffect(() => {
-        const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
-            setUser(firebaseUser);
-            if (!firebaseUser) {
+        const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
+            if (firebaseUser) {
+                await ensureInitialUserData(firebaseUser);
+                setUser(firebaseUser);
+            } else {
+                 setUser(null);
                  setIsLoading(false);
                  // Reset all state on logout
                  setGroupsState([]);
@@ -231,7 +262,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     useEffect(() => {
         if (!user) {
-            setIsLoading(false);
             return;
         }
 
@@ -244,7 +274,9 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 setGroupsState(fetchedGroups);
                 if (!activeGroupId && fetchedGroups.length > 0) {
                     setActiveGroupIdState(fetchedGroups[0].id);
-                } else if (fetchedGroups.length === 0) {
+                } else if (activeGroupId && !fetchedGroups.some(g => g.id === activeGroupId)) {
+                    setActiveGroupIdState(fetchedGroups[0]?.id || null);
+                } else if(fetchedGroups.length === 0) {
                     setActiveGroupIdState(null);
                 }
             }),
@@ -272,7 +304,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 if (doc.exists()) {
                      setUserProfile(doc.data() as UserProfile);
                 }
-                setIsLoading(false);
+                setIsLoading(false); // Consider all initial data loaded after profile is fetched
             }),
              onSnapshot(doc(db, `${prefix}/settings`, 'app'), (doc) => {
                 if (doc.exists()) {

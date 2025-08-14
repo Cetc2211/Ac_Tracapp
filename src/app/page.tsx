@@ -7,7 +7,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import {
   Card,
@@ -25,7 +25,6 @@ import { AppLogo } from '@/components/app-logo';
 import { Loader2, Clapperboard, Images, Star } from 'lucide-react';
 import Image from 'next/image';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
-import { doc, writeBatch } from 'firebase/firestore';
 
 export default function AuthenticationPage() {
   const [loginEmail, setLoginEmail] = useState('');
@@ -37,6 +36,7 @@ export default function AuthenticationPage() {
   const [registerName, setRegisterName] = useState('');
 
   const [isLoading, setIsLoading] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
 
   const { toast } = useToast();
   const router = useRouter();
@@ -70,31 +70,19 @@ export default function AuthenticationPage() {
        toast({ variant: 'destructive', title: 'Error de Registro', description: 'El nombre es obligatorio.' });
        return;
     }
-
-    setIsLoading(true);
+    
+    setIsRegistering(true);
     try {
+      // Step 1: Create user in Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, registerEmail, registerPassword);
-      const user = userCredential.user;
       
-      const batch = writeBatch(db);
+      // Step 2: Store essential info in localStorage to be picked up by the data hook
+      // The useData hook will handle creating the Firestore documents once the user is authenticated.
+      localStorage.setItem('pending_registration_name', registerName.trim());
 
-      const userProfileRef = doc(db, `users/${user.uid}/profile`, 'info');
-      batch.set(userProfileRef, {
-        name: registerName.trim(),
-        email: user.email,
-        photoURL: ""
-      });
+      toast({ title: 'Cuenta Creada', description: '¡Bienvenido! Redirigiendo al dashboard...' });
 
-      const settingsDocRef = doc(db, `users/${user.uid}/settings`, 'app');
-      batch.set(settingsDocRef, {
-        institutionName: "Mi Institución",
-        logo: "",
-        theme: "theme-default"
-      });
-      
-      await batch.commit();
-
-      toast({ title: 'Cuenta Creada', description: '¡Bienvenido! Has sido registrado exitosamente.' });
+      // Step 3: Redirect to dashboard. The auth state change will trigger useData to set up the DB documents.
       router.push('/dashboard');
     } catch (error: any) {
       let errorMessage = 'Ocurrió un error inesperado.';
@@ -105,10 +93,9 @@ export default function AuthenticationPage() {
       }
       toast({ variant: 'destructive', title: 'Error de Registro', description: errorMessage });
     } finally {
-      setIsLoading(false);
+      setIsRegistering(false);
     }
   };
-
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
@@ -139,6 +126,7 @@ export default function AuthenticationPage() {
                     value={loginEmail}
                     onChange={(e) => setLoginEmail(e.target.value)}
                     required
+                    disabled={isLoading}
                   />
                 </div>
                 <div className="space-y-2">
@@ -149,6 +137,7 @@ export default function AuthenticationPage() {
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
                     required
+                    disabled={isLoading}
                   />
                 </div>
               </CardContent>
@@ -178,6 +167,7 @@ export default function AuthenticationPage() {
                     value={registerName}
                     onChange={(e) => setRegisterName(e.target.value)}
                     required
+                    disabled={isRegistering}
                   />
                 </div>
                 <div className="space-y-2">
@@ -189,6 +179,7 @@ export default function AuthenticationPage() {
                     value={registerEmail}
                     onChange={(e) => setRegisterEmail(e.target.value)}
                     required
+                    disabled={isRegistering}
                   />
                 </div>
                 <div className="space-y-2">
@@ -199,6 +190,7 @@ export default function AuthenticationPage() {
                     value={registerPassword}
                     onChange={(e) => setRegisterPassword(e.target.value)}
                     required
+                    disabled={isRegistering}
                   />
                 </div>
                  <div className="space-y-2">
@@ -209,12 +201,13 @@ export default function AuthenticationPage() {
                     value={registerConfirmPassword}
                     onChange={(e) => setRegisterConfirmPassword(e.target.value)}
                     required
+                    disabled={isRegistering}
                   />
                 </div>
               </CardContent>
               <CardFooter>
-                <Button className="w-full" onClick={handleRegister} disabled={isLoading}>
-                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <Button className="w-full" onClick={handleRegister} disabled={isRegistering}>
+                   {isRegistering && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Crear Cuenta
                 </Button>
               </CardFooter>
