@@ -20,7 +20,6 @@ import {
   serverTimestamp,
   Timestamp
 } from 'firebase/firestore';
-import { setupNewUser } from '@/ai/flows/user-setup';
 
 
 // TYPE DEFINITIONS
@@ -181,28 +180,32 @@ const defaultSettings = {
 };
 
 const ensureInitialUserData = async (user: User) => {
-    if (!user) {
-        console.warn("ensureInitialUserData called without a user.");
-        return;
-    }
-
+    if (!user) return;
     const userProfileRef = doc(db, `users/${user.uid}/profile`, 'info');
     
     try {
         const profileSnap = await getDoc(userProfileRef);
+        
         if (!profileSnap.exists()) {
-            console.log(`User data not found for ${user.uid}. Invoking setup flow...`);
+            console.log(`User profile not found for ${user.uid}. Creating initial documents...`);
+            const batch = writeBatch(db);
+
             const pendingName = localStorage.getItem('pending_registration_name');
-            await setupNewUser({
-                userId: user.uid,
-                email: user.email || '',
-                displayName: pendingName || user.displayName || '',
-                photoURL: user.photoURL || '',
+            batch.set(userProfileRef, {
+                name: pendingName || user.email?.split('@')[0] || "Usuario",
+                email: user.email,
+                photoURL: user.photoURL || ""
             });
-            if(pendingName) localStorage.removeItem('pending_registration_name');
+            if (pendingName) localStorage.removeItem('pending_registration_name');
+
+            const settingsDocRef = doc(db, `users/${user.uid}/settings`, 'app');
+            batch.set(settingsDocRef, defaultSettings);
+
+            await batch.commit();
+            console.log(`Initial data successfully written for ${user.uid}.`);
         }
     } catch (error) {
-        console.error("Error in ensureInitialUserData:", error);
+        console.error("Error ensuring initial user data:", error);
     }
 };
 
@@ -236,8 +239,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
             if (firebaseUser) {
-                setUser(firebaseUser);
                 await ensureInitialUserData(firebaseUser);
+                setUser(firebaseUser);
             } else {
                  setUser(null);
                  setGroupsState([]);
@@ -298,7 +301,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 if (doc.exists()) {
                      setUserProfile(doc.data() as UserProfile);
                 }
-                // We don't set loading to false here, to ensure all initial data streams are ready.
             }),
              onSnapshot(doc(db, `${prefix}/settings`, 'app'), (doc) => {
                 if (doc.exists()) {
@@ -306,7 +308,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 } else {
                      setSettingsState(defaultSettings);
                 }
-                setIsLoading(false); // Considered loaded after settings are checked.
+                setIsLoading(false); 
             }),
         ];
 

@@ -108,7 +108,7 @@ export default function MainLayoutClient({
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <Loader2 className="mr-2 h-8 w-8 animate-spin" />
-        <span>Verificando sesión...</span>
+        <span>Cargando...</span>
       </div>
     );
   }

@@ -37,7 +37,15 @@ export function UserNav() {
   }
   
   if (isLoading || !userProfile) {
-    return <Skeleton className="h-8 w-8 rounded-full" />;
+    return (
+        <div className="flex items-center gap-2">
+            <Skeleton className="h-8 w-8 rounded-full" />
+            <div className="space-y-1">
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="h-2 w-24" />
+            </div>
+        </div>
+    )
   }
   
   const displayName = userProfile.name || "Usuario";
@@ -87,5 +95,3 @@ export function UserNav() {
     </DropdownMenu>
   );
 }
-
-    
