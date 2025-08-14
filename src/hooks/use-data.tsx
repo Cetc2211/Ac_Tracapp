@@ -241,13 +241,12 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
+            setIsLoading(true);
             if (firebaseUser) {
                 await ensureInitialUserData(firebaseUser);
                 setUser(firebaseUser);
             } else {
                  setUser(null);
-                 setIsLoading(false);
-                 // Reset all state on logout
                  setGroupsState([]);
                  setAllStudentsState([]);
                  setAllObservations({});
@@ -255,6 +254,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                  setSettingsState(defaultSettings);
                  setUserProfile(null);
                  setPartialData({ criteria: [], grades: {}, attendance: {}, participations: {}, activities: [], activityRecords: {} });
+                 setIsLoading(false);
             }
         });
         return () => unsubscribe();
@@ -265,9 +265,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             return;
         }
 
-        setIsLoading(true);
         const prefix = `users/${user.uid}`;
-
         const unsubscribers = [
             onSnapshot(collection(db, `${prefix}/groups`), (snapshot) => {
                 const fetchedGroups = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Group));
@@ -303,8 +301,10 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             onSnapshot(doc(db, `${prefix}/profile`, 'info'), (doc) => {
                 if (doc.exists()) {
                      setUserProfile(doc.data() as UserProfile);
+                } else {
+                     setUserProfile(defaultProfile);
                 }
-                setIsLoading(false); // Consider all initial data loaded after profile is fetched
+                setIsLoading(false);
             }),
              onSnapshot(doc(db, `${prefix}/settings`, 'app'), (doc) => {
                 if (doc.exists()) {

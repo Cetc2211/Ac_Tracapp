@@ -30,19 +30,19 @@ export function UserNav() {
   const getInitials = (name: string | null | undefined) => {
     if(!name) return 'U';
     const names = name.split(' ');
-    if (names.length > 1) {
+    if (names.length > 1 && names[0] && names[names.length - 1]) {
         return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
     }
     return name.substring(0,2).toUpperCase();
   }
   
-  if (isLoading) {
+  if (isLoading || !userProfile) {
     return <Skeleton className="h-8 w-8 rounded-full" />;
   }
   
-  const displayName = userProfile?.name || "Usuario";
-  const displayEmail = userProfile?.email || "";
-  const displayPhoto = userProfile?.photoURL || "";
+  const displayName = userProfile.name || "Usuario";
+  const displayEmail = userProfile.email || "";
+  const displayPhoto = userProfile.photoURL || "";
 
   return (
     <DropdownMenu>
