@@ -70,30 +70,33 @@ export default function AuthenticationPage() {
        toast({ variant: 'destructive', title: 'Error de Registro', description: 'El nombre es obligatorio.' });
        return;
     }
+    if (registerPassword.length < 6) {
+        toast({ variant: 'destructive', title: 'Error de Registro', description: 'La contraseña debe tener al menos 6 caracteres.' });
+        return;
+    }
     
     setIsRegistering(true);
     try {
-      // Store the pending name in localStorage so the useData hook can pick it up.
-      // This is a robust way to pass data to the logic that creates the user profile in Firestore.
       localStorage.setItem('pending_registration_name', registerName.trim());
 
       await createUserWithEmailAndPassword(auth, registerEmail, registerPassword);
       
-      // The onAuthStateChanged listener in useData will handle creating the user profile.
-      // We just need to navigate to the dashboard.
       toast({ title: 'Cuenta Creada', description: '¡Bienvenido! Redirigiendo al dashboard...' });
       router.push('/dashboard');
 
     } catch (error: any) {
-      // Clear the pending name if registration fails
       localStorage.removeItem('pending_registration_name');
 
-      let errorMessage = 'Ocurrió un error inesperado.';
+      let errorMessage = 'Ocurrió un error inesperado al registrar la cuenta.';
       if (error.code === 'auth/email-already-in-use') {
         errorMessage = 'Este correo electrónico ya está en uso. Por favor, intenta con otro.';
       } else if (error.code === 'auth/weak-password') {
         errorMessage = 'La contraseña es muy débil. Debe tener al menos 6 caracteres.';
+      } else if (error.code === 'auth/invalid-email') {
+          errorMessage = 'El formato del correo electrónico no es válido.';
       }
+      
+      console.error("Registration Error:", error);
       toast({ variant: 'destructive', title: 'Error de Registro', description: errorMessage });
     } finally {
       setIsRegistering(false);
@@ -190,6 +193,7 @@ export default function AuthenticationPage() {
                   <Input
                     id="register-password"
                     type="password"
+                    placeholder="Mínimo 6 caracteres"
                     value={registerPassword}
                     onChange={(e) => setRegisterPassword(e.target.value)}
                     required
