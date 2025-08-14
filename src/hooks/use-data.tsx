@@ -174,7 +174,7 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 
 // UTILITY FUNCTIONS
 const defaultSettings = {
-    institutionName: "Academic Tracker",
+    institutionName: "Mi Institución",
     logo: "",
     theme: "theme-default"
 };
@@ -244,6 +244,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 setGroupsState(fetchedGroups);
                 if (!activeGroupId && fetchedGroups.length > 0) {
                     setActiveGroupIdState(fetchedGroups[0].id);
+                } else if (fetchedGroups.length === 0) {
+                    setActiveGroupIdState(null);
                 }
             }),
             onSnapshot(collection(db, `${prefix}/students`), (snapshot) => {
@@ -269,30 +271,17 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             onSnapshot(doc(db, `${prefix}/profile`, 'info'), (doc) => {
                 if (doc.exists()) {
                      setUserProfile(doc.data() as UserProfile);
-                } else {
-                     // If profile doc doesn't exist for a logged-in user, create it.
-                     const newProfile = { name: user.displayName || "Nuevo Usuario", email: user.email || "", photoURL: user.photoURL || "" };
-                     setDoc(doc.ref, newProfile);
-                     setUserProfile(newProfile);
                 }
+                setIsLoading(false);
             }),
              onSnapshot(doc(db, `${prefix}/settings`, 'app'), (doc) => {
                 if (doc.exists()) {
                     setSettingsState(doc.data() as typeof settings);
                 } else {
-                    setDoc(doc.ref, defaultSettings);
-                    setSettingsState(defaultSettings);
+                     setSettingsState(defaultSettings);
                 }
             }),
         ];
-
-        // A one-time check to ensure all initial data is loaded before setting isLoading to false
-        const checkInitialLoad = async () => {
-            await getDoc(doc(db, `${prefix}/profile`, 'info'));
-            await getDoc(doc(db, `${prefix}/settings`, 'app'));
-            setIsLoading(false);
-        };
-        checkInitialLoad();
         
         return () => unsubscribers.forEach(unsub => unsub());
     

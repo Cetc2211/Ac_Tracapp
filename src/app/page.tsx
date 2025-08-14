@@ -87,7 +87,7 @@ export default function AuthenticationPage() {
 
       const settingsDocRef = doc(db, `users/${user.uid}/settings`, 'app');
       batch.set(settingsDocRef, {
-        institutionName: `${registerName.trim()}'s Institution`,
+        institutionName: "Mi Institución",
         logo: "",
         theme: "theme-default"
       });
