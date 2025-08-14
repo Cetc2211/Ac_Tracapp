@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
@@ -20,7 +19,6 @@ import {
   serverTimestamp,
   Timestamp
 } from 'firebase/firestore';
-import { setupNewUser } from '@/ai/flows/user-setup';
 
 
 // TYPE DEFINITIONS
@@ -181,38 +179,51 @@ const defaultSettings = {
 };
 
 const ensureInitialUserData = async (user: User) => {
+    // Asegurarse de que el usuario esté autenticado antes de intentar escribir en Firestore
     if (!user) {
-        console.warn("ensureInitialUserData called without a user.");
+        console.warn("ensureInitialUserData called without an authenticated user.");
         return;
     }
 
+    // Añadir un pequeño retardo para dar tiempo a que el estado de autenticación se propague
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Retardo de 1 segundo
+
     const userProfileRef = doc(db, `users/${user.uid}/profile`, 'info');
+    const settingsDocRef = doc(db, `users/${user.uid}/settings`, 'app');
 
     try {
         const profileSnap = await getDoc(userProfileRef);
 
         if (!profileSnap.exists()) {
-            console.log(`No profile found for new user ${user.uid}. Creating initial data via server-side flow.`);
+            console.log(`Profile does not exist for ${user.uid}. Creating initial data...`);
+            const batch = writeBatch(db);
+
             const pendingName = localStorage.getItem('pending_registration_name');
-            
-            const result = await setupNewUser({
-                userId: user.uid,
-                email: user.email ?? undefined,
-                displayName: pendingName ?? user.displayName ?? undefined,
-                photoURL: user.photoURL ?? undefined,
+            batch.set(userProfileRef, {
+                name: pendingName || user.email?.split('@')[0] || "Usuario",
+                email: user.email,
+                photoURL: user.photoURL || ""
             });
+            if(pendingName) localStorage.removeItem('pending_registration_name');
 
-            if (pendingName) localStorage.removeItem('pending_registration_name');
-
-            if (!result.success) {
-                console.error("Server-side flow to create initial user data failed.");
-                // Optionally, notify the user that setup failed and they should retry.
-            } else {
-                 console.log("Server-side flow successfully initiated user data creation.");
+            const settingsSnap = await getDoc(settingsDocRef);
+            if (!settingsSnap.exists()) {
+                batch.set(settingsDocRef, defaultSettings);
             }
+
+            try {
+                await batch.commit();
+                console.log(`Initial user data successfully written for user: ${user.uid}`);
+            } catch (batchError) {
+                console.error(`Error committing batch for user ${user.uid}:`, batchError);
+                // Aquí podrías añadir lógica adicional, como reintentar o notificar al usuario
+            }
+        } else {
+             console.log(`User profile already exists for user: ${user.uid}. Skipping initial data write.`);
         }
-    } catch (error) {
-        console.error(`Error in ensureInitialUserData for user ${user.uid}:`, error);
+    } catch (getError) {
+        console.error(`Error fetching user profile or settings for user ${user.uid}:`, getError);
+        // Manejar errores al obtener documentos (aunque menos probable que fallen por permisos en este escenario)
     }
 };
 
