@@ -73,18 +73,21 @@ export default function AuthenticationPage() {
     
     setIsRegistering(true);
     try {
-      // Step 1: Create user in Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(auth, registerEmail, registerPassword);
-      
-      // Step 2: Store essential info in localStorage to be picked up by the data hook
-      // The useData hook will handle creating the Firestore documents once the user is authenticated.
+      // Set the pending name in localStorage BEFORE creating the user.
+      // The useData hook will pick this up on first load after registration.
       localStorage.setItem('pending_registration_name', registerName.trim());
 
+      await createUserWithEmailAndPassword(auth, registerEmail, registerPassword);
+      
+      // The onAuthStateChanged listener in useData will handle the rest.
+      // We just need to redirect.
       toast({ title: 'Cuenta Creada', description: '¡Bienvenido! Redirigiendo al dashboard...' });
-
-      // Step 3: Redirect to dashboard. The auth state change will trigger useData to set up the DB documents.
       router.push('/dashboard');
+
     } catch (error: any) {
+      // Clear the pending name if registration fails
+      localStorage.removeItem('pending_registration_name');
+
       let errorMessage = 'Ocurrió un error inesperado.';
       if (error.code === 'auth/email-already-in-use') {
         errorMessage = 'Este correo electrónico ya está en uso. Por favor, intenta con otro.';

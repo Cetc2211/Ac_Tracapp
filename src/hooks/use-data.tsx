@@ -262,6 +262,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     useEffect(() => {
         if (!user) {
+            setIsLoading(false);
             return;
         }
 
