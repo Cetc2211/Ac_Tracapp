@@ -213,32 +213,25 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
-            if (firebaseUser) {
-                if (!user || user.uid !== firebaseUser.uid) {
-                    setUser(firebaseUser);
-                } else {
-                    setIsLoading(false);
-                }
-            } else {
-                setUser(null);
-                setIsLoading(false);
-                // Reset all state on logout
-                setGroupsState([]);
-                setAllStudentsState([]);
-                setAllObservations({});
-                setActiveGroupIdState(null);
-                setSettingsState(defaultSettings);
-                setUserProfile(null);
-                setPartialData({ criteria: [], grades: {}, attendance: {}, participations: {}, activities: [], activityRecords: {} });
+            setUser(firebaseUser);
+            if (!firebaseUser) {
+                 setIsLoading(false);
+                 // Reset all state on logout
+                 setGroupsState([]);
+                 setAllStudentsState([]);
+                 setAllObservations({});
+                 setActiveGroupIdState(null);
+                 setSettingsState(defaultSettings);
+                 setUserProfile(null);
+                 setPartialData({ criteria: [], grades: {}, attendance: {}, participations: {}, activities: [], activityRecords: {} });
             }
         });
         return () => unsubscribe();
-    }, [user]);
+    }, []);
 
     useEffect(() => {
         if (!user) return;
     
-        setIsLoading(true);
         const prefix = `users/${user.uid}`;
     
         const unsubscribers = [
@@ -248,6 +241,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 if (!activeGroupId && fetchedGroups.length > 0) {
                     setActiveGroupIdState(fetchedGroups[0].id);
                 }
+                setIsLoading(false);
             }),
             onSnapshot(collection(db, `${prefix}/students`), (snapshot) => {
                 setAllStudentsState(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student)));
@@ -269,21 +263,20 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 });
                 setAllObservations(fetchedObservations);
             }),
-            onSnapshot(doc(db, `${prefix}/settings`, 'app'), (doc) => {
-                setSettingsState(doc.exists() ? (doc.data() as typeof settings) : defaultSettings);
-            }),
             onSnapshot(doc(db, `${prefix}/profile`, 'info'), (doc) => {
-                setUserProfile(doc.exists() ? (doc.data() as UserProfile) : { ...defaultProfile, email: user.email || '' });
+                if (doc.exists()) {
+                     setUserProfile(doc.data() as UserProfile);
+                } else {
+                     setUserProfile({ ...defaultProfile, email: user.email || '' });
+                }
+            }),
+             onSnapshot(doc(db, `${prefix}/settings`, 'app'), (doc) => {
+                if (doc.exists()) {
+                    setSettingsState(doc.data() as typeof settings);
+                }
             }),
         ];
-    
-        Promise.all([
-          getDoc(doc(db, `${prefix}/profile`, 'info')),
-          getDoc(doc(db, `${prefix}/settings`, 'app')),
-        ]).finally(() => {
-            setIsLoading(false);
-        });
-    
+        
         return () => unsubscribers.forEach(unsub => unsub());
     
     }, [user, activeGroupId]);
