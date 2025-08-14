@@ -1,4 +1,3 @@
-
 'use client';
 
 import './globals.css';
@@ -6,7 +5,7 @@ import { DataProvider } from '@/hooks/use-data';
 import MainLayoutClient from './main-layout-client';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { app } from '@/lib/firebase'; // Import to ensure firebase is initialized
+import { initializeFirebase } from '@/lib/firebase';
 import { Loader2 } from 'lucide-react';
 
 export default function RootLayout({
@@ -19,9 +18,16 @@ export default function RootLayout({
   const [isFirebaseReady, setIsFirebaseReady] = useState(false);
 
   useEffect(() => {
-    // The mere act of importing from firebase.ts initializes the app.
-    // We use a state to ensure components don't render before this effect has run.
-    setIsFirebaseReady(true);
+    // initializeFirebase() devuelve una promesa, asegurando que podamos esperar
+    // a que la inicialización esté completa.
+    initializeFirebase()
+      .then(() => {
+        setIsFirebaseReady(true);
+      })
+      .catch((error) => {
+        console.error("Firebase initialization failed:", error);
+        // Opcionalmente, mostrar un estado de error al usuario
+      });
   }, []);
 
   if (!isFirebaseReady) {
