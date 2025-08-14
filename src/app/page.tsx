@@ -25,7 +25,7 @@ import { AppLogo } from '@/components/app-logo';
 import { Loader2, Clapperboard, Images, Star } from 'lucide-react';
 import Image from 'next/image';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
-import { doc, setDoc, writeBatch } from 'firebase/firestore';
+import { doc, writeBatch } from 'firebase/firestore';
 
 export default function AuthenticationPage() {
   const [loginEmail, setLoginEmail] = useState('');
