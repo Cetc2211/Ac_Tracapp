@@ -18,16 +18,17 @@ export default function RootLayout({
   const [isAuthReady, setIsAuthReady] = useState(false);
 
   useEffect(() => {
-    // onAuthStateChanged returns an unsubscriber
+    // onAuthStateChanged ensures that the Firebase auth SDK is initialized and ready.
+    // The first time this callback runs, we know we can safely render the rest of the app.
     const unsubscribe = auth.onAuthStateChanged(user => {
-      // This callback runs when the initial auth state is determined.
-      // At this point, we know Firebase is initialized and we can proceed.
-      setIsAuthReady(true);
+      if (!isAuthReady) {
+        setIsAuthReady(true);
+      }
     });
 
     // Cleanup subscription on unmount
     return () => unsubscribe();
-  }, []);
+  }, [isAuthReady]);
 
 
   if (!isAuthReady) {
