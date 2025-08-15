@@ -10,7 +10,7 @@
 import { ai } from '@/ai';
 import { z } from 'zod';
 import { getFirestore, doc, writeBatch } from 'firebase/firestore';
-import { app } from '@/lib/firebase';
+import { app } from '@/lib/firebase/client';
 
 const UserSetupInputSchema = z.object({
   userId: z.string().describe('The UID of the new user.'),
@@ -19,12 +19,6 @@ const UserSetupInputSchema = z.object({
   photoURL: z.string().optional().describe('The photo URL for the new user.'),
 });
 export type UserSetupInput = z.infer<typeof UserSetupInputSchema>;
-
-const defaultSettings = {
-    institutionName: "Mi Institución",
-    logo: "",
-    theme: "theme-default"
-};
 
 export async function setupNewUser(input: UserSetupInput): Promise<{success: boolean}> {
     return setupNewUserFlow(input);
@@ -37,6 +31,12 @@ const setupNewUserFlow = ai.defineFlow(
     outputSchema: z.object({ success: z.boolean() }),
   },
   async (input) => {
+    const defaultSettings = {
+        institutionName: "Mi Institución",
+        logo: "",
+        theme: "theme-default"
+    };
+    
     try {
         const db = getFirestore(app);
         const batch = writeBatch(db);
@@ -60,8 +60,8 @@ const setupNewUserFlow = ai.defineFlow(
 
     } catch (error) {
         console.error('Error setting up new user:', error);
-        // We return success: false instead of throwing, to handle it gracefully on the client
-        return { success: false };
+        // Throw an error to be caught by the calling Server Action
+        throw new Error('Failed to set up initial user data in Firestore.');
     }
   }
 );

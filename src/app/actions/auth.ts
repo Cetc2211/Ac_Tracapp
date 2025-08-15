@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client'; // Server Actions can use the client-side config
 import { SignupFormSchema, type FormState } from '@/lib/definitions';
+import { setupNewUser } from '@/ai/flows/user-setup';
 
 export async function signup(state: FormState, formData: FormData) {
   // Validate form fields
@@ -26,7 +27,26 @@ export async function signup(state: FormState, formData: FormData) {
   try {
     // This is safe to run on the server because Firebase Auth SDK for JS
     // sends a request to the Firebase Auth backend.
-    await createUserWithEmailAndPassword(auth, email, password);
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+
+    // After creating the user, set up their initial data in Firestore
+    const setupResult = await setupNewUser({
+      userId: user.uid,
+      email: user.email || '',
+      displayName: name,
+      photoURL: user.photoURL || '',
+    });
+
+    if (!setupResult.success) {
+      // This is a critical error, the user was created in Auth but not in the DB.
+      // For this app, we will inform the user of a general error.
+      // In a real-world scenario, you might want to add more robust retry logic
+      // or cleanup mechanisms for the created auth user.
+      return {
+        message: 'No se pudo configurar la cuenta de usuario. Por favor, contacta a soporte.'
+      }
+    }
 
   } catch (error: any) {
     // Handle Firebase errors
