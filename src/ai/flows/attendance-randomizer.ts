@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -8,7 +9,7 @@
  * - AttendanceRandomizerOutput - The return type for the attendanceRandomizer function.
  */
 
-import {ai} from '@/ai/genkit';
+import {ai} from '@/ai';
 import {z} from 'genkit';
 
 const AttendanceRandomizerInputSchema = z.object({

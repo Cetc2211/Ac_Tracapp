@@ -7,7 +7,7 @@
  * - UserSetupInput - The input type for the setupNewUser function.
  */
 
-import { ai } from '@/ai/genkit';
+import { ai } from '@/ai';
 import { z } from 'zod';
 import { getFirestore, doc, writeBatch } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
