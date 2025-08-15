@@ -7,7 +7,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth } from '@/lib/firebase-client'; // <--- UPDATED IMPORT
 import { useRouter } from 'next/navigation';
 import {
   Card,

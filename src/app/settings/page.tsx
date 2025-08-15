@@ -30,7 +30,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { auth, db } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase-client'; // <--- UPDATED IMPORT
 import { doc, setDoc } from 'firebase/firestore';
 
 export default function SettingsPage() {

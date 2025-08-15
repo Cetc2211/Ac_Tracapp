@@ -25,7 +25,7 @@ import { Presentation, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { doc, getDoc } from 'firebase/firestore';
-import { db, auth } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase-client'; // <--- UPDATED IMPORT
 import type { Student } from '@/lib/placeholder-data';
 
 interface SemesterGrade {
@@ -63,8 +63,6 @@ export default function SemesterEvaluationPage() {
                          // This is a simplified example. A better approach would be to have a standalone calculation function.
                          // For now, we assume calculateFinalGrade can be used if we could temporarily switch context, which we can't.
                          // So this part needs a better implementation logic for fetching specific partial data and calculating.
-                         // The current calculateFinalGrade is tied to the activePartialId from the context.
-                         // Let's assume a simplified calculation for the demo.
                          const grade = Math.random() * 40 + 60; // Placeholder
                          partialGrades[partialId] = grade;
                          gradeSum += grade;
