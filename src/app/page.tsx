@@ -22,9 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AppLogo } from '@/components/app-logo';
-import { Loader2, Clapperboard, Images, Star } from 'lucide-react';
-import Image from 'next/image';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+import { Loader2 } from 'lucide-react';
 
 export default function AuthenticationPage() {
   const [loginEmail, setLoginEmail] = useState('');
@@ -221,48 +219,6 @@ export default function AuthenticationPage() {
             </Card>
           </TabsContent>
         </Tabs>
-      </div>
-      <div className="w-full max-w-4xl mt-12">
-        <Card className="p-6">
-            <CardHeader className="p-0 mb-6 text-center">
-                <h2 className="text-2xl font-bold">La Herramienta Definitiva para el Docente Moderno</h2>
-                <p className="text-muted-foreground">Simplifica tu seguimiento, maximiza tu impacto.</p>
-            </CardHeader>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                 <div className="space-y-4">
-                     <h3 className="font-semibold text-lg flex items-center gap-2"><Images /> Galería de la Aplicación</h3>
-                     <Carousel className="w-full max-w-lg mx-auto">
-                        <CarouselContent>
-                            <CarouselItem>
-                                <Image src="https://placehold.co/600x400.png" alt="Vista del Dashboard" width={600} height={400} className="rounded-lg" data-ai-hint="app dashboard" />
-                            </CarouselItem>
-                            <CarouselItem>
-                                <Image src="https://placehold.co/600x400.png" alt="Vista de Calificaciones" width={600} height={400} className="rounded-lg" data-ai-hint="grades view" />
-                            </CarouselItem>
-                             <CarouselItem>
-                                <Image src="https://placehold.co/600x400.png" alt="Vista de Informes" width={600} height={400} className="rounded-lg" data-ai-hint="reports page" />
-                            </CarouselItem>
-                        </CarouselContent>
-                        <CarouselPrevious />
-                        <CarouselNext />
-                    </Carousel>
-                 </div>
-                 <div className="space-y-4">
-                     <h3 className="font-semibold text-lg flex items-center gap-2"><Clapperboard/> Video Explicativo</h3>
-                     <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
-                         <p className="text-muted-foreground">Tu video aquí (16:9)</p>
-                     </div>
-                 </div>
-             </div>
-             <div className="mt-8 text-center space-y-2">
-                 <h3 className="font-semibold text-lg">¿Por qué elegir Academic Tracker?</h3>
-                 <div className="flex justify-center gap-6 text-muted-foreground pt-2">
-                     <span className="flex items-center gap-1"><Star className="text-primary h-4 w-4"/> Centralizado</span>
-                     <span className="flex items-center gap-1"><Star className="text-primary h-4 w-4"/> IA Integrada</span>
-                     <span className="flex items-center gap-1"><Star className="text-primary h-4 w-4"/> Personalizable</span>
-                 </div>
-             </div>
-        </Card>
       </div>
     </div>
   );
