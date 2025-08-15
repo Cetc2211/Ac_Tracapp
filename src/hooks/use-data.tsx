@@ -237,6 +237,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
+            setIsLoading(true);
             if (firebaseUser) {
                 await ensureInitialUserData(firebaseUser);
                 setUser(firebaseUser);
@@ -257,12 +258,9 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     useEffect(() => {
         if (!user) {
-            setIsLoading(false);
             return;
         }
         
-        setIsLoading(true);
-
         const prefix = `users/${user.uid}`;
         const unsubscribers = [
             onSnapshot(collection(db, `${prefix}/groups`), (snapshot) => {
