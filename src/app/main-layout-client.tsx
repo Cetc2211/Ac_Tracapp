@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -45,7 +44,7 @@ import { getPartialLabel } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { auth } from '@/lib/firebase-client';
+import { auth } from '@/lib/firebase/client';
 import type { User } from 'firebase/auth';
 
 const navItems = [

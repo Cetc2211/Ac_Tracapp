@@ -1,9 +1,8 @@
-
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { Student, Group, PartialId, StudentObservation } from '@/lib/placeholder-data';
-import { auth, db } from '@/lib/firebase-client';
+import { auth, db } from '@/lib/firebase/client';
 import type { User } from 'firebase/auth';
 import {
   collection,

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -7,7 +6,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from 'firebase/auth';
-import { auth } from '@/lib/firebase-client';
+import { auth } from '@/lib/firebase/client';
 import { useRouter } from 'next/navigation';
 import {
   Card,
