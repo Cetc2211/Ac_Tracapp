@@ -4,7 +4,7 @@ import './globals.css';
 import { DataProvider } from '@/hooks/use-data';
 import MainLayoutClient from './main-layout-client';
 import { usePathname } from 'next/navigation';
-import { auth } from '@/lib/firebase';
+import { auth } from '@/lib/firebase-client';
 import { Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
