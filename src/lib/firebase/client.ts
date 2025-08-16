@@ -14,10 +14,19 @@ const firebaseConfig = {
   messagingSenderId: "263108580734"
 };
 
-
 // Initialize Firebase for client-side
-const app: FirebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
+let app: FirebaseApp;
+if (!getApps().length) {
+    if (!firebaseConfig.apiKey) {
+        throw new Error("Missing Firebase API Key");
+    }
+    app = initializeApp(firebaseConfig);
+} else {
+    app = getApp();
+}
+
 const auth: Auth = getAuth(app);
 const db: Firestore = getFirestore(app);
 
 export { app, auth, db };
+
