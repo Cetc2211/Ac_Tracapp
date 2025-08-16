@@ -2,14 +2,13 @@ import admin from 'firebase-admin';
 import { getApps, initializeApp, App } from 'firebase-admin/app';
 import { getAuth, Auth } from 'firebase-admin/auth';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
+import { config } from 'dotenv';
+
+config();
 
 let app: App;
 
-function getAdminApp(): App {
-    if (getApps().length > 0) {
-        return getApps()[0];
-    }
-
+if (getApps().length === 0) {
     const serviceAccount = {
         type: process.env.FIREBASE_TYPE,
         project_id: process.env.FIREBASE_PROJECT_ID,
@@ -26,11 +25,12 @@ function getAdminApp(): App {
     app = initializeApp({
         credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
     });
-
-    return app;
+} else {
+    app = getApps()[0];
 }
 
-const adminAuth: Auth = getAuth(getAdminApp());
-const adminDb: Firestore = getFirestore(getAdminApp());
+
+const adminAuth: Auth = getAuth(app);
+const adminDb: Firestore = getFirestore(app);
 
 export { adminAuth, adminDb };
