@@ -329,7 +329,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
         return () => unsubscribers.forEach(unsub => unsub());
     
-    }, [user, activeGroupId, pathname, router]);
+    }, [user]);
     
     useEffect(() => {
         if(user && activeGroupId && activePartialId) {
