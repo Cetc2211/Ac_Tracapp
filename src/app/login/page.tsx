@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -39,7 +40,7 @@ export default function LoginPage() {
         title: 'Inicio de sesión exitoso',
         description: 'Redirigiendo a tu dashboard...',
       });
-      router.push('/dashboard');
+      window.location.href = '/dashboard';
     } catch (err: any) {
       let errorMessage = 'Ocurrió un error inesperado.';
       switch (err.code) {

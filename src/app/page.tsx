@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -15,9 +16,8 @@ import { Label } from '@/components/ui/label';
 import { AppLogo } from '@/components/app-logo';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { auth, db } from '@/lib/firebase/client';
+import { auth } from '@/lib/firebase/client';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc, writeBatch } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { SignupFormSchema } from '@/lib/definitions';
@@ -57,7 +57,7 @@ export default function AuthenticationPage() {
         title: 'Registro exitoso',
         description: '¡Bienvenido! Redirigiendo a tu dashboard...',
       });
-      router.push('/dashboard');
+      window.location.href = '/dashboard';
 
     } catch (error: any) {
       let errorMessage = 'Ocurrió un error inesperado al registrar la cuenta.';
