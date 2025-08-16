@@ -73,7 +73,6 @@ export async function signup(state: FormState, formData: FormData) {
     }
   }
 
-  // Do not redirect here. The client will handle login and redirection.
   return {
     errors: {},
     message: '',

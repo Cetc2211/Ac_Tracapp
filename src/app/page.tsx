@@ -44,7 +44,7 @@ export default function AuthenticationPage() {
 
   useEffect(() => {
     const handleSuccessfulSignup = async () => {
-        if (state && !state.errors && !state.message) {
+        if (state && !Object.keys(state.errors || {}).length && !state.message) {
             try {
                 await signInWithEmailAndPassword(auth, email, password);
                  toast({
