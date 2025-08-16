@@ -2,18 +2,23 @@ import admin from 'firebase-admin';
 import { getApps, initializeApp, App } from 'firebase-admin/app';
 import { getAuth, Auth } from 'firebase-admin/auth';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
-import { config } from 'dotenv';
-
-config();
 
 let app: App;
 
 if (getApps().length === 0) {
-    const serviceAccountString = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-    if (!serviceAccountString) {
-        throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON environment variable is not set.');
+    // This approach is more robust for environments where .env loading is inconsistent.
+    // It constructs the service account object from individual, reliable environment variables.
+    const serviceAccount = {
+      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+      clientEmail: process.env.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL,
+      // The private key must be formatted correctly with newlines.
+      privateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
+    };
+    
+    // Check if the essential properties are present.
+    if (!serviceAccount.projectId || !serviceAccount.clientEmail || !serviceAccount.privateKey) {
+        throw new Error('Firebase Admin SDK configuration error: Missing required environment variables.');
     }
-    const serviceAccount = JSON.parse(serviceAccountString);
 
     app = initializeApp({
         credential: admin.credential.cert(serviceAccount),
