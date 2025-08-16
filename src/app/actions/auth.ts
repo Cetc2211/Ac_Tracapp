@@ -2,9 +2,10 @@
 
 import { redirect } from 'next/navigation';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase/client';
+import { auth, db } from '@/lib/firebase/client';
 import { SignupFormSchema, type FormState } from '@/lib/definitions';
-import { setupNewUser } from '@/ai/flows/user-setup';
+import { doc, writeBatch } from 'firebase/firestore';
+
 
 export async function signup(state: FormState, formData: FormData) {
   // Validate form fields
@@ -28,13 +29,31 @@ export async function signup(state: FormState, formData: FormData) {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
 
-    // After creating the user, set up their initial data in Firestore
-    await setupNewUser({
-      userId: user.uid,
-      email: user.email || '',
-      displayName: name,
-      photoURL: user.photoURL || '',
-    });
+    // After creating the user, set up their initial data in Firestore directly
+    const batch = writeBatch(db);
+
+    // Default settings for a new user
+    const defaultSettings = {
+        institutionName: "Mi Institución",
+        logo: "",
+        theme: "theme-default"
+    };
+
+    // Profile document
+    const profileRef = doc(db, `users/${user.uid}/profile`, 'info');
+    const profileData = {
+        name: name,
+        email: user.email || "",
+        photoURL: user.photoURL || ""
+    };
+    batch.set(profileRef, profileData);
+
+    // Settings document
+    const settingsRef = doc(db, `users/${user.uid}/settings`, 'app');
+    batch.set(settingsRef, defaultSettings);
+
+    await batch.commit();
+
 
   } catch (error: any) {
     console.error("Signup Error:", error);
