@@ -4,7 +4,12 @@ import { getAuth, Auth } from 'firebase-admin/auth';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
 
 let app: App;
-if (!getApps().length) {
+
+function getAdminApp(): App {
+    if (getApps().length > 0) {
+        return getApps()[0];
+    }
+
     const serviceAccount = {
         type: process.env.FIREBASE_TYPE,
         project_id: process.env.FIREBASE_PROJECT_ID,
@@ -21,11 +26,11 @@ if (!getApps().length) {
     app = initializeApp({
         credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
     });
-} else {
-    app = getApps()[0];
+
+    return app;
 }
 
-const adminAuth: Auth = getAuth(app);
-const adminDb: Firestore = getFirestore(app);
+const adminAuth: Auth = getAuth(getAdminApp());
+const adminDb: Firestore = getFirestore(getAdminApp());
 
 export { adminAuth, adminDb };
