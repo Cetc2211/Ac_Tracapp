@@ -20,6 +20,8 @@ import {
   serverTimestamp,
   Timestamp
 } from 'firebase/firestore';
+import { usePathname, useRouter } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 
 
 // TYPE DEFINITIONS
@@ -183,7 +185,11 @@ const defaultSettings = {
 // DATA PROVIDER COMPONENT
 export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isAuthLoading, setIsAuthLoading] = useState(true);
+    const [isDataLoading, setIsDataLoading] = useState(true);
+    const router = useRouter();
+    const pathname = usePathname();
+
     
     // Core data
     const [allStudents, setAllStudentsState] = useState<Student[]>([]);
@@ -205,50 +211,66 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         activities: [],
         activityRecords: {},
     });
-    
+
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
-            setIsLoading(true);
-            if (firebaseUser) {
-                setUser(firebaseUser);
-            } else {
-                 setUser(null);
-                 setGroupsState([]);
-                 setAllStudentsState([]);
-                 setAllObservations({});
-                 setActiveGroupIdState(null);
-                 setSettingsState(defaultSettings);
-                 setUserProfile(null);
-                 setPartialData({ criteria: [], grades: {}, attendance: {}, participations: {}, activities: [], activityRecords: {} });
-                 setIsLoading(false);
-            }
+            setUser(firebaseUser);
+            setIsAuthLoading(false);
         });
         return () => unsubscribe();
     }, []);
 
     useEffect(() => {
+      const isAuthPage = pathname === '/' || pathname === '/login';
+
+      if (!isAuthLoading) {
+        if (!user && !isAuthPage) {
+          router.push('/login');
+        }
+        if (user && isAuthPage) {
+          router.push('/dashboard');
+        }
+      }
+    }, [user, isAuthLoading, pathname, router]);
+
+    
+    useEffect(() => {
         if (!user) {
+            // Reset state when user logs out
+            setGroupsState([]);
+            setAllStudentsState([]);
+            setAllObservations({});
+            setActiveGroupIdState(null);
+            setSettingsState(defaultSettings);
+            setUserProfile(null);
+            setPartialData({ criteria: [], grades: {}, attendance: {}, participations: {}, activities: [], activityRecords: {} });
+            setIsDataLoading(false);
             return;
         }
-        
+
+        setIsDataLoading(true);
         const prefix = `users/${user.uid}`;
         
         const initializeUserData = async () => {
             const profileRef = doc(db, `${prefix}/profile`, 'info');
             const settingsRef = doc(db, `${prefix}/settings`, 'app');
 
-            const profileSnap = await getDoc(profileRef);
-            const settingsSnap = await getDoc(settingsRef);
+            try {
+                const profileSnap = await getDoc(profileRef);
+                const settingsSnap = await getDoc(settingsRef);
 
-            if (!profileSnap.exists()) {
-                await setDoc(profileRef, {
-                    name: user.displayName || "Usuario",
-                    email: user.email,
-                    photoURL: user.photoURL || ''
-                });
-            }
-            if (!settingsSnap.exists()) {
-                await setDoc(settingsRef, defaultSettings);
+                if (!profileSnap.exists()) {
+                    await setDoc(profileRef, {
+                        name: user.displayName || "Usuario",
+                        email: user.email,
+                        photoURL: user.photoURL || ''
+                    });
+                }
+                if (!settingsSnap.exists()) {
+                    await setDoc(settingsRef, defaultSettings);
+                }
+            } catch (e) {
+                console.error("Failed to initialize user data", e);
             }
         };
         
@@ -265,7 +287,10 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 } else if(fetchedGroups.length === 0) {
                     setActiveGroupIdState(null);
                 }
-                 setIsLoading(false);
+                setIsDataLoading(false);
+            }, (error) => {
+                console.error("Error fetching groups:", error);
+                setIsDataLoading(false);
             }),
             onSnapshot(collection(db, `${prefix}/students`), (snapshot) => {
                 setAllStudentsState(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student)));
@@ -303,7 +328,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
         return () => unsubscribers.forEach(unsub => unsub());
     
-    }, [user, activeGroupId]);
+    }, [user, activeGroupId, pathname, router]);
     
     useEffect(() => {
         if(user && activeGroupId && activePartialId) {
@@ -560,7 +585,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
 
     const contextValue: DataContextType = {
-        isLoading,
+        isLoading: isDataLoading,
         groups, allStudents, allObservations, activeStudentsInGroups, settings, userProfile, activeGroup, activePartialId,
         partialData,
         groupAverages, atRiskStudents, overallAverageParticipation,
@@ -570,6 +595,15 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         calculateFinalGrade, getStudentRiskLevel, calculateDetailedFinalGrade,
         fetchPartialData,
     };
+    
+    if (isAuthLoading) {
+        return (
+            <div className="flex h-screen w-full items-center justify-center">
+                <Loader2 className="mr-2 h-8 w-8 animate-spin" />
+                <span>Autenticando...</span>
+            </div>
+        );
+    }
 
     return (
         <DataContext.Provider value={contextValue}>

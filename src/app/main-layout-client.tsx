@@ -21,7 +21,7 @@ import {
   Loader2
 } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 
 import { AppLogo } from '@/components/app-logo';
 import { UserNav } from '@/components/user-nav';
@@ -38,15 +38,12 @@ import {
   SidebarInset,
 } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useData } from '@/hooks/use-data';
 import { getPartialLabel } from '@/lib/utils';
-import { Toaster } from '@/components/ui/toaster';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { auth } from '@/lib/firebase/client';
-import type { User } from 'firebase/auth';
 
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -75,49 +72,13 @@ export default function MainLayoutClient({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
   const { settings, activeGroup, activePartialId, isLoading: isDataLoading } = useData();
-  const [user, setUser] = useState<User | null>(null);
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
   
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
-      setUser(firebaseUser);
-      setIsAuthLoading(false);
-    });
-    
-    return () => unsubscribe();
-  }, []);
+    const theme = settings?.theme || defaultSettings.theme;
+    document.body.className = theme;
+  }, [settings?.theme]);
   
-  useEffect(() => {
-    if (!isAuthLoading) {
-      const isAuthPage = pathname === '/' || pathname === '/login';
-      if (!user && !isAuthPage) {
-        router.push('/');
-      }
-      if (user && isAuthPage) {
-        router.push('/dashboard');
-      }
-    }
-  }, [isAuthLoading, user, pathname, router]);
-
-  useEffect(() => {
-    if (settings.theme) {
-      document.body.className = settings.theme;
-    } else {
-      document.body.className = defaultSettings.theme;
-    }
-  }, [settings.theme]);
-  
-  if (isAuthLoading || !user) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <Loader2 className="mr-2 h-8 w-8 animate-spin" />
-        <span>Cargando...</span>
-      </div>
-    );
-  }
-
   return (
     <>
       <SidebarProvider>
@@ -211,7 +172,6 @@ export default function MainLayoutClient({
           ) : children}</main>
         </SidebarInset>
       </SidebarProvider>
-      <Toaster />
     </>
   );
 }

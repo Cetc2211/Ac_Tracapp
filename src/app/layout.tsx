@@ -4,6 +4,7 @@ import './globals.css';
 import { DataProvider } from '@/hooks/use-data';
 import MainLayoutClient from './main-layout-client';
 import { usePathname } from 'next/navigation';
+import { Toaster } from '@/components/ui/toaster';
 
 export default function RootLayout({
   children,
@@ -18,6 +19,7 @@ export default function RootLayout({
       <body>
         <DataProvider>
           {isAuthPage ? children : <MainLayoutClient>{children}</MainLayoutClient>}
+          <Toaster />
         </DataProvider>
       </body>
     </html>
