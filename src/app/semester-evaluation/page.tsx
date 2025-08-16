@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -24,7 +25,8 @@ import { Presentation, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { doc, getDoc } from 'firebase/firestore';
-import { db, auth } from '@/lib/firebase/client';
+import { db } from '@/lib/firebase/client';
+import { auth } from '@/lib/firebase/auth';
 import type { Student } from '@/lib/placeholder-data';
 
 interface SemesterGrade {
