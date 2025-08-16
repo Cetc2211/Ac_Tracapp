@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useActionState } from 'react';
 import { signup } from '@/app/actions/auth';
 import {
   Card,
@@ -16,15 +16,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AppLogo } from '@/components/app-logo';
 import { Loader2 } from 'lucide-react';
+import Link from 'next/link';
 
 export default function AuthenticationPage() {
   const [state, action, isPending] = useActionState(signup, undefined);
-
-  // For simplicity, we'll keep login form as a placeholder for now
-  // as we focus on fixing the signup flow first.
-  const [loginEmail, setLoginEmail] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
@@ -87,11 +82,17 @@ export default function AuthenticationPage() {
               </div>
               {state?.message && <p className="text-sm text-destructive">{state.message}</p>}
             </CardContent>
-            <CardFooter>
+            <CardFooter className="flex-col gap-4">
               <Button className="w-full" type="submit" disabled={isPending}>
                 {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Crear Cuenta
               </Button>
+               <p className="text-center text-sm text-muted-foreground">
+                ¿Ya tienes una cuenta?{' '}
+                <Link href="/login" className="underline">
+                  Inicia sesión
+                </Link>
+              </p>
             </CardFooter>
           </form>
         </Card>

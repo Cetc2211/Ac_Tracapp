@@ -68,6 +68,7 @@ export async function signup(state: FormState, formData: FormData) {
     }
     
     return {
+        errors: {},
         message: errorMessage,
     }
   }
