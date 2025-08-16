@@ -86,7 +86,7 @@ export default function AuthenticationPage() {
             <CardDescription>
               Regístrate para empezar a gestionar tus grupos.
             </CardDescription>
-          </Header>
+          </CardHeader>
           <form onSubmit={handleSignup}>
             <CardContent className="space-y-4">
               <div className="space-y-2">
