@@ -178,36 +178,6 @@ const defaultSettings = {
     theme: "theme-default"
 };
 
-const ensureInitialUserData = async (user: User) => {
-    if (!user) return;
-    const userProfileRef = doc(db, `users/${user.uid}/profile`, 'info');
-    
-    try {
-        const profileSnap = await getDoc(userProfileRef);
-        
-        if (!profileSnap.exists()) {
-            console.log(`User profile not found for ${user.uid}. Creating initial documents...`);
-            const batch = writeBatch(db);
-
-            const pendingName = localStorage.getItem('pending_registration_name');
-            batch.set(userProfileRef, {
-                name: pendingName || user.email?.split('@')[0] || "Usuario",
-                email: user.email,
-                photoURL: user.photoURL || ""
-            });
-            if (pendingName) localStorage.removeItem('pending_registration_name');
-
-            const settingsDocRef = doc(db, `users/${user.uid}/settings`, 'app');
-            batch.set(settingsDocRef, defaultSettings);
-
-            await batch.commit();
-            console.log(`Initial data successfully written for ${user.uid}.`);
-        }
-    } catch (error) {
-        console.error("Error ensuring initial user data:", error);
-    }
-};
-
 
 // DATA PROVIDER COMPONENT
 export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
@@ -239,7 +209,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
             setIsLoading(true);
             if (firebaseUser) {
-                await ensureInitialUserData(firebaseUser);
                 setUser(firebaseUser);
             } else {
                  setUser(null);
@@ -273,6 +242,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 } else if(fetchedGroups.length === 0) {
                     setActiveGroupIdState(null);
                 }
+                 setIsLoading(false);
             }),
             onSnapshot(collection(db, `${prefix}/students`), (snapshot) => {
                 setAllStudentsState(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student)));
@@ -305,7 +275,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 } else {
                      setSettingsState(defaultSettings);
                 }
-                setIsLoading(false); 
             }),
         ];
 

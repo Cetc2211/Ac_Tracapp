@@ -46,10 +46,8 @@ export default function LoginPage() {
       switch (err.code) {
         case 'auth/user-not-found':
         case 'auth/wrong-password':
-          errorMessage = 'Correo o contraseña incorrectos.';
-          break;
         case 'auth/invalid-credential':
-             errorMessage = 'Las credenciales proporcionadas no son válidas.';
+             errorMessage = 'Correo o contraseña incorrectos.';
              break;
         default:
           console.error(err);

@@ -86,13 +86,15 @@ export default function MainLayoutClient({
         setUser(firebaseUser);
       } else {
         setUser(null);
-        router.push('/');
+        if (pathname !== '/' && pathname !== '/login') {
+            router.push('/');
+        }
       }
       setIsAuthLoading(false);
     });
     
     return () => unsubscribe();
-  }, [router]);
+  }, [router, pathname]);
   
   useEffect(() => {
     setIsClient(true);
