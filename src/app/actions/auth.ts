@@ -73,10 +73,9 @@ export async function signup(state: FormState, formData: FormData) {
     }
   }
 
-  // Redirect to the dashboard after successful signup.
-  // Note: We are not logging the user in on the server.
-  // The client-side will need to handle the login flow.
-  // For simplicity in this step, we just redirect. A full implementation
-  // would involve creating a session.
-  redirect('/dashboard');
+  // Do not redirect here. The client will handle login and redirection.
+  return {
+    errors: {},
+    message: '',
+  };
 }

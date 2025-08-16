@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState, useEffect } from 'react';
 import { signup } from '@/app/actions/auth';
 import {
   Card,
@@ -17,9 +17,52 @@ import { Label } from '@/components/ui/label';
 import { AppLogo } from '@/components/app-logo';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { useFormStatus } from 'react-dom';
+import { auth } from '@/lib/firebase/client';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
+import type { FormState } from '@/lib/definitions';
+
+
+function SignupButton() {
+    const { pending } = useFormStatus();
+    return (
+        <Button className="w-full" type="submit" disabled={pending}>
+            {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Crear Cuenta
+        </Button>
+    )
+}
 
 export default function AuthenticationPage() {
-  const [state, action, isPending] = useActionState(signup, undefined);
+  const [state, action] = useActionState(signup, undefined);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const router = useRouter();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const handleSuccessfulSignup = async () => {
+        if (state && !state.errors && !state.message) {
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                 toast({
+                    title: 'Registro y sesión exitosos',
+                    description: 'Redirigiendo a tu dashboard...',
+                });
+                router.push('/dashboard');
+            } catch (signInError) {
+                 toast({
+                    variant: 'destructive',
+                    title: 'Error de inicio de sesión',
+                    description: 'No pudimos iniciar sesión después del registro. Por favor, ve a la página de login.',
+                });
+            }
+        }
+    };
+    handleSuccessfulSignup();
+  }, [state, email, password, router, toast]);
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
@@ -43,7 +86,6 @@ export default function AuthenticationPage() {
                   name="name"
                   placeholder="Tu nombre completo"
                   required
-                  disabled={isPending}
                 />
                  {state?.errors?.name && <p className="text-sm text-destructive">{state.errors.name}</p>}
               </div>
@@ -55,7 +97,8 @@ export default function AuthenticationPage() {
                   type="email"
                   placeholder="tucorreo@ejemplo.com"
                   required
-                  disabled={isPending}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                 />
                  {state?.errors?.email && <p className="text-sm text-destructive">{state.errors.email}</p>}
               </div>
@@ -67,7 +110,8 @@ export default function AuthenticationPage() {
                   type="password"
                   placeholder="Mínimo 8 caracteres"
                   required
-                  disabled={isPending}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                 />
                  {state?.errors?.password && (
                     <div className="text-sm text-destructive">
@@ -83,10 +127,7 @@ export default function AuthenticationPage() {
               {state?.message && <p className="text-sm text-destructive">{state.message}</p>}
             </CardContent>
             <CardFooter className="flex-col gap-4">
-              <Button className="w-full" type="submit" disabled={isPending}>
-                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Crear Cuenta
-              </Button>
+              <SignupButton />
                <p className="text-center text-sm text-muted-foreground">
                 ¿Ya tienes una cuenta?{' '}
                 <Link href="/login" className="underline">
