@@ -50,14 +50,13 @@ export default function AuthenticationPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Update Firebase Auth profile
       await updateProfile(user, { displayName: name });
       
       toast({
         title: 'Registro exitoso',
         description: '¡Bienvenido! Redirigiendo a tu dashboard...',
       });
-      window.location.href = '/dashboard';
+      router.push('/dashboard');
 
     } catch (error: any) {
       let errorMessage = 'Ocurrió un error inesperado al registrar la cuenta.';

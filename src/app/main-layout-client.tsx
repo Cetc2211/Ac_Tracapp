@@ -75,6 +75,7 @@ export default function MainLayoutClient({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { settings, activeGroup, activePartialId, isLoading: isDataLoading } = useData();
   const [user, setUser] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
@@ -88,6 +89,18 @@ export default function MainLayoutClient({
     return () => unsubscribe();
   }, []);
   
+  useEffect(() => {
+    if (!isAuthLoading) {
+      const isAuthPage = pathname === '/' || pathname === '/login';
+      if (!user && !isAuthPage) {
+        router.push('/');
+      }
+      if (user && isAuthPage) {
+        router.push('/dashboard');
+      }
+    }
+  }, [isAuthLoading, user, pathname, router]);
+
   useEffect(() => {
     if (settings.theme) {
       document.body.className = settings.theme;

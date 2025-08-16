@@ -40,7 +40,7 @@ export default function LoginPage() {
         title: 'Inicio de sesión exitoso',
         description: 'Redirigiendo a tu dashboard...',
       });
-      window.location.href = '/dashboard';
+      router.push('/dashboard');
     } catch (err: any) {
       let errorMessage = 'Ocurrió un error inesperado.';
       switch (err.code) {
