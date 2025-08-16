@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { LogOut, Settings, User as UserIcon } from 'lucide-react';
 import Link from 'next/link';
-import { auth } from '@/lib/firebase/auth';
+import { auth } from '@/lib/firebase/client';
 import { useRouter } from 'next/navigation';
 import { useData } from '@/hooks/use-data';
 import { Skeleton } from './ui/skeleton';

@@ -29,8 +29,7 @@ import { useToast } from '@/hooks/use-toast';
 import { PlusCircle, Users, ArrowRight, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { doc, setDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/client';
-import { auth } from '@/lib/firebase/auth';
+import { db, auth } from '@/lib/firebase/client';
 
 const cardColors = [
   'bg-card-1', 'bg-card-2', 'bg-card-3', 'bg-card-4', 'bg-card-5'

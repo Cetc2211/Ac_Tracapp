@@ -3,8 +3,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { Student, Group, PartialId, StudentObservation } from '@/lib/placeholder-data';
-import { auth } from '@/lib/firebase/auth';
-import { db } from '@/lib/firebase/client';
+import { auth, db } from '@/lib/firebase/client';
 import type { User } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
 import {

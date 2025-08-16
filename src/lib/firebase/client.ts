@@ -1,8 +1,8 @@
-
 'use client';
 
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getFirestore, Firestore } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 
 const firebaseConfig = {
   projectId: "academic-tracker-qeoxi",
@@ -13,7 +13,7 @@ const firebaseConfig = {
   messagingSenderId: "263108580734"
 };
 
-// Initialize Firebase for client-side
+// Initialize Firebase
 let app: FirebaseApp;
 if (!getApps().length) {
     app = initializeApp(firebaseConfig);
@@ -22,5 +22,6 @@ if (!getApps().length) {
 }
 
 const db: Firestore = getFirestore(app);
+const auth = getAuth(app);
 
-export { app, db };
+export { app, db, auth };

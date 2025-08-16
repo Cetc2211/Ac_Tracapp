@@ -13,8 +13,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { db } from '@/lib/firebase/client';
-import { auth } from '@/lib/firebase/auth';
+import { db, auth } from '@/lib/firebase/client';
 import { doc, updateDoc } from 'firebase/firestore';
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
