@@ -1,8 +1,7 @@
 
 'use client';
 
-import { useActionState, useState, useEffect } from 'react';
-import { signup } from '@/app/actions/auth';
+import { useState } from 'react';
 import {
   Card,
   CardContent,
@@ -17,54 +16,83 @@ import { Label } from '@/components/ui/label';
 import { AppLogo } from '@/components/app-logo';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useFormStatus } from 'react-dom';
-import { auth } from '@/lib/firebase/client';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth, db } from '@/lib/firebase/client';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { doc, setDoc, writeBatch } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import type { FormState } from '@/lib/definitions';
-
-
-function SignupButton() {
-    const { pending } = useFormStatus();
-    return (
-        <Button className="w-full" type="submit" disabled={pending}>
-            {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Crear Cuenta
-        </Button>
-    )
-}
+import { SignupFormSchema } from '@/lib/definitions';
 
 export default function AuthenticationPage() {
-  const [state, action] = useActionState(signup, undefined);
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState<{[key: string]: string[]}>({});
+  const [formError, setFormError] = useState('');
+
   const router = useRouter();
   const { toast } = useToast();
 
-  useEffect(() => {
-    const handleSuccessfulSignup = async () => {
-        // Check if the server action was successful
-        if (state && !Object.keys(state.errors || {}).length && !state.message) {
-            try {
-                // Now, sign in the user on the client
-                await signInWithEmailAndPassword(auth, email, password);
-                 toast({
-                    title: 'Registro y sesión exitosos',
-                    description: 'Redirigiendo a tu dashboard...',
-                });
-                router.push('/dashboard');
-            } catch (signInError) {
-                 toast({
-                    variant: 'destructive',
-                    title: 'Error de inicio de sesión',
-                    description: 'No pudimos iniciar sesión después del registro. Por favor, ve a la página de login.',
-                });
-            }
-        }
-    };
-    handleSuccessfulSignup();
-  }, [state, email, password, router, toast]);
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setErrors({});
+    setFormError('');
+
+    const validatedFields = SignupFormSchema.safeParse({ name, email, password });
+    if (!validatedFields.success) {
+        setErrors(validatedFields.error.flatten().fieldErrors);
+        setIsLoading(false);
+        return;
+    }
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // Update Firebase Auth profile
+      await updateProfile(user, { displayName: name });
+      
+      // Create user documents in Firestore
+      const batch = writeBatch(db);
+
+      const profileRef = doc(db, `users/${user.uid}/profile`, 'info');
+      batch.set(profileRef, {
+        name: name,
+        email: user.email,
+        photoURL: user.photoURL || ''
+      });
+
+      const settingsRef = doc(db, `users/${user.uid}/settings`, 'app');
+      batch.set(settingsRef, {
+        institutionName: "Mi Institución",
+        logo: "",
+        theme: "theme-default"
+      });
+
+      await batch.commit();
+      
+      toast({
+        title: 'Registro exitoso',
+        description: '¡Bienvenido! Redirigiendo a tu dashboard...',
+      });
+      router.push('/dashboard');
+
+    } catch (error: any) {
+      let errorMessage = 'Ocurrió un error inesperado al registrar la cuenta.';
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = 'Este correo electrónico ya está en uso. Por favor, intenta con otro.';
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = 'La contraseña es muy débil. Debe tener al menos 6 caracteres.';
+      }
+      setFormError(errorMessage);
+      console.error("Signup Error:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
@@ -79,7 +107,7 @@ export default function AuthenticationPage() {
               Regístrate para empezar a gestionar tus grupos.
             </CardDescription>
           </CardHeader>
-          <form action={action}>
+          <form onSubmit={handleSignup}>
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Nombre Completo</Label>
@@ -88,8 +116,11 @@ export default function AuthenticationPage() {
                   name="name"
                   placeholder="Tu nombre completo"
                   required
+                  disabled={isLoading}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                 />
-                 {state?.errors?.name && <p className="text-sm text-destructive">{state.errors.name}</p>}
+                 {errors.name && <p className="text-sm text-destructive">{errors.name[0]}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Correo Electrónico</Label>
@@ -99,10 +130,11 @@ export default function AuthenticationPage() {
                   type="email"
                   placeholder="tucorreo@ejemplo.com"
                   required
+                  disabled={isLoading}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
-                 {state?.errors?.email && <p className="text-sm text-destructive">{state.errors.email}</p>}
+                 {errors.email && <p className="text-sm text-destructive">{errors.email[0]}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Contraseña</Label>
@@ -110,26 +142,21 @@ export default function AuthenticationPage() {
                   id="password"
                   name="password"
                   type="password"
-                  placeholder="Mínimo 8 caracteres"
+                  placeholder="Mínimo 6 caracteres"
                   required
+                  disabled={isLoading}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
-                 {state?.errors?.password && (
-                    <div className="text-sm text-destructive">
-                      <p>La contraseña debe contener:</p>
-                      <ul className="list-disc pl-5">
-                        {state.errors.password.map((error) => (
-                          <li key={error}>- {error}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                 {errors.password && <p className="text-sm text-destructive">{errors.password[0]}</p>}
               </div>
-              {state?.message && <p className="text-sm text-destructive">{state.message}</p>}
+              {formError && <p className="text-sm text-destructive">{formError}</p>}
             </CardContent>
             <CardFooter className="flex-col gap-4">
-              <SignupButton />
+              <Button className="w-full" type="submit" disabled={isLoading}>
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Crear Cuenta
+              </Button>
                <p className="text-center text-sm text-muted-foreground">
                 ¿Ya tienes una cuenta?{' '}
                 <Link href="/login" className="underline">

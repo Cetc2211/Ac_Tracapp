@@ -70,7 +70,7 @@ export default function LoginPage() {
             <CardDescription>
               Ingresa a tu cuenta para continuar.
             </CardDescription>
-          </CardHeader>
+          </Header>
           <form onSubmit={handleLogin}>
             <CardContent className="space-y-4">
               <div className="space-y-2">
