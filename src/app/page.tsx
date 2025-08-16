@@ -44,8 +44,10 @@ export default function AuthenticationPage() {
 
   useEffect(() => {
     const handleSuccessfulSignup = async () => {
+        // Check if the server action was successful
         if (state && !Object.keys(state.errors || {}).length && !state.message) {
             try {
+                // Now, sign in the user on the client
                 await signInWithEmailAndPassword(auth, email, password);
                  toast({
                     title: 'Registro y sesión exitosos',

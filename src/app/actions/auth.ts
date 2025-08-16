@@ -73,6 +73,8 @@ export async function signup(state: FormState, formData: FormData) {
     }
   }
 
+  // On successful user creation and data setup, we don't redirect here.
+  // The client will handle login and redirection.
   return {
     errors: {},
     message: '',
