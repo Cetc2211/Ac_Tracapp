@@ -64,6 +64,8 @@ export default function AuthenticationPage() {
         errorMessage = 'Este correo electrónico ya está en uso. Por favor, intenta con otro.';
       } else if (error.code === 'auth/weak-password') {
         errorMessage = 'La contraseña es muy débil. Debe tener al menos 6 caracteres.';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'El formato del correo electrónico no es válido.';
       }
       setFormError(errorMessage);
       console.error("Signup Error:", error);
@@ -149,3 +151,4 @@ export default function AuthenticationPage() {
     </div>
   );
 }
+
