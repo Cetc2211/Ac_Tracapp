@@ -1,11 +1,9 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase/client';
+import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { SignupFormSchema, type FormState } from '@/lib/definitions';
-import { doc, writeBatch } from 'firebase/firestore';
-
+import { revalidatePath } from 'next/cache';
 
 export async function signup(state: FormState, formData: FormData) {
   // Validate form fields
@@ -26,11 +24,17 @@ export async function signup(state: FormState, formData: FormData) {
   const { name, email, password } = validatedFields.data;
 
   try {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
+    // Create user with Firebase Admin SDK
+    const userRecord = await adminAuth.createUser({
+      email,
+      password,
+      displayName: name,
+    });
+
+    const user = userRecord;
 
     // After creating the user, set up their initial data in Firestore directly
-    const batch = writeBatch(db);
+    const batch = adminDb.batch();
 
     // Default settings for a new user
     const defaultSettings = {
@@ -40,7 +44,7 @@ export async function signup(state: FormState, formData: FormData) {
     };
 
     // Profile document
-    const profileRef = doc(db, `users/${user.uid}/profile`, 'info');
+    const profileRef = adminDb.doc(`users/${user.uid}/profile/info`);
     const profileData = {
         name: name,
         email: user.email || "",
@@ -49,16 +53,15 @@ export async function signup(state: FormState, formData: FormData) {
     batch.set(profileRef, profileData);
 
     // Settings document
-    const settingsRef = doc(db, `users/${user.uid}/settings`, 'app');
+    const settingsRef = adminDb.doc(`users/${user.uid}/settings/app`);
     batch.set(settingsRef, defaultSettings);
 
     await batch.commit();
 
-
   } catch (error: any) {
     console.error("Signup Error:", error);
     let errorMessage = 'Ocurrió un error inesperado al registrar la cuenta.';
-    if (error.code === 'auth/email-already-in-use') {
+    if (error.code === 'auth/email-already-exists') {
       errorMessage = 'Este correo electrónico ya está en uso. Por favor, intenta con otro.';
     } else if (error.code === 'auth/weak-password') {
       errorMessage = 'La contraseña es muy débil. Debe tener al menos 6 caracteres.';
@@ -69,5 +72,10 @@ export async function signup(state: FormState, formData: FormData) {
     }
   }
 
+  // Redirect to the dashboard after successful signup.
+  // Note: We are not logging the user in on the server.
+  // The client-side will need to handle the login flow.
+  // For simplicity in this step, we just redirect. A full implementation
+  // would involve creating a session.
   redirect('/dashboard');
 }
