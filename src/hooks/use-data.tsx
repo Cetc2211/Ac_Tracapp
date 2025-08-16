@@ -231,6 +231,28 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         }
         
         const prefix = `users/${user.uid}`;
+        
+        const initializeUserData = async () => {
+            const profileRef = doc(db, `${prefix}/profile`, 'info');
+            const settingsRef = doc(db, `${prefix}/settings`, 'app');
+
+            const profileSnap = await getDoc(profileRef);
+            const settingsSnap = await getDoc(settingsRef);
+
+            if (!profileSnap.exists()) {
+                await setDoc(profileRef, {
+                    name: user.displayName || "Usuario",
+                    email: user.email,
+                    photoURL: user.photoURL || ''
+                });
+            }
+            if (!settingsSnap.exists()) {
+                await setDoc(settingsRef, defaultSettings);
+            }
+        };
+        
+        initializeUserData();
+
         const unsubscribers = [
             onSnapshot(collection(db, `${prefix}/groups`), (snapshot) => {
                 const fetchedGroups = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Group));

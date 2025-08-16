@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -53,25 +52,6 @@ export default function AuthenticationPage() {
 
       // Update Firebase Auth profile
       await updateProfile(user, { displayName: name });
-      
-      // Create user documents in Firestore
-      const batch = writeBatch(db);
-
-      const profileRef = doc(db, `users/${user.uid}/profile`, 'info');
-      batch.set(profileRef, {
-        name: name,
-        email: user.email,
-        photoURL: user.photoURL || ''
-      });
-
-      const settingsRef = doc(db, `users/${user.uid}/settings`, 'app');
-      batch.set(settingsRef, {
-        institutionName: "Mi Institución",
-        logo: "",
-        theme: "theme-default"
-      });
-
-      await batch.commit();
       
       toast({
         title: 'Registro exitoso',
