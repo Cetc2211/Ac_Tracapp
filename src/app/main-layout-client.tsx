@@ -72,13 +72,22 @@ export default function MainLayoutClient({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { settings, activeGroup, activePartialId, isLoading: isDataLoading } = useData();
+  const { settings, activeGroup, activePartialId, isLoading } = useData();
   
   useEffect(() => {
     const theme = settings?.theme || defaultSettings.theme;
     document.body.className = theme;
   }, [settings?.theme]);
   
+  if (isLoading) {
+    return (
+        <div className="flex h-screen w-full items-center justify-center">
+            <Loader2 className="mr-2 h-8 w-8 animate-spin" />
+            <span>Cargando datos...</span>
+        </div>
+    );
+  }
+
   return (
     <>
       <SidebarProvider>
@@ -109,7 +118,7 @@ export default function MainLayoutClient({
                     </div>
                     <Separator className="my-2" />
                   </>
-              ) : isDataLoading ? (
+              ) : isLoading ? (
                   <>
                     <div className="px-4 py-2">
                       <Skeleton className="h-3 w-20 mb-2" />
@@ -165,13 +174,11 @@ export default function MainLayoutClient({
               <UserNav />
             </div>
           </header>
-          <main className="flex-1 p-4 sm:p-6">{isDataLoading ? (
-             <div className="flex h-full w-full items-center justify-center">
-                <Loader2 className="mr-2 h-8 w-8 animate-spin" />
-             </div>
-          ) : children}</main>
+          <main className="flex-1 p-4 sm:p-6">{children}</main>
         </SidebarInset>
       </SidebarProvider>
     </>
   );
 }
+
+    

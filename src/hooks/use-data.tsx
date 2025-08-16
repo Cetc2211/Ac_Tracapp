@@ -6,6 +6,7 @@ import { Student, Group, PartialId, StudentObservation } from '@/lib/placeholder
 import { auth } from '@/lib/firebase/auth';
 import { db } from '@/lib/firebase/client';
 import type { User } from 'firebase/auth';
+import { onAuthStateChanged } from 'firebase/auth';
 import {
   collection,
   doc,
@@ -214,7 +215,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     });
 
     useEffect(() => {
-        const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
+        const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
             setUser(firebaseUser);
             setIsAuthLoading(false);
         });
@@ -222,15 +223,15 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }, []);
 
     useEffect(() => {
+      if (isAuthLoading) return;
+
       const isAuthPage = pathname === '/' || pathname === '/login';
 
-      if (!isAuthLoading) {
-        if (!user && !isAuthPage) {
-          router.push('/login');
-        }
-        if (user && isAuthPage) {
-          router.push('/dashboard');
-        }
+      if (!user && !isAuthPage) {
+        router.push('/login');
+      }
+      if (user && isAuthPage) {
+        router.push('/dashboard');
       }
     }, [user, isAuthLoading, pathname, router]);
 
@@ -586,7 +587,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
 
     const contextValue: DataContextType = {
-        isLoading: isDataLoading,
+        isLoading: isAuthLoading || isDataLoading,
         groups, allStudents, allObservations, activeStudentsInGroups, settings, userProfile, activeGroup, activePartialId,
         partialData,
         groupAverages, atRiskStudents, overallAverageParticipation,
@@ -620,3 +621,5 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
+
+    
