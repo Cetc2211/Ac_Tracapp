@@ -232,10 +232,11 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                         } else if (fetchedGroups.length === 0) {
                             setActiveGroupIdState(null);
                         }
-                        setIsLoading(false);
+                        // This is the key change: only set loading to false after the first successful read.
+                        setIsLoading(false); 
                     }, (error) => {
                         console.error("Error fetching groups:", error);
-                        setIsLoading(false);
+                        setIsLoading(false); // Also stop loading on error
                     }),
                     onSnapshot(collection(db, `${prefix}/students`), (snapshot) => {
                         setAllStudentsState(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student)));
