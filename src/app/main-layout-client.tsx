@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -17,10 +18,12 @@ import {
   ClipboardCheck,
   User as UserIcon,
   ChevronRight,
-  Loader2
+  Loader2,
+  LogOut,
 } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/use-auth';
 
 import { AppLogo } from '@/components/app-logo';
 import {
@@ -42,6 +45,15 @@ import { useData } from '@/hooks/use-data';
 import { getPartialLabel } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import Image from 'next/image';
 
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -70,20 +82,32 @@ export default function MainLayoutClient({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { settings, activeGroup, activePartialId, isLoading } = useData();
+  const router = useRouter();
+  const { user, loading, error, signOut } = useAuth();
+  const { settings, activeGroup, activePartialId, isLoading: isDataLoading } = useData();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/');
+    }
+  }, [user, loading, router]);
   
   useEffect(() => {
     const theme = settings?.theme || defaultSettings.theme;
     document.body.className = theme;
   }, [settings?.theme]);
   
-  if (isLoading) {
+  if (loading || isDataLoading) {
     return (
         <div className="flex h-screen w-full items-center justify-center">
             <Loader2 className="mr-2 h-8 w-8 animate-spin" />
             <span>Cargando datos...</span>
         </div>
     );
+  }
+
+  if (!user) {
+    return null;
   }
 
   return (
@@ -116,7 +140,7 @@ export default function MainLayoutClient({
                     </div>
                     <Separator className="my-2" />
                   </>
-              ) : isLoading ? (
+              ) : isDataLoading ? (
                   <>
                     <div className="px-4 py-2">
                       <Skeleton className="h-3 w-20 mb-2" />
@@ -160,6 +184,34 @@ export default function MainLayoutClient({
         <SidebarInset>
           <header className="flex h-14 items-center gap-4 border-b bg-card px-4 lg:h-[60px] lg:px-6">
             <SidebarTrigger className="md:hidden" />
+            <div className='flex-1' />
+             <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                  <Image
+                    src={user.photoURL || `https://placehold.co/100x100.png?text=${user.displayName?.charAt(0)}`}
+                    alt="Avatar del usuario"
+                    className="rounded-full"
+                    fill
+                  />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">{user.displayName || 'Usuario'}</p>
+                    <p className="text-xs leading-none text-muted-foreground">
+                      {user.email}
+                    </p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={signOut}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Cerrar sesión</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </header>
           <main className="flex-1 p-4 sm:p-6">{children}</main>
         </SidebarInset>
@@ -167,5 +219,3 @@ export default function MainLayoutClient({
     </>
   );
 }
-
-    

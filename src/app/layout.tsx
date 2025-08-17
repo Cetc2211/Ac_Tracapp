@@ -1,9 +1,27 @@
+
 'use client';
 
 import './globals.css';
 import { DataProvider } from '@/hooks/use-data';
 import MainLayoutClient from './main-layout-client';
 import { Toaster } from '@/components/ui/toaster';
+import { usePathname } from 'next/navigation';
+import { AuthProvider } from '@/hooks/use-auth.tsx';
+
+function AppContent({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isAuthPage = pathname === '/' || pathname === '/signup';
+
+  if (isAuthPage) {
+    return <>{children}</>;
+  }
+
+  return (
+    <DataProvider>
+      <MainLayoutClient>{children}</MainLayoutClient>
+    </DataProvider>
+  );
+}
 
 export default function RootLayout({
   children,
@@ -13,10 +31,10 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body>
-        <DataProvider>
-          <MainLayoutClient>{children}</MainLayoutClient>
-          <Toaster />
-        </DataProvider>
+        <AuthProvider>
+            <AppContent>{children}</AppContent>
+            <Toaster />
+        </AuthProvider>
       </body>
     </html>
   );

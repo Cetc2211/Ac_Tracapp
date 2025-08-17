@@ -1,9 +1,10 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { Student, Group, PartialId, StudentObservation } from '@/lib/placeholder-data';
-import { db, auth } from '@/lib/firebase/client';
-import { useAuthState } from 'react-firebase-hooks/auth';
+import { db } from '@/lib/firebase/client';
+import { useAuth } from '@/hooks/use-auth';
 import {
   collection,
   doc,
@@ -19,9 +20,6 @@ import {
   serverTimestamp,
   Timestamp
 } from 'firebase/firestore';
-import { usePathname, useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
-
 
 // TYPE DEFINITIONS
 export type EvaluationCriteria = {
@@ -145,9 +143,9 @@ interface DataContextType {
   // Setters
   setGroups: (groups: Group[]) => Promise<void>;
   setAllStudents: (students: Student[]) => Promise<void>;
-  addStudentToGroup: (student: Omit<Student, 'id' | 'photo'>) => Promise<void>;
+  addStudentToGroup: (groupId: string, studentData: Omit<Student, 'id' | 'photo'>) => Promise<void>;
   updateStudentInGroup: (studentId: string, studentData: Partial<Student>) => Promise<void>;
-  removeStudentFromGroup: (studentId: string) => Promise<void>;
+  removeStudentFromGroup: (groupId: string, studentId: string) => Promise<void>;
   
   setActiveGroupId: (groupId: string | null) => void;
   setActivePartialId: (partialId: PartialId) => void;
@@ -179,12 +177,9 @@ const defaultSettings = {
     theme: "theme-default"
 };
 
-const DUMMY_USER_ID = "local-user";
-
-
 // DATA PROVIDER COMPONENT
 export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
-    const [user, authLoading] = useAuthState(auth);
+    const { user, loading: authLoading } = useAuth();
     
     // Core data
     const [allStudents, setAllStudentsState] = useState<Student[]>([]);
@@ -210,10 +205,10 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     useEffect(() => {
       let unsubscribers: (() => void)[] = [];
-      setIsDataLoading(true);
-
-      const setupListeners = () => {
-          const prefix = `users/${DUMMY_USER_ID}`;
+      
+      const setupListeners = (userId: string) => {
+          setIsDataLoading(true);
+          const prefix = `users/${userId}`;
           
           unsubscribers = [
               onSnapshot(collection(db, `${prefix}/groups`), (snapshot) => {
@@ -261,18 +256,26 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
           ];
       }
 
-      // If not using real auth, we can just set up listeners.
-      // With real auth, you'd wait for the user object.
-      setupListeners();
+      if (user) {
+        setupListeners(user.uid);
+      } else if (!authLoading) {
+        // No user, clear data and stop loading
+        setGroupsState([]);
+        setAllStudentsState([]);
+        setAllObservations({});
+        setSettingsState(defaultSettings);
+        setActiveGroupIdState(null);
+        setIsDataLoading(false);
+      }
       
       return () => {
           unsubscribers.forEach(unsub => unsub());
       };
-    }, []); 
+    }, [user, authLoading]); 
     
     useEffect(() => {
-        if(activeGroupId && activePartialId) {
-            const prefix = `users/${DUMMY_USER_ID}/groups/${activeGroupId}/partials/${activePartialId}`;
+        if(activeGroupId && activePartialId && user) {
+            const prefix = `users/${user.uid}/groups/${activeGroupId}/partials/${activePartialId}`;
             const unsub = onSnapshot(doc(db, prefix, 'data'), (docSnap) => {
                 const data = docSnap.exists() ? docSnap.data() as PartialData : null;
                 setPartialData({
@@ -293,21 +296,22 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 participations: {}, activities: [], activityRecords: {},
             });
         }
-    }, [activeGroupId, activePartialId]);
+    }, [activeGroupId, activePartialId, user]);
     
     const fetchPartialData = useCallback(async (groupId: string, partialId: PartialId): Promise<PartialData> => {
-        const docRef = doc(db, `users/${DUMMY_USER_ID}/groups/${groupId}/partials/${partialId}`, 'data');
+        if (!user) return { criteria: [], grades: {}, attendance: {}, participations: {}, activities: [], activityRecords: {} };
+        const docRef = doc(db, `users/${user.uid}/groups/${groupId}/partials/${partialId}`, 'data');
         const docSnap = await getDoc(docRef);
         if(docSnap.exists()){
             return docSnap.data() as PartialData;
         }
         return { criteria: [], grades: {}, attendance: {}, participations: {}, activities: [], activityRecords: {} };
-    }, []);
+    }, [user]);
 
     const getPartialDataDocRef = useCallback(() => {
-        if (!activeGroupId) return null;
-        return doc(db, `users/${DUMMY_USER_ID}/groups/${activeGroupId}/partials/${activePartialId}`, 'data');
-    }, [activeGroupId, activePartialId]);
+        if (!activeGroupId || !user) return null;
+        return doc(db, `users/${user.uid}/groups/${activeGroupId}/partials/${activePartialId}`, 'data');
+    }, [activeGroupId, activePartialId, user]);
 
 
     const createSetter = <T,>(field: keyof PartialData) => async (setter: React.SetStateAction<T>) => {
@@ -397,13 +401,14 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }, [groups]);
 
     const setGroups = async (newGroups: Group[]) => {
+       if (!user) return;
        const batch = writeBatch(db);
-        const collectionRef = collection(db, `users/${DUMMY_USER_ID}/groups`);
+       const collectionRef = collection(db, `users/${user.uid}/groups`);
         
-        const currentGroupsSnapshot = await getDocs(collectionRef);
-        currentGroupsSnapshot.docs.forEach(doc => batch.delete(doc.ref));
+       const currentGroupsSnapshot = await getDocs(collectionRef);
+       currentGroupsSnapshot.docs.forEach(doc => batch.delete(doc.ref));
         
-        newGroups.forEach(group => {
+       newGroups.forEach(group => {
             const docRef = doc(collectionRef, group.id);
             batch.set(docRef, group);
         });
@@ -411,45 +416,49 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     };
 
     const setAllStudents = async (newStudents: Student[]) => {
+       if (!user) return;
        const batch = writeBatch(db);
-        const collectionRef = collection(db, `users/${DUMMY_USER_ID}/students`);
+       const collectionRef = collection(db, `users/${user.uid}/students`);
         
-        const currentStudentsSnapshot = await getDocs(collectionRef);
-        currentStudentsSnapshot.docs.forEach(doc => batch.delete(doc.ref));
+       const currentStudentsSnapshot = await getDocs(collectionRef);
+       currentStudentsSnapshot.docs.forEach(doc => batch.delete(doc.ref));
 
-        newStudents.forEach(student => {
+       newStudents.forEach(student => {
             const docRef = doc(collectionRef, student.id);
             batch.set(docRef, student);
         });
         await batch.commit();
     };
     
-    const addStudentToGroup = async (studentData: Omit<Student, 'id' | 'photo'>) => {};
+    const addStudentToGroup = async (groupId: string, studentData: Omit<Student, 'id' | 'photo'>) => {};
     const updateStudentInGroup = async (studentId: string, studentData: Partial<Student>) => {};
-    const removeStudentFromGroup = async (studentId: string) => {};
+    const removeStudentFromGroup = async (groupId: string, studentId: string) => {};
     
     const setActivePartialId = (partialId: PartialId) => {
         setActivePartialIdState(partialId);
     };
 
     const deleteGroup = async (groupId: string) => {
-        await deleteDoc(doc(db, `users/${DUMMY_USER_ID}/groups`, groupId));
+        if (!user) return;
+        await deleteDoc(doc(db, `users/${user.uid}/groups`, groupId));
         // Note: Deleting subcollections (partials) needs a more complex implementation, often a cloud function.
         // For now, we only delete the group doc.
     }
     
     const addStudentObservation = async (observation: Omit<StudentObservation, 'id' | 'date' | 'followUpUpdates' | 'isClosed'>) => {
+        if (!user) return;
         const newObservation = {
             ...observation,
             date: serverTimestamp(),
             followUpUpdates: [],
             isClosed: false,
         };
-        await addDoc(collection(db, `users/${DUMMY_USER_ID}/observations`), newObservation);
+        await addDoc(collection(db, `users/${user.uid}/observations`), newObservation);
     };
     
     const updateStudentObservation = async (studentId: string, observationId: string, updateText: string, isClosing: boolean) => {
-      const docRef = doc(db, `users/${DUMMY_USER_ID}/observations`, observationId);
+      if (!user) return;
+      const docRef = doc(db, `users/${user.uid}/observations`, observationId);
       const obsDoc = await getDoc(docRef);
       if (obsDoc.exists()) {
           const currentData = obsDoc.data() as StudentObservation;

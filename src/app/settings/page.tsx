@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -31,10 +32,10 @@ import {
 } from '@/components/ui/alert-dialog';
 import { db } from '@/lib/firebase/client';
 import { doc, setDoc } from 'firebase/firestore';
-
-const DUMMY_USER_ID = "local-user";
+import { useAuth } from '@/hooks/use-auth';
 
 export default function SettingsPage() {
+    const { user } = useAuth();
     const { settings, isLoading, setSettings: setSettingsInDb } = useData();
     const [localSettings, setLocalSettings] = useState(settings);
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -48,10 +49,14 @@ export default function SettingsPage() {
     }, [settings]);
     
     const handleSave = async () => {
+        if (!user) {
+            toast({variant: "destructive", title: "Error", description: "Debes iniciar sesión para guardar los ajustes."})
+            return;
+        }
         setIsSaving(true);
         const newSettings = { ...localSettings, logo: logoPreview || '' };
         try {
-          await setDoc(doc(db, `users/${DUMMY_USER_ID}/settings`, 'app'), newSettings);
+          await setDoc(doc(db, `users/${user.uid}/settings`, 'app'), newSettings);
           toast({
               title: 'Ajustes Guardados',
               description: 'La información ha sido actualizada.',
@@ -121,7 +126,7 @@ export default function SettingsPage() {
     }
 
   if (isLoading && !settings.institutionName) {
-    return <div className="flex h-full w-full items-center justify-center"><Loader2 className="mr-2 h-8 w-8 animate-spin" /> Cargando...</div>;
+    return <div className="flex h-full w-full items-center justify-center"><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Cargando...</div>;
   }
 
   return (
@@ -252,5 +257,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-
-    
