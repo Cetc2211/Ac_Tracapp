@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -24,7 +23,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 import { AppLogo } from '@/components/app-logo';
-import { UserNav } from '@/components/user-nav';
 import {
   SidebarProvider,
   Sidebar,
@@ -149,14 +147,6 @@ export default function MainLayoutClient({
             <Separator className="mx-0" />
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname.startsWith('/profile')}>
-                  <Link href="/profile">
-                    <UserIcon />
-                    <span>Mi Perfil</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={pathname.startsWith('/settings')}>
                   <Link href="/settings">
                     <Settings />
@@ -170,9 +160,6 @@ export default function MainLayoutClient({
         <SidebarInset>
           <header className="flex h-14 items-center gap-4 border-b bg-card px-4 lg:h-[60px] lg:px-6">
             <SidebarTrigger className="md:hidden" />
-            <div className="flex w-full items-center justify-end gap-4">
-              <UserNav />
-            </div>
           </header>
           <main className="flex-1 p-4 sm:p-6">{children}</main>
         </SidebarInset>

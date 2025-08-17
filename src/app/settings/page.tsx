@@ -29,8 +29,10 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { auth, db } from '@/lib/firebase/client';
+import { db } from '@/lib/firebase/client';
 import { doc, setDoc } from 'firebase/firestore';
+
+const DUMMY_USER_ID = "local-user";
 
 export default function SettingsPage() {
     const { settings, isLoading, setSettings: setSettingsInDb } = useData();
@@ -46,14 +48,10 @@ export default function SettingsPage() {
     }, [settings]);
     
     const handleSave = async () => {
-        if (!auth.currentUser) {
-            toast({variant: "destructive", title: "Error", description: "Debes iniciar sesión."});
-            return;
-        }
         setIsSaving(true);
         const newSettings = { ...localSettings, logo: logoPreview || '' };
         try {
-          await setDoc(doc(db, `users/${auth.currentUser.uid}/settings`, 'app'), newSettings);
+          await setDoc(doc(db, `users/${DUMMY_USER_ID}/settings`, 'app'), newSettings);
           toast({
               title: 'Ajustes Guardados',
               description: 'La información ha sido actualizada.',
@@ -254,3 +252,5 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+    

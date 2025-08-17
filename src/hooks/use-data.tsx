@@ -2,9 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { Student, Group, PartialId, StudentObservation } from '@/lib/placeholder-data';
-import { auth, db } from '@/lib/firebase/client';
-import type { User } from 'firebase/auth';
-import { onAuthStateChanged } from 'firebase/auth';
+import { db } from '@/lib/firebase/client';
 import {
   collection,
   doc,
@@ -181,15 +179,12 @@ const defaultSettings = {
     theme: "theme-default"
 };
 
+const DUMMY_USER_ID = "local-user";
+
 
 // DATA PROVIDER COMPONENT
 export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
-    const [user, setUser] = useState<User | null>(null);
-    const [isAuthLoading, setIsAuthLoading] = useState(true);
     const [isDataLoading, setIsDataLoading] = useState(true);
-    const router = useRouter();
-    const pathname = usePathname();
-
     
     // Core data
     const [allStudents, setAllStudentsState] = useState<Student[]>([]);
@@ -213,59 +208,15 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     });
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-            setUser(firebaseUser);
-            setIsAuthLoading(false);
-        });
-        return () => unsubscribe();
-    }, []);
-
-    useEffect(() => {
-      if (isAuthLoading) return;
-
-      const isAuthPage = pathname === '/' || pathname === '/login';
-
-      if (!user && !isAuthPage) {
-        router.push('/login');
-      }
-      if (user && isAuthPage) {
-        router.push('/dashboard');
-      }
-    }, [user, isAuthLoading, pathname, router]);
-
-    
-    useEffect(() => {
-        if (!user) {
-            // Reset state when user logs out
-            setGroupsState([]);
-            setAllStudentsState([]);
-            setAllObservations({});
-            setActiveGroupIdState(null);
-            setSettingsState(defaultSettings);
-            setUserProfile(null);
-            setPartialData({ criteria: [], grades: {}, attendance: {}, participations: {}, activities: [], activityRecords: {} });
-            setIsDataLoading(false);
-            return;
-        }
-
         setIsDataLoading(true);
-        const prefix = `users/${user.uid}`;
+        const prefix = `users/${DUMMY_USER_ID}`;
         
         const initializeUserData = async () => {
-            const profileRef = doc(db, `${prefix}/profile`, 'info');
             const settingsRef = doc(db, `${prefix}/settings`, 'app');
 
             try {
-                const profileSnap = await getDoc(profileRef);
                 const settingsSnap = await getDoc(settingsRef);
 
-                if (!profileSnap.exists()) {
-                    await setDoc(profileRef, {
-                        name: user.displayName || "Usuario",
-                        email: user.email,
-                        photoURL: user.photoURL || ''
-                    });
-                }
                 if (!settingsSnap.exists()) {
                     await setDoc(settingsRef, defaultSettings);
                 }
@@ -312,11 +263,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 });
                 setAllObservations(fetchedObservations);
             }),
-            onSnapshot(doc(db, `${prefix}/profile`, 'info'), (doc) => {
-                if (doc.exists()) {
-                     setUserProfile(doc.data() as UserProfile);
-                }
-            }),
              onSnapshot(doc(db, `${prefix}/settings`, 'app'), (doc) => {
                 if (doc.exists()) {
                     setSettingsState(doc.data() as typeof settings);
@@ -328,11 +274,11 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
         return () => unsubscribers.forEach(unsub => unsub());
     
-    }, [user, activeGroupId]);
+    }, [activeGroupId]);
     
     useEffect(() => {
-        if(user && activeGroupId && activePartialId) {
-            const prefix = `users/${user.uid}/groups/${activeGroupId}/partials/${activePartialId}`;
+        if(activeGroupId && activePartialId) {
+            const prefix = `users/${DUMMY_USER_ID}/groups/${activeGroupId}/partials/${activePartialId}`;
             const unsub = onSnapshot(doc(db, prefix, 'data'), (docSnap) => {
                 const data = docSnap.exists() ? docSnap.data() as PartialData : null;
                 setPartialData({
@@ -351,22 +297,21 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 participations: {}, activities: [], activityRecords: {},
             });
         }
-    }, [user, activeGroupId, activePartialId]);
+    }, [activeGroupId, activePartialId]);
     
     const fetchPartialData = useCallback(async (groupId: string, partialId: PartialId): Promise<PartialData> => {
-        if (!user) return { criteria: [], grades: {}, attendance: {}, participations: {}, activities: [], activityRecords: {} };
-        const docRef = doc(db, `users/${user.uid}/groups/${groupId}/partials/${partialId}`, 'data');
+        const docRef = doc(db, `users/${DUMMY_USER_ID}/groups/${groupId}/partials/${partialId}`, 'data');
         const docSnap = await getDoc(docRef);
         if(docSnap.exists()){
             return docSnap.data() as PartialData;
         }
         return { criteria: [], grades: {}, attendance: {}, participations: {}, activities: [], activityRecords: {} };
-    }, [user]);
+    }, []);
 
     const getPartialDataDocRef = useCallback(() => {
-        if (!user || !activeGroupId) return null;
-        return doc(db, `users/${user.uid}/groups/${activeGroupId}/partials/${activePartialId}`, 'data');
-    }, [user, activeGroupId, activePartialId]);
+        if (!activeGroupId) return null;
+        return doc(db, `users/${DUMMY_USER_ID}/groups/${activeGroupId}/partials/${activePartialId}`, 'data');
+    }, [activeGroupId, activePartialId]);
 
 
     const createSetter = <T,>(field: keyof PartialData) => async (setter: React.SetStateAction<T>) => {
@@ -456,9 +401,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }, [groups]);
 
     const setGroups = async (newGroups: Group[]) => {
-       if (!user) return;
-        const batch = writeBatch(db);
-        const collectionRef = collection(db, `users/${user.uid}/groups`);
+       const batch = writeBatch(db);
+        const collectionRef = collection(db, `users/${DUMMY_USER_ID}/groups`);
         
         const currentGroupsSnapshot = await getDocs(collectionRef);
         currentGroupsSnapshot.docs.forEach(doc => batch.delete(doc.ref));
@@ -471,9 +415,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     };
 
     const setAllStudents = async (newStudents: Student[]) => {
-       if (!user) return;
-        const batch = writeBatch(db);
-        const collectionRef = collection(db, `users/${user.uid}/students`);
+       const batch = writeBatch(db);
+        const collectionRef = collection(db, `users/${DUMMY_USER_ID}/students`);
         
         const currentStudentsSnapshot = await getDocs(collectionRef);
         currentStudentsSnapshot.docs.forEach(doc => batch.delete(doc.ref));
@@ -494,26 +437,23 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     };
 
     const deleteGroup = async (groupId: string) => {
-        if (!user) return;
-        await deleteDoc(doc(db, `users/${user.uid}/groups`, groupId));
+        await deleteDoc(doc(db, `users/${DUMMY_USER_ID}/groups`, groupId));
         // Note: Deleting subcollections (partials) needs a more complex implementation, often a cloud function.
         // For now, we only delete the group doc.
     }
     
     const addStudentObservation = async (observation: Omit<StudentObservation, 'id' | 'date' | 'followUpUpdates' | 'isClosed'>) => {
-       if (!user) return;
         const newObservation = {
             ...observation,
             date: serverTimestamp(),
             followUpUpdates: [],
             isClosed: false,
         };
-        await addDoc(collection(db, `users/${user.uid}/observations`), newObservation);
+        await addDoc(collection(db, `users/${DUMMY_USER_ID}/observations`), newObservation);
     };
     
     const updateStudentObservation = async (studentId: string, observationId: string, updateText: string, isClosing: boolean) => {
-      if (!user) return;
-      const docRef = doc(db, `users/${user.uid}/observations`, observationId);
+      const docRef = doc(db, `users/${DUMMY_USER_ID}/observations`, observationId);
       const obsDoc = await getDoc(docRef);
       if (obsDoc.exists()) {
           const currentData = obsDoc.data() as StudentObservation;
@@ -585,7 +525,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
 
     const contextValue: DataContextType = {
-        isLoading: isAuthLoading || isDataLoading,
+        isLoading: isDataLoading,
         groups, allStudents, allObservations, activeStudentsInGroups, settings, userProfile, activeGroup, activePartialId,
         partialData,
         groupAverages, atRiskStudents, overallAverageParticipation,
@@ -595,15 +535,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         calculateFinalGrade, getStudentRiskLevel, calculateDetailedFinalGrade,
         fetchPartialData,
     };
-    
-    if (isAuthLoading) {
-        return (
-            <div className="flex h-screen w-full items-center justify-center">
-                <Loader2 className="mr-2 h-8 w-8 animate-spin" />
-                <span>Autenticando...</span>
-            </div>
-        );
-    }
 
     return (
         <DataContext.Provider value={contextValue}>
@@ -619,3 +550,5 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
+
+    

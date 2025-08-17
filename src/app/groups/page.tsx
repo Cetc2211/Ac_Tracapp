@@ -28,11 +28,14 @@ import { useToast } from '@/hooks/use-toast';
 import { PlusCircle, Users, ArrowRight, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { doc, setDoc } from 'firebase/firestore';
-import { db, auth } from '@/lib/firebase/client';
+import { db } from '@/lib/firebase/client';
 
 const cardColors = [
   'bg-card-1', 'bg-card-2', 'bg-card-3', 'bg-card-4', 'bg-card-5'
 ];
+
+const DUMMY_USER_ID = "local-user";
+
 
 export default function GroupsPage() {
   const { groups, setActiveGroupId, isLoading } = useData();
@@ -53,10 +56,6 @@ export default function GroupsPage() {
       });
       return;
     }
-    if (!auth.currentUser) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Debes iniciar sesión.' });
-        return;
-    }
 
     setIsSubmitting(true);
     const id = `G${Date.now()}`;
@@ -70,7 +69,7 @@ export default function GroupsPage() {
     };
     
     try {
-        await setDoc(doc(db, `users/${auth.currentUser.uid}/groups`, id), newGroup);
+        await setDoc(doc(db, `users/${DUMMY_USER_ID}/groups`, id), newGroup);
         toast({
           title: 'Grupo Creado',
           description: `El grupo "${newGroup.subject}" ha sido creado exitosamente.`,
@@ -222,3 +221,5 @@ export default function GroupsPage() {
     </div>
   );
 }
+
+    
