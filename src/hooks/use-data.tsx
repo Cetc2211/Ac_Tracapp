@@ -232,11 +232,10 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                         } else if (fetchedGroups.length === 0) {
                             setActiveGroupIdState(null);
                         }
-                        // This is the key change: only set loading to false after the first successful read.
                         setIsLoading(false); 
                     }, (error) => {
                         console.error("Error fetching groups:", error);
-                        setIsLoading(false); // Also stop loading on error
+                        setIsLoading(false);
                     }),
                     onSnapshot(collection(db, `${prefix}/students`), (snapshot) => {
                         setAllStudentsState(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student)));
@@ -278,7 +277,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         return () => {
             unsubscribers.forEach(unsub => unsub());
         };
-    }, []); // Runs only once on mount
+    }, []); 
     
     useEffect(() => {
         if(activeGroupId && activePartialId) {
