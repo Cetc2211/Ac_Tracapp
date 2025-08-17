@@ -1,8 +1,8 @@
 
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, Auth } from 'firebase/auth';
 import { app } from './client';
 
-const auth = getAuth(app);
+const auth: Auth = getAuth(app);
 
 const signUp = async (name: string, email: string, password: string) => {
   try {
@@ -11,7 +11,7 @@ const signUp = async (name: string, email: string, password: string) => {
     
     // Update the user's profile with the name
     await updateProfile(user, { displayName: name });
-    
+
     console.log("User created and profile updated:", user);
     return user;
   } catch (error: any) {

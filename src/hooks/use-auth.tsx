@@ -20,8 +20,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [error, setError] = useState<Error | undefined>(undefined);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(
-      auth,
+    const unsubscribe = onAuthStateChanged(auth,
       (user) => {
         setUser(user);
         setLoading(false);
@@ -31,7 +30,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setLoading(false);
       }
     );
-
     return () => unsubscribe();
   }, []);
   

@@ -1,7 +1,7 @@
 
 'use client';
 
-import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore, Firestore } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -13,8 +13,11 @@ const firebaseConfig = {
   messagingSenderId: "263108580734"
 };
 
-// Initialize Firebase
-const app: FirebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
-const db: Firestore = getFirestore(app);
+// Initialize Firebase only on the client side
+const app = typeof window !== 'undefined' && getApps().length === 0 ? initializeApp(firebaseConfig) : getApps().length > 0 ? getApp() : null;
 
-export { app, db, firebaseConfig };
+// Initialize Firestore only if the app is initialized
+const db: Firestore | null = app ? getFirestore(app) : null;
+
+
+export { app, db };

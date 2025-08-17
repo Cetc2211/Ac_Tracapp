@@ -253,7 +253,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                        setSettingsState(defaultSettings);
                   }
               }, (error) => console.error("Error fetching settings:", error)),
-          ];
+ ];
       }
 
       if (user) {
@@ -271,7 +271,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
       return () => {
           unsubscribers.forEach(unsub => unsub());
       };
-    }, [user, authLoading]); 
+    }, [user, authLoading, activeGroupId]); 
     
     useEffect(() => {
         if(activeGroupId && activePartialId && user) {
@@ -300,6 +300,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     
     const fetchPartialData = useCallback(async (groupId: string, partialId: PartialId): Promise<PartialData> => {
         if (!user) return { criteria: [], grades: {}, attendance: {}, participations: {}, activities: [], activityRecords: {} };
+        if (!db) return { criteria: [], grades: {}, attendance: {}, participations: {}, activities: [], activityRecords: {} };
         const docRef = doc(db, `users/${user.uid}/groups/${groupId}/partials/${partialId}`, 'data');
         const docSnap = await getDoc(docRef);
         if(docSnap.exists()){
@@ -402,12 +403,13 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     const setGroups = async (newGroups: Group[]) => {
        if (!user) return;
+       if (!db) return;
        const batch = writeBatch(db);
        const collectionRef = collection(db, `users/${user.uid}/groups`);
-        
+
        const currentGroupsSnapshot = await getDocs(collectionRef);
        currentGroupsSnapshot.docs.forEach(doc => batch.delete(doc.ref));
-        
+
        newGroups.forEach(group => {
             const docRef = doc(collectionRef, group.id);
             batch.set(docRef, group);
@@ -417,9 +419,10 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     const setAllStudents = async (newStudents: Student[]) => {
        if (!user) return;
+       if (!db) return;
        const batch = writeBatch(db);
        const collectionRef = collection(db, `users/${user.uid}/students`);
-        
+
        const currentStudentsSnapshot = await getDocs(collectionRef);
        currentStudentsSnapshot.docs.forEach(doc => batch.delete(doc.ref));
 
