@@ -216,11 +216,13 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 const prefix = `users/${DUMMY_USER_ID}`;
                 
                 const settingsRef = doc(db, `${prefix}/settings`, 'app');
+                // Ensure settings exist before subscribing
                 const settingsSnap = await getDoc(settingsRef);
                 if (!settingsSnap.exists()) {
                     await setDoc(settingsRef, defaultSettings);
                 }
 
+                // Now that connection is confirmed, set up listeners
                 unsubscribers = [
                     onSnapshot(collection(db, `${prefix}/groups`), (snapshot) => {
                         const fetchedGroups = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Group));
