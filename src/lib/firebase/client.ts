@@ -1,8 +1,8 @@
-
 'use client';
 
-import { initializeApp, getApps, getApp } from 'firebase/app';
+import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getFirestore, Firestore } from 'firebase/firestore';
+import { getAuth, Auth } from 'firebase/auth';
 
 const firebaseConfig = {
   projectId: "academic-tracker-qeoxi",
@@ -13,11 +13,15 @@ const firebaseConfig = {
   messagingSenderId: "263108580734"
 };
 
-// Initialize Firebase only on the client side
-const app = typeof window !== 'undefined' && getApps().length === 0 ? initializeApp(firebaseConfig) : getApps().length > 0 ? getApp() : null;
+let app: FirebaseApp;
+if (getApps().length === 0) {
+    app = initializeApp(firebaseConfig);
+} else {
+    app = getApp();
+}
 
-// Initialize Firestore only if the app is initialized
-const db: Firestore | null = app ? getFirestore(app) : null;
+const db: Firestore = getFirestore(app);
+const auth: Auth = getAuth(app);
 
 
-export { app, db };
+export { app, db, auth };

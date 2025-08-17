@@ -1,8 +1,5 @@
-
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, Auth } from 'firebase/auth';
-import { app } from './client';
-
-const auth: Auth = getAuth(app);
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { auth } from './client';
 
 const signUp = async (name: string, email: string, password: string) => {
   try {
@@ -37,4 +34,4 @@ const signIn = async (email: string, password: string) => {
   }
 };
 
-export { auth, signUp, signIn };
+export { signUp, signIn };
