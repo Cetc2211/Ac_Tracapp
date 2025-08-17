@@ -1,7 +1,7 @@
 'use client';
 
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import { getFirestore, Firestore, enableNetwork } from 'firebase/firestore';
 
 const firebaseConfig = {
   projectId: "academic-tracker-qeoxi",
@@ -16,6 +16,4 @@ const firebaseConfig = {
 const app: FirebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const db: Firestore = getFirestore(app);
 
-export { app, db, firebaseConfig };
-
-    
+export { app, db, firebaseConfig, enableNetwork };
