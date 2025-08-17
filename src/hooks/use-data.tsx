@@ -300,7 +300,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     
     const fetchPartialData = useCallback(async (groupId: string, partialId: PartialId): Promise<PartialData> => {
         if (!user) return { criteria: [], grades: {}, attendance: {}, participations: {}, activities: [], activityRecords: {} };
-        if (!db) return { criteria: [], grades: {}, attendance: {}, participations: {}, activities: [], activityRecords: {} };
         const docRef = doc(db, `users/${user.uid}/groups/${groupId}/partials/${partialId}`, 'data');
         const docSnap = await getDoc(docRef);
         if(docSnap.exists()){
@@ -403,7 +402,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     const setGroups = async (newGroups: Group[]) => {
        if (!user) return;
-       if (!db) return;
        const batch = writeBatch(db);
        const collectionRef = collection(db, `users/${user.uid}/groups`);
 
@@ -419,7 +417,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     const setAllStudents = async (newStudents: Student[]) => {
        if (!user) return;
-       if (!db) return;
        const batch = writeBatch(db);
        const collectionRef = collection(db, `users/${user.uid}/students`);
 
