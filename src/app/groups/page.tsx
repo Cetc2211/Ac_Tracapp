@@ -29,16 +29,16 @@ import { PlusCircle, Users, ArrowRight, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
+import { useAuth } from '@/hooks/use-auth';
 
 const cardColors = [
   'bg-card-1', 'bg-card-2', 'bg-card-3', 'bg-card-4', 'bg-card-5'
 ];
 
-const DUMMY_USER_ID = "local-user";
-
 
 export default function GroupsPage() {
   const { groups, setActiveGroupId, isLoading } = useData();
+  const { user } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newGroupSubject, setNewGroupSubject] = useState('');
@@ -56,6 +56,10 @@ export default function GroupsPage() {
       });
       return;
     }
+    if (!user) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Debes iniciar sesión para crear un grupo.'});
+        return;
+    }
 
     setIsSubmitting(true);
     const id = `G${Date.now()}`;
@@ -69,7 +73,7 @@ export default function GroupsPage() {
     };
     
     try {
-        await setDoc(doc(db, `users/${DUMMY_USER_ID}/groups`, id), newGroup);
+        await setDoc(doc(db, `users/${user.uid}/groups`, id), newGroup);
         toast({
           title: 'Grupo Creado',
           description: `El grupo "${newGroup.subject}" ha sido creado exitosamente.`,
@@ -221,5 +225,3 @@ export default function GroupsPage() {
     </div>
   );
 }
-
-    

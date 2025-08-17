@@ -1,9 +1,8 @@
-
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged, User, signOut as firebaseSignOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase/client';
+import { auth } from '@/lib/firebase/auth';
 
 interface AuthContextType {
   user: User | null;
@@ -36,7 +35,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async () => {
     try {
       await firebaseSignOut(auth);
-      // User state will be updated by onAuthStateChanged listener
     } catch (err) {
       console.error("Error signing out: ", err);
     }

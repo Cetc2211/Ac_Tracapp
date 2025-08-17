@@ -1,12 +1,13 @@
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { auth } from './client';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, Auth } from 'firebase/auth';
+import { app } from './client';
+
+export const auth: Auth = getAuth(app);
 
 const signUp = async (name: string, email: string, password: string) => {
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
     
-    // Update the user's profile with the name
     await updateProfile(user, { displayName: name });
 
     console.log("User created and profile updated:", user);
@@ -22,7 +23,6 @@ const signUp = async (name: string, email: string, password: string) => {
 const signIn = async (email: string, password: string) => {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    // Signed in
     const user = userCredential.user;
     console.log("User signed in:", user);
     return user;
