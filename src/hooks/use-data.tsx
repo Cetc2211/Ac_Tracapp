@@ -328,7 +328,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
         return () => unsubscribers.forEach(unsub => unsub());
     
-    }, [user]);
+    }, [user, activeGroupId]);
     
     useEffect(() => {
         if(user && activeGroupId && activePartialId) {
