@@ -131,7 +131,6 @@ interface DataContextType {
   allObservations: {[studentId: string]: StudentObservation[]};
   activeStudentsInGroups: Student[];
   settings: { institutionName: string; logo: string; theme: string };
-  userProfile: UserProfile | null;
   
   activeGroup: Group | null;
   activePartialId: PartialId;
@@ -191,7 +190,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const [allObservations, setAllObservations] = useState<{[studentId: string]: StudentObservation[]}>({});
     const [groups, setGroupsState] = useState<Group[]>([]);
     const [settings, setSettingsState] = useState(defaultSettings);
-    const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     
     // Active state
     const [activeGroupId, setActiveGroupIdState] = useState<string | null>(null);
@@ -208,77 +206,77 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     });
 
     useEffect(() => {
-        const prefix = `users/${DUMMY_USER_ID}`;
+        let unsubscribers: (() => void)[] = [];
         
-        const initializeApp = async () => {
-            setIsLoading(true);
+        const initializeAndListen = async () => {
             try {
                 await enableNetwork(db);
+                console.log("Firebase network enabled.");
 
-                // Initialize settings if they don't exist
+                const prefix = `users/${DUMMY_USER_ID}`;
+                
                 const settingsRef = doc(db, `${prefix}/settings`, 'app');
                 const settingsSnap = await getDoc(settingsRef);
                 if (!settingsSnap.exists()) {
                     await setDoc(settingsRef, defaultSettings);
                 }
 
-            } catch (error) {
-                console.error("Firebase network enabling failed", error);
-                setIsLoading(false); // Stop loading on error
-                return;
-            }
-
-            // Setup listeners after network is enabled
-            const unsubscribers = [
-                onSnapshot(collection(db, `${prefix}/groups`), (snapshot) => {
-                    const fetchedGroups = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Group));
-                    setGroupsState(fetchedGroups);
-                    if (!activeGroupId && fetchedGroups.length > 0) {
-                        setActiveGroupIdState(fetchedGroups[0].id);
-                    } else if (activeGroupId && !fetchedGroups.some(g => g.id === activeGroupId)) {
-                        setActiveGroupIdState(fetchedGroups[0]?.id || null);
-                    } else if (fetchedGroups.length === 0) {
-                        setActiveGroupIdState(null);
-                    }
-                    setIsLoading(false); // Main data loaded
-                }, (error) => {
-                    console.error("Error fetching groups:", error);
-                    setIsLoading(false);
-                }),
-                onSnapshot(collection(db, `${prefix}/students`), (snapshot) => {
-                    setAllStudentsState(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student)));
-                }, (error) => console.error("Error fetching students:", error)),
-                onSnapshot(collection(db, `${prefix}/observations`), (snapshot) => {
-                    const fetchedObservations: {[studentId: string]: StudentObservation[]} = {};
-                    snapshot.docs.forEach(doc => {
-                        const obs = { id: doc.id, ...doc.data() } as StudentObservation;
-                        if (obs.studentId) {
-                            if (!fetchedObservations[obs.studentId]) {
-                                fetchedObservations[obs.studentId] = [];
-                            }
-                            if (obs.date && obs.date instanceof Timestamp) {
-                               obs.date = obs.date.toDate().toISOString();
-                            }
-                            obs.followUpUpdates = (obs.followUpUpdates || []).map(f => ({...f, date: f.date && f.date instanceof Timestamp ? f.date.toDate().toISOString() : f.date }));
-                            fetchedObservations[obs.studentId].push(obs);
+                unsubscribers = [
+                    onSnapshot(collection(db, `${prefix}/groups`), (snapshot) => {
+                        const fetchedGroups = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Group));
+                        setGroupsState(fetchedGroups);
+                        if (!activeGroupId && fetchedGroups.length > 0) {
+                            setActiveGroupIdState(fetchedGroups[0].id);
+                        } else if (activeGroupId && !fetchedGroups.some(g => g.id === activeGroupId)) {
+                            setActiveGroupIdState(fetchedGroups[0]?.id || null);
+                        } else if (fetchedGroups.length === 0) {
+                            setActiveGroupIdState(null);
                         }
-                    });
-                    setAllObservations(fetchedObservations);
-                }, (error) => console.error("Error fetching observations:", error)),
-                onSnapshot(doc(db, `${prefix}/settings`, 'app'), (doc) => {
-                    if (doc.exists()) {
-                        setSettingsState(doc.data() as typeof settings);
-                    } else {
-                         setSettingsState(defaultSettings);
-                    }
-                }, (error) => console.error("Error fetching settings:", error)),
-            ];
+                        setIsLoading(false);
+                    }, (error) => {
+                        console.error("Error fetching groups:", error);
+                        setIsLoading(false);
+                    }),
+                    onSnapshot(collection(db, `${prefix}/students`), (snapshot) => {
+                        setAllStudentsState(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student)));
+                    }, (error) => console.error("Error fetching students:", error)),
+                    onSnapshot(collection(db, `${prefix}/observations`), (snapshot) => {
+                        const fetchedObservations: {[studentId: string]: StudentObservation[]} = {};
+                        snapshot.docs.forEach(doc => {
+                            const obs = { id: doc.id, ...doc.data() } as StudentObservation;
+                            if (obs.studentId) {
+                                if (!fetchedObservations[obs.studentId]) {
+                                    fetchedObservations[obs.studentId] = [];
+                                }
+                                if (obs.date && obs.date instanceof Timestamp) {
+                                   obs.date = obs.date.toDate().toISOString();
+                                }
+                                obs.followUpUpdates = (obs.followUpUpdates || []).map(f => ({...f, date: f.date && f.date instanceof Timestamp ? f.date.toDate().toISOString() : f.date }));
+                                fetchedObservations[obs.studentId].push(obs);
+                            }
+                        });
+                        setAllObservations(fetchedObservations);
+                    }, (error) => console.error("Error fetching observations:", error)),
+                    onSnapshot(doc(db, `${prefix}/settings`, 'app'), (doc) => {
+                        if (doc.exists()) {
+                            setSettingsState(doc.data() as typeof settings);
+                        } else {
+                             setSettingsState(defaultSettings);
+                        }
+                    }, (error) => console.error("Error fetching settings:", error)),
+                ];
 
-            return () => unsubscribers.forEach(unsub => unsub());
+            } catch (error) {
+                console.error("Firebase initialization failed:", error);
+                setIsLoading(false);
+            }
         };
 
-        initializeApp();
+        initializeAndListen();
 
+        return () => {
+            unsubscribers.forEach(unsub => unsub());
+        };
     }, []); // Runs only once on mount
     
     useEffect(() => {
@@ -533,7 +531,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     const contextValue: DataContextType = {
         isLoading,
-        groups, allStudents, allObservations, activeStudentsInGroups, settings, userProfile, activeGroup, activePartialId,
+        groups, allStudents, allObservations, activeStudentsInGroups, settings,
+        activeGroup, activePartialId,
         partialData,
         groupAverages, atRiskStudents, overallAverageParticipation,
         setGroups, setAllStudents, addStudentToGroup, updateStudentInGroup, removeStudentFromGroup, setActiveGroupId, setActivePartialId,
