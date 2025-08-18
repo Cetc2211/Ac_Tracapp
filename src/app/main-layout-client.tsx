@@ -84,21 +84,21 @@ export default function MainLayoutClient({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, loading, signOut } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
   const { settings, activeGroup, activePartialId, isLoading: isDataLoading, error: dataError } = useData();
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!authLoading && !user) {
       router.push('/');
     }
-  }, [user, loading, router]);
+  }, [user, authLoading, router]);
   
   useEffect(() => {
     const theme = settings?.theme || defaultSettings.theme;
     document.body.className = theme;
   }, [settings?.theme]);
   
-  if (loading || isDataLoading) {
+  if (authLoading || isDataLoading) {
     return (
         <div className="flex h-screen w-full items-center justify-center">
             <Loader2 className="mr-2 h-8 w-8 animate-spin" />

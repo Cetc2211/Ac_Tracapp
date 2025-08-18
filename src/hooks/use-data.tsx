@@ -208,7 +208,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     useEffect(() => {
         if (authLoading) {
-            setIsLoading(true);
             return;
         }
 
@@ -231,11 +230,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 (snapshot) => {
                     const fetchedGroups = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Group));
                     setGroupsState(fetchedGroups);
-                    // Set active group if not already set or if it no longer exists
-                    if (!activeGroupId || !fetchedGroups.some(g => g.id === activeGroupId)) {
-                        setActiveGroupIdState(fetchedGroups[0]?.id || null);
-                    }
-                    setIsLoading(false); // Stop loading once we have groups (or know there are none)
+                    setIsLoading(false);
                 }, 
                 (err) => {
                     console.error("Groups listener error:", err);
@@ -250,7 +245,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 (err) => {
                     console.error("Students listener error:", err);
                     setError(err);
-                    setIsLoading(false);
                 }
             ),
             onSnapshot(collection(db, `${prefix}/observations`), 
@@ -273,8 +267,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 }, 
                 (err) => {
                     console.error("Observations listener error:", err);
-                    setError(err);
-                    setIsLoading(false);
                 }
             ),
             onSnapshot(doc(db, `${prefix}/settings`, 'app'), 
@@ -285,8 +277,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 }, 
                 (err) => {
                     console.error("Settings listener error:", err);
-                    setError(err);
-                    setIsLoading(false);
                 }
             )
         ];
@@ -481,13 +471,16 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     
     const addStudentObservation = async (observation: Omit<StudentObservation, 'id' | 'date' | 'followUpUpdates' | 'isClosed'>) => {
         if (!user) return;
+        
+        const newDocRef = doc(collection(db, `users/${user.uid}/observations`));
         const newObservation = {
             ...observation,
+            id: newDocRef.id,
             date: serverTimestamp(),
             followUpUpdates: [],
             isClosed: false,
         };
-        await addDoc(collection(db, `users/${user.uid}/observations`), newObservation);
+        await setDoc(newDocRef, newObservation);
     };
     
     const updateStudentObservation = async (studentId: string, observationId: string, updateText: string, isClosing: boolean) => {
@@ -618,5 +611,3 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
-
-    

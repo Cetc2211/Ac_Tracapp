@@ -70,18 +70,19 @@ export default function SettingsPage() {
     }, [settings]);
     
     const handleSave = async () => {
-        if (!user) {
-            toast({variant: "destructive", title: "Error", description: "Debes iniciar sesión para guardar los ajustes."})
+        if (!user || isLoading) {
+            toast({variant: "destructive", title: "Error", description: "No se pueden guardar los ajustes mientras los datos se están cargando."})
             return;
         }
         setIsSaving(true);
         const newSettings = { ...localSettings, logo: logoPreview || '' };
+        
         try {
-          await setDoc(doc(db, `users/${user.uid}/settings`, 'app'), newSettings);
-          toast({
+            await setSettingsInDb(newSettings);
+            toast({
               title: 'Ajustes Guardados',
               description: 'La información ha sido actualizada.',
-          });
+            });
         } catch (e) {
           toast({variant: "destructive", title: "Error", description: "No se pudieron guardar los ajustes."})
         } finally {
@@ -186,12 +187,18 @@ export default function SettingsPage() {
                     const snapshot = await getDocs(collection(db, `${userPrefix}/${coll}`));
                     snapshot.docs.forEach(doc => batch.delete(doc.ref));
                 }
-
+                
                 data.groups.forEach(group => batch.set(doc(db, `${userPrefix}/groups`, group.id), group));
                 data.students.forEach(student => batch.set(doc(db, `${userPrefix}/students`, student.id), student));
+
                 if (data.observations) {
-                  Object.values(data.observations).flat().forEach(obs => batch.set(doc(collection(db, `${userPrefix}/observations`)), obs));
+                  Object.values(data.observations).flat().forEach(obs => {
+                      if (obs && obs.id) {
+                        batch.set(doc(db, `${userPrefix}/observations`, obs.id), obs)
+                      }
+                  });
                 }
+                
                 batch.set(doc(db, `${userPrefix}/settings`, 'app'), data.settings);
 
                 if (data.partialsData) {
@@ -231,7 +238,19 @@ export default function SettingsPage() {
         try {
             const batch = writeBatch(db);
             const userPrefix = `users/${user.uid}`;
-
+            
+            // Delete all subcollections from groups first
+            for (const group of groups) {
+                const partialsRef = collection(db, `${userPrefix}/groups/${group.id}/partials`);
+                const partialsSnap = await getDocs(partialsRef);
+                for (const partialDoc of partialsSnap.docs) {
+                    const dataRef = collection(db, partialDoc.ref.path, 'data');
+                    const dataSnap = await getDocs(dataRef);
+                    dataSnap.forEach(doc => batch.delete(doc.ref));
+                    batch.delete(partialDoc.ref);
+                }
+            }
+            
             const collectionsToDelete = ['groups', 'students', 'observations'];
              for (const coll of collectionsToDelete) {
                 const snapshot = await getDocs(collection(db, `${userPrefix}/${coll}`));
@@ -252,7 +271,11 @@ export default function SettingsPage() {
     }
 
   if (isLoading && !settings.institutionName) {
-    return <div className="flex h-full w-full items-center justify-center"><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Cargando...</div>;
+    return (
+        <div className="flex h-full w-full items-center justify-center">
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Cargando...
+        </div>
+    );
   }
 
   return (
@@ -309,7 +332,7 @@ export default function SettingsPage() {
             <ThemeSwitcher selectedTheme={localSettings.theme} onThemeChange={handleThemeChange} />
         </CardContent>
         <CardFooter className="border-t px-6 py-4">
-          <Button onClick={handleSave} disabled={isSaving}>
+          <Button onClick={handleSave} disabled={isSaving || (isLoading && !settings.institutionName)}>
             {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
             Guardar Cambios
           </Button>
@@ -404,4 +427,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-
