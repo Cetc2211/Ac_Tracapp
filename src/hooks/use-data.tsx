@@ -184,9 +184,9 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const { user, loading: authLoading } = useAuth();
     
     // Core data
-    const [allStudents, setAllStudentsState] = useState<Student[]>([]);
+    const [allStudents, setAllStudents] = useState<Student[]>([]);
     const [allObservations, setAllObservations] = useState<{[studentId: string]: StudentObservation[]}>({});
-    const [groups, setGroupsState] = useState<Group[]>([]);
+    const [groups, setGroups] = useState<Group[]>([]);
     const [settings, setSettingsState] = useState(defaultSettings);
     
     // Active state
@@ -208,90 +208,58 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     useEffect(() => {
         if (authLoading) {
-            setIsLoading(true);
-            return;
+          setIsLoading(true);
+          return;
         }
-
         if (!user) {
-            setGroupsState([]);
-            setAllStudentsState([]);
-            setAllObservations({});
-            setSettingsState(defaultSettings);
-            setActiveGroupIdState(null);
-            setPartialData({ criteria: [], grades: {}, attendance: {}, participations: {}, activities: [], activityRecords: {} });
-            setIsLoading(false);
-            setError(null);
-            return;
+          setGroups([]);
+          setAllStudents([]);
+          setAllObservations({});
+          setSettingsState(defaultSettings);
+          setActiveGroupIdState(null);
+          setPartialData({ criteria: [], grades: {}, attendance: {}, participations: {}, activities: [], activityRecords: {} });
+          setIsLoading(false);
+          return;
         }
-
+    
         const prefix = `users/${user.uid}`;
-        
-        const groupsUnsub = onSnapshot(collection(db, `${prefix}/groups`), 
+    
+        const unsubscribers = [
+          onSnapshot(collection(db, `${prefix}/groups`), 
+            (snapshot) => setGroups(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Group))),
+            (e) => { console.error("Groups listener error:", e); setError(e); }
+          ),
+          onSnapshot(collection(db, `${prefix}/students`), 
+            (snapshot) => setAllStudents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student))),
+            (e) => { console.error("Students listener error:", e); setError(e); }
+          ),
+          onSnapshot(collection(db, `${prefix}/observations`), 
             (snapshot) => {
-                const fetchedGroups = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Group));
-                setGroupsState(fetchedGroups);
-                setIsLoading(false); // Only set loading to false after groups (main data) are loaded
-            }, 
-            (err) => {
-                console.error("Groups listener error:", err);
-                setError(err);
-                setIsLoading(false);
-            }
-        );
+              const fetchedObservations: {[studentId: string]: StudentObservation[]} = {};
+              snapshot.docs.forEach(doc => {
+                  const obs = { id: doc.id, ...doc.data() } as StudentObservation;
+                  if (obs.studentId) {
+                      if (!fetchedObservations[obs.studentId]) fetchedObservations[obs.studentId] = [];
+                      if (obs.date && obs.date instanceof Timestamp) obs.date = obs.date.toDate().toISOString();
+                      obs.followUpUpdates = (obs.followUpUpdates || []).map(f => ({...f, date: f.date && f.date instanceof Timestamp ? f.date.toDate().toISOString() : f.date }));
+                      fetchedObservations[obs.studentId].push(obs);
+                  }
+              });
+              setAllObservations(fetchedObservations);
+            },
+            (e) => { console.error("Observations listener error:", e); setError(e); }
+          ),
+          onSnapshot(doc(db, `${prefix}/settings`, 'app'), 
+            (doc) => setSettingsState(doc.exists() ? doc.data() as typeof settings : defaultSettings),
+            (e) => { console.error("Settings listener error:", e); setError(e); }
+          ),
+        ];
 
-        const studentsUnsub = onSnapshot(collection(db, `${prefix}/students`), 
-            (snapshot) => {
-                setAllStudentsState(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student)));
-            }, 
-            (err) => {
-                console.error("Students listener error:", err);
-                setError(err);
-            }
-        );
-
-        const observationsUnsub = onSnapshot(collection(db, `${prefix}/observations`), 
-            (snapshot) => {
-                const fetchedObservations: {[studentId: string]: StudentObservation[]} = {};
-                snapshot.docs.forEach(doc => {
-                    const obs = { id: doc.id, ...doc.data() } as StudentObservation;
-                    if (obs.studentId) {
-                        if (!fetchedObservations[obs.studentId]) {
-                            fetchedObservations[obs.studentId] = [];
-                        }
-                        if (obs.date && obs.date instanceof Timestamp) {
-                            obs.date = obs.date.toDate().toISOString();
-                        }
-                        obs.followUpUpdates = (obs.followUpUpdates || []).map(f => ({...f, date: f.date && f.date instanceof Timestamp ? f.date.toDate().toISOString() : f.date }));
-                        fetchedObservations[obs.studentId].push(obs);
-                    }
-                });
-                setAllObservations(fetchedObservations);
-            }, 
-            (err) => {
-                console.error("Observations listener error:", err);
-            }
-        );
-
-        const settingsUnsub = onSnapshot(doc(db, `${prefix}/settings`, 'app'), 
-            (doc) => {
-                if (doc.exists()) {
-                    setSettingsState(doc.data() as typeof settings);
-                } else {
-                    // Do not create settings here, it's created on signup
-                }
-            }, 
-            (err) => {
-                console.error("Settings listener error:", err);
-                setError(err);
-            }
-        );
-
-        return () => {
-            groupsUnsub();
-            studentsUnsub();
-            observationsUnsub();
-            settingsUnsub();
-        };
+        // Only set loading to false after all initial listeners are established
+        setIsLoading(false);
+    
+        return () => unsubscribers.forEach(unsub => unsub());
+    
     }, [user, authLoading]);
     
     useEffect(() => {
