@@ -2,6 +2,7 @@
 
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getFirestore, Firestore } from 'firebase/firestore';
+import { getAuth, Auth } from 'firebase/auth';
 
 const firebaseConfig = {
   projectId: "academic-tracker-qeoxi",
@@ -12,7 +13,9 @@ const firebaseConfig = {
   messagingSenderId: "263108580734"
 };
 
+// Initialize Firebase
 const app: FirebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const db: Firestore = getFirestore(app);
+const auth: Auth = getAuth(app);
 
-export { app, db };
+export { app, db, auth };
