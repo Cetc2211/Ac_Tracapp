@@ -31,17 +31,38 @@ import {
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { db } from '@/lib/firebase/client';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDocs, collection, writeBatch, deleteDoc } from 'firebase/firestore';
 import { useAuth } from '@/hooks/use-auth';
+import type { Group, Student, StudentObservation, PartialId } from '@/lib/placeholder-data';
+import type { PartialData } from '@/hooks/use-data';
+
+
+type ExportData = {
+  version: string;
+  groups: Group[];
+  students: Student[];
+  observations: { [studentId: string]: StudentObservation[] };
+  settings: typeof settings;
+  partialsData: {
+    [groupId: string]: {
+      [partialId in PartialId]?: PartialData;
+    };
+  };
+};
+
 
 export default function SettingsPage() {
     const { user } = useAuth();
-    const { settings, isLoading, setSettings: setSettingsInDb } = useData();
+    const { settings, isLoading, groups, allStudents, allObservations, fetchPartialData, setSettings: setSettingsInDb } = useData();
     const [localSettings, setLocalSettings] = useState(settings);
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
     const { toast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
+    const [isImporting, setIsImporting] = useState(false);
+    const [importFile, setImportFile] = useState<File | null>(null);
+    const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
     
     useEffect(() => {
         setLocalSettings(settings);
@@ -89,40 +110,146 @@ export default function SettingsPage() {
         document.body.className = theme;
     };
 
-    const handleExportData = () => {
-      // This needs to be reimplemented to fetch all data from Firestore,
-      // which is a complex operation and best handled by a backend/cloud function.
-      // For now, we'll disable it or show a message.
-      toast({
-        title: "Función no disponible",
-        description: "La exportación de datos desde la nube se añadirá en una futura actualización."
-      });
+    const handleExportData = async () => {
+        if (!user) {
+            toast({ title: "Error", description: "Debes iniciar sesión para exportar."});
+            return;
+        }
+        setIsExporting(true);
+        toast({ title: "Exportando datos...", description: "Recopilando toda tu información."});
+        try {
+            const partialsData: ExportData['partialsData'] = {};
+            for (const group of groups) {
+                partialsData[group.id] = {};
+                const partials: PartialId[] = ['p1', 'p2', 'p3'];
+                const results = await Promise.all(partials.map(pId => fetchPartialData(group.id, pId)));
+                partials.forEach((pId, index) => {
+                    if (results[index].criteria.length > 0 || Object.keys(results[index].grades).length > 0) {
+                        partialsData[group.id][pId] = results[index];
+                    }
+                });
+            }
+
+            const exportData: ExportData = {
+                version: "1.0.0",
+                groups,
+                students: allStudents,
+                observations: allObservations,
+                settings,
+                partialsData,
+            };
+
+            const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(exportData, null, 2))}`;
+            const link = document.createElement("a");
+            link.href = jsonString;
+            link.download = `academic_tracker_backup_${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            toast({ title: "Exportación completa", description: "Tus datos han sido guardados." });
+
+        } catch (error) {
+            console.error("Export error:", error);
+            toast({ variant: 'destructive', title: "Error de exportación", description: "No se pudieron exportar los datos." });
+        } finally {
+            setIsExporting(false);
+        }
     };
 
-    const handleImportData = (event: React.ChangeEvent<HTMLInputElement>) => {
-        // This is also a complex and potentially dangerous operation.
-        // It would require careful data validation and merging.
-        // Disabling for now.
-         toast({
-          title: "Función no disponible",
-          description: "La importación de datos a la nube se añadirá en una futura actualización."
-        });
-        if(fileInputRef.current) {
-            fileInputRef.current.value = '';
+    const handleImportFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            setImportFile(file);
         }
+    };
+    
+    const handleConfirmImport = async () => {
+        if (!user || !importFile) return;
+        setIsImporting(true);
+        toast({ title: 'Importando datos...', description: 'Esto puede tardar un momento y sobreescribirá tus datos actuales.' });
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const text = e.target?.result;
+                if (typeof text !== 'string') throw new Error("File could not be read");
+                
+                const data = JSON.parse(text) as ExportData;
+
+                // Basic validation
+                if (!data.version || !data.groups || !data.students || !data.settings) {
+                    throw new Error("Archivo de importación inválido o corrupto.");
+                }
+
+                const batch = writeBatch(db);
+                const userPrefix = `users/${user.uid}`;
+
+                // Clear old data
+                const collectionsToDelete = ['groups', 'students', 'observations'];
+                for (const coll of collectionsToDelete) {
+                    const snapshot = await getDocs(collection(db, `${userPrefix}/${coll}`));
+                    snapshot.docs.forEach(doc => batch.delete(doc.ref));
+                }
+
+                // Write new data
+                data.groups.forEach(group => batch.set(doc(db, `${userPrefix}/groups`, group.id), group));
+                data.students.forEach(student => batch.set(doc(db, `${userPrefix}/students`, student.id), student));
+                Object.values(data.observations).flat().forEach(obs => batch.set(doc(collection(db, `${userPrefix}/observations`)), obs));
+                batch.set(doc(db, `${userPrefix}/settings`, 'app'), data.settings);
+
+                if (data.partialsData) {
+                    for (const groupId in data.partialsData) {
+                        for (const partialId in data.partialsData[groupId]) {
+                            const path = `${userPrefix}/groups/${groupId}/partials/${partialId}/data/content`;
+                            batch.set(doc(db, path), data.partialsData[groupId][partialId as PartialId] as PartialData);
+                        }
+                    }
+                }
+
+                await batch.commit();
+
+                toast({ title: "Importación exitosa", description: "Tus datos han sido restaurados. La página se recargará." });
+                setTimeout(() => window.location.reload(), 2000);
+
+            } catch (error: any) {
+                console.error("Import error:", error);
+                toast({ variant: 'destructive', title: "Error de importación", description: error.message || "El archivo puede estar corrupto." });
+            } finally {
+                setIsImporting(false);
+                setImportFile(null);
+                if (fileInputRef.current) fileInputRef.current.value = '';
+            }
+        };
+        reader.readAsText(importFile);
     };
 
     const triggerFileSelect = () => {
         fileInputRef.current?.click();
     };
 
-    const handleResetApp = () => {
-        // This should now delete all data for the current user from Firestore.
-        // This is a very destructive action and requires careful implementation.
-        toast({
-            title: "Función no disponible",
-            description: "El reseteo de datos se implementará próximamente."
-        });
+    const handleResetApp = async () => {
+       if (!user) return;
+        setIsSaving(true);
+        toast({ title: 'Restableciendo datos...', description: 'Este proceso es irreversible y puede tardar.' });
+        try {
+            const batch = writeBatch(db);
+            const userPrefix = `users/${user.uid}`;
+
+            const collectionsToDelete = ['groups', 'students', 'observations'];
+             for (const coll of collectionsToDelete) {
+                const snapshot = await getDocs(collection(db, `${userPrefix}/${coll}`));
+                snapshot.docs.forEach(docRef => batch.delete(docRef.ref));
+            }
+            batch.delete(doc(db, `${userPrefix}/settings`, 'app'));
+            
+            await batch.commit();
+            toast({ title: 'Datos eliminados', description: 'La aplicación ha sido restablecida.' });
+            setTimeout(() => window.location.reload(), 2000);
+        } catch(e) {
+            console.error("Reset error:", e);
+            toast({ variant: 'destructive', title: "Error al restablecer", description: "No se pudieron eliminar los datos." });
+        } finally {
+            setIsSaving(false);
+            setIsResetDialogOpen(false);
+        }
     }
 
   if (isLoading && !settings.institutionName) {
@@ -193,29 +320,47 @@ export default function SettingsPage() {
           <CardHeader>
               <CardTitle>Copia de Seguridad y Restauración</CardTitle>
               <CardDescription>
-                  Guarda todos tus datos en un archivo o restaura la aplicación desde uno. (Funcionalidad deshabilitada temporalmente)
+                  Guarda todos tus datos en un archivo o restaura la aplicación desde uno. La importación sobreescribirá todos los datos actuales.
               </CardDescription>
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Button onClick={handleExportData} variant="outline" disabled>
-                  <Download className="mr-2 h-4 w-4" />
+              <Button onClick={handleExportData} variant="outline" disabled={isExporting}>
+                  {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
                   Exportar Mis Datos
               </Button>
-              <Button onClick={triggerFileSelect} disabled>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Importar Mis Datos
-              </Button>
+               <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                         <Button onClick={triggerFileSelect} disabled={isImporting}>
+                            <Upload className="mr-2 h-4 w-4" />
+                             Importar Mis Datos
+                         </Button>
+                    </AlertDialogTrigger>
+                    {importFile && (
+                         <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>¿Confirmas la importación?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    Esta acción sobreescribirá permanentemente TODOS tus datos actuales con los datos del archivo "{importFile.name}". Esta acción no se puede deshacer.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel onClick={() => setImportFile(null)}>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleConfirmImport}>Sí, importar y sobreescribir</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    )}
+                </AlertDialog>
               <input 
                 type="file"
                 ref={fileInputRef}
                 className="hidden"
                 accept=".json"
-                onChange={handleImportData}
+                onChange={handleImportFileChange}
               />
           </CardContent>
            <CardFooter>
                <p className="text-xs text-muted-foreground">
-                  La importación/exportación masiva de datos en la nube requiere una implementación cuidadosa y estará disponible en el futuro.
+                  Asegúrate de que el archivo de importación haya sido generado por esta aplicación.
               </p>
            </CardFooter>
       </Card>
@@ -227,9 +372,9 @@ export default function SettingsPage() {
               </CardDescription>
           </CardHeader>
           <CardContent>
-                <AlertDialog>
+                <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
                     <AlertDialogTrigger asChild>
-                        <Button variant="destructive" disabled>
+                        <Button variant="destructive">
                             <RotateCcw className="mr-2 h-4 w-4" />
                             Restablecer Mis Datos
                         </Button>
@@ -238,7 +383,7 @@ export default function SettingsPage() {
                         <AlertDialogHeader>
                             <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
                             <AlertDialogDescription>
-                                Esta acción borrará permanentemente TODOS tus datos de la aplicación, incluyendo grupos, estudiantes, calificaciones y ajustes.
+                                Esta acción borrará permanentemente TODOS tus datos de la aplicación en la nube, incluyendo grupos, estudiantes, calificaciones y ajustes.
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -250,7 +395,7 @@ export default function SettingsPage() {
           </CardContent>
            <CardFooter>
                <p className="text-xs text-muted-foreground">
-                  Esta función eliminará todos tus datos en la nube. Estará disponible próximamente.
+                  Esta función eliminará todos tus datos en la nube.
               </p>
            </CardFooter>
       </Card>
