@@ -291,7 +291,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }, [user, authLoading]);
     
     useEffect(() => {
-        if(activeGroupId && activePartialId && user) {
+        if(activeGroupId && activePartialId && user && !isLoading) {
             const docPath = `users/${user.uid}/groups/${activeGroupId}/partials/${activePartialId}/data/content`;
             const unsub = onSnapshot(doc(db, docPath), (docSnap) => {
                 const data = docSnap.exists() ? docSnap.data() as PartialData : null;
@@ -314,7 +314,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 participations: {}, activities: [], activityRecords: {},
             });
         }
-    }, [activeGroupId, activePartialId, user]);
+    }, [activeGroupId, activePartialId, user, isLoading]);
     
     const fetchPartialData = useCallback(async (groupId: string, partialId: PartialId): Promise<PartialData> => {
         if (!user) return { criteria: [], grades: {}, attendance: {}, participations: {}, activities: [], activityRecords: {} };
