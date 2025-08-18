@@ -157,6 +157,7 @@ interface DataContextType {
   setParticipations: (setter: React.SetStateAction<ParticipationRecord>) => Promise<void>;
   setActivities: (setter: React.SetStateAction<Activity[]>) => Promise<void>;
   setActivityRecords: (setter: React.SetStateAction<ActivityRecord>) => Promise<void>;
+  setSettings: (settings: { institutionName: string; logo: string; theme: string }) => Promise<void>;
 
 
   // Functions
@@ -222,10 +223,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                   } else if (fetchedGroups.length === 0) {
                       setActiveGroupIdState(null);
                   }
-                  setIsDataLoading(false);
               }, (error) => {
                   console.error("Error fetching groups:", error);
-                  setIsDataLoading(false);
               }),
               onSnapshot(collection(db, `${prefix}/students`), (snapshot) => {
                   setAllStudentsState(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student)));
@@ -250,11 +249,13 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
               onSnapshot(doc(db, `${prefix}/settings`, 'app'), (doc) => {
                   if (doc.exists()) {
                       setSettingsState(doc.data() as typeof settings);
-                  } else {
-                       setSettingsState(defaultSettings);
                   }
+                  // No else clause here to prevent overwriting with defaults
               }, (error) => console.error("Error fetching settings:", error)),
- ];
+          ];
+
+          // Stop loading after a short delay to allow all listeners to get initial data
+           setTimeout(() => setIsDataLoading(false), 1500);
       }
 
       if (user) {
@@ -272,7 +273,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
       return () => {
           unsubscribers.forEach(unsub => unsub());
       };
-    }, [user, authLoading]); 
+    }, [user, authLoading, activeGroupId]); 
     
     useEffect(() => {
         if(activeGroupId && activePartialId && user) {
@@ -324,6 +325,11 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         }
     };
     
+    const setSettingsInDb = async (newSettings: { institutionName: string; logo: string; theme: string }) => {
+        if (!user) return;
+        await setDoc(doc(db, `users/${user.uid}/settings`, 'app'), newSettings);
+    };
+
     const setCriteria = createSetter<EvaluationCriteria[]>('criteria');
     const setGrades = createSetter<Grades>('grades');
     const setAttendance = createSetter<AttendanceRecord>('attendance');
@@ -569,6 +575,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         addStudentsToGroup, removeStudentFromGroup, updateGroup, updateStudent,
         setActiveGroupId, setActivePartialId,
         setCriteria, setGrades, setAttendance, setParticipations, setActivities, setActivityRecords,
+        setSettings: setSettingsInDb,
         deleteGroup, addStudentObservation, updateStudentObservation,
         calculateFinalGrade, getStudentRiskLevel, calculateDetailedFinalGrade,
         fetchPartialData,
