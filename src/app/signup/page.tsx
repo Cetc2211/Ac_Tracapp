@@ -55,7 +55,7 @@ export default function SignupPage() {
       await setDoc(doc(db, `users/${user.uid}/settings`, 'app'), {
         institutionName: `Escuela de ${data.name}`,
         logo: '',
-        theme: 'theme-default',
+        theme: 'theme-mint',
       });
       
       toast({

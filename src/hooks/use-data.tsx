@@ -126,7 +126,7 @@ export type UserProfile = {
 const defaultSettings = {
     institutionName: "Mi Institución",
     logo: "",
-    theme: "theme-default"
+    theme: "theme-mint"
 };
 
 // CONTEXT TYPE
@@ -345,7 +345,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         }
     };
     
-    const setSettingsInDb = async (newSettings: { institutionName: string; logo: string; theme: string }) => {
+    const setSettings = async (newSettings: { institutionName: string; logo: string; theme: string }) => {
         if (!user) throw new Error("User not authenticated");
         await setDoc(doc(db, `users/${user.uid}/settings`, 'app'), newSettings);
     };
@@ -404,7 +404,9 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     // Derived State
     const setActiveGroupId = (groupId: string | null) => {
-        setActiveGroupIdState(groupId);
+        if(groupId !== activeGroupId) {
+            setActiveGroupIdState(groupId);
+        }
     };
 
     const activeGroup = useMemo(() => {
@@ -599,7 +601,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         addStudentsToGroup, removeStudentFromGroup, updateGroup, updateStudent,
         setActiveGroupId, setActivePartialId,
         setCriteria, setGrades, setAttendance, setParticipations, setActivities, setActivityRecords,
-        setSettings: setSettingsInDb,
+        setSettings,
         deleteGroup, addStudentObservation, updateStudentObservation,
         calculateFinalGrade, getStudentRiskLevel, calculateDetailedFinalGrade,
         fetchPartialData,

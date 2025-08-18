@@ -73,7 +73,7 @@ const navItems = [
 const defaultSettings = {
     institutionName: "Academic Tracker",
     logo: "",
-    theme: "theme-default"
+    theme: "theme-mint"
 };
 
 
