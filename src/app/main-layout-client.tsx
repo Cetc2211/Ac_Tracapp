@@ -118,7 +118,7 @@ export default function MainLayoutClient({
             <AppLogo name={settings.institutionName} logoUrl={settings.logo} />
           </SidebarHeader>
           <SidebarContent>
-            {activeGroup ? (
+            {activeGroup && user ? (
                   <>
                     <div className="px-4 py-2">
                         <p className="text-xs font-semibold text-sidebar-foreground/70 tracking-wider uppercase">Grupo Activo</p>
