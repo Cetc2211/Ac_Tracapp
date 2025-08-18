@@ -214,7 +214,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         }
 
         if (!user) {
-            // Clear all data if user logs out
             setGroupsState([]);
             setAllStudentsState([]);
             setAllObservations({});
@@ -225,7 +224,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             return;
         }
 
-        setIsLoading(true);
         const prefix = `users/${user.uid}`;
         
         const listeners = [
@@ -233,10 +231,12 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 (snapshot) => {
                     const fetchedGroups = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Group));
                     setGroupsState(fetchedGroups);
-                    // Set active group only if one isn't set or the current one is deleted
-                    if (!activeGroupId || !fetchedGroups.some(g => g.id === activeGroupId)) {
-                        setActiveGroupIdState(fetchedGroups[0]?.id || null);
+                    if (!activeGroupId && fetchedGroups.length > 0) {
+                        setActiveGroupIdState(fetchedGroups[0].id);
+                    } else if (fetchedGroups.length === 0) {
+                        setActiveGroupIdState(null);
                     }
+                    setError(null); // Clear previous errors on successful fetch
                 }, 
                 (err) => {
                     console.error("Groups listener error:", err);
@@ -244,7 +244,10 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 }
             ),
             onSnapshot(collection(db, `${prefix}/students`), 
-                (snapshot) => setAllStudentsState(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student))), 
+                (snapshot) => {
+                    setAllStudentsState(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student)));
+                    setError(null);
+                }, 
                 (err) => {
                     console.error("Students listener error:", err);
                     setError(err);
@@ -267,6 +270,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                         }
                     });
                     setAllObservations(fetchedObservations);
+                    setError(null);
                 }, 
                 (err) => {
                     console.error("Observations listener error:", err);
@@ -277,11 +281,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 (doc) => {
                     if (doc.exists()) {
                         setSettingsState(doc.data() as typeof settings);
-                    } else {
-                        // Settings don't exist, this might be a new user, but we don't create it here.
-                        // Creation is handled on signup. We just use defaults.
-                        setSettingsState(defaultSettings);
                     }
+                    setError(null);
                 }, 
                 (err) => {
                     console.error("Settings listener error:", err);
@@ -290,20 +291,19 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             )
         ];
 
-        // This ensures all initial data loads are complete before setting loading to false.
-        const allListenersReady = Promise.all([
-            getDocs(collection(db, `${prefix}/groups`)),
-            getDocs(collection(db, `${prefix}/students`)),
-            getDoc(doc(db, `${prefix}/settings`, 'app')),
-        ]);
+        const checkInitialLoad = async () => {
+            try {
+                // Perform a simple read to check connection status
+                await getDoc(doc(db, prefix, 'settings/app'));
+                setIsLoading(false);
+            } catch (err: any) {
+                console.error("Initial data check failed:", err);
+                setError(err);
+                setIsLoading(false);
+            }
+        };
 
-        allListenersReady.then(() => {
-            setIsLoading(false);
-        }).catch(err => {
-            console.error("Error on initial data fetch:", err);
-            setError(err);
-            setIsLoading(false);
-        });
+        checkInitialLoad();
 
         return () => {
             listeners.forEach(unsub => unsub());
