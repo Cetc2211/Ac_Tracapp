@@ -176,6 +176,7 @@ export default function GroupDetailsPage() {
 
     await addStudentsToGroup(activeGroup.id, newStudents);
     
+    setIsAddStudentDialogOpen(false);
     setBulkNames('');
     setBulkEmails('');
     setBulkPhones('');
@@ -185,7 +186,6 @@ export default function GroupDetailsPage() {
         title: "Estudiantes agregados",
         description: `${newStudents.length} estudiante(s) han sido añadidos al grupo.`
     });
-    setIsAddStudentDialogOpen(false);
   };
 
   const handleSelectStudent = (studentId: string) => {
