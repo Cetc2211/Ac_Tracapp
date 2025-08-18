@@ -98,7 +98,7 @@ export default function ParticipationsPage() {
             </div>
         </div>
         <div className="flex items-center gap-2">
-            {activeGroup && <AttendanceRandomizer students={studentsToDisplay || []} variant="outline" />}
+            {activeGroup && <AttendanceRandomizer students={studentsToDisplay} variant="outline" />}
             {activeGroup && <Button onClick={handleRegisterToday}>Registrar Participaciones de Hoy</Button>}
         </div>
       </div>
