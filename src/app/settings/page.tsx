@@ -125,7 +125,7 @@ export default function SettingsPage() {
                 const partials: PartialId[] = ['p1', 'p2', 'p3'];
                 const results = await Promise.all(partials.map(pId => fetchPartialData(group.id, pId)));
                 partials.forEach((pId, index) => {
-                    if (results[index].criteria.length > 0 || Object.keys(results[index].grades).length > 0) {
+                    if (results[index] && (results[index].criteria.length > 0 || Object.keys(results[index].grades).length > 0)) {
                         partialsData[group.id][pId] = results[index];
                     }
                 });
@@ -270,160 +270,160 @@ export default function SettingsPage() {
         }
     }
 
-  if (isLoading && !settings.institutionName) {
-    return (
-        <div className="flex h-full w-full items-center justify-center">
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Cargando...
-        </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-3xl font-bold">Ajustes</h1>
-        <p className="text-muted-foreground">
-          Personaliza la información de tu institución y la apariencia de la aplicación.
-        </p>
-      </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Información de la Institución</CardTitle>
-          <CardDescription>
-            Actualiza el nombre y logo de tu escuela. Estos datos aparecerán en los informes.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="institutionName">Nombre de la Institución</Label>
-            <Input
-              id="institutionName"
-              value={localSettings.institutionName}
-              onChange={handleInputChange}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="logo">Logo de la Institución</Label>
-            <div className="flex items-center gap-4">
-              <div className="relative h-20 w-20">
-                <Image
-                  src={logoPreview || 'https://placehold.co/200x200.png'}
-                  alt="Logo actual"
-                  fill
-                  className="rounded-md object-contain"
-                  data-ai-hint="school logo"
-                />
-              </div>
-              <Input id="logo" type="file" className="max-w-sm" onChange={handleLogoChange} accept="image/png, image/jpeg" />
+    if (isLoading) {
+        return (
+            <div className="flex h-full w-full items-center justify-center">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Cargando...
             </div>
-            <p className="text-xs text-muted-foreground">
-              Sube un archivo PNG o JPG. Tamaño recomendado: 200x200px.
+        );
+    }
+  
+    return (
+        <div className="flex flex-col gap-6">
+        <div>
+            <h1 className="text-3xl font-bold">Ajustes</h1>
+            <p className="text-muted-foreground">
+            Personaliza la información de tu institución y la apariencia de la aplicación.
             </p>
-          </div>
-        </CardContent>
-        <Separator className="my-4" />
-        <CardHeader>
-            <CardTitle>Apariencia</CardTitle>
+        </div>
+        <Card>
+            <CardHeader>
+            <CardTitle>Información de la Institución</CardTitle>
             <CardDescription>
-                Elige un tema para personalizar los colores de la aplicación.
+                Actualiza el nombre y logo de tu escuela. Estos datos aparecerán en los informes.
             </CardDescription>
-        </CardHeader>
-         <CardContent>
-            <ThemeSwitcher selectedTheme={localSettings.theme} onThemeChange={handleThemeChange} />
-        </CardContent>
-        <CardFooter className="border-t px-6 py-4">
-          <Button onClick={handleSave} disabled={isSaving || (isLoading && !settings.institutionName)}>
-            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-            Guardar Cambios
-          </Button>
-        </CardFooter>
-      </Card>
-      <Card>
-          <CardHeader>
-              <CardTitle>Copia de Seguridad y Restauración</CardTitle>
-              <CardDescription>
-                  Guarda todos tus datos en un archivo o restaura la aplicación desde uno. La importación sobreescribirá todos los datos actuales.
-              </CardDescription>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Button onClick={handleExportData} variant="outline" disabled={isExporting}>
-                  {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                  Exportar Mis Datos
-              </Button>
-               <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                         <Button onClick={triggerFileSelect}>
-                            <Upload className="mr-2 h-4 w-4" />
-                             Importar Mis Datos
-                         </Button>
-                    </AlertDialogTrigger>
-                    {importFile && (
-                         <AlertDialogContent>
+            </CardHeader>
+            <CardContent className="space-y-6">
+            <div className="space-y-2">
+                <Label htmlFor="institutionName">Nombre de la Institución</Label>
+                <Input
+                id="institutionName"
+                value={localSettings.institutionName}
+                onChange={handleInputChange}
+                />
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="logo">Logo de la Institución</Label>
+                <div className="flex items-center gap-4">
+                <div className="relative h-20 w-20">
+                    <Image
+                    src={logoPreview || 'https://placehold.co/200x200.png'}
+                    alt="Logo actual"
+                    fill
+                    className="rounded-md object-contain"
+                    data-ai-hint="school logo"
+                    />
+                </div>
+                <Input id="logo" type="file" className="max-w-sm" onChange={handleLogoChange} accept="image/png, image/jpeg" />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                Sube un archivo PNG o JPG. Tamaño recomendado: 200x200px.
+                </p>
+            </div>
+            </CardContent>
+            <Separator className="my-4" />
+            <CardHeader>
+                <CardTitle>Apariencia</CardTitle>
+                <CardDescription>
+                    Elige un tema para personalizar los colores de la aplicación.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <ThemeSwitcher selectedTheme={localSettings.theme} onThemeChange={handleThemeChange} />
+            </CardContent>
+            <CardFooter className="border-t px-6 py-4">
+            <Button onClick={handleSave} disabled={isSaving || isLoading}>
+                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                Guardar Cambios
+            </Button>
+            </CardFooter>
+        </Card>
+        <Card>
+            <CardHeader>
+                <CardTitle>Copia de Seguridad y Restauración</CardTitle>
+                <CardDescription>
+                    Guarda todos tus datos en un archivo o restaura la aplicación desde uno. La importación sobreescribirá todos los datos actuales.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Button onClick={handleExportData} variant="outline" disabled={isExporting}>
+                    {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                    Exportar Mis Datos
+                </Button>
+                <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button onClick={triggerFileSelect}>
+                                <Upload className="mr-2 h-4 w-4" />
+                                Importar Mis Datos
+                            </Button>
+                        </AlertDialogTrigger>
+                        {importFile && (
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>¿Confirmas la importación?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Esta acción sobreescribirá permanentemente TODOS tus datos actuales con los datos del archivo "{importFile.name}". Esta acción no se puede deshacer.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel onClick={() => setImportFile(null)}>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleConfirmImport} disabled={isImporting}>
+                                        {isImporting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                        Sí, importar y sobreescribir
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        )}
+                    </AlertDialog>
+                <input 
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    accept=".json"
+                    onChange={handleImportFileChange}
+                />
+            </CardContent>
+            <CardFooter>
+                <p className="text-xs text-muted-foreground">
+                    Asegúrate de que el archivo de importación haya sido generado por esta aplicación.
+                </p>
+            </CardFooter>
+        </Card>
+        <Card>
+            <CardHeader>
+                <CardTitle className="text-destructive">Zona de Peligro</CardTitle>
+                <CardDescription>
+                    Estas acciones no se pueden deshacer. Úsalas con precaución.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                    <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="destructive">
+                                <RotateCcw className="mr-2 h-4 w-4" />
+                                Restablecer Mis Datos
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
                             <AlertDialogHeader>
-                                <AlertDialogTitle>¿Confirmas la importación?</AlertDialogTitle>
+                                <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                    Esta acción sobreescribirá permanentemente TODOS tus datos actuales con los datos del archivo "{importFile.name}". Esta acción no se puede deshacer.
+                                    Esta acción borrará permanentemente TODOS tus datos de la aplicación en la nube, incluyendo grupos, estudiantes, calificaciones y ajustes.
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                                <AlertDialogCancel onClick={() => setImportFile(null)}>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleConfirmImport} disabled={isImporting}>
-                                    {isImporting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    Sí, importar y sobreescribir
-                                </AlertDialogAction>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleResetApp}>Sí, borrar mis datos</AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
-                    )}
-                </AlertDialog>
-              <input 
-                type="file"
-                ref={fileInputRef}
-                className="hidden"
-                accept=".json"
-                onChange={handleImportFileChange}
-              />
-          </CardContent>
-           <CardFooter>
-               <p className="text-xs text-muted-foreground">
-                  Asegúrate de que el archivo de importación haya sido generado por esta aplicación.
-              </p>
-           </CardFooter>
-      </Card>
-       <Card>
-          <CardHeader>
-              <CardTitle className="text-destructive">Zona de Peligro</CardTitle>
-              <CardDescription>
-                  Estas acciones no se pueden deshacer. Úsalas con precaución.
-              </CardDescription>
-          </CardHeader>
-          <CardContent>
-                <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
-                    <AlertDialogTrigger asChild>
-                        <Button variant="destructive">
-                            <RotateCcw className="mr-2 h-4 w-4" />
-                            Restablecer Mis Datos
-                        </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                Esta acción borrará permanentemente TODOS tus datos de la aplicación en la nube, incluyendo grupos, estudiantes, calificaciones y ajustes.
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleResetApp}>Sí, borrar mis datos</AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
-          </CardContent>
-           <CardFooter>
-               <p className="text-xs text-muted-foreground">
-                  Esta función eliminará todos tus datos en la nube.
-              </p>
-           </CardFooter>
-      </Card>
-    </div>
-  );
+                    </AlertDialog>
+            </CardContent>
+            <CardFooter>
+                <p className="text-xs text-muted-foreground">
+                    Esta función eliminará todos tus datos en la nube.
+                </p>
+            </CardFooter>
+        </Card>
+        </div>
+    );
 }

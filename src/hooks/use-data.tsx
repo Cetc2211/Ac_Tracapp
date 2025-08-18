@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { Student, Group, PartialId, StudentObservation } from '@/lib/placeholder-data';
-import { db } from '@/lib/firebase/client';
+import { db, auth } from '@/lib/firebase/client';
 import { useAuth } from '@/hooks/use-auth';
 import {
   collection,
@@ -208,10 +208,11 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     useEffect(() => {
         if (authLoading) {
-            return;
+            return; // Wait until auth state is resolved
         }
 
         if (!user) {
+            // Clear all data if user signs out
             setGroupsState([]);
             setAllStudentsState([]);
             setAllObservations({});
@@ -224,18 +225,17 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         }
 
         const prefix = `users/${user.uid}`;
-        
+        setIsLoading(true);
+
         const listeners = [
             onSnapshot(collection(db, `${prefix}/groups`), 
                 (snapshot) => {
                     const fetchedGroups = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Group));
                     setGroupsState(fetchedGroups);
-                    setIsLoading(false);
                 }, 
                 (err) => {
                     console.error("Groups listener error:", err);
                     setError(err);
-                    setIsLoading(false);
                 }
             ),
             onSnapshot(collection(db, `${prefix}/students`), 
@@ -274,9 +274,13 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                     if (doc.exists()) {
                         setSettingsState(doc.data() as typeof settings);
                     }
+                    // Only set loading to false after settings (the last piece of core data) is fetched
+                    setIsLoading(false);
                 }, 
                 (err) => {
                     console.error("Settings listener error:", err);
+                    setError(err);
+                    setIsLoading(false);
                 }
             )
         ];
@@ -315,9 +319,13 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const fetchPartialData = useCallback(async (groupId: string, partialId: PartialId): Promise<PartialData> => {
         if (!user) return { criteria: [], grades: {}, attendance: {}, participations: {}, activities: [], activityRecords: {} };
         const docRef = doc(db, `users/${user.uid}/groups/${groupId}/partials/${partialId}/data/content`);
-        const docSnap = await getDoc(docRef);
-        if(docSnap.exists()){
-            return docSnap.data() as PartialData;
+        try {
+            const docSnap = await getDoc(docRef);
+            if(docSnap.exists()){
+                return docSnap.data() as PartialData;
+            }
+        } catch (e) {
+            console.error("Failed to fetch partial data:", e);
         }
         return { criteria: [], grades: {}, attendance: {}, participations: {}, activities: [], activityRecords: {} };
     }, [user]);
@@ -338,7 +346,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     };
     
     const setSettingsInDb = async (newSettings: { institutionName: string; logo: string; theme: string }) => {
-        if (!user) return;
+        if (!user) throw new Error("User not authenticated");
         await setDoc(doc(db, `users/${user.uid}/settings`, 'app'), newSettings);
     };
 
