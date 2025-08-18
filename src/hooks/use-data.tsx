@@ -123,6 +123,12 @@ export type UserProfile = {
     photoURL: string;
 }
 
+const defaultSettings = {
+    institutionName: "Mi Institución",
+    logo: "",
+    theme: "theme-default"
+};
+
 // CONTEXT TYPE
 interface DataContextType {
   // State
@@ -172,13 +178,6 @@ interface DataContextType {
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
-
-// UTILITY FUNCTIONS
-const defaultSettings = {
-    institutionName: "Mi Institución",
-    logo: "",
-    theme: "theme-default"
-};
 
 // DATA PROVIDER COMPONENT
 export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
@@ -236,7 +235,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                     } else if (fetchedGroups.length === 0) {
                         setActiveGroupIdState(null);
                     }
-                    setError(null); // Clear previous errors on successful fetch
                 }, 
                 (err) => {
                     console.error("Groups listener error:", err);
@@ -246,7 +244,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             onSnapshot(collection(db, `${prefix}/students`), 
                 (snapshot) => {
                     setAllStudentsState(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student)));
-                    setError(null);
                 }, 
                 (err) => {
                     console.error("Students listener error:", err);
@@ -270,7 +267,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                         }
                     });
                     setAllObservations(fetchedObservations);
-                    setError(null);
                 }, 
                 (err) => {
                     console.error("Observations listener error:", err);
@@ -282,7 +278,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                     if (doc.exists()) {
                         setSettingsState(doc.data() as typeof settings);
                     }
-                    setError(null);
                 }, 
                 (err) => {
                     console.error("Settings listener error:", err);
@@ -293,12 +288,12 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
         const checkInitialLoad = async () => {
             try {
-                // Perform a simple read to check connection status
-                await getDoc(doc(db, prefix, 'settings/app'));
-                setIsLoading(false);
+                await getDoc(doc(db, `${prefix}/settings`, 'app'));
+                setError(null);
             } catch (err: any) {
                 console.error("Initial data check failed:", err);
                 setError(err);
+            } finally {
                 setIsLoading(false);
             }
         };
