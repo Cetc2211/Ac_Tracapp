@@ -208,11 +208,11 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     useEffect(() => {
         if (authLoading) {
-            return; // Wait until auth state is resolved
+            setIsLoading(true);
+            return;
         }
 
         if (!user) {
-            // Clear all data if user signs out
             setGroupsState([]);
             setAllStudentsState([]);
             setAllObservations({});
@@ -225,13 +225,17 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         }
 
         const prefix = `users/${user.uid}`;
+        let initialGroupsLoaded = false;
         
         const listeners = [
             onSnapshot(collection(db, `${prefix}/groups`), 
                 (snapshot) => {
                     const fetchedGroups = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Group));
                     setGroupsState(fetchedGroups);
-                    if(isLoading) setIsLoading(false);
+                    if (!initialGroupsLoaded) {
+                        initialGroupsLoaded = true;
+                        setIsLoading(false);
+                    }
                 }, 
                 (err) => {
                     console.error("Groups listener error:", err);
@@ -275,8 +279,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                     if (doc.exists()) {
                         setSettingsState(doc.data() as typeof settings);
                     } else {
-                        // This case is for a new user, where settings might not exist yet.
-                        // We set default settings, but don't overwrite if they exist.
                         setDoc(doc.ref, defaultSettings).catch(e => console.error("Failed to set default settings:", e));
                     }
                 }, 
