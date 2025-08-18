@@ -1,5 +1,6 @@
+
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { auth } from './client'; // Corrected import
+import { auth } from './client';
 
 const signUp = async (name: string, email: string, password: string) => {
   try {

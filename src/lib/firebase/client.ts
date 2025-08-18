@@ -13,9 +13,14 @@ const firebaseConfig = {
   messagingSenderId: "263108580734"
 };
 
-// Initialize Firebase for client-side
-const app: FirebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
-const db: Firestore = getFirestore(app);
-const auth: Auth = getAuth(app);
+let app: FirebaseApp;
+if (!getApps().length) {
+  app = initializeApp(firebaseConfig);
+} else {
+  app = getApp();
+}
+
+const db = getFirestore(app);
+const auth = getAuth(app);
 
 export { app, db, auth };
