@@ -134,7 +134,7 @@ export default function SettingsPage() {
                 version: "1.0.0",
                 groups,
                 students: allStudents,
-                observations: allObservations || {},
+                observations: allObservations,
                 settings,
                 partialsData,
             };
@@ -174,7 +174,6 @@ export default function SettingsPage() {
                 
                 const data = JSON.parse(text) as ExportData;
 
-                // Basic validation
                 if (!data.version || !data.groups || !data.students || !data.settings) {
                     throw new Error("Archivo de importación inválido o corrupto.");
                 }
@@ -182,14 +181,12 @@ export default function SettingsPage() {
                 const batch = writeBatch(db);
                 const userPrefix = `users/${user.uid}`;
 
-                // Clear old data
                 const collectionsToDelete = ['groups', 'students', 'observations'];
                 for (const coll of collectionsToDelete) {
                     const snapshot = await getDocs(collection(db, `${userPrefix}/${coll}`));
                     snapshot.docs.forEach(doc => batch.delete(doc.ref));
                 }
 
-                // Write new data
                 data.groups.forEach(group => batch.set(doc(db, `${userPrefix}/groups`, group.id), group));
                 data.students.forEach(student => batch.set(doc(db, `${userPrefix}/students`, student.id), student));
                 if (data.observations) {
@@ -408,4 +405,3 @@ export default function SettingsPage() {
   );
 }
 
-    
