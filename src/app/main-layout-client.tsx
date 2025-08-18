@@ -20,6 +20,7 @@ import {
   ChevronRight,
   Loader2,
   LogOut,
+  AlertTriangle,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -83,8 +84,8 @@ export default function MainLayoutClient({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, loading, error, signOut } = useAuth();
-  const { settings, activeGroup, activePartialId, isLoading: isDataLoading } = useData();
+  const { user, loading, signOut } = useAuth();
+  const { settings, activeGroup, activePartialId, isLoading: isDataLoading, error: dataError } = useData();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -104,6 +105,21 @@ export default function MainLayoutClient({
             <span>Cargando datos...</span>
         </div>
     );
+  }
+
+  if (dataError) {
+      return (
+        <div className="flex h-screen w-full items-center justify-center text-center">
+          <div className="p-4 rounded-md border bg-card text-card-foreground max-w-md">
+            <AlertTriangle className="mx-auto h-12 w-12 text-destructive mb-4"/>
+            <h2 className="text-xl font-bold">Error de Conexión</h2>
+            <p className="text-muted-foreground mt-2">
+              No se pudo conectar a la base de datos. Por favor, revisa tu conexión a internet y vuelve a intentarlo.
+            </p>
+            <Button onClick={() => window.location.reload()} className="mt-4">Recargar Página</Button>
+          </div>
+        </div>
+      )
   }
 
   if (!user) {

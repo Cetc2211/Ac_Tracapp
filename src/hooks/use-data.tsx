@@ -127,6 +127,7 @@ export type UserProfile = {
 interface DataContextType {
   // State
   isLoading: boolean;
+  error: Error | null;
   groups: Group[];
   allStudents: Student[];
   allObservations: {[studentId: string]: StudentObservation[]};
@@ -204,12 +205,20 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     });
 
     const [isDataLoading, setIsDataLoading] = useState(true);
+    const [error, setError] = useState<Error | null>(null);
 
     useEffect(() => {
       let unsubscribers: (() => void)[] = [];
       
+      const handleError = (err: Error) => {
+        console.error("Firebase listener error:", err);
+        setError(err);
+        setIsDataLoading(false);
+      };
+
       const setupListeners = (userId: string) => {
           setIsDataLoading(true);
+          setError(null);
           const prefix = `users/${userId}`;
           
           unsubscribers = [
@@ -220,15 +229,15 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                       setActiveGroupIdState(fetchedGroups[0].id);
                   } else if (activeGroupId && !fetchedGroups.some(g => g.id === activeGroupId)) {
                       setActiveGroupIdState(fetchedGroups[0]?.id || null);
-                  } else if (fetchedGroups.length === 0) {
-                      setActiveGroupIdState(null);
                   }
-              }, (error) => {
-                  console.error("Error fetching groups:", error);
-              }),
+                  
+                  if (!snapshot.metadata.fromCache) {
+                    setIsDataLoading(false);
+                  }
+              }, handleError),
               onSnapshot(collection(db, `${prefix}/students`), (snapshot) => {
                   setAllStudentsState(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student)));
-              }, (error) => console.error("Error fetching students:", error)),
+              }, handleError),
               onSnapshot(collection(db, `${prefix}/observations`), (snapshot) => {
                   const fetchedObservations: {[studentId: string]: StudentObservation[]} = {};
                   snapshot.docs.forEach(doc => {
@@ -245,35 +254,41 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                       }
                   });
                   setAllObservations(fetchedObservations);
-              }, (error) => console.error("Error fetching observations:", error)),
+              }, handleError),
               onSnapshot(doc(db, `${prefix}/settings`, 'app'), (doc) => {
                   if (doc.exists()) {
                       setSettingsState(doc.data() as typeof settings);
                   }
-                  // No else clause here to prevent overwriting with defaults
-              }, (error) => console.error("Error fetching settings:", error)),
+              }, handleError),
           ];
 
-          // Stop loading after a short delay to allow all listeners to get initial data
-           setTimeout(() => setIsDataLoading(false), 1500);
+           setTimeout(() => {
+             if (isDataLoading) {
+                const groupsLoaded = groups.length > 0;
+                if (!groupsLoaded && groups.length === 0) {
+                    // If after timeout there are still no groups, we assume it's an empty account
+                    setIsDataLoading(false);
+                }
+             }
+           }, 3000);
       }
 
       if (user) {
         setupListeners(user.uid);
       } else if (!authLoading) {
-        // No user, clear data and stop loading
         setGroupsState([]);
         setAllStudentsState([]);
         setAllObservations({});
         setSettingsState(defaultSettings);
         setActiveGroupIdState(null);
         setIsDataLoading(false);
+        setError(null);
       }
       
       return () => {
           unsubscribers.forEach(unsub => unsub());
       };
-    }, [user, authLoading, activeGroupId]); 
+    }, [user, authLoading]); 
     
     useEffect(() => {
         if(activeGroupId && activePartialId && user) {
@@ -290,6 +305,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 });
             }, (error) => {
                 console.error(`Error fetching partial data for ${activeGroupId}/${activePartialId}:`, error);
+                setError(error);
             });
             return () => unsub();
         } else {
@@ -568,6 +584,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     const contextValue: DataContextType = {
         isLoading: authLoading || isDataLoading,
+        error,
         groups, allStudents, allObservations, activeStudentsInGroups, settings,
         activeGroup, activePartialId,
         partialData,
