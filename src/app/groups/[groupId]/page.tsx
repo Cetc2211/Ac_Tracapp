@@ -1,4 +1,3 @@
-
 'use client';
 import {
   Card,
@@ -78,6 +77,10 @@ export default function GroupDetailsPage() {
     setActivePartialId,
     calculateFinalGrade,
     getStudentRiskLevel,
+    addStudentsToGroup,
+    removeStudentFromGroup,
+    updateGroup,
+    updateStudent,
   } = useData();
   
   const { criteria, attendance } = partialData;
@@ -119,24 +122,18 @@ export default function GroupDetailsPage() {
     return riskMap;
   }, [activeGroup, partialData, calculateFinalGrade, getStudentRiskLevel, activePartialId, attendance]);
 
-  const setGroups = (newGroups: Group[]) => {
-      // This function now needs to interact with the database via the hook.
-      // Let's assume the hook will provide a `setGroups` function that handles the DB logic.
-  };
-  
-  const saveState = (newGroups: Group[], newAllStudents: Student[]) => {
-      setGroups(newGroups);
-      // `setAllStudents` from the hook will also handle DB logic.
-  };
-
-  const handleRemoveStudent = (studentId: string) => {
+  const handleRemoveStudents = (studentIds: string[]) => {
     if (!activeGroup) return;
-    const newStudents = activeGroup.students.filter(s => s.id !== studentId);
-    // TODO: Update group in DB
-    toast({
-        title: "Estudiante eliminado",
-        description: "El estudiante ha sido quitado del grupo.",
+    studentIds.forEach(id => {
+      removeStudentFromGroup(activeGroup.id, id);
     });
+    toast({
+        title: "Estudiante(s) eliminado(s)",
+        description: "El/los estudiante(s) ha(n) sido quitado(s) del grupo.",
+    });
+    if (isSelectionMode) {
+      handleCancelSelectionMode();
+    }
   };
 
   const handleDeleteGroup = () => {
@@ -149,14 +146,14 @@ export default function GroupDetailsPage() {
     router.push('/groups');
   };
   
-  const handleAddStudents = () => {
+  const handleAddStudents = async () => {
     if (!activeGroup) return;
 
-    const names = bulkNames.trim().split('\\n').filter(name => name);
-    const emails = bulkEmails.trim().split('\\n');
-    const phones = bulkPhones.trim().split('\\n');
-    const tutorNames = bulkTutorNames.trim().split('\\n');
-    const tutorPhones = bulkTutorPhones.trim().split('\\n');
+    const names = bulkNames.trim().split('\n').filter(name => name);
+    const emails = bulkEmails.trim().split('\n');
+    const phones = bulkPhones.trim().split('\n');
+    const tutorNames = bulkTutorNames.trim().split('\n');
+    const tutorPhones = bulkTutorPhones.trim().split('\n');
     
     if (names.length === 0) {
       toast({
@@ -177,7 +174,7 @@ export default function GroupDetailsPage() {
       photo: 'https://placehold.co/100x100.png',
     }));
 
-    // TODO: Update group and students in DB
+    await addStudentsToGroup(activeGroup.id, newStudents);
     
     setBulkNames('');
     setBulkEmails('');
@@ -210,15 +207,7 @@ export default function GroupDetailsPage() {
   };
   
   const handleDeleteSelectedStudents = () => {
-    if (!activeGroup) return;
-    const newStudents = activeGroup.students.filter(s => !selectedStudents.includes(s.id));
-    // TODO: Update group in DB
-    
-    toast({
-        title: "Estudiantes eliminados",
-        description: `${selectedStudents.length} estudiante(s) han sido quitados del grupo.`,
-    });
-    setSelectedStudents([]);
+    handleRemoveStudents(selectedStudents);
   };
 
   const handleCancelSelectionMode = () => {
@@ -243,10 +232,10 @@ export default function GroupDetailsPage() {
     }
   };
 
-  const handleSavePhoto = () => {
+  const handleSavePhoto = async () => {
     if (!editingStudent || !photoPreview) return;
     
-    // TODO: Update student photo in DB (allStudents and in group)
+    await updateStudent(editingStudent.id, { photo: photoPreview });
     
     toast({
         title: "Foto actualizada",
@@ -264,10 +253,15 @@ export default function GroupDetailsPage() {
     }
   };
 
-  const handleUpdateGroup = () => {
+  const handleUpdateGroup = async () => {
     if (!editingGroup) return;
     
-    // TODO: Update group info in DB
+    await updateGroup(editingGroup.id, {
+      subject: editingGroup.subject,
+      semester: editingGroup.semester,
+      groupName: editingGroup.groupName,
+      facilitator: editingGroup.facilitator,
+    });
     
     toast({
         title: 'Grupo Actualizado',
@@ -618,7 +612,7 @@ export default function GroupDetailsPage() {
                                         Cambiar Foto
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator />
-                                    <DropdownMenuItem onClick={() => handleRemoveStudent(student.id)} className="text-destructive">
+                                    <DropdownMenuItem onClick={() => handleRemoveStudents([student.id])} className="text-destructive">
                                     Quitar del Grupo
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>

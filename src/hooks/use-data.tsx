@@ -18,7 +18,9 @@ import {
   updateDoc,
   addDoc,
   serverTimestamp,
-  Timestamp
+  Timestamp,
+  arrayUnion,
+  arrayRemove
 } from 'firebase/firestore';
 
 // TYPE DEFINITIONS
@@ -140,12 +142,11 @@ interface DataContextType {
   atRiskStudents: StudentWithRisk[];
   overallAverageParticipation: number;
 
-  // Setters
-  setGroups: (groups: Group[]) => Promise<void>;
-  setAllStudents: (students: Student[]) => Promise<void>;
-  addStudentToGroup: (groupId: string, studentData: Omit<Student, 'id' | 'photo'>) => Promise<void>;
-  updateStudentInGroup: (studentId: string, studentData: Partial<Student>) => Promise<void>;
+  // Setters / Updaters
+  addStudentsToGroup: (groupId: string, students: Student[]) => Promise<void>;
   removeStudentFromGroup: (groupId: string, studentId: string) => Promise<void>;
+  updateGroup: (groupId: string, data: Partial<Omit<Group, 'id' | 'students'>>) => Promise<void>;
+  updateStudent: (studentId: string, data: Partial<Student>) => Promise<void>;
   
   setActiveGroupId: (groupId: string | null) => void;
   setActivePartialId: (partialId: PartialId) => void;
@@ -400,39 +401,38 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         return Array.from(studentSet);
     }, [groups]);
 
-    const setGroups = async (newGroups: Group[]) => {
-       if (!user) return;
-       const batch = writeBatch(db);
-       const collectionRef = collection(db, `users/${user.uid}/groups`);
-
-       const currentGroupsSnapshot = await getDocs(collectionRef);
-       currentGroupsSnapshot.docs.forEach(doc => batch.delete(doc.ref));
-
-       newGroups.forEach(group => {
-            const docRef = doc(collectionRef, group.id);
-            batch.set(docRef, group);
+    const addStudentsToGroup = async (groupId: string, students: Student[]) => {
+        if (!user) return;
+        const groupRef = doc(db, `users/${user.uid}/groups`, groupId);
+        // Use arrayUnion to add new students without overwriting existing ones.
+        await updateDoc(groupRef, {
+            students: arrayUnion(...students)
         });
+
+        // Also add students to the global student list if they are not there
+        const batch = writeBatch(db);
+        const studentsCollectionRef = collection(db, `users/${user.uid}/students`);
+        for (const student of students) {
+            const studentRef = doc(studentsCollectionRef, student.id);
+            batch.set(studentRef, student, { merge: true });
+        }
         await batch.commit();
     };
 
-    const setAllStudents = async (newStudents: Student[]) => {
-       if (!user) return;
-       const batch = writeBatch(db);
-       const collectionRef = collection(db, `users/${user.uid}/students`);
-
-       const currentStudentsSnapshot = await getDocs(collectionRef);
-       currentStudentsSnapshot.docs.forEach(doc => batch.delete(doc.ref));
-
-       newStudents.forEach(student => {
-            const docRef = doc(collectionRef, student.id);
-            batch.set(docRef, student);
-        });
-        await batch.commit();
+    const removeStudentFromGroup = async (groupId: string, studentId: string) => {
+        if (!user) return;
+        const groupRef = doc(db, `users/${user.uid}/groups`, groupId);
+        const groupDoc = await getDoc(groupRef);
+        if (groupDoc.exists()) {
+            const groupData = groupDoc.data() as Group;
+            const studentToRemove = groupData.students.find(s => s.id === studentId);
+            if (studentToRemove) {
+                await updateDoc(groupRef, {
+                    students: arrayRemove(studentToRemove)
+                });
+            }
+        }
     };
-    
-    const addStudentToGroup = async (groupId: string, studentData: Omit<Student, 'id' | 'photo'>) => {};
-    const updateStudentInGroup = async (studentId: string, studentData: Partial<Student>) => {};
-    const removeStudentFromGroup = async (groupId: string, studentId: string) => {};
     
     const setActivePartialId = (partialId: PartialId) => {
         setActivePartialIdState(partialId);
@@ -444,6 +444,12 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         // Note: Deleting subcollections (partials) needs a more complex implementation, often a cloud function.
         // For now, we only delete the group doc.
     }
+
+    const updateGroup = async (groupId: string, data: Partial<Omit<Group, 'id' | 'students'>>) => {
+        if (!user) return;
+        const groupRef = doc(db, `users/${user.uid}/groups`, groupId);
+        await updateDoc(groupRef, data);
+    };
     
     const addStudentObservation = async (observation: Omit<StudentObservation, 'id' | 'date' | 'followUpUpdates' | 'isClosed'>) => {
         if (!user) return;
@@ -470,6 +476,31 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
           });
       }
     }
+    
+    const updateStudent = async (studentId: string, data: Partial<Student>) => {
+        if (!user) return;
+        
+        // Update in the master student list
+        const studentRef = doc(db, `users/${user.uid}/students`, studentId);
+        await updateDoc(studentRef, data);
+        
+        // Update in all groups the student belongs to
+        const batch = writeBatch(db);
+        const userGroups = groups.filter(g => g.students.some(s => s.id === studentId));
+
+        for(const group of userGroups) {
+            const groupRef = doc(db, `users/${user.uid}/groups`, group.id);
+            const updatedStudents = group.students.map(s => {
+                if (s.id === studentId) {
+                    return { ...s, ...data };
+                }
+                return s;
+            });
+            batch.update(groupRef, { students: updatedStudents });
+        }
+        await batch.commit();
+    };
+
 
     const getStudentRiskLevel = useCallback((finalGrade: number, pAttendance: AttendanceRecord, studentId: string): CalculatedRisk => {
         const safeAttendance = pAttendance || {};
@@ -535,7 +566,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         activeGroup, activePartialId,
         partialData,
         groupAverages, atRiskStudents, overallAverageParticipation,
-        setGroups, setAllStudents, addStudentToGroup, updateStudentInGroup, removeStudentFromGroup, setActiveGroupId, setActivePartialId,
+        addStudentsToGroup, removeStudentFromGroup, updateGroup, updateStudent,
+        setActiveGroupId, setActivePartialId,
         setCriteria, setGrades, setAttendance, setParticipations, setActivities, setActivityRecords,
         deleteGroup, addStudentObservation, updateStudentObservation,
         calculateFinalGrade, getStudentRiskLevel, calculateDetailedFinalGrade,
