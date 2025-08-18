@@ -181,11 +181,11 @@ export default function GroupDetailsPage() {
     setBulkPhones('');
     setBulkTutorNames('');
     setBulkTutorPhones('');
-    setIsAddStudentDialogOpen(false);
     toast({
         title: "Estudiantes agregados",
         description: `${newStudents.length} estudiante(s) han sido añadidos al grupo.`
     });
+    setIsAddStudentDialogOpen(false);
   };
 
   const handleSelectStudent = (studentId: string) => {
