@@ -305,9 +305,13 @@ export default function AtRiskReportPage() {
             setIsLoading(true);
             const partials: PartialId[] = ['p1', 'p2', 'p3'];
             const atRiskStudentMap = new Map<string, StudentReportData>();
+            
+            const allPartialsData = await Promise.all(
+                partials.map(pId => fetchPartialData(group.id, pId))
+            );
 
-            for (const partialId of partials) {
-                const partialData = await fetchPartialData(group.id, partialId);
+            partials.forEach((partialId, index) => {
+                const partialData = allPartialsData[index];
 
                 for (const student of group.students) {
                     const { finalGrade, criteriaDetails } = calculateDetailedFinalGrade(student.id, group.id, partialId, partialData);
@@ -341,7 +345,7 @@ export default function AtRiskReportPage() {
                         }
                     }
                 }
-            }
+            });
             
             setReportData(Array.from(atRiskStudentMap.values()));
         }
@@ -350,6 +354,8 @@ export default function AtRiskReportPage() {
     
     if (group && !isDataLoading) {
       generateReport();
+    } else if (!group) {
+        setIsLoading(false);
     }
   }, [group, calculateDetailedFinalGrade, getStudentRiskLevel, allObservations, fetchPartialData, isDataLoading]);
 
@@ -416,4 +422,3 @@ export default function AtRiskReportPage() {
     </div>
   );
 }
-

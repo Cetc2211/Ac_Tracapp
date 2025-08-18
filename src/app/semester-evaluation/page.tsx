@@ -50,21 +50,26 @@ export default function SemesterEvaluationPage() {
 
             setIsCalculating(true);
             const partials: PartialId[] = ['p1', 'p2', 'p3'];
+            
+            // Fetch all partial data in parallel
+            const allPartialsData = await Promise.all(
+                partials.map(pId => fetchPartialData(activeGroup.id, pId))
+            );
+
             const studentPromises = activeGroup.students.map(async (student) => {
-                
                 const grades: {[key in PartialId]?: number} = {};
                 let gradeSum = 0;
                 let partialsWithGrades = 0;
                 
-                for (const partialId of partials) {
-                    const partialData = await fetchPartialData(activeGroup.id, partialId);
-                    if (partialData.criteria.length > 0) {
+                partials.forEach((partialId, index) => {
+                    const partialData = allPartialsData[index];
+                     if (partialData.criteria.length > 0) {
                         const grade = calculateFinalGrade(student.id, activeGroup.id, partialId, partialData);
                         grades[partialId] = grade;
                         gradeSum += grade;
                         partialsWithGrades++;
                     }
-                }
+                });
                 
                 const semesterAverage = partialsWithGrades > 0 ? gradeSum / partialsWithGrades : 0;
                 
@@ -84,6 +89,8 @@ export default function SemesterEvaluationPage() {
 
         if(!isDataLoading && activeGroup) {
           calculateGrades();
+        } else if (!activeGroup) {
+            setIsCalculating(false);
         }
     }, [activeGroup, calculateFinalGrade, fetchPartialData, isDataLoading]);
 
