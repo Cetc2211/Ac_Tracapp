@@ -218,6 +218,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             setAllObservations({});
             setSettingsState(defaultSettings);
             setActiveGroupIdState(null);
+            setPartialData({ criteria: [], grades: {}, attendance: {}, participations: {}, activities: [], activityRecords: {} });
             setIsLoading(false);
             setError(null);
             return;
@@ -230,15 +231,16 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 (snapshot) => {
                     const fetchedGroups = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Group));
                     setGroupsState(fetchedGroups);
-                    if (!activeGroupId && fetchedGroups.length > 0) {
-                        setActiveGroupIdState(fetchedGroups[0].id);
-                    } else if (fetchedGroups.length === 0) {
-                        setActiveGroupIdState(null);
+                    // Set active group if not already set or if it no longer exists
+                    if (!activeGroupId || !fetchedGroups.some(g => g.id === activeGroupId)) {
+                        setActiveGroupIdState(fetchedGroups[0]?.id || null);
                     }
+                    setIsLoading(false); // Stop loading once we have groups (or know there are none)
                 }, 
                 (err) => {
                     console.error("Groups listener error:", err);
                     setError(err);
+                    setIsLoading(false);
                 }
             ),
             onSnapshot(collection(db, `${prefix}/students`), 
@@ -248,6 +250,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 (err) => {
                     console.error("Students listener error:", err);
                     setError(err);
+                    setIsLoading(false);
                 }
             ),
             onSnapshot(collection(db, `${prefix}/observations`), 
@@ -271,6 +274,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 (err) => {
                     console.error("Observations listener error:", err);
                     setError(err);
+                    setIsLoading(false);
                 }
             ),
             onSnapshot(doc(db, `${prefix}/settings`, 'app'), 
@@ -282,28 +286,15 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 (err) => {
                     console.error("Settings listener error:", err);
                     setError(err);
+                    setIsLoading(false);
                 }
             )
         ];
 
-        const checkInitialLoad = async () => {
-            try {
-                await getDoc(doc(db, `${prefix}/settings`, 'app'));
-                setError(null);
-            } catch (err: any) {
-                console.error("Initial data check failed:", err);
-                setError(err);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        checkInitialLoad();
-
         return () => {
             listeners.forEach(unsub => unsub());
         };
-    }, [user, authLoading, activeGroupId]);
+    }, [user, authLoading]);
     
     useEffect(() => {
         if(activeGroupId && activePartialId && user) {
@@ -627,3 +618,5 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
+
+    
