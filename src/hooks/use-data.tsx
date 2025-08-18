@@ -225,17 +225,18 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         }
 
         const prefix = `users/${user.uid}`;
-        setIsLoading(true);
-
+        
         const listeners = [
             onSnapshot(collection(db, `${prefix}/groups`), 
                 (snapshot) => {
                     const fetchedGroups = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Group));
                     setGroupsState(fetchedGroups);
+                    if(isLoading) setIsLoading(false);
                 }, 
                 (err) => {
                     console.error("Groups listener error:", err);
                     setError(err);
+                    setIsLoading(false);
                 }
             ),
             onSnapshot(collection(db, `${prefix}/students`), 
@@ -273,14 +274,15 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 (doc) => {
                     if (doc.exists()) {
                         setSettingsState(doc.data() as typeof settings);
+                    } else {
+                        // This case is for a new user, where settings might not exist yet.
+                        // We set default settings, but don't overwrite if they exist.
+                        setDoc(doc.ref, defaultSettings).catch(e => console.error("Failed to set default settings:", e));
                     }
-                    // Only set loading to false after settings (the last piece of core data) is fetched
-                    setIsLoading(false);
                 }, 
                 (err) => {
                     console.error("Settings listener error:", err);
                     setError(err);
-                    setIsLoading(false);
                 }
             )
         ];
@@ -621,3 +623,5 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
+
+    

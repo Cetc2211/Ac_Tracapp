@@ -65,9 +65,11 @@ export default function SettingsPage() {
     const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
     
     useEffect(() => {
-        setLocalSettings(settings);
-        setLogoPreview(settings.logo);
-    }, [settings]);
+        if(!isLoading && settings) {
+            setLocalSettings(settings);
+            setLogoPreview(settings.logo);
+        }
+    }, [settings, isLoading]);
     
     const handleSave = async () => {
         if (!user || isLoading) {
@@ -427,3 +429,5 @@ export default function SettingsPage() {
         </div>
     );
 }
+
+    
