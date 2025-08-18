@@ -134,7 +134,7 @@ export default function SettingsPage() {
                 version: "1.0.0",
                 groups,
                 students: allStudents,
-                observations: allObservations,
+                observations: allObservations || {},
                 settings,
                 partialsData,
             };
@@ -192,7 +192,9 @@ export default function SettingsPage() {
                 // Write new data
                 data.groups.forEach(group => batch.set(doc(db, `${userPrefix}/groups`, group.id), group));
                 data.students.forEach(student => batch.set(doc(db, `${userPrefix}/students`, student.id), student));
-                Object.values(data.observations).flat().forEach(obs => batch.set(doc(collection(db, `${userPrefix}/observations`)), obs));
+                if (data.observations) {
+                  Object.values(data.observations).flat().forEach(obs => batch.set(doc(collection(db, `${userPrefix}/observations`)), obs));
+                }
                 batch.set(doc(db, `${userPrefix}/settings`, 'app'), data.settings);
 
                 if (data.partialsData) {
@@ -330,7 +332,7 @@ export default function SettingsPage() {
               </Button>
                <AlertDialog>
                     <AlertDialogTrigger asChild>
-                         <Button onClick={triggerFileSelect} disabled={isImporting}>
+                         <Button onClick={triggerFileSelect}>
                             <Upload className="mr-2 h-4 w-4" />
                              Importar Mis Datos
                          </Button>
@@ -345,7 +347,10 @@ export default function SettingsPage() {
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                                 <AlertDialogCancel onClick={() => setImportFile(null)}>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleConfirmImport}>Sí, importar y sobreescribir</AlertDialogAction>
+                                <AlertDialogAction onClick={handleConfirmImport} disabled={isImporting}>
+                                    {isImporting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Sí, importar y sobreescribir
+                                </AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
                     )}
@@ -402,3 +407,5 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+    
