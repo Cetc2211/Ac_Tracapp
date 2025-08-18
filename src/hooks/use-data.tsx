@@ -272,7 +272,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
       return () => {
           unsubscribers.forEach(unsub => unsub());
       };
-    }, [user, authLoading, activeGroupId]); 
+    }, [user, authLoading]); 
     
     useEffect(() => {
         if(activeGroupId && activePartialId && user) {
@@ -561,7 +561,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
 
     const contextValue: DataContextType = {
-        isLoading: isDataLoading,
+        isLoading: authLoading || isDataLoading,
         groups, allStudents, allObservations, activeStudentsInGroups, settings,
         activeGroup, activePartialId,
         partialData,
