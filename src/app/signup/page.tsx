@@ -53,7 +53,7 @@ export default function SignupPage() {
       
       // Create initial settings for the new user
       await setDoc(doc(db, `users/${user.uid}/settings`, 'app'), {
-        institutionName: `${data.name}'s School`,
+        institutionName: `Escuela de ${data.name}`,
         logo: '',
         theme: 'theme-default',
       });
