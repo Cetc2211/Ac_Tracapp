@@ -275,8 +275,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     
     useEffect(() => {
         if(activeGroupId && activePartialId && user) {
-            const prefix = `users/${user.uid}/groups/${activeGroupId}/partials/${activePartialId}`;
-            const unsub = onSnapshot(doc(db, prefix, 'data'), (docSnap) => {
+            const docPath = `users/${user.uid}/groups/${activeGroupId}/partials/${activePartialId}/data/content`;
+            const unsub = onSnapshot(doc(db, docPath), (docSnap) => {
                 const data = docSnap.exists() ? docSnap.data() as PartialData : null;
                 setPartialData({
                     criteria: data?.criteria || [],
@@ -300,7 +300,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     
     const fetchPartialData = useCallback(async (groupId: string, partialId: PartialId): Promise<PartialData> => {
         if (!user) return { criteria: [], grades: {}, attendance: {}, participations: {}, activities: [], activityRecords: {} };
-        const docRef = doc(db, `users/${user.uid}/groups/${groupId}/partials/${partialId}`, 'data');
+        const docRef = doc(db, `users/${user.uid}/groups/${groupId}/partials/${partialId}/data/content`);
         const docSnap = await getDoc(docRef);
         if(docSnap.exists()){
             return docSnap.data() as PartialData;
@@ -310,7 +310,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     const getPartialDataDocRef = useCallback(() => {
         if (!activeGroupId || !user) return null;
-        return doc(db, `users/${user.uid}/groups/${activeGroupId}/partials/${activePartialId}`, 'data');
+        return doc(db, `users/${user.uid}/groups/${activeGroupId}/partials/${activePartialId}/data/content`);
     }, [activeGroupId, activePartialId, user]);
 
 

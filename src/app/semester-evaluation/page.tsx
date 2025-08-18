@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -36,7 +37,7 @@ interface SemesterGrade {
 }
 
 export default function SemesterEvaluationPage() {
-    const { activeGroup, calculateFinalGrade, isLoading: isDataLoading } = useData();
+    const { activeGroup, calculateFinalGrade, isLoading: isDataLoading, fetchPartialData } = useData();
     const [semesterGrades, setSemesterGrades] = useState<SemesterGrade[]>([]);
     const [isCalculating, setIsCalculating] = useState(true);
 
@@ -50,39 +51,28 @@ export default function SemesterEvaluationPage() {
             setIsCalculating(true);
             const partials: PartialId[] = ['p1', 'p2', 'p3'];
             const studentPromises = activeGroup.students.map(async (student) => {
-                const partialGrades: { [key in PartialId]?: number } = {};
+                
+                const grades: {[key in PartialId]?: number} = {};
                 let gradeSum = 0;
                 let partialsWithGrades = 0;
-
+                
                 for (const partialId of partials) {
-                    const docRef = doc(db, `users/${auth.currentUser?.uid}/groups/${activeGroup.id}/partials/${partialId}`, 'data');
-                    const docSnap = await getDoc(docRef);
-                    if (docSnap.exists()) {
-                         // We need a way to calculate grades for other partials without changing the global context
-                         // This is a simplified example. A better approach would be to have a standalone calculation function.
-                         // For now, we assume calculateFinalGrade can be used if we could temporarily switch context, which we can't.
-                         const grade = Math.random() * 40 + 60; // Placeholder
-                         partialGrades[partialId] = grade;
-                         gradeSum += grade;
-                         partialsWithGrades++;
+                    const partialData = await fetchPartialData(activeGroup.id, partialId);
+                    if (partialData.criteria.length > 0) {
+                        const grade = calculateFinalGrade(student.id, activeGroup.id, partialId, partialData);
+                        grades[partialId] = grade;
+                        gradeSum += grade;
+                        partialsWithGrades++;
                     }
                 }
                 
-                // This is a temporary workaround as we cannot easily calculate grades for non-active partials
-                // without significant changes to useData.
-                 const p1 = calculateFinalGrade(student.id, activeGroup.id, 'p1');
-                 const p2 = calculateFinalGrade(student.id, activeGroup.id, 'p2');
-                 const p3 = calculateFinalGrade(student.id, activeGroup.id, 'p3');
-
-
-                const validPartials = [p1, p2, p3].filter(g => g > 0);
-                const semesterAverage = validPartials.length > 0 ? validPartials.reduce((a,b) => a+b, 0) / validPartials.length : 0;
+                const semesterAverage = partialsWithGrades > 0 ? gradeSum / partialsWithGrades : 0;
                 
                 return {
                     student,
-                    p1: p1 > 0 ? p1 : undefined,
-                    p2: p2 > 0 ? p2 : undefined,
-                    p3: p3 > 0 ? p3 : undefined,
+                    p1: grades['p1'],
+                    p2: grades['p2'],
+                    p3: grades['p3'],
                     average: semesterAverage,
                 };
             });
@@ -92,8 +82,10 @@ export default function SemesterEvaluationPage() {
             setIsCalculating(false);
         };
 
-        calculateGrades();
-    }, [activeGroup, calculateFinalGrade]);
+        if(!isDataLoading && activeGroup) {
+          calculateGrades();
+        }
+    }, [activeGroup, calculateFinalGrade, fetchPartialData, isDataLoading]);
 
 
     if (isDataLoading) {
