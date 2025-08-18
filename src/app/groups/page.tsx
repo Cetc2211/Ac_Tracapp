@@ -63,6 +63,20 @@ export default function GroupsPage() {
     }
 
     setIsSubmitting(true);
+    
+    // --- Optimistic UI Update ---
+    // Reset form and close dialog immediately
+    setNewGroupSubject('');
+    setNewGroupSemester('');
+    setNewGroupGroupName('');
+    setNewGroupFacilitator('');
+    setIsDialogOpen(false);
+    toast({
+        title: 'Creando Grupo...',
+        description: `El grupo "${newGroupSubject.trim()}" se está guardando.`,
+    });
+    // -------------------------
+
     const id = `G${Date.now()}`;
     const newGroup: Group = {
       id,
@@ -75,19 +89,20 @@ export default function GroupsPage() {
     
     try {
         await setDoc(doc(db, `users/${user.uid}/groups`, id), newGroup);
+        // The success toast might not be necessary if the UI updates instantly via listener
+        // But it can be good for confirmation
         toast({
           title: 'Grupo Creado',
           description: `El grupo "${newGroup.subject}" ha sido creado exitosamente.`,
         });
-
-        // Reset form and close dialog
-        setNewGroupSubject('');
-        setNewGroupSemester('');
-        setNewGroupGroupName('');
-        setNewGroupFacilitator('');
-        setIsDialogOpen(false);
     } catch (e) {
-        toast({ variant: 'destructive', title: 'Error al crear', description: 'No se pudo guardar el grupo.' });
+        toast({ variant: 'destructive', title: 'Error al crear', description: 'No se pudo guardar el grupo. Por favor, inténtalo de nuevo.' });
+        // Optionally, re-open the dialog with the previous data if save fails
+        setIsDialogOpen(true);
+        setNewGroupSubject(newGroup.subject);
+        setNewGroupSemester(newGroup.semester || '');
+        setNewGroupGroupName(newGroup.groupName || '');
+        setNewGroupFacilitator(newGroup.facilitator || '');
     } finally {
         setIsSubmitting(false);
     }
