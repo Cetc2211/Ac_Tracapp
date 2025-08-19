@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -79,8 +78,13 @@ export default function StudentProfilePage() {
         const partials: PartialId[] = ['p1', 'p2', 'p3'];
         const allStats: StudentStats[] = [];
 
+        const primaryGroupId = studentGroups[0].id;
+        if (!primaryGroupId) {
+          setIsCalculatingStats(false);
+          return;
+        }
+
         for (const pId of partials) {
-            const primaryGroupId = studentGroups[0].id;
             const partialData = await fetchPartialData(primaryGroupId, pId);
             const gradeDetails = calculateDetailedFinalGrade(student.id, primaryGroupId, pId, partialData);
             
