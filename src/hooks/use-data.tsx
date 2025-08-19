@@ -129,6 +129,15 @@ const defaultSettings = {
     theme: "theme-mint"
 };
 
+const defaultPartialData: PartialData = {
+    criteria: [],
+    grades: {},
+    attendance: {},
+    participations: {},
+    activities: [],
+    activityRecords: {},
+};
+
 // CONTEXT TYPE
 interface DataContextType {
   // State
@@ -195,14 +204,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const [activePartialId, setActivePartialIdState] = useState<PartialId>('p1');
     
     // Data stores for active group
-    const [partialData, setPartialData] = useState<PartialData>({
-        criteria: [],
-        grades: {},
-        attendance: {},
-        participations: {},
-        activities: [],
-        activityRecords: {},
-    });
+    const [partialData, setPartialData] = useState<PartialData>(defaultPartialData);
 
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
@@ -219,7 +221,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             setAllObservations({});
             setActiveGroupIdState(null);
             setSettingsState(defaultSettings);
-            setPartialData({ criteria: [], grades: {}, attendance: {}, participations: {}, activities: [], activityRecords: {} });
+            setPartialData(defaultPartialData);
             setIsLoading(false);
             return;
         }
@@ -314,25 +316,31 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             });
             return () => unsub();
         } else {
-             setPartialData({
-                criteria: [], grades: {}, attendance: {},
-                participations: {}, activities: [], activityRecords: {},
-            });
+             setPartialData(defaultPartialData);
         }
     }, [activeGroupId, activePartialId, user, isLoading]);
     
     const fetchPartialData = useCallback(async (groupId: string, partialId: PartialId): Promise<PartialData> => {
-        if (!user) return { criteria: [], grades: {}, attendance: {}, participations: {}, activities: [], activityRecords: {} };
+        if (!user) return defaultPartialData;
         const docRef = doc(db, `users/${user.uid}/groups/${groupId}/partials/${partialId}/data/content`);
         try {
             const docSnap = await getDoc(docRef);
             if(docSnap.exists()){
-                return docSnap.data() as PartialData;
+                const data = docSnap.data();
+                // Ensure all keys of PartialData are present
+                return {
+                    criteria: data.criteria || [],
+                    grades: data.grades || {},
+                    attendance: data.attendance || {},
+                    participations: data.participations || {},
+                    activities: data.activities || [],
+                    activityRecords: data.activityRecords || {},
+                };
             }
         } catch (e) {
             console.error("Failed to fetch partial data:", e);
         }
-        return { criteria: [], grades: {}, attendance: {}, participations: {}, activities: [], activityRecords: {} };
+        return defaultPartialData;
     }, [user]);
 
     const getPartialDataDocRef = useCallback(() => {
@@ -367,7 +375,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const calculateDetailedFinalGrade = useCallback((studentId: string, forGroupId?: string, forPartialId?: PartialId, forPartialData?: PartialData): { finalGrade: number, criteriaDetails: CriteriaDetail[] } => {
         const data = forPartialData || partialData;
         const groupId = forGroupId || activeGroupId;
-        if (!groupId) return { finalGrade: 0, criteriaDetails: [] };
+        if (!groupId || !data || !data.criteria) return { finalGrade: 0, criteriaDetails: [] };
         
         let finalGrade = 0;
         const criteriaDetails: CriteriaDetail[] = [];
@@ -378,18 +386,18 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
              if (criterion.name === 'Actividades' || criterion.name === 'Portafolio') {
                 const totalActivities = data.activities.length;
                 if (totalActivities > 0) {
-                    const deliveredActivities = Object.values(data.activityRecords[studentId] || {}).filter(Boolean).length;
+                    const deliveredActivities = Object.values(data.activityRecords?.[studentId] || {}).filter(Boolean).length;
                     performanceRatio = deliveredActivities / totalActivities;
                 }
             } else if (criterion.name === 'Participación') {
-                const participationDates = Object.keys(data.participations);
-                const studentParticipationOpportunities = participationDates.filter(date => Object.prototype.hasOwnProperty.call(data.participations[date], studentId)).length;
+                const participationDates = Object.keys(data.participations || {});
+                const studentParticipationOpportunities = participationDates.filter(date => Object.prototype.hasOwnProperty.call(data.participations?.[date], studentId)).length;
                 if (studentParticipationOpportunities > 0) {
-                    const studentParticipations = Object.values(data.participations).filter(p => p[studentId]).length;
+                    const studentParticipations = Object.values(data.participations || {}).filter(p => p[studentId]).length;
                     performanceRatio = studentParticipations / studentParticipationOpportunities;
                 }
             } else {
-                const delivered = data.grades[studentId]?.[criterion.id]?.delivered ?? 0;
+                const delivered = data.grades?.[studentId]?.[criterion.id]?.delivered ?? 0;
                 const expected = criterion.expectedValue;
                 if (expected > 0) {
                     performanceRatio = delivered / expected;
@@ -660,9 +668,4 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 };
 
 export const useData = (): DataContextType => {
-  const context = useContext(DataContext);
-  if (context === undefined) {
-    throw new Error('useData must be used within a DataProvider');
-  }
-  return context;
-};
+  const
