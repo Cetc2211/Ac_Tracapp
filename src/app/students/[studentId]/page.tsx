@@ -70,51 +70,69 @@ export default function StudentProfilePage() {
 
   useEffect(() => {
     const calculateStats = async () => {
-        if (!student || studentGroups.length === 0) {
+        if (!student) {
+            setIsCalculatingStats(false);
+            return;
+        }
+
+        if (studentGroups.length === 0) {
             setIsCalculatingStats(false);
             return;
         }
         
         setIsCalculatingStats(true);
-        const partials: PartialId[] = ['p1', 'p2', 'p3'];
-        const allStats: StudentStats[] = [];
+        try {
+            const partials: PartialId[] = ['p1', 'p2', 'p3'];
+            const allStats: StudentStats[] = [];
 
-        const primaryGroupId = studentGroups[0].id;
-        if (!primaryGroupId) {
-          setIsCalculatingStats(false);
-          return;
-        }
+            const primaryGroupId = studentGroups[0].id;
 
-        for (const pId of partials) {
-            const partialData = await fetchPartialData(primaryGroupId, pId);
-            const gradeDetails = calculateDetailedFinalGrade(student.id, primaryGroupId, pId, partialData);
-            
-            let p = 0, a = 0, total = 0;
-            Object.keys(partialData.attendance).forEach(date => {
-                if (partialData.attendance[date]?.[studentId] !== undefined) {
-                    total++;
-                    if (partialData.attendance[date][studentId]) p++; else a++;
+            for (const pId of partials) {
+                const partialData = await fetchPartialData(primaryGroupId, pId);
+
+                // If there's no data for a partial, skip it.
+                if (!partialData) {
+                    continue;
                 }
-            });
+                
+                const gradeDetails = calculateDetailedFinalGrade(student.id, primaryGroupId, pId, partialData);
+                
+                let p = 0, a = 0, total = 0;
+                const safeAttendance = partialData.attendance || {};
+                Object.keys(safeAttendance).forEach(date => {
+                    if (safeAttendance[date]?.[studentId] !== undefined) {
+                        total++;
+                        if (safeAttendance[date][studentId]) p++; else a++;
+                    }
+                });
 
-            const partialObservations = (allObservations[studentId] || []).filter(obs => obs.partialId === pId);
+                const partialObservations = (allObservations[studentId] || []).filter(obs => obs.partialId === pId);
+                
+                allStats.push({
+                    ...gradeDetails,
+                    partialId: pId,
+                    attendance: { p, a, total, rate: total > 0 ? (p / total) * 100 : 100 },
+                    observations: partialObservations,
+                });
+            }
             
-            allStats.push({
-                ...gradeDetails,
-                partialId: pId,
-                attendance: { p, a, total, rate: total > 0 ? (p / total) * 100 : 100 },
-                observations: partialObservations,
+            setStudentStatsByPartial(allStats);
+        } catch(e) {
+            console.error("Failed to calculate student stats:", e);
+            toast({
+                variant: 'destructive',
+                title: 'Error al calcular estadísticas',
+                description: 'No se pudieron cargar los datos del estudiante.'
             });
+        } finally {
+            setIsCalculatingStats(false);
         }
-        
-        setStudentStatsByPartial(allStats);
-        setIsCalculatingStats(false);
     }
     
     if(!isLoading) {
         calculateStats();
     }
-  }, [student, studentGroups, calculateDetailedFinalGrade, allObservations, studentId, isLoading, fetchPartialData]);
+  }, [student, studentGroups, calculateDetailedFinalGrade, allObservations, studentId, isLoading, fetchPartialData, toast]);
   
   const semesterAverage = useMemo(() => {
     if (studentStatsByPartial.length === 0) return 0;
@@ -473,3 +491,5 @@ export default function StudentProfilePage() {
     </>
   );
 }
+
+    
