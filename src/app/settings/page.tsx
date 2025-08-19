@@ -184,12 +184,14 @@ export default function SettingsPage() {
                 const batch = writeBatch(db);
                 const userPrefix = `users/${user.uid}`;
 
+                // Nuke all existing data first
                 const collectionsToDelete = ['groups', 'students', 'observations'];
                 for (const coll of collectionsToDelete) {
                     const snapshot = await getDocs(collection(db, `${userPrefix}/${coll}`));
                     snapshot.docs.forEach(doc => batch.delete(doc.ref));
                 }
                 
+                // Set new data
                 data.groups.forEach(group => batch.set(doc(db, `${userPrefix}/groups`, group.id), group));
                 data.students.forEach(student => batch.set(doc(db, `${userPrefix}/students`, student.id), student));
 
