@@ -66,13 +66,18 @@ export default function StudentProfilePage() {
   const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  const student = useMemo(() => allStudents.find((s) => s.id === studentId), [allStudents, studentId]);
+  const student = useMemo(() => {
+    console.log('allStudents:', allStudents);
+    return allStudents.find((s) => s.id === studentId);
+  }, [allStudents, studentId]);
 
   const studentGroups = useMemo(() => {
+    console.log('groups:', groups);
     return groups.filter((g) => g.students.some((s) => s.id === studentId));
   }, [groups, studentId]);
 
   const calculateStats = useCallback(async () => {
+    console.log('calculateStats called for studentId:', studentId);
     if (!student) {
       setError('Estudiante no encontrado.');
       setIsCalculatingStats(false);
@@ -100,6 +105,7 @@ export default function StudentProfilePage() {
       for (const pId of partials) {
         try {
           const partialData = await fetchPartialData(primaryGroupId, pId);
+          console.log(`fetchPartialData for ${pId}:`, partialData);
 
           if (!partialData || !partialData.criteria || !Array.isArray(partialData.criteria)) {
             console.warn(`No valid data for partial ${pId} in group ${primaryGroupId}`);
@@ -107,6 +113,7 @@ export default function StudentProfilePage() {
           }
 
           const gradeDetails = calculateDetailedFinalGrade(student.id, primaryGroupId, pId, partialData);
+          console.log(`gradeDetails for ${pId}:`, gradeDetails);
 
           let p = 0,
             a = 0,
@@ -138,6 +145,7 @@ export default function StudentProfilePage() {
         }
       }
 
+      console.log('allStats:', allStats);
       setStudentStatsByPartial(allStats);
       if (allStats.length === 0) {
         setError('No se encontraron datos válidos para ningún parcial.');
@@ -156,18 +164,19 @@ export default function StudentProfilePage() {
   }, [student, studentGroups, calculateDetailedFinalGrade, allObservations, studentId, fetchPartialData, toast]);
 
   useEffect(() => {
+    console.log('useEffect triggered:', { isLoading, student: !!student, studentGroups: studentGroups.length });
     if (isLoading) {
       setIsCalculatingStats(true);
       return;
     }
     if (student && studentGroups.length > 0) {
       calculateStats();
-    } else if (!isLoading) { // only set error if not loading
+    } else {
       setIsCalculatingStats(false);
       if(!student) setError('Estudiante no encontrado.');
       else if(studentGroups.length === 0) setError('El estudiante no está asignado a ningún grupo.');
     }
-  }, [isLoading, student, studentGroups]);
+  }, [isLoading, student, studentGroups, calculateStats]);
 
 
   const semesterAverage = useMemo(() => {
@@ -280,7 +289,7 @@ export default function StudentProfilePage() {
     if (generatedFeedback) {
       setEditedFeedback({
         feedback: generatedFeedback.feedback,
-        recommendations: generatedFeedback.recommendations.join('\n'),
+        recommendations: generatedFeedback.recommendations.join('\\n'),
       });
       setIsEditingFeedback(true);
     }
@@ -290,7 +299,7 @@ export default function StudentProfilePage() {
     if (generatedFeedback) {
       setGeneratedFeedback({
         feedback: editedFeedback.feedback,
-        recommendations: editedFeedback.recommendations.split('\n').filter((r) => r.trim() !== ''),
+        recommendations: editedFeedback.recommendations.split('\\n').filter((r) => r.trim() !== ''),
       });
       setIsEditingFeedback(false);
       toast({ title: 'Feedback actualizado' });
