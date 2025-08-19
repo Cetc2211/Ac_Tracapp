@@ -1,4 +1,3 @@
-
 'use client';
 import {
   Card,
@@ -100,7 +99,7 @@ export default function GroupDetailsPage() {
   const [bulkTutorPhones, setBulkTutorPhones] = useState('');
 
 
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmittingStudents, setIsSubmittingStudents] = useState(false);
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [isPhotoDialogOpen, setIsPhotoDialogOpen] = useState(false);
@@ -164,29 +163,41 @@ export default function GroupDetailsPage() {
       });
       return;
     }
-
-    const newStudents: Student[] = names.map((name, index) => ({
-      id: `S${Date.now()}-${Math.random().toString(36).substr(2, 5)}-${index}`,
-      name: name.trim(),
-      email: emails[index]?.trim() || '',
-      phone: phones[index]?.trim() || '',
-      tutorName: tutorNames[index]?.trim() || '',
-      tutorPhone: tutorPhones[index]?.trim() || '',
-      photo: 'https://placehold.co/100x100.png',
-    }));
-
-    await addStudentsToGroup(activeGroup.id, newStudents);
     
-    setBulkNames('');
-    setBulkEmails('');
-    setBulkPhones('');
-    setBulkTutorNames('');
-    setBulkTutorPhones('');
-    toast({
-        title: "Estudiantes agregados",
-        description: `${newStudents.length} estudiante(s) han sido añadidos al grupo.`
-    });
-    setIsAddStudentDialogOpen(false);
+    setIsSubmittingStudents(true);
+    try {
+        const newStudents: Student[] = names.map((name, index) => ({
+        id: `S${Date.now()}-${Math.random().toString(36).substr(2, 5)}-${index}`,
+        name: name.trim(),
+        email: emails[index]?.trim() || '',
+        phone: phones[index]?.trim() || '',
+        tutorName: tutorNames[index]?.trim() || '',
+        tutorPhone: tutorPhones[index]?.trim() || '',
+        photo: 'https://placehold.co/100x100.png',
+        }));
+
+        await addStudentsToGroup(activeGroup.id, newStudents);
+        
+        setBulkNames('');
+        setBulkEmails('');
+        setBulkPhones('');
+        setBulkTutorNames('');
+        setBulkTutorPhones('');
+        toast({
+            title: "Estudiantes agregados",
+            description: `${newStudents.length} estudiante(s) han sido añadidos al grupo.`
+        });
+        setIsAddStudentDialogOpen(false); // Close dialog on success
+    } catch (e) {
+        console.error("Failed to add students:", e);
+        toast({
+            variant: "destructive",
+            title: "Error al agregar",
+            description: "No se pudieron agregar los estudiantes. Inténtalo de nuevo."
+        })
+    } finally {
+        setIsSubmittingStudents(false);
+    }
   };
 
   const handleSelectStudent = (studentId: string) => {
@@ -517,8 +528,11 @@ export default function GroupDetailsPage() {
                                 </div>
                             </div>
                             <DialogFooter>
-                            <Button variant="outline" onClick={() => setIsAddStudentDialogOpen(false)}>Cancelar</Button>
-                            <Button onClick={handleAddStudents} disabled={!bulkNames.trim()}>Agregar Estudiantes</Button>
+                            <Button variant="outline" onClick={() => setIsAddStudentDialogOpen(false)} disabled={isSubmittingStudents}>Cancelar</Button>
+                            <Button onClick={handleAddStudents} disabled={isSubmittingStudents || !bulkNames.trim()}>
+                                {isSubmittingStudents && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                                Agregar Estudiantes
+                            </Button>
                             </DialogFooter>
                         </DialogContent>
                         </Dialog>
@@ -530,13 +544,13 @@ export default function GroupDetailsPage() {
                     <TableHeader>
                     <TableRow>
                         {isSelectionMode && (
-                            <TableHead padding="checkbox">
+                            <TableCell padding="checkbox">
                                 <Checkbox
                                     checked={activeGroup.students.length > 0 && numSelected === activeGroup.students.length ? true : (numSelected > 0 ? 'indeterminate' : false)}
                                     onCheckedChange={(checked) => handleSelectAll(checked)}
                                     aria-label="Seleccionar todo"
                                 />
-                            </TableHead>
+                            </TableCell>
                         )}
                         <TableHead>#</TableHead>
                         <TableHead className="hidden w-[100px] sm:table-cell">
@@ -705,8 +719,3 @@ export default function GroupDetailsPage() {
     </>
   );
 }
-
-
-
-
-    

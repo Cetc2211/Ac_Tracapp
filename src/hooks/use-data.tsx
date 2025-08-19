@@ -190,12 +190,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const [settings, setSettingsState] = useState(defaultSettings);
     
     // Active state
-    const [activeGroupId, setActiveGroupIdState] = useState<string | null>(() => {
-        if (typeof window !== 'undefined') {
-            return localStorage.getItem('activeGroupId_v1');
-        }
-        return null;
-    });
+    const [activeGroupId, setActiveGroupIdState] = useState<string | null>(null);
     const [activePartialId, setActivePartialIdState] = useState<PartialId>('p1');
     
     // Data stores for active group
@@ -210,6 +205,18 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
+
+    useEffect(() => {
+        const setActiveGroupFromStorage = () => {
+          try {
+            const storedGroupId = localStorage.getItem('activeGroupId_v1');
+            setActiveGroupIdState(storedGroupId);
+          } catch (error) {
+            console.warn("Could not access localStorage to set active group.");
+          }
+        };
+        setActiveGroupFromStorage();
+    }, []);
 
     useEffect(() => {
         if (authLoading) {
@@ -387,10 +394,14 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const setActiveGroupId = (groupId: string | null) => {
         if(groupId !== activeGroupId) {
             setActiveGroupIdState(groupId);
-            if (groupId) {
-                localStorage.setItem('activeGroupId_v1', groupId);
-            } else {
-                localStorage.removeItem('activeGroupId_v1');
+            try {
+                if (groupId) {
+                    localStorage.setItem('activeGroupId_v1', groupId);
+                } else {
+                    localStorage.removeItem('activeGroupId_v1');
+                }
+            } catch(e) {
+                console.warn("Could not access localStorage to set active group ID.")
             }
         }
     };
@@ -607,5 +618,3 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
-
-    
