@@ -223,39 +223,69 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             return;
         }
         
-        setIsLoading(true);
-        const prefix = `users/${user.uid}`;
-        
         const unsubscribers: (() => void)[] = [];
-        
-        const setupListeners = () => {
-             unsubscribers.push(onSnapshot(query(collection(db, `${prefix}/groups`)), (snapshot) => {
-                setGroups(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Group)));
-            }));
-            
-            unsubscribers.push(onSnapshot(query(collection(db, `${prefix}/students`)), (snapshot) => {
-                setAllStudents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student)));
-            }));
-            
-            unsubscribers.push(onSnapshot(query(collection(db, `${prefix}/observations`)), (snapshot) => {
-                const fetchedObservations: { [studentId: string]: StudentObservation[] } = {};
-                snapshot.docs.forEach(doc => {
-                    const obs = { id: doc.id, ...doc.data() } as StudentObservation;
-                    if (obs.studentId) {
-                        if (!fetchedObservations[obs.studentId]) fetchedObservations[obs.studentId] = [];
-                        if (obs.date && obs.date instanceof Timestamp) obs.date = obs.date.toDate().toISOString();
-                        obs.followUpUpdates = (obs.followUpUpdates || []).map(f => ({ ...f, date: f.date && f.date instanceof Timestamp ? f.date.toDate().toISOString() : f.date }));
-                        fetchedObservations[obs.studentId].push(obs);
-                    }
-                });
-                setAllObservations(fetchedObservations);
-            }));
 
-            unsubscribers.push(onSnapshot(doc(db, `${prefix}/settings`, 'app'), (doc) => {
-                setSettingsState(doc.exists() ? (doc.data() as typeof settings) : defaultSettings);
-            }));
-            
-            setIsLoading(false);
+        const setupListeners = () => {
+            setIsLoading(true);
+            try {
+                if (!user) {
+                    setIsLoading(false);
+                    return;
+                }
+                const prefix = `users/${user.uid}`;
+                const groupsQuery = query(collection(db, `${prefix}/groups`));
+                const studentsQuery = query(collection(db, `${prefix}/students`));
+                const observationsQuery = query(collection(db, `${prefix}/observations`));
+                const settingsDoc = doc(db, `${prefix}/settings`, 'app');
+        
+                let isInitialGroupsLoad = true;
+
+                unsubscribers.push(
+                    onSnapshot(groupsQuery, (snapshot) => {
+                        setGroups(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Group)));
+                        if (isInitialGroupsLoad) {
+                            setIsLoading(false);
+                            isInitialGroupsLoad = false;
+                        }
+                    }, (err) => {
+                        console.error("Error in groups listener:", err);
+                        setError(err);
+                        setIsLoading(false);
+                    })
+                );
+                unsubscribers.push(
+                    onSnapshot(studentsQuery, (snapshot) => {
+                        setAllStudents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student)));
+                    }, (err) => console.error("Error in students listener:", err))
+                );
+                unsubscribers.push(
+                    onSnapshot(observationsQuery, (snapshot) => {
+                        const obsData: { [studentId: string]: StudentObservation[] } = {};
+                        snapshot.docs.forEach(doc => {
+                            const obs = { id: doc.id, ...doc.data() } as StudentObservation;
+                            if (obs.studentId) {
+                                if (!obsData[obs.studentId]) obsData[obs.studentId] = [];
+                                if (obs.date && obs.date instanceof Timestamp) obs.date = obs.date.toDate().toISOString();
+                                obs.followUpUpdates = (obs.followUpUpdates || []).map(f => ({
+                                    ...f,
+                                    date: f.date && f.date instanceof Timestamp ? f.date.toDate().toISOString() : f.date
+                                }));
+                                obsData[obs.studentId].push(obs);
+                            }
+                        });
+                        setAllObservations(obsData);
+                    }, (err) => console.error("Error in observations listener:", err))
+                );
+                unsubscribers.push(
+                    onSnapshot(settingsDoc, (doc) => {
+                        setSettingsState(doc.exists() ? (doc.data() as typeof settings) : defaultSettings);
+                    }, (err) => console.error("Error in settings listener:", err))
+                );
+            } catch (err: any) {
+                console.error("Error setting up Firestore listeners:", err);
+                setError(err);
+                setIsLoading(false);
+            }
         };
         
         setupListeners();
