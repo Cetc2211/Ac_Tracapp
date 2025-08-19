@@ -224,16 +224,16 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             return;
         }
         
+        const prefix = `users/${user.uid}`;
         const unsubscribers: (() => void)[] = [];
-
+        
         const setupListeners = () => {
             setIsLoading(true);
             try {
-                if (!user) { // Double check user
+                if (!user) {
                     setIsLoading(false);
                     return;
                 }
-                const prefix = `users/${user.uid}`;
                 const groupsQuery = query(collection(db, `${prefix}/groups`));
                 const studentsQuery = query(collection(db, `${prefix}/students`));
                 const observationsQuery = query(collection(db, `${prefix}/observations`));
@@ -242,7 +242,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 unsubscribers.push(
                     onSnapshot(groupsQuery, (snapshot) => {
                         setGroups(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Group)));
-                        setIsLoading(false); // Set loading to false after the main data is fetched
+                        // This is the key: only set loading to false after the first batch of essential data has arrived.
+                        setIsLoading(false);
                     }, (err) => {
                         console.error("Error in groups listener:", err);
                         setError(err);
@@ -666,3 +667,4 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
+
