@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
@@ -189,7 +190,12 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const [settings, setSettingsState] = useState(defaultSettings);
     
     // Active state
-    const [activeGroupId, setActiveGroupIdState] = useState<string | null>(null);
+    const [activeGroupId, setActiveGroupIdState] = useState<string | null>(() => {
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('activeGroupId_v1');
+        }
+        return null;
+    });
     const [activePartialId, setActivePartialIdState] = useState<PartialId>('p1');
     
     // Data stores for active group
@@ -207,61 +213,38 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     useEffect(() => {
         if (authLoading) {
-          setIsLoading(true);
-          return;
+            setIsLoading(true);
+            return;
         }
         if (!user) {
-          setGroups([]);
-          setAllStudents([]);
-          setAllObservations({});
-          setActiveGroupIdState(null);
-          setSettingsState(defaultSettings);
-          setPartialData({
-            criteria: [],
-            grades: {},
-            attendance: {},
-            participations: {},
-            activities: [],
-            activityRecords: {},
-          });
-          setIsLoading(false);
-          return;
+            // Clear all data and stop loading if user is logged out
+            setGroups([]);
+            setAllStudents([]);
+            setAllObservations({});
+            setActiveGroupIdState(null);
+            setSettingsState(defaultSettings);
+            setPartialData({ criteria: [], grades: {}, attendance: {}, participations: {}, activities: [], activityRecords: {} });
+            setIsLoading(false);
+            return;
         }
-    
+
         const prefix = `users/${user.uid}`;
         
         // Define listeners
-        const unsubGroups = onSnapshot(
-          collection(db, `${prefix}/groups`),
-          (snapshot) => {
-            const fetchedGroups = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Group));
-            setGroups(fetchedGroups);
-            if (!localStorage.getItem('activeGroupId_v1') && fetchedGroups.length > 0) {
-                // No active group set, keep it that way until user interaction
-            }
-            setIsLoading(false); // Set loading to false after the first essential data load
-          },
-          (e) => {
+        const unsubGroups = onSnapshot(collection(db, `${prefix}/groups`), (snapshot) => {
+            setGroups(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Group)));
+            setIsLoading(false); // Groups are the primary data, consider loading done after this
+        }, (e) => {
             console.error('Groups listener error:', e);
             setError(e);
             setIsLoading(false);
-          }
-        );
-    
-        const unsubStudents = onSnapshot(
-          collection(db, `${prefix}/students`),
-          (snapshot) => {
+        });
+
+        const unsubStudents = onSnapshot(collection(db, `${prefix}/students`), (snapshot) => {
             setAllStudents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student)));
-          },
-          (e) => {
-            console.error('Students listener error:', e);
-            setError(e);
-          }
-        );
-    
-        const unsubObservations = onSnapshot(
-          collection(db, `${prefix}/observations`),
-          (snapshot) => {
+        }, (e) => console.error('Students listener error:', e));
+        
+        const unsubObservations = onSnapshot(collection(db, `${prefix}/observations`), (snapshot) => {
             const fetchedObservations: { [studentId: string]: StudentObservation[] } = {};
             snapshot.docs.forEach(doc => {
               const obs = { id: doc.id, ...doc.data() } as StudentObservation;
@@ -273,29 +256,11 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
               }
             });
             setAllObservations(fetchedObservations);
-          },
-          (e) => {
-            console.error('Observations listener error:', e);
-            setError(e);
-          }
-        );
-    
-        const unsubSettings = onSnapshot(
-          doc(db, `${prefix}/settings`, 'app'),
-          (doc) => {
+        }, (e) => console.error('Observations listener error:', e));
+
+        const unsubSettings = onSnapshot(doc(db, `${prefix}/settings`, 'app'), (doc) => {
             setSettingsState(doc.exists() ? (doc.data() as typeof settings) : defaultSettings);
-          },
-          (e) => {
-            console.error('Settings listener error:', e);
-            setError(e);
-          }
-        );
-        
-        // Retrieve active group from local storage
-        const savedGroupId = localStorage.getItem('activeGroupId_v1');
-        if (savedGroupId) {
-            setActiveGroupIdState(savedGroupId);
-        }
+        }, (e) => console.error('Settings listener error:', e));
 
         return () => {
           unsubGroups();
@@ -642,3 +607,5 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
+
+    
