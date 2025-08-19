@@ -47,6 +47,7 @@ export default function StudentProfilePage() {
       allObservations,
       isLoading,
       fetchPartialData,
+      error: dataError,
   } = useData();
 
   const [isLogOpen, setIsLogOpen] = useState(false);
@@ -57,7 +58,8 @@ export default function StudentProfilePage() {
   const [editedFeedback, setEditedFeedback] = useState<{feedback: string, recommendations: string}>({feedback: '', recommendations: ''});
   const [studentStatsByPartial, setStudentStatsByPartial] = useState<StudentStats[]>([]);
   const [isCalculatingStats, setIsCalculatingStats] = useState(true);
-  
+  const [error, setError] = useState<string | null>(null);
+
   const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -69,27 +71,24 @@ export default function StudentProfilePage() {
 
   useEffect(() => {
     const calculateStats = async () => {
-        if (!student) {
+        if (!student || studentGroups.length === 0) {
             setIsCalculatingStats(false);
+            setError('Estudiante no encontrado o no está asignado a ningún grupo.');
             return;
         }
 
-        if (studentGroups.length === 0) {
-            setIsCalculatingStats(false);
-            return;
-        }
-        
         setIsCalculatingStats(true);
+        setError(null);
         try {
             const partials: PartialId[] = ['p1', 'p2', 'p3'];
             const allStats: StudentStats[] = [];
 
             const primaryGroupId = studentGroups[0].id;
-
+            
             for (const pId of partials) {
                 const partialData = await fetchPartialData(primaryGroupId, pId);
 
-                // Robust check: if no data for a partial, skip it.
+                // Skip partials with no data to avoid errors
                 if (!partialData) {
                     continue;
                 }
@@ -118,18 +117,23 @@ export default function StudentProfilePage() {
             setStudentStatsByPartial(allStats);
         } catch(e) {
             console.error("Failed to calculate student stats:", e);
+            setError('Error al calcular las estadísticas del estudiante.');
             toast({
                 variant: 'destructive',
-                title: 'Error al calcular estadísticas',
-                description: 'No se pudieron cargar los datos del estudiante.'
+                title: 'Error al cargar estadísticas',
+                description: 'No se pudieron calcular las estadísticas del estudiante.'
             });
         } finally {
             setIsCalculatingStats(false);
         }
     }
     
-    if(!isLoading) {
+    // This effect now robustly depends on `student` and `studentGroups` being defined
+    if (student && studentGroups) {
         calculateStats();
+    } else if (!isLoading) {
+        // If data loading is finished and we still have no student, set loading to false.
+        setIsCalculatingStats(false);
     }
   }, [student, studentGroups, calculateDetailedFinalGrade, allObservations, studentId, isLoading, fetchPartialData, toast]);
   
@@ -272,6 +276,18 @@ export default function StudentProfilePage() {
   
   if (!student) {
     return notFound();
+  }
+
+  if (error || dataError) {
+    return (
+        <div className="flex flex-col justify-center items-center h-full text-center">
+            <p className="text-lg font-semibold text-destructive">Error al cargar el perfil del estudiante</p>
+            <p className="text-muted-foreground mt-2">{error || dataError?.message || 'Ocurrió un error inesperado.'}</p>
+            <Button asChild className="mt-4">
+                <Link href="/dashboard">Volver al Dashboard</Link>
+            </Button>
+        </div>
+    );
   }
   
   const allSemesterObservations = Object.values(allObservations).flat().filter(obs => obs.studentId === studentId);
