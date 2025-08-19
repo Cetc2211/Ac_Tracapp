@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -90,7 +89,7 @@ export default function StudentProfilePage() {
             for (const pId of partials) {
                 const partialData = await fetchPartialData(primaryGroupId, pId);
 
-                // If there's no data for a partial, skip it.
+                // Robust check: if no data for a partial, skip it.
                 if (!partialData) {
                     continue;
                 }
@@ -491,5 +490,3 @@ export default function StudentProfilePage() {
     </>
   );
 }
-
-    
