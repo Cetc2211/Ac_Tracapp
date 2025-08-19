@@ -348,27 +348,27 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }, [activeGroupId, activePartialId, user]);
 
 
-    const createSetter = <T,>(field: keyof PartialData) => async (setter: React.SetStateAction<T>) => {
+    const createSetter = useCallback((field: keyof PartialData) => async (setter: React.SetStateAction<any>) => {
         const docRef = getPartialDataDocRef();
         if (docRef) {
             const currentValue = (partialData as any)[field];
-            const newValue = typeof setter === 'function' ? (setter as (prevState: T) => T)(currentValue) : setter;
+            const newValue = typeof setter === 'function' ? (setter as (prevState: any) => any)(currentValue) : setter;
             await setDoc(docRef, { [field]: newValue }, { merge: true });
         }
-    };
+    }, [getPartialDataDocRef, partialData]);
     
-    const setSettings = async (newSettings: { institutionName: string; logo: string; theme: string }) => {
+    const setSettings = useCallback(async (newSettings: { institutionName: string; logo: string; theme: string }) => {
         if (!user) throw new Error("User not authenticated");
         if (isLoading) return;
         await setDoc(doc(db, `users/${user.uid}/settings`, 'app'), newSettings);
-    };
+    }, [user, isLoading]);
 
-    const setCriteria = createSetter<EvaluationCriteria[]>('criteria');
-    const setGrades = createSetter<Grades>('grades');
-    const setAttendance = createSetter<AttendanceRecord>('attendance');
-    const setParticipations = createSetter<ParticipationRecord>('participations');
-    const setActivities = createSetter<Activity[]>('activities');
-    const setActivityRecords = createSetter<ActivityRecord>('activityRecords');
+    const setCriteria = useMemo(() => createSetter('criteria'), [createSetter]);
+    const setGrades = useMemo(() => createSetter('grades'), [createSetter]);
+    const setAttendance = useMemo(() => createSetter('attendance'), [createSetter]);
+    const setParticipations = useMemo(() => createSetter('participations'), [createSetter]);
+    const setActivities = useMemo(() => createSetter('activities'), [createSetter]);
+    const setActivityRecords = useMemo(() => createSetter('activityRecords'), [createSetter]);
 
 
     const calculateDetailedFinalGrade = useCallback((studentId: string, forGroupId?: string, forPartialId?: PartialId, forPartialData?: PartialData): { finalGrade: number, criteriaDetails: CriteriaDetail[] } => {
@@ -451,7 +451,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         return Array.from(studentSet);
     }, [groups]);
 
-    const addStudentsToGroup = async (groupId: string, students: Student[]) => {
+    const addStudentsToGroup = useCallback(async (groupId: string, students: Student[]) => {
         if (!user) return;
         const groupRef = doc(db, `users/${user.uid}/groups`, groupId);
         // Use arrayUnion to add new students without overwriting existing ones.
@@ -467,9 +467,9 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             batch.set(studentRef, student, { merge: true });
         }
         await batch.commit();
-    };
+    }, [user]);
 
-    const removeStudentFromGroup = async (groupId: string, studentId: string) => {
+    const removeStudentFromGroup = useCallback(async (groupId: string, studentId: string) => {
         if (!user) return;
         const groupRef = doc(db, `users/${user.uid}/groups`, groupId);
         const groupDoc = await getDoc(groupRef);
@@ -482,26 +482,26 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 });
             }
         }
-    };
+    }, [user]);
     
     const setActivePartialId = (partialId: PartialId) => {
         setActivePartialIdState(partialId);
     };
 
-    const deleteGroup = async (groupId: string) => {
+    const deleteGroup = useCallback(async (groupId: string) => {
         if (!user) return;
         await deleteDoc(doc(db, `users/${user.uid}/groups`, groupId));
         // Note: Deleting subcollections (partials) needs a more complex implementation, often a cloud function.
         // For now, we only delete the group doc.
-    }
+    }, [user]);
 
-    const updateGroup = async (groupId: string, data: Partial<Omit<Group, 'id' | 'students'>>) => {
+    const updateGroup = useCallback(async (groupId: string, data: Partial<Omit<Group, 'id' | 'students'>>) => {
         if (!user) return;
         const groupRef = doc(db, `users/${user.uid}/groups`, groupId);
         await updateDoc(groupRef, data);
-    };
+    }, [user]);
     
-    const addStudentObservation = async (observation: Omit<StudentObservation, 'id' | 'date' | 'followUpUpdates' | 'isClosed'>) => {
+    const addStudentObservation = useCallback(async (observation: Omit<StudentObservation, 'id' | 'date' | 'followUpUpdates' | 'isClosed'>) => {
         if (!user) return;
         
         const newDocRef = doc(collection(db, `users/${user.uid}/observations`));
@@ -513,9 +513,9 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             isClosed: false,
         };
         await setDoc(newDocRef, newObservation);
-    };
+    }, [user]);
     
-    const updateStudentObservation = async (studentId: string, observationId: string, updateText: string, isClosing: boolean) => {
+    const updateStudentObservation = useCallback(async (studentId: string, observationId: string, updateText: string, isClosing: boolean) => {
       if (!user) return;
       const docRef = doc(db, `users/${user.uid}/observations`, observationId);
       const obsDoc = await getDoc(docRef);
@@ -528,9 +528,9 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
               isClosed: isClosing,
           });
       }
-    }
+    }, [user]);
     
-    const updateStudent = async (studentId: string, data: Partial<Student>) => {
+    const updateStudent = useCallback(async (studentId: string, data: Partial<Student>) => {
         if (!user) return;
         
         // Update in the master student list
@@ -552,7 +552,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             batch.update(groupRef, { students: updatedStudents });
         }
         await batch.commit();
-    };
+    }, [user, groups]);
 
 
     const getStudentRiskLevel = useCallback((finalGrade: number, pAttendance: AttendanceRecord, studentId: string): CalculatedRisk => {
@@ -626,7 +626,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     }, [activeGroup, partialData.participations]);
 
-    const takeAttendanceForDate = async (groupId: string, date: string) => {
+    const takeAttendanceForDate = useCallback(async (groupId: string, date: string) => {
         if (!user) return;
         const group = groups.find(g => g.id === groupId);
         if (!group) return;
@@ -639,7 +639,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         if (docRef) {
              await setDoc(docRef, { attendance: { [date]: newAttendanceForDate } }, { merge: true });
         }
-    };
+    }, [user, groups, getPartialDataDocRef]);
 
 
     const contextValue: DataContextType = useMemo(() => ({
@@ -681,7 +681,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         isLoading, error, groups, allStudents, allObservations, activeStudentsInGroups, settings,
         activeGroup, activePartialId, partialData, groupAverages, atRiskStudents,
         overallAverageParticipation, calculateFinalGrade, getStudentRiskLevel,
-        calculateDetailedFinalGrade, fetchPartialData
+        calculateDetailedFinalGrade, fetchPartialData, addStudentsToGroup, removeStudentFromGroup, updateGroup, updateStudent, setSettings, deleteGroup, addStudentObservation, updateStudentObservation, takeAttendanceForDate, setCriteria, setGrades, setAttendance, setParticipations, setActivities, setActivityRecords
     ]);
 
     return (
@@ -698,5 +698,3 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
-
-    
