@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +18,7 @@ import { attendanceRandomizer } from '@/ai/flows/attendance-randomizer';
 import type { AttendanceRandomizerOutput } from '@/ai/flows/attendance-randomizer';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Wand2 } from 'lucide-react';
+import { useData } from '@/hooks/use-data';
 
 interface AttendanceRandomizerProps extends ButtonProps {
   students: Student[];
@@ -28,6 +29,18 @@ export function AttendanceRandomizer({ students, ...props }: AttendanceRandomize
   const [isLoading, setIsLoading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
+  const { partialData } = useData();
+  const { participations } = partialData;
+
+  const participationCounts = useMemo(() => {
+    return students.map(student => {
+        const participationDates = Object.keys(participations);
+        const studentParticipations = participationDates.filter(date =>
+            participations[date]?.[student.id]
+        ).length;
+        return { name: student.name, participationCount: studentParticipations };
+    });
+  }, [students, participations]);
 
   const handleRandomize = async () => {
     if (students.length === 0) {
@@ -43,8 +56,7 @@ export function AttendanceRandomizer({ students, ...props }: AttendanceRandomize
     setResult(null);
 
     try {
-      const studentList = students.map((s) => s.name);
-      const randomStudent = await attendanceRandomizer({ studentList });
+      const randomStudent = await attendanceRandomizer({ studentList: participationCounts });
       setResult(randomStudent);
       setIsDialogOpen(true);
     } catch (error) {
