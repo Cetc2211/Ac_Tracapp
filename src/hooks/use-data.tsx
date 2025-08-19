@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
@@ -674,5 +673,3 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
-
-    
