@@ -719,5 +719,3 @@ export default function GroupDetailsPage() {
     </>
   );
 }
-
-    
