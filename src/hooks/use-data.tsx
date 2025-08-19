@@ -609,7 +609,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             const studentParticipationOpportunities = participationDates.filter(date => Object.prototype.hasOwnProperty.call(partialData.participations[date], student.id)).length;
 
             if (studentParticipationOpportunities > 0) {
-                 const studentParticipations = Object.values(partialData.participations).filter(p => p[studentId]).length;
+                 const studentParticipations = Object.values(partialData.participations).filter(p => p[student.id]).length;
                  totalRatio += studentParticipations / studentParticipationOpportunities;
                  studentsWithOpportunities++;
             }
