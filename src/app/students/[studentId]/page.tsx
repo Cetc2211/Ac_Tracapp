@@ -14,14 +14,14 @@ import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, Download, User, Mail, Phone, Wand2, Loader2, MessageSquare, BookText, Edit, Save } from 'lucide-react';
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useData } from '@/hooks/use-data';
 import { Badge } from '@/components/ui/badge';
 import { getPartialLabel } from '@/lib/utils';
-import type { PartialId, StudentObservation, EvaluationCriteria, Grades, ParticipationRecord, ActivityRecord, Activity, PartialData } from '@/hooks/use-data';
+import type { PartialId, StudentObservation, PartialData } from '@/hooks/use-data';
 import { StudentObservationLogDialog } from '@/components/student-observation-log-dialog';
 import { WhatsAppDialog } from '@/components/whatsapp-dialog';
 import { generateStudentFeedback } from '@/ai/flows/student-feedback';
@@ -72,30 +72,40 @@ export default function StudentProfilePage() {
     return groups.filter((g) => g.students.some((s) => s.id === studentId));
   }, [groups, studentId]);
 
-  useEffect(() => {
-    const calculateStats = async () => {
-      if (!student || studentGroups.length === 0) {
-        setIsCalculatingStats(false);
-        setError('Estudiante no encontrado o no está asignado a ningún grupo.');
-        return;
-      }
+  const calculateStats = useCallback(async () => {
+    if (!student || studentGroups.length === 0) {
+      setError('Estudiante no encontrado o no está asignado a ningún grupo.');
+      setIsCalculatingStats(false);
+      return;
+    }
 
-      setIsCalculatingStats(true);
-      setError(null);
-      try {
-        const partials: PartialId[] = ['p1', 'p2', 'p3'];
-        const allStats: StudentStats[] = [];
-        const primaryGroupId = studentGroups[0].id;
+    const primaryGroupId = studentGroups[0]?.id;
+    if (!primaryGroupId) {
+      setError('No se encontró un grupo principal para el estudiante.');
+      setIsCalculatingStats(false);
+      return;
+    }
 
-        for (const pId of partials) {
+    setIsCalculatingStats(true);
+    setError(null);
+    try {
+      const partials: PartialId[] = ['p1', 'p2', 'p3'];
+      const allStats: StudentStats[] = [];
+
+      for (const pId of partials) {
+        try {
           const partialData = await fetchPartialData(primaryGroupId, pId);
-          if (!partialData) {
+          
+          if (!partialData || !partialData.criteria || !Array.isArray(partialData.criteria)) {
+            console.warn(`No valid data for partial ${pId} in group ${primaryGroupId}`);
             continue;
           }
 
           const gradeDetails = calculateDetailedFinalGrade(student.id, primaryGroupId, pId, partialData);
-          
-          let p = 0, a = 0, total = 0;
+
+          let p = 0,
+            a = 0,
+            total = 0;
           const safeAttendance = partialData.attendance || {};
           Object.keys(safeAttendance).forEach((date) => {
             if (safeAttendance[date]?.[studentId] !== undefined) {
@@ -113,27 +123,44 @@ export default function StudentProfilePage() {
             attendance: { p, a, total, rate: total > 0 ? (p / total) * 100 : 100 },
             observations: partialObservations,
           });
+        } catch (e) {
+          console.error(`Error processing partial ${pId}:`, e);
+          toast({
+            variant: 'destructive',
+            title: `Error al cargar datos del parcial ${getPartialLabel(pId)}`,
+            description: 'No se pudieron cargar los datos. Inténtalo de nuevo.',
+          });
         }
-        setStudentStatsByPartial(allStats);
-      } catch (e) {
-        console.error('Error calculating stats:', e);
-        setError('Error al calcular las estadísticas del estudiante.');
-        toast({
-          variant: 'destructive',
-          title: 'Error al cargar estadísticas',
-          description: 'No se pudieron calcular las estadísticas del estudiante.',
-        });
-      } finally {
-        setIsCalculatingStats(false);
       }
-    };
-    
-    if (student && studentGroups) {
-      calculateStats();
-    } else if(!isLoading) {
+
+      setStudentStatsByPartial(allStats);
+    } catch (e) {
+      console.error('Error calculating stats:', e);
+      setError('Error al calcular las estadísticas del estudiante.');
+      toast({
+        variant: 'destructive',
+        title: 'Error al cargar estadísticas',
+        description: 'No se pudieron calcular las estadísticas del estudiante.',
+      });
+    } finally {
       setIsCalculatingStats(false);
     }
-  }, [student, studentGroups, isLoading, calculateDetailedFinalGrade, allObservations, studentId, fetchPartialData, toast]);
+  }, [student, studentGroups, calculateDetailedFinalGrade, allObservations, studentId, fetchPartialData, toast]);
+
+  useEffect(() => {
+    if (isLoading) {
+      setIsCalculatingStats(true);
+      return;
+    }
+    if (student && studentGroups.length > 0) {
+      calculateStats();
+    } else if (!isLoading) {
+      setIsCalculatingStats(false);
+      if (!student || studentGroups.length === 0) {
+        setError('Estudiante no encontrado o no está asignado a ningún grupo.');
+      }
+    }
+  }, [isLoading, student, studentGroups, calculateStats]);
 
   const semesterAverage = useMemo(() => {
     if (studentStatsByPartial.length === 0) return 0;
