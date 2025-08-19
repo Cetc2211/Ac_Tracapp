@@ -175,6 +175,7 @@ interface DataContextType {
   calculateDetailedFinalGrade: (studentId: string, forGroupId?: string, forPartialId?: PartialId, forPartialData?: PartialData) => { finalGrade: number, criteriaDetails: CriteriaDetail[] };
   getStudentRiskLevel: (finalGrade: number, pAttendance: AttendanceRecord, studentId: string) => CalculatedRisk;
   fetchPartialData: (groupId: string, partialId: PartialId) => Promise<PartialData>;
+  takeAttendanceForDate: (groupId: string, date: string) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -228,7 +229,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         const setupListeners = () => {
             setIsLoading(true);
             try {
-                if (!user) {
+                if (!user) { // Double check user
                     setIsLoading(false);
                     return;
                 }
@@ -241,7 +242,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 unsubscribers.push(
                     onSnapshot(groupsQuery, (snapshot) => {
                         setGroups(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Group)));
-                        setIsLoading(false);
+                        setIsLoading(false); // Set loading to false after the main data is fetched
                     }, (err) => {
                         console.error("Error in groups listener:", err);
                         setError(err);
@@ -600,29 +601,38 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }, [groups, activePartialId, getStudentRiskLevel, calculateFinalGrade, partialData.attendance]);
     
     const overallAverageParticipation = useMemo(() => {
-        if (!activeGroup) return 0;
+        if (!activeGroup) return 100;
         let totalRatio = 0;
-        let totalStudentsWithOpportunities = 0;
+        let studentsWithOpportunities = 0;
 
         activeGroup.students.forEach(student => {
             const participationDates = Object.keys(partialData.participations);
-            // Filter attendance records to only include dates relevant to the student.
-            const studentAttendance = Object.keys(partialData.attendance).filter(
-                date => partialData.attendance[date]?.[student.id] === true
-            );
-            // An opportunity is a participation day where the student was present.
-            const opportunities = participationDates.filter(date => studentAttendance.includes(date)).length;
-            
-            if (opportunities > 0) {
-                const participations = participationDates.filter(date => partialData.participations[date]?.[student.id] === true).length;
-                const ratio = participations / opportunities;
-                totalRatio += ratio;
-                totalStudentsWithOpportunities++;
+            const studentParticipationOpportunities = participationDates.filter(date => Object.prototype.hasOwnProperty.call(partialData.participations[date], student.id)).length;
+
+            if (studentParticipationOpportunities > 0) {
+                 const studentParticipations = Object.values(partialData.participations).filter(p => p[student.id]).length;
+                 totalRatio += studentParticipations / studentParticipationOpportunities;
+                 studentsWithOpportunities++;
             }
         });
+        if (studentsWithOpportunities === 0) return 100;
+        return (totalRatio / studentsWithOpportunities) * 100;
 
-        return totalStudentsWithOpportunities > 0 ? (totalRatio / totalStudentsWithOpportunities) * 100 : 0;
-    }, [activeGroup, partialData.participations, partialData.attendance]);
+    }, [activeGroup, partialData.participations]);
+
+    const takeAttendanceForDate = async (groupId: string, date: string) => {
+        if (!user) return;
+        const group = groups.find(g => g.id === groupId);
+        if (!group) return;
+        const newAttendance = group.students.reduce((acc, student) => ({
+            ...acc,
+            [student.id]: true
+        }), {} as {[studentId: string]: boolean});
+        await setAttendance(prev => ({
+            ...prev,
+            [date]: newAttendance
+        }));
+    };
 
 
     const contextValue: DataContextType = {
@@ -639,6 +649,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         deleteGroup, addStudentObservation, updateStudentObservation,
         calculateFinalGrade, getStudentRiskLevel, calculateDetailedFinalGrade,
         fetchPartialData,
+        takeAttendanceForDate,
     };
 
     return (
@@ -655,5 +666,3 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
-
-    

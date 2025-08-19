@@ -24,7 +24,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useData } from '@/hooks/use-data';
 
 export default function AttendancePage() {
-  const { activeGroup, partialData, setAttendance } = useData();
+  const { activeGroup, partialData, setAttendance, takeAttendanceForDate } = useData();
   const { attendance } = partialData;
 
   const studentsToDisplay = useMemo(() => {
@@ -39,18 +39,7 @@ export default function AttendancePage() {
   const handleRegisterToday = () => {
     if (!activeGroup) return;
     const today = format(new Date(), 'yyyy-MM-dd');
-
-    setAttendance(prev => {
-        const newAttendance = { ...prev };
-        if (!newAttendance[today]) {
-          newAttendance[today] = {};
-          // Set all students to present by default
-          activeGroup.students.forEach(student => {
-            newAttendance[today][student.id] = true;
-          });
-        }
-        return newAttendance;
-    });
+    takeAttendanceForDate(activeGroup.id, today);
   };
   
   const handleAttendanceChange = (studentId: string, date: string, isPresent: boolean) => {
