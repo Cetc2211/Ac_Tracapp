@@ -30,11 +30,11 @@ try {
         if (err.code == 'failed-precondition') {
           // Multiple tabs open, persistence can only be enabled
           // in one tab at a time.
-          console.warn('Firebase persistence failed: Multiple tabs open.');
+          // This is a normal scenario, so we can ignore it.
         } else if (err.code == 'unimplemented') {
           // The current browser does not support all of the
           // features required to enable persistence
-          console.warn('Firebase persistence failed: Browser does not support persistence.');
+          console.warn('Firebase persistence is not supported in this browser.');
         }
       });
 } catch (e) {
@@ -43,5 +43,3 @@ try {
 
 
 export { app, db, auth };
-
-    
