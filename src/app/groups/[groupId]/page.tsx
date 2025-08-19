@@ -147,7 +147,7 @@ export default function GroupDetailsPage() {
   };
   
   const handleAddStudents = async () => {
-    if (!activeGroup) return;
+    if (!activeGroup || isSubmittingStudents) return;
 
     const names = bulkNames.trim().split('\n').filter(name => name);
     const emails = bulkEmails.trim().split('\n');
@@ -719,3 +719,5 @@ export default function GroupDetailsPage() {
     </>
   );
 }
+
+    
