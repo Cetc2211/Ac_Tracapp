@@ -187,7 +187,7 @@ export default function GroupDetailsPage() {
             title: "Estudiantes agregados",
             description: `${newStudents.length} estudiante(s) han sido añadidos al grupo.`
         });
-        setIsAddStudentDialogOpen(false); // Close dialog on success
+        setIsAddStudentDialogOpen(false);
     } catch (e) {
         console.error("Failed to add students:", e);
         toast({
