@@ -642,22 +642,47 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     };
 
 
-    const contextValue: DataContextType = {
-        isLoading: isLoading,
+    const contextValue: DataContextType = useMemo(() => ({
+        isLoading,
         error,
-        groups, allStudents, allObservations, activeStudentsInGroups, settings,
-        activeGroup, activePartialId,
+        groups,
+        allStudents,
+        allObservations,
+        activeStudentsInGroups,
+        settings,
+        activeGroup,
+        activePartialId,
         partialData,
-        groupAverages, atRiskStudents, overallAverageParticipation,
-        addStudentsToGroup, removeStudentFromGroup, updateGroup, updateStudent,
-        setActiveGroupId, setActivePartialId,
-        setCriteria, setGrades, setAttendance, setParticipations, setActivities, setActivityRecords,
+        groupAverages,
+        atRiskStudents,
+        overallAverageParticipation,
+        addStudentsToGroup,
+        removeStudentFromGroup,
+        updateGroup,
+        updateStudent,
+        setActiveGroupId,
+        setActivePartialId,
+        setCriteria,
+        setGrades,
+        setAttendance,
+        setParticipations,
+        setActivities,
+        setActivityRecords,
         setSettings,
-        deleteGroup, addStudentObservation, updateStudentObservation,
-        calculateFinalGrade, getStudentRiskLevel, calculateDetailedFinalGrade,
+        deleteGroup,
+        addStudentObservation,
+        updateStudentObservation,
+        calculateFinalGrade,
+        getStudentRiskLevel,
+        calculateDetailedFinalGrade,
         fetchPartialData,
         takeAttendanceForDate,
-    };
+    }), [
+        isLoading, error, groups, allStudents, allObservations, activeStudentsInGroups, settings,
+        activeGroup, activePartialId, partialData, groupAverages, atRiskStudents,
+        overallAverageParticipation, calculateFinalGrade, getStudentRiskLevel,
+        calculateDetailedFinalGrade, fetchPartialData
+    ]);
 
     return (
         <DataContext.Provider value={contextValue}>
@@ -673,3 +698,5 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
+
+    
