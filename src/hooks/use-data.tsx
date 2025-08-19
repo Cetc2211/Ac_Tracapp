@@ -238,15 +238,10 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 const observationsQuery = query(collection(db, `${prefix}/observations`));
                 const settingsDoc = doc(db, `${prefix}/settings`, 'app');
         
-                let isInitialGroupsLoad = true;
-
                 unsubscribers.push(
                     onSnapshot(groupsQuery, (snapshot) => {
                         setGroups(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Group)));
-                        if (isInitialGroupsLoad) {
-                            setIsLoading(false);
-                            isInitialGroupsLoad = false;
-                        }
+                        setIsLoading(false);
                     }, (err) => {
                         console.error("Error in groups listener:", err);
                         setError(err);
@@ -605,10 +600,29 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }, [groups, activePartialId, getStudentRiskLevel, calculateFinalGrade, partialData.attendance]);
     
     const overallAverageParticipation = useMemo(() => {
-        // This is now complex to calculate across all partials efficiently on the client.
-        // We will return a placeholder for now.
-        return 100;
-    }, []);
+        if (!activeGroup) return 0;
+        let totalRatio = 0;
+        let totalStudentsWithOpportunities = 0;
+
+        activeGroup.students.forEach(student => {
+            const participationDates = Object.keys(partialData.participations);
+            // Filter attendance records to only include dates relevant to the student.
+            const studentAttendance = Object.keys(partialData.attendance).filter(
+                date => partialData.attendance[date]?.[student.id] === true
+            );
+            // An opportunity is a participation day where the student was present.
+            const opportunities = participationDates.filter(date => studentAttendance.includes(date)).length;
+            
+            if (opportunities > 0) {
+                const participations = participationDates.filter(date => partialData.participations[date]?.[student.id] === true).length;
+                const ratio = participations / opportunities;
+                totalRatio += ratio;
+                totalStudentsWithOpportunities++;
+            }
+        });
+
+        return totalStudentsWithOpportunities > 0 ? (totalRatio / totalStudentsWithOpportunities) * 100 : 0;
+    }, [activeGroup, partialData.participations, partialData.attendance]);
 
 
     const contextValue: DataContextType = {
