@@ -230,15 +230,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         const setupListeners = () => {
             setIsLoading(true);
             try {
-                if (!user) {
-                    setIsLoading(false);
-                    return;
-                }
                 const groupsQuery = query(collection(db, `${prefix}/groups`));
-                const studentsQuery = query(collection(db, `${prefix}/students`));
-                const observationsQuery = query(collection(db, `${prefix}/observations`));
-                const settingsDoc = doc(db, `${prefix}/settings`, 'app');
-        
                 unsubscribers.push(
                     onSnapshot(groupsQuery, (snapshot) => {
                         setGroups(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Group)));
@@ -250,11 +242,15 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                         setIsLoading(false);
                     })
                 );
+                
+                const studentsQuery = query(collection(db, `${prefix}/students`));
                 unsubscribers.push(
                     onSnapshot(studentsQuery, (snapshot) => {
                         setAllStudents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student)));
                     }, (err) => console.error("Error in students listener:", err))
                 );
+
+                const observationsQuery = query(collection(db, `${prefix}/observations`));
                 unsubscribers.push(
                     onSnapshot(observationsQuery, (snapshot) => {
                         const obsData: { [studentId: string]: StudentObservation[] } = {};
@@ -273,6 +269,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                         setAllObservations(obsData);
                     }, (err) => console.error("Error in observations listener:", err))
                 );
+
+                const settingsDoc = doc(db, `${prefix}/settings`, 'app');
                 unsubscribers.push(
                     onSnapshot(settingsDoc, (doc) => {
                         setSettingsState(doc.exists() ? (doc.data() as typeof settings) : defaultSettings);
@@ -611,7 +609,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             const studentParticipationOpportunities = participationDates.filter(date => Object.prototype.hasOwnProperty.call(partialData.participations[date], student.id)).length;
 
             if (studentParticipationOpportunities > 0) {
-                 const studentParticipations = Object.values(partialData.participations).filter(p => p[student.id]).length;
+                 const studentParticipations = Object.values(partialData.participations).filter(p => p[studentId]).length;
                  totalRatio += studentParticipations / studentParticipationOpportunities;
                  studentsWithOpportunities++;
             }
@@ -625,14 +623,15 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         if (!user) return;
         const group = groups.find(g => g.id === groupId);
         if (!group) return;
-        const newAttendance = group.students.reduce((acc, student) => ({
+        const newAttendanceForDate = group.students.reduce((acc, student) => ({
             ...acc,
             [student.id]: true
         }), {} as {[studentId: string]: boolean});
-        await setAttendance(prev => ({
-            ...prev,
-            [date]: newAttendance
-        }));
+        
+        const docRef = getPartialDataDocRef();
+        if (docRef) {
+             await setDoc(docRef, { attendance: { [date]: newAttendanceForDate } }, { merge: true });
+        }
     };
 
 
@@ -667,4 +666,3 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
-
