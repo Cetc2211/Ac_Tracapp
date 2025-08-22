@@ -226,74 +226,78 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             return;
         }
         
-        setIsLoading(true);
         const prefix = `users/${user.uid}`;
         const listeners: (() => void)[] = [];
-        
-        const initialStates = {
-            groups: [] as Group[],
-            students: [] as Student[],
-            observations: {} as {[studentId: string]: StudentObservation[]},
-        };
-        const setters = {
-            groups: setGroups,
-            students: setAllStudents,
-            observations: setAllObservations,
-        };
 
-        const collectionsToLoad = ['groups', 'students', 'observations', 'settings'];
-        let loadedCount = 0;
+        const loadInitialDataAndSetupListeners = async () => {
+          try {
+            setIsLoading(true);
 
-        const checkAllLoaded = () => {
-            loadedCount++;
-            if (loadedCount >= collectionsToLoad.length) {
-                setIsLoading(false);
-            }
-        };
+            // Fetch initial data first to ensure availability
+            const groupsQuery = query(collection(db, `${prefix}/groups`));
+            const studentsQuery = query(collection(db, `${prefix}/students`));
+            const observationsQuery = query(collection(db, `${prefix}/observations`));
+            const settingsDocRef = doc(db, `${prefix}/settings`, 'app');
 
-        const handleError = (err: Error) => {
-            console.error("Firebase listener error:", err);
-            setError(err);
-            setIsLoading(false);
-        };
-        
-        function createListener(collectionName: keyof typeof initialStates) {
-            const q = query(collection(db, `${prefix}/${collectionName}`));
-            return onSnapshot(q, (snapshot) => {
-                if (Array.isArray(initialStates[collectionName])) {
-                     const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    (setters[collectionName] as React.Dispatch<React.SetStateAction<any[]>>)(data);
-                } else {
-                     const data: { [key: string]: any[] } = {};
-                    snapshot.docs.forEach(doc => {
-                        const item = { id: doc.id, ...doc.data() } as StudentObservation;
-                        if (item.date && item.date instanceof Timestamp) item.date = item.date.toDate().toISOString();
-                        item.followUpUpdates = (item.followUpUpdates || []).map(f => ({
-                            ...f,
-                            date: f.date && f.date instanceof Timestamp ? f.date.toDate().toISOString() : f.date
-                        }));
-                        const key = item.studentId;
-                        if (key) {
-                            if (!data[key]) data[key] = [];
-                            data[key].push(item);
-                        }
-                    });
-                    (setters[collectionName] as React.Dispatch<React.SetStateAction<{}>>)(data);
+            const [groupsSnapshot, studentsSnapshot, observationsSnapshot, settingsDoc] = await Promise.all([
+              getDocs(groupsQuery),
+              getDocs(studentsQuery),
+              getDocs(observationsQuery),
+              getDoc(settingsDocRef)
+            ]);
+
+            const initialGroups = groupsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Group[];
+            setGroups(initialGroups);
+            
+            const initialStudents = studentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Student[];
+            setAllStudents(initialStudents);
+            
+            const initialObservations: { [key: string]: any[] } = {};
+            observationsSnapshot.docs.forEach(doc => {
+                const item = { id: doc.id, ...doc.data() } as StudentObservation;
+                if (item.date && item.date instanceof Timestamp) item.date = item.date.toDate().toISOString();
+                item.followUpUpdates = (item.followUpUpdates || []).map(f => ({
+                    ...f,
+                    date: f.date && f.date instanceof Timestamp ? f.date.toDate().toISOString() : f.date
+                }));
+                const key = item.studentId;
+                if (key) {
+                    if (!initialObservations[key]) initialObservations[key] = [];
+                    initialObservations[key].push(item);
                 }
-                checkAllLoaded();
-            }, handleError);
-        }
+            });
+            setAllObservations(initialObservations);
 
-        Object.keys(initialStates).forEach(name => {
-             listeners.push(createListener(name as keyof typeof initialStates));
-        });
+            setSettingsState(settingsDoc.exists() ? (settingsDoc.data() as typeof settings) : defaultSettings);
+            
+            // Now that initial data is loaded, set up listeners for real-time updates
+            listeners.push(onSnapshot(groupsQuery, snapshot => setGroups(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Group[])));
+            listeners.push(onSnapshot(studentsQuery, snapshot => setAllStudents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Student[])));
+            listeners.push(onSnapshot(observationsQuery, snapshot => {
+              const updatedObservations: { [key: string]: any[] } = {};
+              snapshot.docs.forEach(doc => {
+                  const item = { id: doc.id, ...doc.data() } as StudentObservation;
+                  if (item.date && item.date instanceof Timestamp) item.date = item.date.toDate().toISOString();
+                  item.followUpUpdates = (item.followUpUpdates || []).map(f => ({ ...f, date: f.date && f.date instanceof Timestamp ? f.date.toDate().toISOString() : f.date }));
+                  const key = item.studentId;
+                  if (key) {
+                      if (!updatedObservations[key]) updatedObservations[key] = [];
+                      updatedObservations[key].push(item);
+                  }
+              });
+              setAllObservations(updatedObservations);
+            }));
+            listeners.push(onSnapshot(settingsDocRef, doc => setSettingsState(doc.exists() ? (doc.data() as typeof settings) : defaultSettings)));
 
-        const settingsDoc = doc(db, `${prefix}/settings`, 'app');
-        const settingsUnsubscribe = onSnapshot(settingsDoc, (doc) => {
-            setSettingsState(doc.exists() ? (doc.data() as typeof settings) : defaultSettings);
-            checkAllLoaded();
-        }, handleError);
-        listeners.push(settingsUnsubscribe);
+          } catch (err: any) {
+            console.error("Firebase data loading error:", err);
+            setError(err);
+          } finally {
+            setIsLoading(false);
+          }
+        };
+
+        loadInitialDataAndSetupListeners();
 
         const storedGroupId = localStorage.getItem('activeGroupId_v1');
         if (storedGroupId) {
@@ -707,3 +711,6 @@ export const useData = (): DataContextType => {
   return context;
 };
 
+
+
+    
