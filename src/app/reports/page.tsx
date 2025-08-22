@@ -45,7 +45,7 @@ export default function ReportsPage() {
   } = useData();
   const { criteria, participations, activities, activityRecords, grades, attendance } = partialData;
 
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const quickStats = useMemo(() => {
@@ -137,11 +137,6 @@ export default function ReportsPage() {
     toast({title: 'CSV Generado', description: 'La descarga de calificaciones ha comenzado.'});
   };
   
-  const handleStudentChange = (studentId: string) => {
-      const student = activeGroup?.students.find(s => s.id === studentId);
-      setSelectedStudent(student || null);
-  }
-  
   if (isLoading) {
       return (
         <div className="flex justify-center items-center h-full">
@@ -193,7 +188,7 @@ export default function ReportsPage() {
           </CardHeader>
         </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><FileText /> Reporte General del Grupo</CardTitle>
@@ -207,7 +202,7 @@ export default function ReportsPage() {
                     </Button>
                 </CardFooter>
             </Card>
-             <Card>
+            <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><AlertTriangle className="text-destructive" /> Reporte de Riesgo</CardTitle>
                     <CardDescription>Análisis detallado de estudiantes en riesgo, con recomendaciones de IA.</CardDescription>
@@ -216,6 +211,34 @@ export default function ReportsPage() {
                     <Button className="w-full" variant="destructive" asChild>
                         <Link href={`/reports/${activeGroup.id}/at-risk`}>
                             <Eye className="mr-2 h-4 w-4" /> Ver Informe de Riesgo
+                        </Link>
+                    </Button>
+                </CardFooter>
+            </Card>
+             <Card className="md:col-span-2">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><User /> Informe Individual por Estudiante</CardTitle>
+                    <CardDescription>Genera un informe detallado para un estudiante específico del grupo activo.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="space-y-2">
+                        <Label htmlFor="student-select">Selecciona un Estudiante</Label>
+                        <Select onValueChange={setSelectedStudentId} value={selectedStudentId || ''}>
+                            <SelectTrigger id="student-select">
+                                <SelectValue placeholder="Elige un estudiante..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {activeGroup.students.map(student => (
+                                    <SelectItem key={student.id} value={student.id}>{student.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </CardContent>
+                <CardFooter>
+                    <Button className="w-full" asChild disabled={!selectedStudentId}>
+                        <Link href={`/students/${selectedStudentId}`}>
+                           <Printer className="mr-2 h-4 w-4" /> Generar Informe Individual
                         </Link>
                     </Button>
                 </CardFooter>

@@ -70,20 +70,17 @@ export default function StudentProfilePage() {
 
   useEffect(() => {
     const calculateStats = async () => {
-        if (isDataLoading) return;
-        
-        if (!student || studentGroups.length === 0) {
-          setIsPageLoading(false);
-          return;
+        if (isDataLoading || !student || studentGroups.length === 0) {
+            if (!isDataLoading) setIsPageLoading(false);
+            return;
         }
         
         setIsPageLoading(true);
         const stats: StudentStats[] = [];
         const partials: PartialId[] = ['p1', 'p2', 'p3'];
-
+        const primaryGroupId = studentGroups[0].id;
+        
         try {
-            const primaryGroupId = studentGroups[0].id;
-            
             for (const pId of partials) {
                 const partialData = await fetchPartialData(primaryGroupId, pId);
                 
@@ -278,7 +275,7 @@ export default function StudentProfilePage() {
         <div id="interactive-buttons-header" className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button asChild variant="outline" size="icon">
-              <Link href="/dashboard">
+              <Link href="/reports">
                 <ArrowLeft />
                 <span className="sr-only">Volver</span>
               </Link>
