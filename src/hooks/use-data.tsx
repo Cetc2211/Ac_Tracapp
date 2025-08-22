@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
@@ -115,6 +116,12 @@ export type PartialData = {
     activityRecords: ActivityRecord;
 };
 
+export type AllPartialsData = {
+  [groupId: string]: {
+    [partialId in PartialId]?: PartialData;
+  };
+};
+
 export type UserProfile = {
     name: string;
     email: string;
@@ -201,8 +208,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const [activeGroupId, setActiveGroupIdState] = useState<string | null>(null);
     const [activePartialId, setActivePartialIdState] = useState<PartialId>('p1');
     
-    // Data stores for active group
-    const [partialData, setPartialData] = useState<PartialData>(defaultPartialData);
+    // New centralized store for all partial data
+    const [allPartialsData, setAllPartialsData] = useState<AllPartialsData>({});
 
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
@@ -217,58 +224,70 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             setGroups([]);
             setAllStudents([]);
             setAllObservations({});
+            setAllPartialsData({});
             setActiveGroupIdState(null);
             setSettingsState(defaultSettings);
-            setPartialData(defaultPartialData);
             setIsLoading(false);
             return;
         }
         
         const prefix = `users/${user.uid}`;
 
-        const loadInitialData = async () => {
+        const loadAndListen = async () => {
           try {
-            const collectionsToFetch = {
-                groups: query(collection(db, `${prefix}/groups`)),
-                students: query(collection(db, `${prefix}/students`)),
-                observations: query(collection(db, `${prefix}/observations`)),
-                settings: doc(db, `${prefix}/settings`, 'app'),
-            };
+            // Load base data
+            const groupsQuery = query(collection(db, `${prefix}/groups`));
+            const groupsSnap = await getDocs(groupsQuery);
+            const initialGroups = groupsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Group[];
+            setGroups(initialGroups);
 
-            const [groupsSnap, studentsSnap, observationsSnap, settingsSnap] = await Promise.all([
-                getDocs(collectionsToFetch.groups),
-                getDocs(collectionsToFetch.students),
-                getDocs(collectionsToFetch.observations),
-                getDoc(collectionsToFetch.settings),
-            ]);
-
-            setGroups(groupsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Group[]);
-            setAllStudents(studentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Student[]);
-            
-            const initialObservations: { [key: string]: any[] } = {};
-            observationsSnap.docs.forEach(doc => {
-                const item = { id: doc.id, ...doc.data() } as StudentObservation;
-                if (item.date && item.date instanceof Timestamp) item.date = item.date.toDate().toISOString();
-                item.followUpUpdates = (item.followUpUpdates || []).map(f => ({
-                    ...f,
-                    date: f.date && f.date instanceof Timestamp ? f.date.toDate().toISOString() : f.date
-                }));
-                const key = item.studentId;
-                if (key) {
-                    if (!initialObservations[key]) initialObservations[key] = [];
-                    initialObservations[key].push(item);
+            // Load all partial data for all groups at once
+            const partials: PartialId[] = ['p1', 'p2', 'p3'];
+            const partialsDataPromises = initialGroups.map(async (group) => {
+              const groupPartials: { [key in PartialId]?: PartialData } = {};
+              for (const pId of partials) {
+                const docRef = doc(db, `${prefix}/groups/${group.id}/partials/${pId}/data/content`);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                  groupPartials[pId] = docSnap.data() as PartialData;
                 }
+              }
+              return { groupId: group.id, data: groupPartials };
             });
-            setAllObservations(initialObservations);
 
-            setSettingsState(settingsSnap.exists() ? (settingsSnap.data() as typeof settings) : defaultSettings);
-            
+            const allPartialsResults = await Promise.all(partialsDataPromises);
+            const allPartialsMap = allPartialsResults.reduce((acc, curr) => {
+                acc[curr.groupId] = curr.data;
+                return acc;
+            }, {} as AllPartialsData);
+            setAllPartialsData(allPartialsMap);
+
             setIsLoading(false);
             
-            // Now set up listeners
-            onSnapshot(collectionsToFetch.groups, snapshot => setGroups(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Group[]));
-            onSnapshot(collectionsToFetch.students, snapshot => setAllStudents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Student[]));
-            onSnapshot(collectionsToFetch.observations, snapshot => {
+            // Set up listeners after initial load
+            onSnapshot(groupsQuery, snapshot => {
+              setGroups(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Group[]);
+            });
+
+            initialGroups.forEach(group => {
+              partials.forEach(pId => {
+                const docRef = doc(db, `${prefix}/groups/${group.id}/partials/${pId}/data/content`);
+                onSnapshot(docRef, (docSnap) => {
+                  setAllPartialsData(prev => ({
+                    ...prev,
+                    [group.id]: {
+                      ...prev[group.id],
+                      [pId]: docSnap.exists() ? (docSnap.data() as PartialData) : defaultPartialData
+                    }
+                  }));
+                });
+              });
+            });
+
+            // Listen to other collections
+            onSnapshot(query(collection(db, `${prefix}/students`)), s => setAllStudents(s.docs.map(d => ({id:d.id, ...d.data()})) as Student[]));
+            onSnapshot(doc(db, `${prefix}/settings`, 'app'), doc => setSettingsState(doc.exists() ? (doc.data() as typeof settings) : defaultSettings));
+            onSnapshot(query(collection(db, `${prefix}/observations`)), snapshot => {
               const updatedObservations: { [key: string]: any[] } = {};
               snapshot.docs.forEach(doc => {
                   const item = { id: doc.id, ...doc.data() } as StudentObservation;
@@ -282,8 +301,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
               });
               setAllObservations(updatedObservations);
             });
-            onSnapshot(collectionsToFetch.settings, doc => setSettingsState(doc.exists() ? (doc.data() as typeof settings) : defaultSettings));
-
 
           } catch (err: any) {
             console.error("Firebase data loading error:", err);
@@ -292,7 +309,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
           }
         };
 
-        loadInitialData();
+        loadAndListen();
 
         const storedGroupId = localStorage.getItem('activeGroupId_v1');
         if (storedGroupId) {
@@ -301,52 +318,30 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     }, [user, authLoading]);
     
-    useEffect(() => {
-        if(activeGroupId && activePartialId && user && !isLoading) {
-            const docPath = `users/${user.uid}/groups/${activeGroupId}/partials/${activePartialId}/data/content`;
-            const unsub = onSnapshot(doc(db, docPath), (docSnap) => {
-                const data = docSnap.exists() ? docSnap.data() as PartialData : null;
-                setPartialData({
-                    criteria: data?.criteria || [],
-                    grades: data?.grades || {},
-                    attendance: data?.attendance || {},
-                    participations: data?.participations || {},
-                    activities: data?.activities || [],
-                    activityRecords: data?.activityRecords || {},
-                });
-            }, (error) => {
-                console.error(`Error fetching partial data for ${activeGroupId}/${activePartialId}:`, error);
-                setError(error);
-            });
-            return () => unsub();
-        } else {
-             setPartialData(defaultPartialData);
-        }
-    }, [activeGroupId, activePartialId, user, isLoading]);
+    // Get the current partial data based on active group/partial
+    const partialData = useMemo(() => {
+        if (!activeGroupId || !allPartialsData[activeGroupId]) return defaultPartialData;
+        return allPartialsData[activeGroupId][activePartialId] || defaultPartialData;
+    }, [activeGroupId, activePartialId, allPartialsData]);
     
     const fetchPartialData = useCallback(async (groupId: string, partialId: PartialId): Promise<PartialData | null> => {
+        if (allPartialsData[groupId] && allPartialsData[groupId][partialId]) {
+            return allPartialsData[groupId][partialId] as PartialData;
+        }
+        // Fallback to fetch if not in memory, though the new logic should prevent this.
         if (!user) return null;
         const docRef = doc(db, `users/${user.uid}/groups/${groupId}/partials/${partialId}/data/content`);
         try {
             const docSnap = await getDoc(docRef);
             if(docSnap.exists()){
-                const data = docSnap.data();
-                // Ensure all keys of PartialData are present
-                return {
-                    criteria: data.criteria || [],
-                    grades: data.grades || {},
-                    attendance: data.attendance || {},
-                    participations: data.participations || {},
-                    activities: data.activities || [],
-                    activityRecords: data.activityRecords || {},
-                };
+                return docSnap.data() as PartialData;
             }
             return defaultPartialData;
         } catch (e) {
             console.error("Failed to fetch partial data:", e);
             return null;
         }
-    }, [user]);
+    }, [user, allPartialsData]);
 
     const getPartialDataDocRef = useCallback(() => {
         if (!activeGroupId || !user) return null;
@@ -357,8 +352,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const createSetter = useCallback((field: keyof PartialData) => async (setter: React.SetStateAction<any>) => {
         const docRef = getPartialDataDocRef();
         if (docRef) {
-            const currentValue = (partialData as any)[field];
-            const newValue = typeof setter === 'function' ? (setter as (prevState: any) => any)(currentValue) : setter;
+            const currentValue = partialData[field];
+            const newValue = typeof setter === 'function' ? setter(currentValue) : setter;
             await setDoc(docRef, { [field]: newValue }, { merge: true });
         }
     }, [getPartialDataDocRef, partialData]);
@@ -386,7 +381,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             let performanceRatio = 0;
 
              if (criterion.name === 'Actividades' || criterion.name === 'Portafolio') {
-                const totalActivities = pData.activities.length;
+                const totalActivities = pData.activities?.length ?? 0;
                 if (totalActivities > 0) {
                     const deliveredActivities = Object.values(pData.activityRecords?.[studentId] || {}).filter(Boolean).length;
                     performanceRatio = deliveredActivities / totalActivities;
@@ -445,12 +440,10 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         const uniqueStudents: Student[] = [];
         groups.forEach(group => {
             group.students.forEach(student => {
-                if (!studentSet.has(student.id)) {
+                const fullStudent = allStudents.find(s => s.id === student.id);
+                if (fullStudent && !studentSet.has(student.id)) {
                     studentSet.add(student.id);
-                    const fullStudent = allStudents.find(s => s.id === student.id);
-                    if (fullStudent) {
-                        uniqueStudents.push(fullStudent);
-                    }
+                    uniqueStudents.push(fullStudent);
                 }
             });
         });
@@ -583,19 +576,27 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const groupAverages = useMemo(() => {
         const averages: { [groupId: string]: number } = {};
         groups.forEach(group => {
-            const groupGrades = group.students.map(s => calculateFinalGrade(s.id, group.id, activePartialId));
+            const groupData = allPartialsData[group.id]?.[activePartialId];
+            if (!groupData) {
+                averages[group.id] = 0;
+                return;
+            }
+            const groupGrades = group.students.map(s => calculateFinalGrade(s.id, group.id, activePartialId, groupData));
             const total = groupGrades.reduce((sum, grade) => sum + grade, 0);
             averages[group.id] = groupGrades.length > 0 ? total / groupGrades.length : 0;
         });
         return averages;
-    }, [groups, activePartialId, calculateFinalGrade]);
+    }, [groups, activePartialId, calculateFinalGrade, allPartialsData]);
     
     const atRiskStudents: StudentWithRisk[] = useMemo(() => {
         const studentsAtRiskInPartial = new Map<string, StudentWithRisk>();
         groups.forEach(group => {
+            const groupPartialData = allPartialsData[group.id]?.[activePartialId];
+            if (!groupPartialData) return;
+
             group.students.forEach(student => {
-                const finalGrade = calculateFinalGrade(student.id, group.id, activePartialId);
-                const risk = getStudentRiskLevel(finalGrade, partialData.attendance, student.id);
+                const finalGrade = calculateFinalGrade(student.id, group.id, activePartialId, groupPartialData);
+                const risk = getStudentRiskLevel(finalGrade, groupPartialData.attendance, student.id);
 
                 if (risk.level === 'high' || risk.level === 'medium') {
                     studentsAtRiskInPartial.set(student.id, { ...student, calculatedRisk: risk });
@@ -604,7 +605,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         });
 
         return Array.from(studentsAtRiskInPartial.values());
-    }, [groups, activePartialId, getStudentRiskLevel, calculateFinalGrade, partialData.attendance]);
+    }, [groups, activePartialId, getStudentRiskLevel, calculateFinalGrade, allPartialsData]);
     
     const overallAverageParticipation = useMemo(() => {
         if (!activeGroup) return 100;
