@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -14,7 +15,7 @@ import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, Download, User, Mail, Phone, Wand2, Loader2, MessageSquare, BookText, Edit, Save } from 'lucide-react';
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -50,14 +51,14 @@ export default function StudentProfilePage() {
   } = useData();
 
   const [studentStatsByPartial, setStudentStatsByPartial] = useState<StudentStats[]>([]);
-  const [isCalculating, setIsCalculating] = useState(true);
+  const [isPageLoading, setIsPageLoading] = useState(true);
   
   const [isLogOpen, setIsLogOpen] = useState(false);
   const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false);
   const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
   const [generatedFeedback, setGeneratedFeedback] = useState<StudentFeedbackOutput | null>(null);
   const [isEditingFeedback, setIsEditingFeedback] = useState(false);
-  const [editedFeedback, setEditedFeedback] = useState<{ feedback: string; recommendations: string }>({
+  const [editedFeedback, setEditedFeedback<{ feedback: string; recommendations: string }>({
     feedback: '',
     recommendations: '',
   });
@@ -71,20 +72,21 @@ export default function StudentProfilePage() {
   useEffect(() => {
     const calculateStats = async () => {
         if (!student) {
-            setIsCalculating(false);
+            setIsPageLoading(false);
             return;
         }
 
         if (studentGroups.length === 0) {
-            setIsCalculating(false);
+            setIsPageLoading(false);
             return;
         }
 
-        setIsCalculating(true);
+        setIsPageLoading(true);
 
         try {
             const primaryGroupId = studentGroups[0].id;
             const partials: PartialId[] = ['p1', 'p2', 'p3'];
+            
             const allStatsPromises = partials.map(async (pId) => {
                 const partialData = await fetchPartialData(primaryGroupId, pId);
                 
@@ -118,7 +120,7 @@ export default function StudentProfilePage() {
             console.error('Error calculating stats:', e);
             toast({ variant: 'destructive', title: 'Error', description: 'No se pudieron calcular las estadísticas.' });
         } finally {
-            setIsCalculating(false);
+            setIsPageLoading(false);
         }
     };
     
@@ -256,7 +258,7 @@ export default function StudentProfilePage() {
     }
   };
 
-  if (isDataLoading || isCalculating) {
+  if (isDataLoading || isPageLoading) {
     return (
       <div className="flex justify-center items-center h-full">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -510,7 +512,7 @@ export default function StudentProfilePage() {
                 )}
               </CardContent>
             ) : (
-              !hasAnyDataForFeedback && !isDataLoading && !isCalculating && (
+              !hasAnyDataForFeedback && !isDataLoading && !isPageLoading && (
                 <CardContent>
                   <div className="text-center text-sm text-muted-foreground bg-muted/50 p-4 rounded-md">
                     <p>No hay datos de calificaciones para generar un feedback automatizado.</p>
@@ -533,4 +535,5 @@ export default function StudentProfilePage() {
     </>
   );
 }
+
     

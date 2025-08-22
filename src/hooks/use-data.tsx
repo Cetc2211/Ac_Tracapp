@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
@@ -178,7 +179,7 @@ interface DataContextType {
   addStudentObservation: (observation: Omit<StudentObservation, 'id' | 'date' | 'followUpUpdates' | 'isClosed'>) => Promise<void>;
   updateStudentObservation: (studentId: string, observationId: string, updateText: string, isClosing: boolean) => Promise<void>;
   calculateFinalGrade: (studentId: string, forGroupId?: string, forPartialId?: PartialId, forPartialData?: PartialData) => number;
-  calculateDetailedFinalGrade: (studentId: string, forGroupId?: string, forPartialId?: PartialId, forPartialData?: PartialData) => { finalGrade: number, criteriaDetails: CriteriaDetail[] };
+  calculateDetailedFinalGrade: (studentId: string, groupId: string, partialId: PartialId, partialData: PartialData) => { finalGrade: number, criteriaDetails: CriteriaDetail[] };
   getStudentRiskLevel: (finalGrade: number, pAttendance: AttendanceRecord, studentId: string) => CalculatedRisk;
   fetchPartialData: (groupId: string, partialId: PartialId) => Promise<PartialData | null>;
   takeAttendanceForDate: (groupId: string, date: string) => Promise<void>;
@@ -227,26 +228,25 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
         const loadInitialData = async () => {
           try {
-            setIsLoading(true);
+            const collectionsToFetch = {
+                groups: query(collection(db, `${prefix}/groups`)),
+                students: query(collection(db, `${prefix}/students`)),
+                observations: query(collection(db, `${prefix}/observations`)),
+                settings: doc(db, `${prefix}/settings`, 'app'),
+            };
 
-            // Fetch initial data first to ensure availability
-            const groupsQuery = query(collection(db, `${prefix}/groups`));
-            const studentsQuery = query(collection(db, `${prefix}/students`));
-            const observationsQuery = query(collection(db, `${prefix}/observations`));
-            const settingsDocRef = doc(db, `${prefix}/settings`, 'app');
-
-            const [groupsSnapshot, studentsSnapshot, observationsSnapshot, settingsDoc] = await Promise.all([
-              getDocs(groupsQuery),
-              getDocs(studentsQuery),
-              getDocs(observationsQuery),
-              getDoc(settingsDocRef)
+            const [groupsSnap, studentsSnap, observationsSnap, settingsSnap] = await Promise.all([
+                getDocs(collectionsToFetch.groups),
+                getDocs(collectionsToFetch.students),
+                getDocs(collectionsToFetch.observations),
+                getDoc(collectionsToFetch.settings),
             ]);
-            
-            setGroups(groupsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Group[]);
-            setAllStudents(studentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Student[]);
+
+            setGroups(groupsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Group[]);
+            setAllStudents(studentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Student[]);
             
             const initialObservations: { [key: string]: any[] } = {};
-            observationsSnapshot.docs.forEach(doc => {
+            observationsSnap.docs.forEach(doc => {
                 const item = { id: doc.id, ...doc.data() } as StudentObservation;
                 if (item.date && item.date instanceof Timestamp) item.date = item.date.toDate().toISOString();
                 item.followUpUpdates = (item.followUpUpdates || []).map(f => ({
@@ -261,9 +261,29 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             });
             setAllObservations(initialObservations);
 
-            setSettingsState(settingsDoc.exists() ? (settingsDoc.data() as typeof settings) : defaultSettings);
+            setSettingsState(settingsSnap.exists() ? (settingsSnap.data() as typeof settings) : defaultSettings);
             
             setIsLoading(false);
+            
+            // Now set up listeners
+            onSnapshot(collectionsToFetch.groups, snapshot => setGroups(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Group[]));
+            onSnapshot(collectionsToFetch.students, snapshot => setAllStudents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Student[]));
+            onSnapshot(collectionsToFetch.observations, snapshot => {
+              const updatedObservations: { [key: string]: any[] } = {};
+              snapshot.docs.forEach(doc => {
+                  const item = { id: doc.id, ...doc.data() } as StudentObservation;
+                  if (item.date && item.date instanceof Timestamp) item.date = item.date.toDate().toISOString();
+                  item.followUpUpdates = (item.followUpUpdates || []).map(f => ({ ...f, date: f.date && f.date instanceof Timestamp ? f.date.toDate().toISOString() : f.date }));
+                  const key = item.studentId;
+                  if (key) {
+                      if (!updatedObservations[key]) updatedObservations[key] = [];
+                      updatedObservations[key].push(item);
+                  }
+              });
+              setAllObservations(updatedObservations);
+            });
+            onSnapshot(collectionsToFetch.settings, doc => setSettingsState(doc.exists() ? (doc.data() as typeof settings) : defaultSettings));
+
 
           } catch (err: any) {
             console.error("Firebase data loading error:", err);
@@ -274,35 +294,11 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
         loadInitialData();
 
-        // Now, set up listeners for real-time updates
-        const listeners: (() => void)[] = [];
-        listeners.push(onSnapshot(query(collection(db, `${prefix}/groups`)), snapshot => setGroups(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Group[]), (e) => {console.error("groups listener error", e); setError(e);}));
-        listeners.push(onSnapshot(query(collection(db, `${prefix}/students`)), snapshot => setAllStudents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Student[]), (e) => {console.error("students listener error", e); setError(e);}));
-        listeners.push(onSnapshot(query(collection(db, `${prefix}/observations`)), snapshot => {
-          const updatedObservations: { [key: string]: any[] } = {};
-          snapshot.docs.forEach(doc => {
-              const item = { id: doc.id, ...doc.data() } as StudentObservation;
-              if (item.date && item.date instanceof Timestamp) item.date = item.date.toDate().toISOString();
-              item.followUpUpdates = (item.followUpUpdates || []).map(f => ({ ...f, date: f.date && f.date instanceof Timestamp ? f.date.toDate().toISOString() : f.date }));
-              const key = item.studentId;
-              if (key) {
-                  if (!updatedObservations[key]) updatedObservations[key] = [];
-                  updatedObservations[key].push(item);
-              }
-          });
-          setAllObservations(updatedObservations);
-        }, (e) => {console.error("observations listener error", e); setError(e);}));
-        listeners.push(onSnapshot(doc(db, `${prefix}/settings`, 'app'), doc => setSettingsState(doc.exists() ? (doc.data() as typeof settings) : defaultSettings), (e) => {console.error("settings listener error", e); setError(e);}));
-
-
         const storedGroupId = localStorage.getItem('activeGroupId_v1');
         if (storedGroupId) {
             setActiveGroupIdState(storedGroupId);
         }
 
-        return () => {
-            listeners.forEach(unsub => unsub());
-        };
     }, [user, authLoading]);
     
     useEffect(() => {
@@ -345,7 +341,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                     activityRecords: data.activityRecords || {},
                 };
             }
-            return null;
+            return defaultPartialData;
         } catch (e) {
             console.error("Failed to fetch partial data:", e);
             return null;
@@ -380,9 +376,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const setActivityRecords = useMemo(() => createSetter('activityRecords'), [createSetter]);
 
 
-    const calculateDetailedFinalGrade = useCallback((studentId: string, forGroupId?: string, forPartialId?: PartialId, forPartialData?: PartialData): { finalGrade: number, criteriaDetails: CriteriaDetail[] } => {
-        const data = forPartialData || partialData;
-        const groupId = forGroupId || activeGroupId;
+    const calculateDetailedFinalGrade = useCallback((studentId: string, groupId: string, partialId: PartialId, pData: PartialData): { finalGrade: number, criteriaDetails: CriteriaDetail[] } => {
+        const data = pData;
         if (!groupId || !data || !data.criteria) return { finalGrade: 0, criteriaDetails: [] };
         
         let finalGrade = 0;
@@ -418,11 +413,15 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         
         const grade = Math.max(0, Math.min(100, finalGrade));
         return { finalGrade: grade, criteriaDetails: criteriaDetails };
-    }, [partialData, activeGroupId]);
+    }, []);
 
     const calculateFinalGrade = useCallback((studentId: string, forGroupId?: string, forPartialId?: PartialId, forPartialData?: PartialData): number => {
-        return calculateDetailedFinalGrade(studentId, forGroupId, forPartialId, forPartialData).finalGrade;
-    }, [calculateDetailedFinalGrade]);
+        const data = forPartialData || partialData;
+        const groupId = forGroupId || activeGroupId;
+        if(!groupId || !forPartialId) return 0;
+
+        return calculateDetailedFinalGrade(studentId, groupId, forPartialId, data).finalGrade;
+    }, [calculateDetailedFinalGrade, partialData, activeGroupId]);
 
     // Derived State
     const setActiveGroupId = (groupId: string | null) => {
@@ -681,4 +680,5 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
+
     
