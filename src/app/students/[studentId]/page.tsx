@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -68,58 +69,58 @@ export default function StudentProfilePage() {
   const student = useMemo(() => allStudents.find((s) => s.id === studentId), [allStudents, studentId]);
   const studentGroups = useMemo(() => groups.filter((g) => g.students.some((s) => s.id === studentId)), [groups, studentId]);
 
-  const calculateStats = useCallback(async () => {
-    if (isDataLoading) return;
-    
-    if (!student || studentGroups.length === 0) {
-      setIsPageLoading(false);
-      return;
-    }
-    
-    setIsPageLoading(true);
-    const stats: StudentStats[] = [];
-    const partials: PartialId[] = ['p1', 'p2', 'p3'];
-
-    try {
-      const primaryGroupId = studentGroups[0].id;
-      
-      for (const pId of partials) {
-        const partialData = await fetchPartialData(primaryGroupId, pId);
-        
-        if (partialData && partialData.criteria && partialData.criteria.length > 0) {
-          const gradeDetails = calculateDetailedFinalGrade(student.id, partialData);
-
-          let p = 0, a = 0, total = 0;
-          const safeAttendance = partialData.attendance || {};
-          Object.keys(safeAttendance).forEach((date) => {
-            if (safeAttendance[date]?.[studentId] !== undefined) {
-              total++;
-              if (safeAttendance[date][studentId]) p++; else a++;
-            }
-          });
-
-          const partialObservations = (allObservations[studentId] || []).filter((obs) => obs.partialId === pId);
-          
-          stats.push({
-            ...gradeDetails,
-            partialId: pId,
-            attendance: { p, a, total, rate: total > 0 ? (p / total) * 100 : 100 },
-            observations: partialObservations,
-          });
-        }
-      }
-      setStudentStatsByPartial(stats);
-    } catch (e) {
-      console.error('Error calculating stats:', e);
-      toast({ variant: 'destructive', title: 'Error', description: 'No se pudieron calcular las estadísticas.' });
-    } finally {
-      setIsPageLoading(false);
-    }
-  }, [isDataLoading, student, studentGroups, studentId, fetchPartialData, calculateDetailedFinalGrade, allObservations, toast]);
-
   useEffect(() => {
+    const calculateStats = async () => {
+        if (isDataLoading || !student || studentGroups.length === 0) {
+            if (!isDataLoading) {
+                setIsPageLoading(false);
+            }
+            return;
+        }
+        
+        setIsPageLoading(true);
+        const stats: StudentStats[] = [];
+        const partials: PartialId[] = ['p1', 'p2', 'p3'];
+
+        try {
+            const primaryGroupId = studentGroups[0].id;
+            
+            for (const pId of partials) {
+                const partialData = await fetchPartialData(primaryGroupId, pId);
+                
+                if (partialData && partialData.criteria && partialData.criteria.length > 0) {
+                    const gradeDetails = calculateDetailedFinalGrade(student.id, partialData);
+
+                    let p = 0, a = 0, total = 0;
+                    const safeAttendance = partialData.attendance || {};
+                    Object.keys(safeAttendance).forEach((date) => {
+                        if (safeAttendance[date]?.[studentId] !== undefined) {
+                            total++;
+                            if (safeAttendance[date][studentId]) p++; else a++;
+                        }
+                    });
+
+                    const partialObservations = (allObservations[studentId] || []).filter((obs) => obs.partialId === pId);
+                    
+                    stats.push({
+                        ...gradeDetails,
+                        partialId: pId,
+                        attendance: { p, a, total, rate: total > 0 ? (p / total) * 100 : 100 },
+                        observations: partialObservations,
+                    });
+                }
+            }
+            setStudentStatsByPartial(stats);
+        } catch (e) {
+            console.error('Error calculating stats:', e);
+            toast({ variant: 'destructive', title: 'Error', description: 'No se pudieron calcular las estadísticas.' });
+        } finally {
+            setIsPageLoading(false);
+        }
+    };
+    
     calculateStats();
-  }, [calculateStats]);
+  }, [isDataLoading, student, studentGroups, studentId, fetchPartialData, calculateDetailedFinalGrade, allObservations, toast]);
 
   const semesterAverage = useMemo(() => {
     if (studentStatsByPartial.length === 0) return 0;
