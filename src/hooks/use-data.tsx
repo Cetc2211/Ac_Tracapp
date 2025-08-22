@@ -150,6 +150,7 @@ interface DataContextType {
   error: Error | null;
   groups: Group[];
   allStudents: Student[];
+  activeStudentsInGroups: Student[];
   allObservations: {[studentId: string]: StudentObservation[]};
   settings: { institutionName: string; logo: string; theme: string };
   
@@ -414,6 +415,16 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         if (!activeGroupId) return null;
         return groups.find(g => g.id === activeGroupId) || null;
     }, [groups, activeGroupId]);
+
+    const activeStudentsInGroups = useMemo(() => {
+      const studentSet = new Map<string, Student>();
+      groups.forEach(group => {
+        group.students.forEach(student => {
+          studentSet.set(student.id, student);
+        });
+      });
+      return Array.from(studentSet.values());
+    }, [groups]);
     
     const addStudentsToGroup = useCallback(async (groupId: string, students: Student[]) => {
         if (!user) return;
@@ -613,6 +624,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         error,
         groups,
         allStudents,
+        activeStudentsInGroups,
         allObservations,
         settings,
         activeGroup,
@@ -658,5 +670,7 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
+
+    
 
     
