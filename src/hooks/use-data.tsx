@@ -126,6 +126,28 @@ const defaultPartialData: PartialData = {
     activityRecords: {},
 };
 
+// --- START OF MOCK DATA ---
+const mockStudents: Student[] = [
+    { id: 'S1', name: 'Ana García Pérez', email: 'ana.garcia@example.com', phone: '555-0101', tutorName: 'Ricardo García', tutorPhone: '555-0201', photo: 'https://placehold.co/100x100.png?text=AG' },
+    { id: 'S2', name: 'Luis Martínez Hernández', email: 'luis.martinez@example.com', phone: '555-0102', tutorName: 'Elena Hernández', tutorPhone: '555-0202', photo: 'https://placehold.co/100x100.png?text=LM' },
+    { id: 'S3', name: 'Sofía Rodríguez López', email: 'sofia.rodriguez@example.com', phone: '555-0103', tutorName: 'Javier Rodríguez', tutorPhone: '555-0203', photo: 'https://placehold.co/100x100.png?text=SR' },
+    { id: 'S4', name: 'Carlos González Sánchez', email: 'carlos.gonzalez@example.com', phone: '555-0104', tutorName: 'Marta Sánchez', tutorPhone: '555-0204', photo: 'https://placehold.co/100x100.png?text=CG' },
+    { id: 'S5', name: 'Valeria Gómez Ramírez', email: 'valeria.gomez@example.com', phone: '555-0105', tutorName: 'David Gómez', tutorPhone: '555-0205', photo: 'https://placehold.co/100x100.png?text=VG' },
+];
+
+const mockGroups: Group[] = [
+    {
+        id: 'G1',
+        subject: 'Historia del Arte',
+        semester: 'Cuarto',
+        groupName: '401A',
+        facilitator: 'Prof. Angélica Rosas',
+        students: mockStudents,
+    }
+];
+// --- END OF MOCK DATA ---
+
+
 // CONTEXT TYPE
 interface DataContextType {
   // State
@@ -204,8 +226,9 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             const storedPartials = localStorage.getItem('app_partialsData');
             const storedSettings = localStorage.getItem('app_settings');
             
-            if (storedGroups) setGroups(JSON.parse(storedGroups));
-            if (storedStudents) setAllStudents(JSON.parse(storedStudents));
+            setGroups(storedGroups ? JSON.parse(storedGroups) : mockGroups);
+            setAllStudents(storedStudents ? JSON.parse(storedStudents) : mockStudents);
+
             if (storedObservations) setAllObservations(JSON.parse(storedObservations));
             if (storedPartials) setAllPartialsData(JSON.parse(storedPartials));
             if (storedSettings) setSettingsState(JSON.parse(storedSettings));
@@ -569,3 +592,5 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
+
+    
