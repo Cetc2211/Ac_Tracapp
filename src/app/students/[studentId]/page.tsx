@@ -50,8 +50,6 @@ export default function StudentProfilePage() {
     error: dataError,
   } = useData();
 
-  const [student, setStudent] = useState<Student | null>(null);
-  const [studentGroups, setStudentGroups] = useState<typeof groups>([]);
   const [isLogOpen, setIsLogOpen] = useState(false);
   const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false);
   const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
@@ -62,78 +60,69 @@ export default function StudentProfilePage() {
     recommendations: '',
   });
   const [studentStatsByPartial, setStudentStatsByPartial] = useState<StudentStats[]>([]);
-  const [error, setError] = useState<string | null>(null);
-
+  
   const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  
+  const student = useMemo(() => allStudents.find((s) => s.id === studentId), [allStudents, studentId]);
+  const studentGroups = useMemo(() => groups.filter((g) => g.students.some((s) => s.id === studentId)), [groups, studentId]);
 
   useEffect(() => {
-    if (isDataLoading) {
+    if (isDataLoading || !student || studentGroups.length === 0) {
       return;
     }
-
-    const foundStudent = allStudents.find((s) => s.id === studentId);
-    if (!foundStudent) {
-      setError('Estudiante no encontrado después de la carga de datos.');
-      return;
-    }
-    setStudent(foundStudent);
     
-    const foundGroups = groups.filter((g) => g.students.some((s) => s.id === studentId));
-    if (foundGroups.length === 0) {
-      setError('El estudiante no está asignado a ningún grupo.');
-      return;
-    }
-    setStudentGroups(foundGroups);
-
     const calculateStats = async () => {
-      setError(null);
-      try {
-        const primaryGroupId = foundGroups[0].id;
-        const partials: PartialId[] = ['p1', 'p2', 'p3'];
-        const allStats: StudentStats[] = [];
+        try {
+            const primaryGroupId = studentGroups[0].id;
+            const partials: PartialId[] = ['p1', 'p2', 'p3'];
+            const allStats: StudentStats[] = [];
 
-        for (const pId of partials) {
-          try {
-            const partialData = await fetchPartialData(primaryGroupId, pId);
+            for (const pId of partials) {
+                try {
+                    const partialData = await fetchPartialData(primaryGroupId, pId);
+                    if (!partialData || !partialData.criteria || !Array.isArray(partialData.criteria)) {
+                        continue;
+                    }
 
-            if (!partialData || !partialData.criteria || !Array.isArray(partialData.criteria)) {
-              continue;
+                    const gradeDetails = calculateDetailedFinalGrade(student.id, primaryGroupId, pId, partialData);
+
+                    let p = 0, a = 0, total = 0;
+                    const safeAttendance = partialData.attendance || {};
+                    Object.keys(safeAttendance).forEach((date) => {
+                        if (safeAttendance[date]?.[studentId] !== undefined) {
+                            total++;
+                            if (safeAttendance[date][studentId]) p++; else a++;
+                        }
+                    });
+
+                    const partialObservations = (allObservations[studentId] || []).filter((obs) => obs.partialId === pId);
+
+                    allStats.push({
+                        ...gradeDetails,
+                        partialId: pId,
+                        attendance: { p, a, total, rate: total > 0 ? (p / total) * 100 : 100 },
+                        observations: partialObservations,
+                    });
+                } catch (e) {
+                    console.error(`Error processing partial ${pId}:`, e);
+                }
             }
-
-            const gradeDetails = calculateDetailedFinalGrade(foundStudent.id, primaryGroupId, pId, partialData);
-
-            let p = 0, a = 0, total = 0;
-            const safeAttendance = partialData.attendance || {};
-            Object.keys(safeAttendance).forEach((date) => {
-              if (safeAttendance[date]?.[studentId] !== undefined) {
-                total++;
-                if (safeAttendance[date][studentId]) p++; else a++;
-              }
+            setStudentStatsByPartial(allStats);
+        } catch (e) {
+            console.error('Error calculating stats:', e);
+             toast({
+                variant: 'destructive',
+                title: 'Error al cargar estadísticas',
+                description: 'No se pudieron calcular las estadísticas del estudiante.',
             });
-
-            const partialObservations = (allObservations[studentId] || []).filter((obs) => obs.partialId === pId);
-
-            allStats.push({
-              ...gradeDetails,
-              partialId: pId,
-              attendance: { p, a, total, rate: total > 0 ? (p / total) * 100 : 100 },
-              observations: partialObservations,
-            });
-          } catch (e) {
-            console.error(`Error processing partial ${pId}:`, e);
-          }
         }
-        setStudentStatsByPartial(allStats);
-      } catch (e) {
-        console.error('Error calculating stats:', e);
-        setError('Error al calcular las estadísticas del estudiante.');
-      }
     };
-
+    
     calculateStats();
 
-  }, [isDataLoading, studentId, allStudents, groups, fetchPartialData, calculateDetailedFinalGrade, allObservations]);
+  }, [isDataLoading, student, studentId, studentGroups, fetchPartialData, calculateDetailedFinalGrade, allObservations, toast]);
+
 
   const semesterAverage = useMemo(() => {
     if (studentStatsByPartial.length === 0) return 0;
@@ -275,11 +264,11 @@ export default function StudentProfilePage() {
       return notFound();
   }
 
-  if (error || dataError) {
+  if (dataError) {
     return (
       <div className="flex flex-col justify-center items-center h-full text-center">
         <p className="text-lg font-semibold text-destructive">Error al cargar el perfil del estudiante</p>
-        <p className="text-muted-foreground mt-2">{error || dataError?.message || 'Ocurrió un error inesperado.'}</p>
+        <p className="text-muted-foreground mt-2">{dataError?.message || 'Ocurrió un error inesperado.'}</p>
         <Button asChild className="mt-4">
           <Link href="/dashboard">Volver al Dashboard</Link>
         </Button>
