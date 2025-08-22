@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
@@ -229,8 +230,19 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         const prefix = `users/${user.uid}`;
         const listeners: (() => void)[] = [];
         
-        // Setup state to track if initial data load is complete for each listener
-        const totalListeners = 4; // groups, students, observations, settings
+        const initialStates = {
+            groups: [],
+            students: [],
+            observations: {},
+        };
+
+        const setters = {
+            groups: setGroups,
+            students: setAllStudents,
+            observations: setAllObservations,
+        };
+
+        const totalListeners = Object.keys(initialStates).length + 1; // +1 for settings
         let loadedCount = 0;
         let initialLoadDone = false;
 
@@ -250,38 +262,34 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             setIsLoading(false);
         };
 
-        const createListener = <T>(collectionName: string, setter: React.Dispatch<React.SetStateAction<T[] | {}>>, dataTransformer: (doc: any) => any = (doc) => ({ id: doc.id, ...doc.data() })) => {
+        Object.keys(initialStates).forEach(collectionName => {
+            const isArray = Array.isArray(initialStates[collectionName as keyof typeof initialStates]);
             const q = query(collection(db, `${prefix}/${collectionName}`));
+            
             const unsubscribe = onSnapshot(q, (snapshot) => {
-                if (Array.isArray(setter(s => s))) {
-                   (setter as React.Dispatch<React.SetStateAction<T[]>>)(snapshot.docs.map(dataTransformer));
+                if (isArray) {
+                    const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    (setters[collectionName as keyof typeof setters] as React.Dispatch<React.SetStateAction<any[]>>)(data);
                 } else {
                     const data: { [key: string]: any[] } = {};
                     snapshot.docs.forEach(doc => {
-                        const item = dataTransformer(doc);
+                        const item = { id: doc.id, ...doc.data() } as StudentObservation;
+                        if (item.date && item.date instanceof Timestamp) item.date = item.date.toDate().toISOString();
+                        item.followUpUpdates = (item.followUpUpdates || []).map(f => ({
+                            ...f,
+                            date: f.date && f.date instanceof Timestamp ? f.date.toDate().toISOString() : f.date
+                        }));
                         const key = item.studentId;
                         if (key) {
                             if (!data[key]) data[key] = [];
                             data[key].push(item);
                         }
                     });
-                     (setter as React.Dispatch<React.SetStateAction<{}>>)(data);
+                    (setters[collectionName as keyof typeof setters] as React.Dispatch<React.SetStateAction<{}>>)(data);
                 }
                 checkAllLoaded();
             }, handleError);
             listeners.push(unsubscribe);
-        };
-        
-        createListener<Group>('groups', setGroups);
-        createListener<Student>('students', setAllStudents);
-        createListener<StudentObservation>('observations', setAllObservations, (doc) => {
-            const obs = { id: doc.id, ...doc.data() } as StudentObservation;
-            if (obs.date && obs.date instanceof Timestamp) obs.date = obs.date.toDate().toISOString();
-            obs.followUpUpdates = (obs.followUpUpdates || []).map(f => ({
-                ...f,
-                date: f.date && f.date instanceof Timestamp ? f.date.toDate().toISOString() : f.date
-            }));
-            return obs;
         });
 
         const settingsDoc = doc(db, `${prefix}/settings`, 'app');
@@ -703,5 +711,3 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
-
-    
