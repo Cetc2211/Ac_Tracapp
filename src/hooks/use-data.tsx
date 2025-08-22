@@ -238,6 +238,7 @@ interface DataContextType {
   setActivities: (setter: React.SetStateAction<Activity[]>) => Promise<void>;
   setActivityRecords: (setter: React.SetStateAction<ActivityRecord>) => Promise<void>;
   setSettings: (settings: { institutionName: string; logo: string; theme: string }) => Promise<void>;
+  setGroups: React.Dispatch<React.SetStateAction<Group[]>>;
 
 
   // Functions
@@ -271,34 +272,46 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const [error, setError] = useState<Error | null>(null);
 
     useEffect(() => {
-        const loadData = () => {
-          try {
-            // Load from localStorage or use initial data
-            const storedGroups = localStorage.getItem('app_groups');
-            const storedStudents = localStorage.getItem('app_students');
-            const storedObservations = localStorage.getItem('app_observations');
-            const storedPartials = localStorage.getItem('app_partialsData');
-            const storedSettings = localStorage.getItem('app_settings');
-            
-            setGroups(storedGroups ? JSON.parse(storedGroups) : mockGroups);
-            setAllStudents(storedStudents ? JSON.parse(storedStudents) : mockAllStudents);
-            setAllPartialsData(storedPartials ? JSON.parse(storedPartials) : mockPartialsData);
-
-            if (storedObservations) setAllObservations(JSON.parse(storedObservations));
-            if (storedSettings) setSettingsState(JSON.parse(storedSettings));
-            
-            const storedGroupId = localStorage.getItem('activeGroupId_v1');
-            if (storedGroupId) {
-                setActiveGroupIdState(storedGroupId);
-            }
-          } catch (e) {
-            console.error("Failed to load data from localStorage", e);
-            // Fallback to empty state if localStorage is corrupt
-          } finally {
-            setIsLoading(false);
+      const loadData = () => {
+        try {
+          let loadedGroups: Group[] = [];
+          const storedGroups = localStorage.getItem('app_groups');
+          if (storedGroups) {
+            loadedGroups = JSON.parse(storedGroups);
           }
-        };
-        loadData();
+          if (loadedGroups.length === 0) {
+            loadedGroups = mockGroups;
+          }
+          setGroups(loadedGroups);
+
+          const storedStudents = localStorage.getItem('app_students');
+          setAllStudents(storedStudents ? JSON.parse(storedStudents) : mockAllStudents);
+          
+          const storedPartials = localStorage.getItem('app_partialsData');
+          setAllPartialsData(storedPartials ? JSON.parse(storedPartials) : mockPartialsData);
+
+          const storedObservations = localStorage.getItem('app_observations');
+          if (storedObservations) setAllObservations(JSON.parse(storedObservations));
+
+          const storedSettings = localStorage.getItem('app_settings');
+          if (storedSettings) setSettingsState(JSON.parse(storedSettings));
+
+          const storedGroupId = localStorage.getItem('activeGroupId_v1');
+          if (storedGroupId) {
+            setActiveGroupIdState(storedGroupId);
+          }
+        } catch (e) {
+          console.error("Failed to load data from localStorage, falling back to mocks.", e);
+          setGroups(mockGroups);
+          setAllStudents(mockAllStudents);
+          setAllPartialsData(mockPartialsData);
+          setAllObservations({});
+          setSettingsState(defaultSettings);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      loadData();
     }, []);
     
     // Save to localStorage whenever data changes
@@ -622,6 +635,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         setActivities,
         setActivityRecords,
         setSettings,
+        setGroups,
         deleteGroup,
         addStudentObservation,
         updateStudentObservation,

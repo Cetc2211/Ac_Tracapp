@@ -36,7 +36,7 @@ const cardColors = [
 
 
 export default function GroupsPage() {
-  const { groups, setActiveGroupId, isLoading, addStudentsToGroup, updateGroup } = useData();
+  const { groups, setActiveGroupId, isLoading, setGroups } = useData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newGroupSubject, setNewGroupSubject] = useState('');
@@ -67,20 +67,7 @@ export default function GroupsPage() {
       students: [],
     };
     
-    // In local version, we just update state
-    const existingGroups = [...groups, newGroup];
-    // This is a mock of how you might add a group, but the hook needs to support it.
-    // Let's assume a simplified `updateGroup` that can also add.
-    // A more robust hook would have `addGroup`.
-    
-    // For now, let's simulate by just setting groups in the parent component
-    // This part of the code shows a design issue: the page shouldn't know how to create a group,
-    // the hook should provide a function `addGroup`. I will mock this for now.
-    
-    const { setGroups } = (useData() as any); // Unsafe but necessary for mock
-    if (setGroups) {
-      setGroups((prev: Group[]) => [...prev, newGroup]);
-    }
+    setGroups((prev: Group[]) => [...prev, newGroup]);
 
 
     setTimeout(() => {
