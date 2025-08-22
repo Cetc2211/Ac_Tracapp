@@ -37,8 +37,10 @@ export const ai = genkit({
   plugins: [
     googleAI({
       // Specify the default model for text generation.
-      model: geminiModel,
-      ...standardModelConfig
+      text: {
+        model: geminiModel,
+        ...standardModelConfig
+      }
     }),
   ],
   // Log all errors to the console.
@@ -46,4 +48,3 @@ export const ai = genkit({
   // Ensure that telemetry is exported to the console for debugging purposes.
   enableTracing: true,
 });
-
