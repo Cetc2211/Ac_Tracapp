@@ -30,9 +30,6 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { db } from '@/lib/firebase/client';
-import { doc, setDoc, getDocs, collection, writeBatch, deleteDoc } from 'firebase/firestore';
-import { useAuth } from '@/hooks/use-auth';
 import type { Group, Student, StudentObservation, PartialId } from '@/lib/placeholder-data';
 import type { PartialData } from '@/hooks/use-data';
 
@@ -52,7 +49,6 @@ type ExportData = {
 
 
 export default function SettingsPage() {
-    const { user } = useAuth();
     const { settings, isLoading, groups, allStudents, allObservations, fetchPartialData, setSettings: setSettingsInDb } = useData();
     const [localSettings, setLocalSettings] = useState(settings);
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -72,7 +68,7 @@ export default function SettingsPage() {
     }, [settings, isLoading]);
     
     const handleSave = async () => {
-        if (!user || isLoading) {
+        if (isLoading) {
             toast({variant: "destructive", title: "Error", description: "No se pueden guardar los ajustes mientras los datos se están cargando."})
             return;
         }
@@ -114,10 +110,6 @@ export default function SettingsPage() {
     };
 
     const handleExportData = async () => {
-        if (!user) {
-            toast({ title: "Error", description: "Debes iniciar sesión para exportar."});
-            return;
-        }
         setIsExporting(true);
         toast({ title: "Exportando datos...", description: "Recopilando toda tu información."});
         try {
@@ -127,14 +119,14 @@ export default function SettingsPage() {
                 const partials: PartialId[] = ['p1', 'p2', 'p3'];
                 const results = await Promise.all(partials.map(pId => fetchPartialData(group.id, pId)));
                 partials.forEach((pId, index) => {
-                    if (results[index] && (results[index].criteria.length > 0 || Object.keys(results[index].grades).length > 0)) {
-                        partialsData[group.id][pId] = results[index];
+                    if (results[index] && (results[index]!.criteria.length > 0 || Object.keys(results[index]!.grades).length > 0)) {
+                        partialsData[group.id][pId] = results[index]!;
                     }
                 });
             }
 
             const exportData: ExportData = {
-                version: "1.0.0",
+                version: "1.0.0-local",
                 groups,
                 students: allStudents,
                 observations: allObservations,
@@ -165,7 +157,7 @@ export default function SettingsPage() {
     };
     
     const handleConfirmImport = async () => {
-        if (!user || !importFile) return;
+        if (!importFile) return;
         setIsImporting(true);
         toast({ title: 'Importando datos...', description: 'Esto puede tardar un momento y sobreescribirá tus datos actuales.' });
 
@@ -181,40 +173,12 @@ export default function SettingsPage() {
                     throw new Error("Archivo de importación inválido o corrupto.");
                 }
 
-                const batch = writeBatch(db);
-                const userPrefix = `users/${user.uid}`;
+                localStorage.setItem('app_groups', JSON.stringify(data.groups));
+                localStorage.setItem('app_students', JSON.stringify(data.students));
+                localStorage.setItem('app_observations', JSON.stringify(data.observations));
+                localStorage.setItem('app_partialsData', JSON.stringify(data.partialsData));
+                localStorage.setItem('app_settings', JSON.stringify(data.settings));
 
-                // Nuke all existing data first
-                const collectionsToDelete = ['groups', 'students', 'observations'];
-                for (const coll of collectionsToDelete) {
-                    const snapshot = await getDocs(collection(db, `${userPrefix}/${coll}`));
-                    snapshot.docs.forEach(doc => batch.delete(doc.ref));
-                }
-                
-                // Set new data
-                data.groups.forEach(group => batch.set(doc(db, `${userPrefix}/groups`, group.id), group));
-                data.students.forEach(student => batch.set(doc(db, `${userPrefix}/students`, student.id), student));
-
-                if (data.observations) {
-                  Object.values(data.observations).flat().forEach(obs => {
-                      if (obs && obs.id) {
-                        batch.set(doc(db, `${userPrefix}/observations`, obs.id), obs)
-                      }
-                  });
-                }
-                
-                batch.set(doc(db, `${userPrefix}/settings`, 'app'), data.settings);
-
-                if (data.partialsData) {
-                    for (const groupId in data.partialsData) {
-                        for (const partialId in data.partialsData[groupId]) {
-                            const path = `${userPrefix}/groups/${groupId}/partials/${partialId}/data/content`;
-                            batch.set(doc(db, path), data.partialsData[groupId][partialId as PartialId] as PartialData);
-                        }
-                    }
-                }
-
-                await batch.commit();
 
                 toast({ title: "Importación exitosa", description: "Tus datos han sido restaurados. La página se recargará." });
                 setTimeout(() => window.location.reload(), 2000);
@@ -236,33 +200,16 @@ export default function SettingsPage() {
     };
 
     const handleResetApp = async () => {
-       if (!user) return;
-        setIsSaving(true);
+       setIsSaving(true);
         toast({ title: 'Restableciendo datos...', description: 'Este proceso es irreversible y puede tardar.' });
         try {
-            const batch = writeBatch(db);
-            const userPrefix = `users/${user.uid}`;
+            localStorage.removeItem('app_groups');
+            localStorage.removeItem('app_students');
+            localStorage.removeItem('app_observations');
+            localStorage.removeItem('app_partialsData');
+            localStorage.removeItem('app_settings');
+            localStorage.removeItem('activeGroupId_v1');
             
-            // Delete all subcollections from groups first
-            for (const group of groups) {
-                const partialsRef = collection(db, `${userPrefix}/groups/${group.id}/partials`);
-                const partialsSnap = await getDocs(partialsRef);
-                for (const partialDoc of partialsSnap.docs) {
-                    const dataRef = collection(db, partialDoc.ref.path, 'data');
-                    const dataSnap = await getDocs(dataRef);
-                    dataSnap.forEach(doc => batch.delete(doc.ref));
-                    batch.delete(partialDoc.ref);
-                }
-            }
-            
-            const collectionsToDelete = ['groups', 'students', 'observations'];
-             for (const coll of collectionsToDelete) {
-                const snapshot = await getDocs(collection(db, `${userPrefix}/${coll}`));
-                snapshot.docs.forEach(docRef => batch.delete(docRef.ref));
-            }
-            batch.delete(doc(db, `${userPrefix}/settings`, 'app'));
-            
-            await batch.commit();
             toast({ title: 'Datos eliminados', description: 'La aplicación ha sido restablecida.' });
             setTimeout(() => window.location.reload(), 2000);
         } catch(e) {
@@ -412,7 +359,7 @@ export default function SettingsPage() {
                             <AlertDialogHeader>
                                 <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                    Esta acción borrará permanentemente TODOS tus datos de la aplicación en la nube, incluyendo grupos, estudiantes, calificaciones y ajustes.
+                                    Esta acción borrará permanentemente TODOS tus datos de la aplicación, incluyendo grupos, estudiantes, calificaciones y ajustes.
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -424,12 +371,10 @@ export default function SettingsPage() {
             </CardContent>
             <CardFooter>
                 <p className="text-xs text-muted-foreground">
-                    Esta función eliminará todos tus datos en la nube.
+                    Esta función eliminará todos tus datos guardados en el navegador.
                 </p>
             </CardFooter>
         </Card>
         </div>
     );
 }
-
-    

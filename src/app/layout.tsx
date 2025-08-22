@@ -5,7 +5,6 @@ import { DataProvider } from '@/hooks/use-data';
 import MainLayoutClient from './main-layout-client';
 import { Toaster } from '@/components/ui/toaster';
 import { usePathname } from 'next/navigation';
-import { AuthProvider } from '@/hooks/use-auth.tsx';
 
 export default function RootLayout({
   children,
@@ -18,7 +17,6 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body>
-        <AuthProvider>
           {isAuthPage ? (
             <>{children}</>
           ) : (
@@ -27,7 +25,6 @@ export default function RootLayout({
             </DataProvider>
           )}
           <Toaster />
-        </AuthProvider>
       </body>
     </html>
   );

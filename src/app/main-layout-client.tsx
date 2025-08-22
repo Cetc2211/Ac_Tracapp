@@ -24,8 +24,6 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/use-auth';
-
 import { AppLogo } from '@/components/app-logo';
 import {
   SidebarProvider,
@@ -70,6 +68,12 @@ const navItems = [
   { href: '/contact', icon: Contact, label: 'Contacto y Soporte' },
 ];
 
+const mockUser = {
+    displayName: 'Profesor',
+    email: 'profesor@escuela.com',
+    photoURL: 'https://placehold.co/100x100.png?text=P'
+};
+
 const defaultSettings = {
     institutionName: "Academic Tracker",
     logo: "",
@@ -84,46 +88,20 @@ export default function MainLayoutClient({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, loading: authLoading, signOut } = useAuth();
   const { settings, activeGroup, activePartialId, isLoading: isDataLoading, error: dataError } = useData();
 
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/');
-    }
-  }, [user, authLoading, router]);
-  
   useEffect(() => {
     const theme = settings?.theme || defaultSettings.theme;
     document.body.className = theme;
   }, [settings?.theme]);
   
-  if (authLoading || isDataLoading) {
+  if (isDataLoading) {
     return (
         <div className="flex h-screen w-full items-center justify-center">
             <Loader2 className="mr-2 h-8 w-8 animate-spin" />
             <span>Cargando datos...</span>
         </div>
     );
-  }
-
-  if (dataError) {
-      return (
-        <div className="flex h-screen w-full items-center justify-center text-center">
-          <div className="p-4 rounded-md border bg-card text-card-foreground max-w-md">
-            <AlertTriangle className="mx-auto h-12 w-12 text-destructive mb-4"/>
-            <h2 className="text-xl font-bold">Error de Conexión</h2>
-            <p className="text-muted-foreground mt-2">
-              No se pudo conectar a la base de datos. Por favor, revisa tu conexión a internet y vuelve a intentarlo.
-            </p>
-            <Button onClick={() => window.location.reload()} className="mt-4">Recargar Página</Button>
-          </div>
-        </div>
-      )
-  }
-
-  if (!user) {
-    return null;
   }
 
   return (
@@ -134,7 +112,7 @@ export default function MainLayoutClient({
             <AppLogo name={settings.institutionName} logoUrl={settings.logo} />
           </SidebarHeader>
           <SidebarContent>
-            {activeGroup && user ? (
+            {activeGroup ? (
                   <>
                     <div className="px-4 py-2">
                         <p className="text-xs font-semibold text-sidebar-foreground/70 tracking-wider uppercase">Grupo Activo</p>
@@ -205,7 +183,7 @@ export default function MainLayoutClient({
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                   <Image
-                    src={user.photoURL || `https://placehold.co/100x100.png?text=${user.displayName?.charAt(0)}`}
+                    src={mockUser.photoURL || `https://placehold.co/100x100.png?text=${mockUser.displayName?.charAt(0)}`}
                     alt="Avatar del usuario"
                     className="rounded-full"
                     fill
@@ -215,14 +193,14 @@ export default function MainLayoutClient({
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{user.displayName || 'Usuario'}</p>
+                    <p className="text-sm font-medium leading-none">{mockUser.displayName || 'Usuario'}</p>
                     <p className="text-xs leading-none text-muted-foreground">
-                      {user.email}
+                      {mockUser.email}
                     </p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={signOut}>
+                <DropdownMenuItem onClick={() => router.push('/')}>
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Cerrar sesión</span>
                 </DropdownMenuItem>

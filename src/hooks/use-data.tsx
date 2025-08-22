@@ -3,24 +3,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { Student, Group, PartialId, StudentObservation } from '@/lib/placeholder-data';
-import { db } from '@/lib/firebase/client';
-import { useAuth } from '@/hooks/use-auth';
-import {
-  collection,
-  doc,
-  onSnapshot,
-  setDoc,
-  deleteDoc,
-  writeBatch,
-  query,
-  getDocs,
-  getDoc,
-  updateDoc,
-  serverTimestamp,
-  Timestamp,
-  arrayUnion,
-  arrayRemove
-} from 'firebase/firestore';
+import { format } from 'date-fns';
 
 // TYPE DEFINITIONS
 export type EvaluationCriteria = {
@@ -196,8 +179,6 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 
 // DATA PROVIDER COMPONENT
 export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
-    const { user, loading: authLoading } = useAuth();
-    
     // Core data
     const [allStudents, setAllStudents] = useState<Student[]>([]);
     const [allObservations, setAllObservations] = useState<{[studentId: string]: StudentObservation[]}>({});
@@ -214,92 +195,50 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const [error, setError] = useState<Error | null>(null);
 
     useEffect(() => {
-        if (authLoading) {
-            setIsLoading(true);
-            return;
-        }
-
-        if (!user) {
-            setGroups([]);
-            setAllStudents([]);
-            setAllObservations({});
-            setAllPartialsData({});
-            setActiveGroupIdState(null);
-            setSettingsState(defaultSettings);
-            setIsLoading(false);
-            return;
-        }
-        
-        const prefix = `users/${user.uid}`;
-        const unsubscribes: (() => void)[] = [];
-
-        const setupListeners = async () => {
+        const loadData = () => {
           try {
-            // STEP 1: Fast initial load of essential data (groups, students, settings)
-            const groupsQuery = query(collection(db, `${prefix}/groups`));
-            const studentsQuery = query(collection(db, `${prefix}/students`));
-            const settingsDoc = doc(db, `${prefix}/settings`, 'app');
-            const observationsQuery = query(collection(db, `${prefix}/observations`));
-
-            unsubscribes.push(onSnapshot(groupsQuery, s => setGroups(s.docs.map(d => ({ id: d.id, ...d.data() })) as Group[])));
-            unsubscribes.push(onSnapshot(studentsQuery, s => setAllStudents(s.docs.map(d => ({ id: d.id, ...d.data() })) as Student[])));
-            unsubscribes.push(onSnapshot(settingsDoc, d => setSettingsState(d.exists() ? (d.data() as typeof settings) : defaultSettings)));
-            unsubscribes.push(onSnapshot(observationsQuery, snapshot => {
-              const updatedObservations: { [key: string]: any[] } = {};
-              snapshot.docs.forEach(d => {
-                  const item = { id: d.id, ...d.data() } as StudentObservation;
-                  if (item.date && item.date instanceof Timestamp) item.date = item.date.toDate().toISOString();
-                  item.followUpUpdates = (item.followUpUpdates || []).map(f => ({ ...f, date: f.date && f.date instanceof Timestamp ? f.date.toDate().toISOString() : f.date }));
-                  const key = item.studentId;
-                  if (key) {
-                      if (!updatedObservations[key]) updatedObservations[key] = [];
-                      updatedObservations[key].push(item);
-                  }
-              });
-              setAllObservations(updatedObservations);
-            }));
-
-            setIsLoading(false); // UI is now interactive
-
-            // STEP 2: Lazy load all partial data in the background
-            const allGroupsSnap = await getDocs(groupsQuery);
-            const initialGroups = allGroupsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Group[];
-            const partials: PartialId[] = ['p1', 'p2', 'p3'];
-
-            initialGroups.forEach(group => {
-              partials.forEach(pId => {
-                const docRef = doc(db, `${prefix}/groups/${group.id}/partials/${pId}/data/content`);
-                unsubscribes.push(onSnapshot(docRef, (docSnap) => {
-                  setAllPartialsData(prev => ({
-                    ...prev,
-                    [group.id]: {
-                      ...prev[group.id],
-                      [pId]: docSnap.exists() ? (docSnap.data() as PartialData) : defaultPartialData
-                    }
-                  }));
-                }));
-              });
-            });
-
-          } catch (err: any) {
-            console.error("Firebase data loading error:", err);
-            setError(err);
+            // Load from localStorage or use initial data
+            const storedGroups = localStorage.getItem('app_groups');
+            const storedStudents = localStorage.getItem('app_students');
+            const storedObservations = localStorage.getItem('app_observations');
+            const storedPartials = localStorage.getItem('app_partialsData');
+            const storedSettings = localStorage.getItem('app_settings');
+            
+            if (storedGroups) setGroups(JSON.parse(storedGroups));
+            if (storedStudents) setAllStudents(JSON.parse(storedStudents));
+            if (storedObservations) setAllObservations(JSON.parse(storedObservations));
+            if (storedPartials) setAllPartialsData(JSON.parse(storedPartials));
+            if (storedSettings) setSettingsState(JSON.parse(storedSettings));
+            
+            const storedGroupId = localStorage.getItem('activeGroupId_v1');
+            if (storedGroupId) {
+                setActiveGroupIdState(storedGroupId);
+            }
+          } catch (e) {
+            console.error("Failed to load data from localStorage", e);
+            // Fallback to empty state if localStorage is corrupt
+          } finally {
             setIsLoading(false);
           }
         };
-
-        setupListeners();
-
-        const storedGroupId = localStorage.getItem('activeGroupId_v1');
-        if (storedGroupId) {
-            setActiveGroupIdState(storedGroupId);
-        }
-
-        return () => {
-            unsubscribes.forEach(unsub => unsub());
-        };
-    }, [user, authLoading]);
+        loadData();
+    }, []);
     
+    // Save to localStorage whenever data changes
+    useEffect(() => {
+        try {
+          if(!isLoading) {
+            localStorage.setItem('app_groups', JSON.stringify(groups));
+            localStorage.setItem('app_students', JSON.stringify(allStudents));
+            localStorage.setItem('app_observations', JSON.stringify(allObservations));
+            localStorage.setItem('app_partialsData', JSON.stringify(allPartialsData));
+            localStorage.setItem('app_settings', JSON.stringify(settings));
+          }
+        } catch (e) {
+          console.error("Failed to save data to localStorage", e);
+        }
+    }, [groups, allStudents, allObservations, allPartialsData, settings, isLoading]);
+
     const partialData = useMemo(() => {
         if (!activeGroupId || !allPartialsData[activeGroupId]) return defaultPartialData;
         return allPartialsData[activeGroupId][activePartialId] || defaultPartialData;
@@ -309,41 +248,32 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         if (allPartialsData[groupId] && allPartialsData[groupId][partialId]) {
             return allPartialsData[groupId][partialId] as PartialData;
         }
-        if (!user) return null;
-        const docRef = doc(db, `users/${user.uid}/groups/${groupId}/partials/${partialId}/data/content`);
-        try {
-            const docSnap = await getDoc(docRef);
-            if(docSnap.exists()){
-                const data = docSnap.data() as PartialData;
-                setAllPartialsData(prev => ({ ...prev, [groupId]: { ...prev[groupId], [partialId]: data }}));
-                return data;
+        return defaultPartialData;
+    }, [allPartialsData]);
+
+
+    const setPartialDataState = (groupId: string, partialId: PartialId, newPartialData: PartialData) => {
+        setAllPartialsData(prev => ({
+            ...prev,
+            [groupId]: {
+                ...(prev[groupId] || {}),
+                [partialId]: newPartialData,
             }
-            return defaultPartialData;
-        } catch (e) {
-            console.error("Failed to fetch partial data:", e);
-            return null;
-        }
-    }, [user, allPartialsData]);
-
-    const getPartialDataDocRef = useCallback(() => {
-        if (!activeGroupId || !user) return null;
-        return doc(db, `users/${user.uid}/groups/${activeGroupId}/partials/${activePartialId}/data/content`);
-    }, [activeGroupId, activePartialId, user]);
-
+        }));
+    };
 
     const createSetter = useCallback((field: keyof PartialData) => async (setter: React.SetStateAction<any>) => {
-        const docRef = getPartialDataDocRef();
-        if (docRef) {
-            const currentValue = partialData[field];
-            const newValue = typeof setter === 'function' ? setter(currentValue) : setter;
-            await setDoc(docRef, { [field]: newValue }, { merge: true });
-        }
-    }, [getPartialDataDocRef, partialData]);
+        if (!activeGroupId) return;
+        const currentData = allPartialsData[activeGroupId]?.[activePartialId] || defaultPartialData;
+        const newValue = typeof setter === 'function' ? setter(currentData[field]) : setter;
+        const newPartialData = { ...currentData, [field]: newValue };
+        setPartialDataState(activeGroupId, activePartialId, newPartialData);
+
+    }, [activeGroupId, activePartialId, allPartialsData]);
     
     const setSettings = useCallback(async (newSettings: { institutionName: string; logo: string; theme: string }) => {
-        if (!user) throw new Error("User not authenticated");
-        await setDoc(doc(db, `users/${user.uid}/settings`, 'app'), newSettings);
-    }, [user]);
+        setSettingsState(newSettings);
+    }, []);
 
     const setCriteria = useMemo(() => createSetter('criteria'), [createSetter]);
     const setGrades = useMemo(() => createSetter('grades'), [createSetter]);
@@ -392,9 +322,11 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }, []);
 
     const calculateFinalGrade = useCallback((studentId: string, forGroupId?: string, forPartialId?: PartialId, forPartialData?: PartialData): number => {
-        const data = forPartialData || partialData;
+        const gId = forGroupId || activeGroupId;
+        const pId = forPartialId || activePartialId;
+        const data = forPartialData || (gId ? allPartialsData[gId]?.[pId] : undefined) || partialData;
         return calculateDetailedFinalGrade(studentId, data).finalGrade;
-    }, [calculateDetailedFinalGrade, partialData]);
+    }, [calculateDetailedFinalGrade, partialData, activeGroupId, activePartialId, allPartialsData]);
 
     const setActiveGroupId = (groupId: string | null) => {
         if(groupId !== activeGroupId) {
@@ -429,101 +361,65 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }, [groups]);
     
     const addStudentsToGroup = useCallback(async (groupId: string, students: Student[]) => {
-        if (!user) return;
-        const batch = writeBatch(db);
-        const groupRef = doc(db, `users/${user.uid}/groups`, groupId);
-        
-        batch.update(groupRef, {
-            students: arrayUnion(...students)
-        });
-
-        for (const student of students) {
-            const studentRef = doc(db, `users/${user.uid}/students`, student.id);
-            batch.set(studentRef, student, { merge: true });
-        }
-        await batch.commit();
-    }, [user]);
+        setAllStudents(prev => [...prev, ...students]);
+        setGroups(prev => prev.map(g => g.id === groupId ? {...g, students: [...g.students, ...students]} : g));
+    }, []);
 
     const removeStudentFromGroup = useCallback(async (groupId: string, studentId: string) => {
-        if (!user) return;
-        const groupRef = doc(db, `users/${user.uid}/groups`, groupId);
-        const groupDoc = await getDoc(groupRef);
-        if (groupDoc.exists()) {
-            const groupData = groupDoc.data() as Group;
-            const studentToRemove = groupData.students.find(s => s.id === studentId);
-            if (studentToRemove) {
-                await updateDoc(groupRef, {
-                    students: arrayRemove(studentToRemove)
-                });
-            }
-        }
-    }, [user]);
+        setGroups(prev => prev.map(g => g.id === groupId ? {...g, students: g.students.filter(s => s.id !== studentId)} : g));
+    }, []);
     
     const setActivePartialId = (partialId: PartialId) => {
         setActivePartialIdState(partialId);
     };
 
     const deleteGroup = useCallback(async (groupId: string) => {
-        if (!user) return;
-        await deleteDoc(doc(db, `users/${user.uid}/groups`, groupId));
-    }, [user]);
+        setGroups(prev => prev.filter(g => g.id !== groupId));
+        if(activeGroupId === groupId) setActiveGroupId(null);
+    }, [activeGroupId]);
 
     const updateGroup = useCallback(async (groupId: string, data: Partial<Omit<Group, 'id' | 'students'>>) => {
-        if (!user) return;
-        const groupRef = doc(db, `users/${user.uid}/groups`, groupId);
-        await updateDoc(groupRef, data);
-    }, [user]);
+        setGroups(prev => prev.map(g => g.id === groupId ? { ...g, ...data } : g));
+    }, []);
     
     const addStudentObservation = useCallback(async (observation: Omit<StudentObservation, 'id' | 'date' | 'followUpUpdates' | 'isClosed'>) => {
-        if (!user) return;
-        
-        const newDocRef = doc(collection(db, `users/${user.uid}/observations`));
-        const newObservation = {
+        const newObservation: StudentObservation = {
             ...observation,
-            id: newDocRef.id,
-            date: serverTimestamp(),
+            id: `OBS-${Date.now()}`,
+            date: new Date().toISOString(),
             followUpUpdates: [],
             isClosed: false,
         };
-        await setDoc(newDocRef, newObservation);
-    }, [user]);
+        setAllObservations(prev => ({
+            ...prev,
+            [observation.studentId]: [...(prev[observation.studentId] || []), newObservation],
+        }));
+    }, []);
     
     const updateStudentObservation = useCallback(async (studentId: string, observationId: string, updateText: string, isClosing: boolean) => {
-      if (!user) return;
-      const docRef = doc(db, `users/${user.uid}/observations`, observationId);
-      const obsDoc = await getDoc(docRef);
-      if (obsDoc.exists()) {
-          const currentData = obsDoc.data() as StudentObservation;
-          const newUpdate = { date: serverTimestamp(), update: updateText };
-          const updatedUpdates = [...(currentData.followUpUpdates || []), newUpdate];
-          await updateDoc(docRef, {
-              followUpUpdates: updatedUpdates,
-              isClosed: isClosing,
+      setAllObservations(prev => {
+          const studentObs = (prev[studentId] || []).map(obs => {
+              if (obs.id === observationId) {
+                  const newUpdate = { date: new Date().toISOString(), update: updateText };
+                  return {
+                      ...obs,
+                      followUpUpdates: [...obs.followUpUpdates, newUpdate],
+                      isClosed: isClosing
+                  };
+              }
+              return obs;
           });
-      }
-    }, [user]);
+          return { ...prev, [studentId]: studentObs };
+      });
+    }, []);
     
     const updateStudent = useCallback(async (studentId: string, data: Partial<Student>) => {
-        if (!user) return;
-        
-        const studentRef = doc(db, `users/${user.uid}/students`, studentId);
-        await updateDoc(studentRef, data);
-        
-        const batch = writeBatch(db);
-        const userGroups = groups.filter(g => g.students.some(s => s.id === studentId));
-
-        for(const group of userGroups) {
-            const groupRef = doc(db, `users/${user.uid}/groups`, group.id);
-            const updatedStudents = group.students.map(s => {
-                if (s.id === studentId) {
-                    return { ...s, ...data };
-                }
-                return s;
-            });
-            batch.update(groupRef, { students: updatedStudents });
-        }
-        await batch.commit();
-    }, [user, groups]);
+        setAllStudents(prev => prev.map(s => s.id === studentId ? {...s, ...data} : s));
+        setGroups(prev => prev.map(g => ({
+            ...g,
+            students: g.students.map(s => s.id === studentId ? { ...s, ...data } : s),
+        })));
+    }, []);
 
 
     const getStudentRiskLevel = useCallback((finalGrade: number, pAttendance: AttendanceRecord, studentId: string): CalculatedRisk => {
@@ -606,7 +502,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }, [activeGroup, partialData.participations]);
 
     const takeAttendanceForDate = useCallback(async (groupId: string, date: string) => {
-        if (!user) return;
         const group = groups.find(g => g.id === groupId);
         if (!group) return;
         const newAttendanceForDate = group.students.reduce((acc, student) => ({
@@ -614,11 +509,13 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             [student.id]: true
         }), {} as {[studentId: string]: boolean});
         
-        const docRef = getPartialDataDocRef();
-        if (docRef) {
-             await setDoc(docRef, { attendance: { [date]: newAttendanceForDate } }, { merge: true });
+        if (activeGroupId) {
+            const currentData = allPartialsData[activeGroupId]?.[activePartialId] || defaultPartialData;
+            const newPartialData = { ...currentData, attendance: { ...currentData.attendance, [date]: newAttendanceForDate } };
+            setPartialDataState(activeGroupId, activePartialId, newPartialData);
         }
-    }, [user, groups, getPartialDataDocRef]);
+        
+    }, [groups, activeGroupId, activePartialId, allPartialsData]);
 
 
     const contextValue: DataContextType = {

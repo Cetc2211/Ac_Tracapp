@@ -18,7 +18,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
-import { signIn } from '@/lib/firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 
@@ -44,26 +43,15 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
-    try {
-      await signIn(data.email, data.password);
-      toast({
-        title: 'Inicio de sesión exitoso',
-        description: 'Bienvenido de nuevo.',
-      });
+    toast({
+      title: 'Inicio de sesión exitoso',
+      description: 'Bienvenido de nuevo.',
+    });
+    // Simulate network delay
+    setTimeout(() => {
       router.push('/dashboard');
-    } catch (error: any) {
-      console.error(error);
-      toast({
-        variant: 'destructive',
-        title: 'Error al iniciar sesión',
-        description:
-          error.code === 'auth/invalid-credential'
-            ? 'Las credenciales son incorrectas. Por favor, verifica tu email y contraseña.'
-            : 'Ocurrió un error inesperado. Inténtalo de nuevo.',
-      });
-    } finally {
-        setIsLoading(false);
-    }
+      setIsLoading(false);
+    }, 1000);
   };
 
   return (

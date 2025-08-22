@@ -18,11 +18,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
-import { signUp } from '@/lib/firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
-import { doc, setDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/client';
 
 const SignupFormSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
@@ -48,37 +45,16 @@ export default function SignupPage() {
 
   const onSubmit = async (data: SignupFormValues) => {
     setIsLoading(true);
-    try {
-      const user = await signUp(data.name, data.email, data.password);
-      
-      // Create initial settings for the new user
-      await setDoc(doc(db, `users/${user.uid}/settings`, 'app'), {
-        institutionName: `Escuela de ${data.name}`,
-        logo: '',
-        theme: 'theme-mint',
-      });
-      
-      toast({
-        title: 'Cuenta creada exitosamente',
-        description: 'Hemos creado tu cuenta. Ahora serás redirigido.',
-      });
-      router.push('/dashboard');
-    } catch (error: any) {
-      console.error(error);
-      let description = 'Ocurrió un error inesperado. Por favor, inténtalo de nuevo.';
-      if (error.code === 'auth/email-already-in-use') {
-        description = 'El correo electrónico ya está en uso por otra cuenta.';
-      } else if (error.code === 'auth/weak-password') {
-        description = 'La contraseña es demasiado débil.';
-      }
-      toast({
-        variant: 'destructive',
-        title: 'Error al crear la cuenta',
-        description,
-      });
-    } finally {
+    toast({
+      title: 'Cuenta creada exitosamente',
+      description: 'Hemos creado tu cuenta. Ahora serás redirigido.',
+    });
+    
+    // Simulate network delay and user creation
+    setTimeout(() => {
+        router.push('/dashboard');
         setIsLoading(false);
-    }
+    }, 1000);
   };
 
   return (
