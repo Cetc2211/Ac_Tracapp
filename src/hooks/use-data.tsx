@@ -149,6 +149,7 @@ interface DataContextType {
   
   activeGroup: Group | null;
   activePartialId: PartialId;
+  activeStudentsInGroups: Student[];
   
   partialData: PartialData;
 
@@ -443,6 +444,16 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         return groups.find(g => g.id === activeGroupId) || null;
     }, [groups, activeGroupId]);
     
+    const activeStudentsInGroups = useMemo(() => {
+        const studentSet = new Set<Student>();
+        groups.forEach(group => {
+            group.students.forEach(student => {
+                studentSet.add(student);
+            });
+        });
+        return Array.from(studentSet);
+    }, [groups]);
+
     const addStudentsToGroup = useCallback(async (groupId: string, students: Student[]) => {
         if (!user) return;
         const batch = writeBatch(db);
@@ -637,6 +648,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         settings,
         activeGroup,
         activePartialId,
+        activeStudentsInGroups,
         partialData,
         groupAverages,
         atRiskStudents,

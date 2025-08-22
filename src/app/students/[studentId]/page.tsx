@@ -15,7 +15,7 @@ import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, Download, User, Mail, Phone, Wand2, Loader2, MessageSquare, BookText, Edit, Save } from 'lucide-react';
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -513,15 +513,6 @@ export default function StudentProfilePage() {
                 </CardContent>
               )
             )}
-            <CardFooter>
-              <div className="w-full mt-12 pt-12 text-center text-sm">
-                <div className="inline-block">
-                  <div className="border-t border-foreground w-48 mx-auto"></div>
-                  <p className="font-semibold">{facilitatorName}</p>
-                  <p className="text-muted-foreground">Firma del Docente</p>
-                </div>
-              </div>
-            </CardFooter>
           </Card>
         </div>
       </div>
@@ -529,4 +520,3 @@ export default function StudentProfilePage() {
   );
 }
 
-    
