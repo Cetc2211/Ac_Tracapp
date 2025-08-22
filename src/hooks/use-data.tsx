@@ -155,7 +155,6 @@ interface DataContextType {
   groupAverages: {[groupId: string]: number};
   atRiskStudents: StudentWithRisk[];
   overallAverageParticipation: number;
-  activeStudentsInGroups: Student[];
 
   // Setters / Updaters
   addStudentsToGroup: (groupId: string, students: Student[]) => Promise<void>;
@@ -378,30 +377,29 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
 
     const calculateDetailedFinalGrade = useCallback((studentId: string, pData: PartialData): { finalGrade: number, criteriaDetails: CriteriaDetail[] } => {
-        const data = pData;
-        if (!data || !data.criteria) return { finalGrade: 0, criteriaDetails: [] };
+        if (!pData || !pData.criteria) return { finalGrade: 0, criteriaDetails: [] };
         
         let finalGrade = 0;
         const criteriaDetails: CriteriaDetail[] = [];
         
-        for (const criterion of data.criteria) {
+        for (const criterion of pData.criteria) {
             let performanceRatio = 0;
 
              if (criterion.name === 'Actividades' || criterion.name === 'Portafolio') {
-                const totalActivities = data.activities.length;
+                const totalActivities = pData.activities.length;
                 if (totalActivities > 0) {
-                    const deliveredActivities = Object.values(data.activityRecords?.[studentId] || {}).filter(Boolean).length;
+                    const deliveredActivities = Object.values(pData.activityRecords?.[studentId] || {}).filter(Boolean).length;
                     performanceRatio = deliveredActivities / totalActivities;
                 }
             } else if (criterion.name === 'Participación') {
-                const participationDates = Object.keys(data.participations || {});
-                const studentParticipationOpportunities = participationDates.filter(date => Object.prototype.hasOwnProperty.call(data.participations?.[date], studentId)).length;
+                const participationDates = Object.keys(pData.participations || {});
+                const studentParticipationOpportunities = participationDates.filter(date => Object.prototype.hasOwnProperty.call(pData.participations?.[date], studentId)).length;
                 if (studentParticipationOpportunities > 0) {
-                    const studentParticipations = Object.values(data.participations || {}).filter(p => p[studentId]).length;
+                    const studentParticipations = Object.values(pData.participations || {}).filter(p => p[studentId]).length;
                     performanceRatio = studentParticipations / studentParticipationOpportunities;
                 }
             } else {
-                const delivered = data.grades?.[studentId]?.[criterion.id]?.delivered ?? 0;
+                const delivered = pData.grades?.[studentId]?.[criterion.id]?.delivered ?? 0;
                 const expected = criterion.expectedValue;
                 if (expected > 0) {
                     performanceRatio = delivered / expected;
@@ -445,17 +443,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         return groups.find(g => g.id === activeGroupId) || null;
     }, [groups, activeGroupId]);
 
-    const activeStudentsInGroups = useMemo(() => {
-        const studentMap = new Map<string, Student>();
-        groups.forEach(group => {
-            group.students.forEach(student => {
-                if (!studentMap.has(student.id)) {
-                    studentMap.set(student.id, student);
-                }
-            });
-        });
-        return Array.from(studentMap.values());
-    }, [groups]);
 
     const addStudentsToGroup = useCallback(async (groupId: string, students: Student[]) => {
         if (!user) return;
@@ -655,7 +642,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         groupAverages,
         atRiskStudents,
         overallAverageParticipation,
-        activeStudentsInGroups,
         addStudentsToGroup,
         removeStudentFromGroup,
         updateGroup,
@@ -693,5 +679,3 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
-
-    

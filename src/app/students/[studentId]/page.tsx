@@ -507,7 +507,7 @@ export default function StudentProfilePage() {
                 )}
               </CardContent>
             ) : (
-              !hasAnyDataForFeedback && (
+              !hasAnyDataForFeedback && !isDataLoading && !isPageLoading && (
                 <CardContent>
                   <div className="text-center text-sm text-muted-foreground bg-muted/50 p-4 rounded-md">
                     <p>No hay datos de calificaciones para generar un feedback automatizado.</p>
