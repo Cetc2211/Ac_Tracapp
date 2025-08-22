@@ -14,14 +14,14 @@ import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, Download, User, Mail, Phone, Wand2, Loader2, MessageSquare, BookText, Edit, Save } from 'lucide-react';
-import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useData } from '@/hooks/use-data';
 import { Badge } from '@/components/ui/badge';
 import { getPartialLabel } from '@/lib/utils';
-import type { PartialId, StudentObservation, PartialData, Student } from '@/hooks/use-data';
+import type { PartialId, StudentObservation, Student } from '@/hooks/use-data';
 import { StudentObservationLogDialog } from '@/components/student-observation-log-dialog';
 import { WhatsAppDialog } from '@/components/whatsapp-dialog';
 import { generateStudentFeedback } from '@/ai/flows/student-feedback';
@@ -50,6 +50,10 @@ export default function StudentProfilePage() {
     error: dataError,
   } = useData();
 
+  const [studentStatsByPartial, setStudentStatsByPartial] = useState<StudentStats[]>([]);
+  const [isCalculatingStats, setIsCalculatingStats] = useState(true);
+  const [pageError, setPageError] = useState<string | null>(null);
+  
   const [isLogOpen, setIsLogOpen] = useState(false);
   const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false);
   const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
@@ -59,8 +63,7 @@ export default function StudentProfilePage() {
     feedback: '',
     recommendations: '',
   });
-  const [studentStatsByPartial, setStudentStatsByPartial] = useState<StudentStats[]>([]);
-  
+
   const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   
@@ -68,23 +71,35 @@ export default function StudentProfilePage() {
   const studentGroups = useMemo(() => groups.filter((g) => g.students.some((s) => s.id === studentId)), [groups, studentId]);
 
   useEffect(() => {
-    if (isDataLoading || !student || studentGroups.length === 0) {
-      return;
+    if (isDataLoading) {
+      return; 
     }
-    
+
     const calculateStats = async () => {
+        setIsCalculatingStats(true);
+        setPageError(null);
+
+        if (!student) {
+            setPageError("Estudiante no encontrado.");
+            setIsCalculatingStats(false);
+            return;
+        }
+
+        if (studentGroups.length === 0) {
+            setPageError("El estudiante no pertenece a ningún grupo.");
+            setIsCalculatingStats(false);
+            return;
+        }
+
         try {
             const primaryGroupId = studentGroups[0].id;
             const partials: PartialId[] = ['p1', 'p2', 'p3'];
             const allStats: StudentStats[] = [];
 
             for (const pId of partials) {
-                try {
-                    const partialData = await fetchPartialData(primaryGroupId, pId);
-                    if (!partialData || !partialData.criteria || !Array.isArray(partialData.criteria)) {
-                        continue;
-                    }
-
+                const partialData = await fetchPartialData(primaryGroupId, pId);
+                
+                if (partialData && partialData.criteria && partialData.criteria.length > 0) {
                     const gradeDetails = calculateDetailedFinalGrade(student.id, primaryGroupId, pId, partialData);
 
                     let p = 0, a = 0, total = 0;
@@ -97,31 +112,31 @@ export default function StudentProfilePage() {
                     });
 
                     const partialObservations = (allObservations[studentId] || []).filter((obs) => obs.partialId === pId);
-
+                    
                     allStats.push({
                         ...gradeDetails,
                         partialId: pId,
                         attendance: { p, a, total, rate: total > 0 ? (p / total) * 100 : 100 },
                         observations: partialObservations,
                     });
-                } catch (e) {
-                    console.error(`Error processing partial ${pId}:`, e);
                 }
+            }
+            
+            if (allStats.length === 0) {
+              setPageError("No se encontraron datos de calificación válidos para ningún parcial.");
             }
             setStudentStatsByPartial(allStats);
         } catch (e) {
             console.error('Error calculating stats:', e);
-             toast({
-                variant: 'destructive',
-                title: 'Error al cargar estadísticas',
-                description: 'No se pudieron calcular las estadísticas del estudiante.',
-            });
+            setPageError('No se pudieron calcular las estadísticas del estudiante.');
+        } finally {
+            setIsCalculatingStats(false);
         }
     };
     
     calculateStats();
 
-  }, [isDataLoading, student, studentId, studentGroups, fetchPartialData, calculateDetailedFinalGrade, allObservations, toast]);
+  }, [isDataLoading, student, studentGroups, studentId, fetchPartialData, calculateDetailedFinalGrade, allObservations]);
 
 
   const semesterAverage = useMemo(() => {
@@ -251,29 +266,24 @@ export default function StudentProfilePage() {
     }
   };
 
-  if (isDataLoading) {
+  if (isDataLoading || isCalculatingStats) {
     return (
       <div className="flex justify-center items-center h-full">
         <Loader2 className="h-8 w-8 animate-spin" />
-        <span className="ml-2">Cargando datos maestros...</span>
+        <span className="ml-2">Cargando datos del estudiante...</span>
       </div>
     );
   }
   
-  if (!student) {
-      return notFound();
-  }
-
-  if (dataError) {
-    return (
-      <div className="flex flex-col justify-center items-center h-full text-center">
-        <p className="text-lg font-semibold text-destructive">Error al cargar el perfil del estudiante</p>
-        <p className="text-muted-foreground mt-2">{dataError?.message || 'Ocurrió un error inesperado.'}</p>
-        <Button asChild className="mt-4">
-          <Link href="/dashboard">Volver al Dashboard</Link>
-        </Button>
-      </div>
-    );
+  if (!student || pageError || dataError) {
+      return (
+        <div className="flex flex-col justify-center items-center h-full text-center">
+            <p className="text-lg font-semibold text-destructive">{pageError || dataError?.message || 'Estudiante no encontrado.'}</p>
+            <Button asChild className="mt-4">
+              <Link href="/dashboard">Volver al Dashboard</Link>
+            </Button>
+        </div>
+      )
   }
 
   const allSemesterObservations = Object.values(allObservations)
@@ -354,8 +364,7 @@ export default function StudentProfilePage() {
             <div className="lg:col-span-2 space-y-4">
               {studentStatsByPartial.length > 0 ? (
                 studentStatsByPartial.map(
-                  (stats) =>
-                    stats.criteriaDetails.length > 0 && (
+                  (stats) => (
                       <Card key={stats.partialId}>
                         <CardHeader>
                           <CardTitle>{getPartialLabel(stats.partialId)}</CardTitle>
