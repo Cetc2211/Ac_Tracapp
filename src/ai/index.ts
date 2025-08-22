@@ -5,6 +5,8 @@ import {googleAI} from '@genkit-ai/googleai';
 export const ai = genkit({
   plugins: [
     googleAI({
+      // Specify the default model for text generation.
+      model: 'gemini-1.5-flash-latest',
       // Disabling safety settings for this demo to avoid content filtering issues.
       // In a production app, you should configure this appropriately.
       safetySettings: [
