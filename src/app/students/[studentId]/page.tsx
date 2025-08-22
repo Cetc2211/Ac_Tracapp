@@ -60,43 +60,26 @@ export default function StudentProfilePage() {
     recommendations: '',
   });
   const [studentStatsByPartial, setStudentStatsByPartial] = useState<StudentStats[]>([]);
-  const [isCalculatingStats, setIsCalculatingStats] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  const student = useMemo(() => {
-    console.log('allStudents:', allStudents);
-    return allStudents.find((s) => s.id === studentId);
-  }, [allStudents, studentId]);
+  const student = useMemo(() => allStudents.find((s) => s.id === studentId), [allStudents, studentId]);
 
-  const studentGroups = useMemo(() => {
-    console.log('groups:', groups);
-    return groups.filter((g) => g.students.some((s) => s.id === studentId));
-  }, [groups, studentId]);
+  const studentGroups = useMemo(() => groups.filter((g) => g.students.some((s) => s.id === studentId)), [groups, studentId]);
 
   const calculateStats = useCallback(async () => {
-    console.log('calculateStats called for studentId:', studentId);
-    if (!student) {
-      setError('Estudiante no encontrado.');
-      setIsCalculatingStats(false);
-      return;
-    }
-    if (studentGroups.length === 0) {
-      setError('El estudiante no está asignado a ningún grupo.');
-      setIsCalculatingStats(false);
+    if (!student || studentGroups.length === 0) {
       return;
     }
 
     const primaryGroupId = studentGroups[0]?.id;
     if (!primaryGroupId) {
       setError('No se encontró un grupo principal para el estudiante.');
-      setIsCalculatingStats(false);
       return;
     }
 
-    setIsCalculatingStats(true);
     setError(null);
     try {
       const partials: PartialId[] = ['p1', 'p2', 'p3'];
@@ -105,7 +88,6 @@ export default function StudentProfilePage() {
       for (const pId of partials) {
         try {
           const partialData = await fetchPartialData(primaryGroupId, pId);
-          console.log(`fetchPartialData for ${pId}:`, partialData);
 
           if (!partialData || !partialData.criteria || !Array.isArray(partialData.criteria)) {
             console.warn(`No valid data for partial ${pId} in group ${primaryGroupId}`);
@@ -113,7 +95,6 @@ export default function StudentProfilePage() {
           }
 
           const gradeDetails = calculateDetailedFinalGrade(student.id, primaryGroupId, pId, partialData);
-          console.log(`gradeDetails for ${pId}:`, gradeDetails);
 
           let p = 0,
             a = 0,
@@ -145,7 +126,6 @@ export default function StudentProfilePage() {
         }
       }
 
-      console.log('allStats:', allStats);
       setStudentStatsByPartial(allStats);
       if (allStats.length === 0) {
         setError('No se encontraron datos válidos para ningún parcial.');
@@ -158,25 +138,14 @@ export default function StudentProfilePage() {
         title: 'Error al cargar estadísticas',
         description: 'No se pudieron calcular las estadísticas del estudiante.',
       });
-    } finally {
-      setIsCalculatingStats(false);
     }
   }, [student, studentGroups, calculateDetailedFinalGrade, allObservations, studentId, fetchPartialData, toast]);
 
   useEffect(() => {
-    console.log('useEffect triggered:', { isLoading, student: !!student, studentGroups: studentGroups.length });
-    if (isLoading) {
-      setIsCalculatingStats(true);
-      return;
-    }
-    if (student && studentGroups.length > 0) {
+    if (student) {
       calculateStats();
-    } else {
-      setIsCalculatingStats(false);
-      if(!student) setError('Estudiante no encontrado.');
-      else if(studentGroups.length === 0) setError('El estudiante no está asignado a ningún grupo.');
     }
-  }, [isLoading, student, studentGroups, calculateStats]);
+  }, [student, calculateStats]);
 
 
   const semesterAverage = useMemo(() => {
@@ -306,7 +275,7 @@ export default function StudentProfilePage() {
     }
   };
 
-  if (isLoading || isCalculatingStats) {
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center h-full">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -576,7 +545,7 @@ export default function StudentProfilePage() {
                 <CardContent>
                   <div className="text-center text-sm text-destructive bg-destructive/10 p-4 rounded-md">
                     <p className="font-bold">Sin datos</p>
-                    <p>No hay datos para generar feedback en el.</p>
+                    <p>No hay datos para generar feedback.</p>
                   </div>
                 </CardContent>
               )
