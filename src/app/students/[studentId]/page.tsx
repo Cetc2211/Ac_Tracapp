@@ -71,23 +71,19 @@ export default function StudentProfilePage() {
 
   useEffect(() => {
     const calculateStats = async () => {
-        if (!student) {
-            setIsPageLoading(false);
-            return;
+        if (!student || studentGroups.length === 0) {
+          setIsPageLoading(false);
+          return;
         }
-
-        if (studentGroups.length === 0) {
-            setIsPageLoading(false);
-            return;
-        }
-
+        
         setIsPageLoading(true);
+        const stats: StudentStats[] = [];
 
         try {
             const primaryGroupId = studentGroups[0].id;
             const partials: PartialId[] = ['p1', 'p2', 'p3'];
-            
-            const allStatsPromises = partials.map(async (pId) => {
+
+            for (const pId of partials) {
                 const partialData = await fetchPartialData(primaryGroupId, pId);
                 
                 if (partialData && partialData.criteria && partialData.criteria.length > 0) {
@@ -104,18 +100,15 @@ export default function StudentProfilePage() {
 
                     const partialObservations = (allObservations[studentId] || []).filter((obs) => obs.partialId === pId);
                     
-                    return {
+                    stats.push({
                         ...gradeDetails,
                         partialId: pId,
                         attendance: { p, a, total, rate: total > 0 ? (p / total) * 100 : 100 },
                         observations: partialObservations,
-                    };
+                    });
                 }
-                return null;
-            });
-
-            const allStats = (await Promise.all(allStatsPromises)).filter((s): s is StudentStats => s !== null);
-            setStudentStatsByPartial(allStats);
+            }
+            setStudentStatsByPartial(stats);
         } catch (e) {
             console.error('Error calculating stats:', e);
             toast({ variant: 'destructive', title: 'Error', description: 'No se pudieron calcular las estadísticas.' });
@@ -124,10 +117,8 @@ export default function StudentProfilePage() {
         }
     };
     
-    if(!isDataLoading && student && studentGroups.length > 0){
+    if(!isDataLoading){
       calculateStats();
-    } else if (!isDataLoading) {
-      setIsPageLoading(false);
     }
 
   }, [isDataLoading, student, studentGroups, studentId, fetchPartialData, calculateDetailedFinalGrade, allObservations, toast]);
