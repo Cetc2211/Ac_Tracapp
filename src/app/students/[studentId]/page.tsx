@@ -72,10 +72,8 @@ export default function StudentProfilePage() {
   useEffect(() => {
     const calculateStats = async () => {
         if (isDataLoading || !student || studentGroups.length === 0) {
-          if (!isDataLoading) {
-            setIsPageLoading(false);
-          }
-          return;
+            if (!isDataLoading) setIsPageLoading(false);
+            return;
         }
         
         setIsPageLoading(true);
@@ -527,5 +525,3 @@ export default function StudentProfilePage() {
     </>
   );
 }
-
-    
