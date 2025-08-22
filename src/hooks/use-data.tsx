@@ -257,75 +257,64 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 // DATA PROVIDER COMPONENT
 export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
     // Core data
-    const [allStudents, setAllStudents] = useState<Student[]>([]);
+    const [allStudents, setAllStudents] = useState<Student[]>(mockAllStudents);
     const [allObservations, setAllObservations] = useState<{[studentId: string]: StudentObservation[]}>({});
-    const [groups, setGroups] = useState<Group[]>([]);
+    const [groups, setGroups] = useState<Group[]>(mockGroups);
     const [settings, setSettingsState] = useState(defaultSettings);
     
     // Active state
     const [activeGroupId, setActiveGroupIdState] = useState<string | null>(null);
     const [activePartialId, setActivePartialIdState] = useState<PartialId>('p1');
     
-    const [allPartialsData, setAllPartialsData] = useState<AllPartialsData>({});
+    const [allPartialsData, setAllPartialsData] = useState<AllPartialsData>(mockPartialsData);
 
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
 
     useEffect(() => {
-      const loadData = () => {
+        setIsLoading(true);
         try {
-          let loadedGroups: Group[] = [];
-          const storedGroups = localStorage.getItem('app_groups');
-          if (storedGroups) {
-            loadedGroups = JSON.parse(storedGroups);
-          }
-          if (loadedGroups.length === 0) {
-            loadedGroups = mockGroups;
-          }
-          setGroups(loadedGroups);
+            const storedGroups = localStorage.getItem('app_groups');
+            if(storedGroups) setGroups(JSON.parse(storedGroups));
 
-          const storedStudents = localStorage.getItem('app_students');
-          setAllStudents(storedStudents ? JSON.parse(storedStudents) : mockAllStudents);
-          
-          const storedPartials = localStorage.getItem('app_partialsData');
-          setAllPartialsData(storedPartials ? JSON.parse(storedPartials) : mockPartialsData);
+            const storedStudents = localStorage.getItem('app_students');
+            if(storedStudents) setAllStudents(JSON.parse(storedStudents));
+            
+            const storedPartials = localStorage.getItem('app_partialsData');
+            if(storedPartials) setAllPartialsData(JSON.parse(storedPartials));
 
-          const storedObservations = localStorage.getItem('app_observations');
-          if (storedObservations) setAllObservations(JSON.parse(storedObservations));
+            const storedObservations = localStorage.getItem('app_observations');
+            if (storedObservations) setAllObservations(JSON.parse(storedObservations));
 
-          const storedSettings = localStorage.getItem('app_settings');
-          if (storedSettings) setSettingsState(JSON.parse(storedSettings));
+            const storedSettings = localStorage.getItem('app_settings');
+            if (storedSettings) setSettingsState(JSON.parse(storedSettings));
 
-          const storedGroupId = localStorage.getItem('activeGroupId_v1');
-          if (storedGroupId) {
-            setActiveGroupIdState(storedGroupId);
-          }
+            const storedGroupId = localStorage.getItem('activeGroupId_v1');
+            if (storedGroupId) {
+                setActiveGroupIdState(storedGroupId);
+            } else if (groups.length > 0) {
+                setActiveGroupIdState(groups[0].id)
+            }
         } catch (e) {
-          console.error("Failed to load data from localStorage, falling back to mocks.", e);
-          setGroups(mockGroups);
-          setAllStudents(mockAllStudents);
-          setAllPartialsData(mockPartialsData);
-          setAllObservations({});
-          setSettingsState(defaultSettings);
+            console.error("Failed to load data from localStorage", e);
+            setError(e as Error);
         } finally {
-          setIsLoading(false);
+            setIsLoading(false);
         }
-      };
-      loadData();
     }, []);
     
     // Save to localStorage whenever data changes
     useEffect(() => {
         try {
-          if(!isLoading) {
-            localStorage.setItem('app_groups', JSON.stringify(groups));
-            localStorage.setItem('app_students', JSON.stringify(allStudents));
-            localStorage.setItem('app_observations', JSON.stringify(allObservations));
-            localStorage.setItem('app_partialsData', JSON.stringify(allPartialsData));
-            localStorage.setItem('app_settings', JSON.stringify(settings));
-          }
+            if(!isLoading) {
+                localStorage.setItem('app_groups', JSON.stringify(groups));
+                localStorage.setItem('app_students', JSON.stringify(allStudents));
+                localStorage.setItem('app_observations', JSON.stringify(allObservations));
+                localStorage.setItem('app_partialsData', JSON.stringify(allPartialsData));
+                localStorage.setItem('app_settings', JSON.stringify(settings));
+            }
         } catch (e) {
-          console.error("Failed to save data to localStorage", e);
+            console.error("Failed to save data to localStorage", e);
         }
     }, [groups, allStudents, allObservations, allPartialsData, settings, isLoading]);
 
