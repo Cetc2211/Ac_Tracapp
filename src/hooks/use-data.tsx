@@ -246,7 +246,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
         const checkAllLoaded = () => {
             loadedCount++;
-            if (loadedCount === collectionsToLoad.length) {
+            if (loadedCount >= collectionsToLoad.length) {
                 setIsLoading(false);
             }
         };
@@ -462,17 +462,16 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     const addStudentsToGroup = useCallback(async (groupId: string, students: Student[]) => {
         if (!user) return;
+        const batch = writeBatch(db);
         const groupRef = doc(db, `users/${user.uid}/groups`, groupId);
-        // Use arrayUnion to add new students without overwriting existing ones.
-        await updateDoc(groupRef, {
+        
+        batch.update(groupRef, {
             students: arrayUnion(...students)
         });
 
-        // Also add students to the global student list if they are not there
-        const batch = writeBatch(db);
-        const studentsCollectionRef = collection(db, `users/${user.uid}/students`);
+        // Also add students to the global student list
         for (const student of students) {
-            const studentRef = doc(studentsCollectionRef, student.id);
+            const studentRef = doc(db, `users/${user.uid}/students`, student.id);
             batch.set(studentRef, student, { merge: true });
         }
         await batch.commit();
@@ -707,3 +706,4 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
+
