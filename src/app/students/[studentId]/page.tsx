@@ -15,7 +15,7 @@ import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, Download, User, Mail, Phone, Wand2, Loader2, MessageSquare, BookText, Edit, Save } from 'lucide-react';
-import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -409,21 +409,19 @@ export default function StudentProfilePage() {
                   )}
                 </CardContent>
               </Card>
-              {studentStatsByPartial.length > 0 && (
-                <Card>
-                    <CardHeader>
-                    <CardTitle className="text-base text-center">Calificación Final Semestral</CardTitle>
-                    </CardHeader>
-                    <CardContent className="text-center">
-                    <p
-                        className="text-5xl font-bold"
-                        style={{ color: semesterAverage >= 60 ? 'hsl(var(--chart-2))' : 'hsl(var(--destructive))' }}
-                    >
-                        {semesterAverage.toFixed(1)}%
-                    </p>
-                    </CardContent>
-                </Card>
-              )}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base text-center">Calificación Final Semestral</CardTitle>
+                </CardHeader>
+                <CardContent className="text-center">
+                  <p
+                    className="text-5xl font-bold"
+                    style={{ color: semesterAverage >= 60 ? 'hsl(var(--chart-2))' : 'hsl(var(--destructive))' }}
+                  >
+                    {semesterAverage.toFixed(1)}%
+                  </p>
+                </CardContent>
+              </Card>
             </div>
           </div>
 
@@ -530,3 +528,5 @@ export default function StudentProfilePage() {
     </>
   );
 }
+
+    

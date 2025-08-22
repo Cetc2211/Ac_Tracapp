@@ -148,7 +148,6 @@ interface DataContextType {
   settings: { institutionName: string; logo: string; theme: string };
   
   activeGroup: Group | null;
-  activeStudentsInGroups: Student[];
   activePartialId: PartialId;
   
   partialData: PartialData;
@@ -444,19 +443,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         return groups.find(g => g.id === activeGroupId) || null;
     }, [groups, activeGroupId]);
     
-    const activeStudentsInGroups = useMemo(() => {
-        const studentMap = new Map<string, Student>();
-        groups.forEach(group => {
-            group.students.forEach(student => {
-                if (!studentMap.has(student.id)) {
-                    studentMap.set(student.id, student);
-                }
-            });
-        });
-        return Array.from(studentMap.values());
-    }, [groups]);
-
-
     const addStudentsToGroup = useCallback(async (groupId: string, students: Student[]) => {
         if (!user) return;
         const batch = writeBatch(db);
@@ -650,7 +636,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         allObservations,
         settings,
         activeGroup,
-        activeStudentsInGroups,
         activePartialId,
         partialData,
         groupAverages,
@@ -693,3 +678,5 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
+
+    
