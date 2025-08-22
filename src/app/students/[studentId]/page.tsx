@@ -21,7 +21,7 @@ import html2canvas from 'html2canvas';
 import { useData } from '@/hooks/use-data';
 import { Badge } from '@/components/ui/badge';
 import { getPartialLabel } from '@/lib/utils';
-import type { PartialId, StudentObservation, PartialData } from '@/hooks/use-data';
+import type { PartialId, StudentObservation, PartialData, Student } from '@/hooks/use-data';
 import { StudentObservationLogDialog } from '@/components/student-observation-log-dialog';
 import { WhatsAppDialog } from '@/components/whatsapp-dialog';
 import { generateStudentFeedback } from '@/ai/flows/student-feedback';
@@ -45,11 +45,13 @@ export default function StudentProfilePage() {
     groups,
     calculateDetailedFinalGrade,
     allObservations,
-    isLoading,
+    isLoading: isDataLoading,
     fetchPartialData,
     error: dataError,
   } = useData();
 
+  const [student, setStudent] = useState<Student | null>(null);
+  const [studentGroups, setStudentGroups] = useState<typeof groups>([]);
   const [isLogOpen, setIsLogOpen] = useState(false);
   const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false);
   const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
@@ -65,88 +67,73 @@ export default function StudentProfilePage() {
   const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  const student = useMemo(() => allStudents.find((s) => s.id === studentId), [allStudents, studentId]);
-
-  const studentGroups = useMemo(() => groups.filter((g) => g.students.some((s) => s.id === studentId)), [groups, studentId]);
-
-  const calculateStats = useCallback(async () => {
-    if (!student || studentGroups.length === 0) {
-      return;
-    }
-
-    const primaryGroupId = studentGroups[0]?.id;
-    if (!primaryGroupId) {
-      setError('No se encontró un grupo principal para el estudiante.');
-      return;
-    }
-
-    setError(null);
-    try {
-      const partials: PartialId[] = ['p1', 'p2', 'p3'];
-      const allStats: StudentStats[] = [];
-
-      for (const pId of partials) {
-        try {
-          const partialData = await fetchPartialData(primaryGroupId, pId);
-
-          if (!partialData || !partialData.criteria || !Array.isArray(partialData.criteria)) {
-            console.warn(`No valid data for partial ${pId} in group ${primaryGroupId}`);
-            continue;
-          }
-
-          const gradeDetails = calculateDetailedFinalGrade(student.id, primaryGroupId, pId, partialData);
-
-          let p = 0,
-            a = 0,
-            total = 0;
-          const safeAttendance = partialData.attendance || {};
-          Object.keys(safeAttendance).forEach((date) => {
-            if (safeAttendance[date]?.[studentId] !== undefined) {
-              total++;
-              if (safeAttendance[date][studentId]) p++;
-              else a++;
-            }
-          });
-
-          const partialObservations = (allObservations[studentId] || []).filter((obs) => obs.partialId === pId);
-
-          allStats.push({
-            ...gradeDetails,
-            partialId: pId,
-            attendance: { p, a, total, rate: total > 0 ? (p / total) * 100 : 100 },
-            observations: partialObservations,
-          });
-        } catch (e) {
-          console.error(`Error processing partial ${pId}:`, e);
-          toast({
-            variant: 'destructive',
-            title: `Error al cargar datos del parcial ${getPartialLabel(pId)}`,
-            description: 'No se pudieron cargar los datos. Inténtalo de nuevo.',
-          });
-        }
-      }
-
-      setStudentStatsByPartial(allStats);
-      if (allStats.length === 0) {
-        setError('No se encontraron datos válidos para ningún parcial.');
-      }
-    } catch (e) {
-      console.error('Error calculating stats:', e);
-      setError('Error al calcular las estadísticas del estudiante.');
-      toast({
-        variant: 'destructive',
-        title: 'Error al cargar estadísticas',
-        description: 'No se pudieron calcular las estadísticas del estudiante.',
-      });
-    }
-  }, [student, studentGroups, calculateDetailedFinalGrade, allObservations, studentId, fetchPartialData, toast]);
-
   useEffect(() => {
-    if (student) {
-      calculateStats();
+    if (isDataLoading) {
+      return;
     }
-  }, [student, calculateStats]);
 
+    const foundStudent = allStudents.find((s) => s.id === studentId);
+    if (!foundStudent) {
+      setError('Estudiante no encontrado después de la carga de datos.');
+      return;
+    }
+    setStudent(foundStudent);
+    
+    const foundGroups = groups.filter((g) => g.students.some((s) => s.id === studentId));
+    if (foundGroups.length === 0) {
+      setError('El estudiante no está asignado a ningún grupo.');
+      return;
+    }
+    setStudentGroups(foundGroups);
+
+    const calculateStats = async () => {
+      setError(null);
+      try {
+        const primaryGroupId = foundGroups[0].id;
+        const partials: PartialId[] = ['p1', 'p2', 'p3'];
+        const allStats: StudentStats[] = [];
+
+        for (const pId of partials) {
+          try {
+            const partialData = await fetchPartialData(primaryGroupId, pId);
+
+            if (!partialData || !partialData.criteria || !Array.isArray(partialData.criteria)) {
+              continue;
+            }
+
+            const gradeDetails = calculateDetailedFinalGrade(foundStudent.id, primaryGroupId, pId, partialData);
+
+            let p = 0, a = 0, total = 0;
+            const safeAttendance = partialData.attendance || {};
+            Object.keys(safeAttendance).forEach((date) => {
+              if (safeAttendance[date]?.[studentId] !== undefined) {
+                total++;
+                if (safeAttendance[date][studentId]) p++; else a++;
+              }
+            });
+
+            const partialObservations = (allObservations[studentId] || []).filter((obs) => obs.partialId === pId);
+
+            allStats.push({
+              ...gradeDetails,
+              partialId: pId,
+              attendance: { p, a, total, rate: total > 0 ? (p / total) * 100 : 100 },
+              observations: partialObservations,
+            });
+          } catch (e) {
+            console.error(`Error processing partial ${pId}:`, e);
+          }
+        }
+        setStudentStatsByPartial(allStats);
+      } catch (e) {
+        console.error('Error calculating stats:', e);
+        setError('Error al calcular las estadísticas del estudiante.');
+      }
+    };
+
+    calculateStats();
+
+  }, [isDataLoading, studentId, allStudents, groups, fetchPartialData, calculateDetailedFinalGrade, allObservations]);
 
   const semesterAverage = useMemo(() => {
     if (studentStatsByPartial.length === 0) return 0;
@@ -275,17 +262,17 @@ export default function StudentProfilePage() {
     }
   };
 
-  if (isLoading) {
+  if (isDataLoading) {
     return (
       <div className="flex justify-center items-center h-full">
         <Loader2 className="h-8 w-8 animate-spin" />
-        <span className="ml-2">Cargando perfil del estudiante...</span>
+        <span className="ml-2">Cargando datos maestros...</span>
       </div>
     );
   }
-
+  
   if (!student) {
-    return notFound();
+      return notFound();
   }
 
   if (error || dataError) {
@@ -376,37 +363,38 @@ export default function StudentProfilePage() {
 
           <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-4">
-              {studentStatsByPartial.map(
-                (stats, index) =>
-                  stats.criteriaDetails.length > 0 && (
-                    <Card key={stats.partialId}>
-                      <CardHeader>
-                        <CardTitle>{getPartialLabel(stats.partialId)}</CardTitle>
-                        <CardDescription>
-                          Calificación Final:{' '}
-                          <Badge className={stats.finalGrade >= 60 ? 'bg-green-500' : 'bg-destructive'}>
-                            {stats.finalGrade.toFixed(1)}%
-                          </Badge>{' '}
-                          | Asistencia: <Badge variant="secondary">{stats.attendance.rate.toFixed(1)}%</Badge>
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <h4 className="font-semibold mb-2 text-sm">Desglose de Criterios:</h4>
-                        <div className="space-y-1 text-sm p-3 bg-muted/30 rounded-md">
-                          {stats.criteriaDetails.map((c) => (
-                            <div key={c.name} className="flex justify-between">
-                              <span>
-                                {c.name} <span className="text-xs text-muted-foreground">({c.weight}%)</span>
-                              </span>
-                              <span className="font-medium">{c.earned.toFixed(1)}%</span>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )
-              )}
-              {studentStatsByPartial.filter((s) => s.criteriaDetails.length > 0).length === 0 && (
+              {studentStatsByPartial.length > 0 ? (
+                studentStatsByPartial.map(
+                  (stats) =>
+                    stats.criteriaDetails.length > 0 && (
+                      <Card key={stats.partialId}>
+                        <CardHeader>
+                          <CardTitle>{getPartialLabel(stats.partialId)}</CardTitle>
+                          <CardDescription>
+                            Calificación Final:{' '}
+                            <Badge className={stats.finalGrade >= 60 ? 'bg-green-500' : 'bg-destructive'}>
+                              {stats.finalGrade.toFixed(1)}%
+                            </Badge>{' '}
+                            | Asistencia: <Badge variant="secondary">{stats.attendance.rate.toFixed(1)}%</Badge>
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <h4 className="font-semibold mb-2 text-sm">Desglose de Criterios:</h4>
+                          <div className="space-y-1 text-sm p-3 bg-muted/30 rounded-md">
+                            {stats.criteriaDetails.map((c) => (
+                              <div key={c.name} className="flex justify-between">
+                                <span>
+                                  {c.name} <span className="text-xs text-muted-foreground">({c.weight}%)</span>
+                                </span>
+                                <span className="font-medium">{c.earned.toFixed(1)}%</span>
+                              </div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )
+                )
+              ) : (
                 <Card>
                   <CardContent className="p-12 text-center">
                     <h3 className="text-lg font-semibold">Sin datos de rendimiento</h3>
@@ -545,7 +533,7 @@ export default function StudentProfilePage() {
                 <CardContent>
                   <div className="text-center text-sm text-destructive bg-destructive/10 p-4 rounded-md">
                     <p className="font-bold">Sin datos</p>
-                    <p>No hay datos para generar feedback.</p>
+                    <p>No hay datos para generar feedback en el.</p>
                   </div>
                 </CardContent>
               )

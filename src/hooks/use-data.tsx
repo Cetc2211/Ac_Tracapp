@@ -226,17 +226,32 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         }
         
         const prefix = `users/${user.uid}`;
-        const unsubscribers: (() => void)[] = [];
         
-        const setupListeners = () => {
+        const setupListeners = async () => {
             setIsLoading(true);
             try {
                 const groupsQuery = query(collection(db, `${prefix}/groups`));
+                const studentsQuery = query(collection(db, `${prefix}/students`));
+                const observationsQuery = query(collection(db, `${prefix}/observations`));
+                const settingsDoc = doc(db, `${prefix}/settings`, 'app');
+                
+                const unsubscribers: (() => void)[] = [];
+
+                let groupsLoaded = false;
+                let studentsLoaded = false;
+                let observationsLoaded = false;
+
+                const checkAllLoaded = () => {
+                    if(groupsLoaded && studentsLoaded && observationsLoaded) {
+                        setIsLoading(false);
+                    }
+                }
+
                 unsubscribers.push(
                     onSnapshot(groupsQuery, (snapshot) => {
                         setGroups(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Group)));
-                        // This is the key: only set loading to false after the first batch of essential data has arrived.
-                        setIsLoading(false);
+                        groupsLoaded = true;
+                        checkAllLoaded();
                     }, (err) => {
                         console.error("Error in groups listener:", err);
                         setError(err);
@@ -244,14 +259,17 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                     })
                 );
                 
-                const studentsQuery = query(collection(db, `${prefix}/students`));
                 unsubscribers.push(
                     onSnapshot(studentsQuery, (snapshot) => {
                         setAllStudents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student)));
-                    }, (err) => console.error("Error in students listener:", err))
+                         studentsLoaded = true;
+                         checkAllLoaded();
+                    }, (err) => {
+                        console.error("Error in students listener:", err);
+                        setError(err);
+                    })
                 );
 
-                const observationsQuery = query(collection(db, `${prefix}/observations`));
                 unsubscribers.push(
                     onSnapshot(observationsQuery, (snapshot) => {
                         const obsData: { [studentId: string]: StudentObservation[] } = {};
@@ -268,23 +286,36 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                             }
                         });
                         setAllObservations(obsData);
-                    }, (err) => console.error("Error in observations listener:", err))
+                        observationsLoaded = true;
+                        checkAllLoaded();
+                    }, (err) => {
+                        console.error("Error in observations listener:", err);
+                        setError(err);
+                    })
                 );
 
-                const settingsDoc = doc(db, `${prefix}/settings`, 'app');
                 unsubscribers.push(
                     onSnapshot(settingsDoc, (doc) => {
                         setSettingsState(doc.exists() ? (doc.data() as typeof settings) : defaultSettings);
-                    }, (err) => console.error("Error in settings listener:", err))
+                    }, (err) => {
+                        console.error("Error in settings listener:", err);
+                         setError(err);
+                    })
                 );
+                return unsubscribers;
+
             } catch (err: any) {
                 console.error("Error setting up Firestore listeners:", err);
                 setError(err);
                 setIsLoading(false);
+                return [];
             }
         };
         
-        setupListeners();
+        let allUnsubs: (() => void)[] = [];
+        setupListeners().then(unsubs => {
+            allUnsubs = unsubs;
+        });
         
         const storedGroupId = localStorage.getItem('activeGroupId_v1');
         if (storedGroupId) {
@@ -292,7 +323,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         }
 
         return () => {
-            unsubscribers.forEach(unsub => unsub());
+            allUnsubs.forEach(unsub => unsub());
         };
     }, [user, authLoading]);
     
