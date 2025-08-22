@@ -58,7 +58,7 @@ export default function StudentProfilePage() {
   const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
   const [generatedFeedback, setGeneratedFeedback] = useState<StudentFeedbackOutput | null>(null);
   const [isEditingFeedback, setIsEditingFeedback] = useState(false);
-  const [editedFeedback, setEditedFeedback<{ feedback: string; recommendations: string }>({
+  const [editedFeedback, setEditedFeedback] = useState<{ feedback: string; recommendations: string }>({
     feedback: '',
     recommendations: '',
   });
@@ -124,8 +124,10 @@ export default function StudentProfilePage() {
         }
     };
     
-    if(!isDataLoading){
+    if(!isDataLoading && student && studentGroups.length > 0){
       calculateStats();
+    } else if (!isDataLoading) {
+      setIsPageLoading(false);
     }
 
   }, [isDataLoading, student, studentGroups, studentId, fetchPartialData, calculateDetailedFinalGrade, allObservations, toast]);
@@ -524,7 +526,7 @@ export default function StudentProfilePage() {
               <div className="w-full mt-12 pt-12 text-center text-sm">
                 <div className="inline-block">
                   <div className="border-t border-foreground w-48 mx-auto"></div>
-                  <p className="mt-2 font-semibold">{facilitatorName}</p>
+                  <p className="font-semibold">{facilitatorName}</p>
                   <p className="text-muted-foreground">Firma del Docente</p>
                 </div>
               </div>
@@ -535,5 +537,3 @@ export default function StudentProfilePage() {
     </>
   );
 }
-
-    
