@@ -165,6 +165,16 @@ const mockGroups: Group[] = [
 const mockAllStudents = [...mockStudents, ...testStudents];
 
 const mockPartialsData: AllPartialsData = {
+    "G1": {
+        "p1": {
+            "criteria": [],
+            "grades": {},
+            "attendance": {},
+            "participations": {},
+            "activities": [],
+            "activityRecords": {}
+        }
+    },
     "G2": {
         "p1": {
             "criteria": [
@@ -636,7 +646,3 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
-
-    
-
-    
