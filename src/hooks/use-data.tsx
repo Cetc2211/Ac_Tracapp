@@ -231,28 +231,23 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         const listeners: (() => void)[] = [];
         
         const initialStates = {
-            groups: [],
-            students: [],
-            observations: {},
+            groups: [] as Group[],
+            students: [] as Student[],
+            observations: {} as {[studentId: string]: StudentObservation[]},
         };
-
         const setters = {
             groups: setGroups,
             students: setAllStudents,
             observations: setAllObservations,
         };
 
-        const totalListeners = Object.keys(initialStates).length + 1; // +1 for settings
+        const collectionsToLoad = ['groups', 'students', 'observations', 'settings'];
         let loadedCount = 0;
-        let initialLoadDone = false;
 
         const checkAllLoaded = () => {
-            if (!initialLoadDone) {
-                loadedCount++;
-                if (loadedCount === totalListeners) {
-                    setIsLoading(false);
-                    initialLoadDone = true;
-                }
+            loadedCount++;
+            if (loadedCount === collectionsToLoad.length) {
+                setIsLoading(false);
             }
         };
 
@@ -261,17 +256,15 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             setError(err);
             setIsLoading(false);
         };
-
-        Object.keys(initialStates).forEach(collectionName => {
-            const isArray = Array.isArray(initialStates[collectionName as keyof typeof initialStates]);
+        
+        function createListener(collectionName: keyof typeof initialStates) {
             const q = query(collection(db, `${prefix}/${collectionName}`));
-            
-            const unsubscribe = onSnapshot(q, (snapshot) => {
-                if (isArray) {
-                    const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    (setters[collectionName as keyof typeof setters] as React.Dispatch<React.SetStateAction<any[]>>)(data);
+            return onSnapshot(q, (snapshot) => {
+                if (Array.isArray(initialStates[collectionName])) {
+                     const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    (setters[collectionName] as React.Dispatch<React.SetStateAction<any[]>>)(data);
                 } else {
-                    const data: { [key: string]: any[] } = {};
+                     const data: { [key: string]: any[] } = {};
                     snapshot.docs.forEach(doc => {
                         const item = { id: doc.id, ...doc.data() } as StudentObservation;
                         if (item.date && item.date instanceof Timestamp) item.date = item.date.toDate().toISOString();
@@ -285,11 +278,14 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                             data[key].push(item);
                         }
                     });
-                    (setters[collectionName as keyof typeof setters] as React.Dispatch<React.SetStateAction<{}>>)(data);
+                    (setters[collectionName] as React.Dispatch<React.SetStateAction<{}>>)(data);
                 }
                 checkAllLoaded();
             }, handleError);
-            listeners.push(unsubscribe);
+        }
+
+        Object.keys(initialStates).forEach(name => {
+             listeners.push(createListener(name as keyof typeof initialStates));
         });
 
         const settingsDoc = doc(db, `${prefix}/settings`, 'app');
