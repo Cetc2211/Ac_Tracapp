@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -71,18 +70,21 @@ export default function StudentProfilePage() {
 
   useEffect(() => {
     const calculateStats = async () => {
-        if (isDataLoading || !student || studentGroups.length === 0) {
-            if (!isDataLoading) setIsPageLoading(false);
-            return;
+        if (isDataLoading) return;
+        
+        if (!student || studentGroups.length === 0) {
+          setIsPageLoading(false);
+          return;
         }
         
         setIsPageLoading(true);
         const stats: StudentStats[] = [];
         const partials: PartialId[] = ['p1', 'p2', 'p3'];
-        const primaryGroupId = studentGroups[0].id;
 
-        for (const pId of partials) {
-            try {
+        try {
+            const primaryGroupId = studentGroups[0].id;
+            
+            for (const pId of partials) {
                 const partialData = await fetchPartialData(primaryGroupId, pId);
                 
                 if (partialData && partialData.criteria && partialData.criteria.length > 0) {
@@ -106,14 +108,14 @@ export default function StudentProfilePage() {
                         observations: partialObservations,
                     });
                 }
-            } catch (e) {
-                console.error(`Error processing partial ${pId}:`, e);
-                toast({ variant: 'destructive', title: 'Error de Parcial', description: `No se pudieron calcular las estadísticas para ${getPartialLabel(pId)}.` });
             }
+            setStudentStatsByPartial(stats);
+        } catch (e) {
+            console.error('Error calculating stats:', e);
+            toast({ variant: 'destructive', title: 'Error', description: 'No se pudieron calcular las estadísticas.' });
+        } finally {
+            setIsPageLoading(false);
         }
-        
-        setStudentStatsByPartial(stats);
-        setIsPageLoading(false);
     };
     
     calculateStats();

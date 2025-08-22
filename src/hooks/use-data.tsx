@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
@@ -417,11 +416,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     const calculateFinalGrade = useCallback((studentId: string, forGroupId?: string, forPartialId?: PartialId, forPartialData?: PartialData): number => {
         const data = forPartialData || partialData;
-        const groupId = forGroupId || activeGroupId;
-        if(!groupId || !forPartialId) return 0;
-
         return calculateDetailedFinalGrade(studentId, data).finalGrade;
-    }, [calculateDetailedFinalGrade, partialData, activeGroupId]);
+    }, [calculateDetailedFinalGrade, partialData]);
 
     // Derived State
     const setActiveGroupId = (groupId: string | null) => {
@@ -451,12 +447,15 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             group.students.forEach(student => {
                 if (!studentSet.has(student.id)) {
                     studentSet.add(student.id);
-                    uniqueStudents.push(student);
+                    const fullStudent = allStudents.find(s => s.id === student.id);
+                    if (fullStudent) {
+                        uniqueStudents.push(fullStudent);
+                    }
                 }
             });
         });
         return uniqueStudents;
-    }, [groups]);
+    }, [groups, allStudents]);
 
     const addStudentsToGroup = useCallback(async (groupId: string, students: Student[]) => {
         if (!user) return;
