@@ -71,21 +71,20 @@ export default function StudentProfilePage() {
 
   useEffect(() => {
     const calculateStats = async () => {
-        if (isDataLoading) return;
-        
-        if (!student || studentGroups.length === 0) {
-          setIsPageLoading(false);
+        if (isDataLoading || !student || studentGroups.length === 0) {
+          if (!isDataLoading) {
+            setIsPageLoading(false);
+          }
           return;
         }
         
         setIsPageLoading(true);
         const stats: StudentStats[] = [];
         const partials: PartialId[] = ['p1', 'p2', 'p3'];
+        const primaryGroupId = studentGroups[0].id;
 
-        try {
-            const primaryGroupId = studentGroups[0].id;
-            
-            for (const pId of partials) {
+        for (const pId of partials) {
+            try {
                 const partialData = await fetchPartialData(primaryGroupId, pId);
                 
                 if (partialData && partialData.criteria && partialData.criteria.length > 0) {
@@ -109,14 +108,14 @@ export default function StudentProfilePage() {
                         observations: partialObservations,
                     });
                 }
+            } catch (e) {
+                console.error(`Error processing partial ${pId}:`, e);
+                toast({ variant: 'destructive', title: 'Error de Parcial', description: `No se pudieron calcular las estadísticas para ${getPartialLabel(pId)}.` });
             }
-            setStudentStatsByPartial(stats);
-        } catch (e) {
-            console.error('Error calculating stats:', e);
-            toast({ variant: 'destructive', title: 'Error', description: 'No se pudieron calcular las estadísticas.' });
-        } finally {
-            setIsPageLoading(false);
         }
+        
+        setStudentStatsByPartial(stats);
+        setIsPageLoading(false);
     };
     
     calculateStats();
@@ -513,6 +512,15 @@ export default function StudentProfilePage() {
                 </CardContent>
               )
             )}
+            <CardFooter>
+              <div className="w-full mt-12 pt-12 text-center text-sm">
+                <div className="inline-block">
+                  <div className="border-t border-foreground w-48 mx-auto"></div>
+                  <p className="font-semibold">{facilitatorName}</p>
+                  <p className="text-muted-foreground">Firma del Docente</p>
+                </div>
+              </div>
+            </CardFooter>
           </Card>
         </div>
       </div>
@@ -520,3 +528,4 @@ export default function StudentProfilePage() {
   );
 }
 
+    

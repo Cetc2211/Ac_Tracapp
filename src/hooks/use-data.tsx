@@ -445,13 +445,17 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }, [groups, activeGroupId]);
     
     const activeStudentsInGroups = useMemo(() => {
-        const studentSet = new Set<Student>();
+        const studentSet = new Set<string>();
+        const uniqueStudents: Student[] = [];
         groups.forEach(group => {
             group.students.forEach(student => {
-                studentSet.add(student);
+                if (!studentSet.has(student.id)) {
+                    studentSet.add(student.id);
+                    uniqueStudents.push(student);
+                }
             });
         });
-        return Array.from(studentSet);
+        return uniqueStudents;
     }, [groups]);
 
     const addStudentsToGroup = useCallback(async (groupId: string, students: Student[]) => {
