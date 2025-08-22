@@ -155,7 +155,6 @@ interface DataContextType {
   
   activeGroup: Group | null;
   activePartialId: PartialId;
-  activeStudentsInGroups: Student[];
   
   partialData: PartialData;
 
@@ -208,7 +207,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const [activeGroupId, setActiveGroupIdState] = useState<string | null>(null);
     const [activePartialId, setActivePartialIdState] = useState<PartialId>('p1');
     
-    // New centralized store for all partial data
     const [allPartialsData, setAllPartialsData] = useState<AllPartialsData>({});
 
     const [isLoading, setIsLoading] = useState(true);
@@ -232,65 +230,23 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         }
         
         const prefix = `users/${user.uid}`;
+        const unsubscribes: (() => void)[] = [];
 
-        const loadAndListen = async () => {
+        const setupListeners = async () => {
           try {
-            // Load base data
+            // STEP 1: Fast initial load of essential data (groups, students, settings)
             const groupsQuery = query(collection(db, `${prefix}/groups`));
-            const groupsSnap = await getDocs(groupsQuery);
-            const initialGroups = groupsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Group[];
-            setGroups(initialGroups);
+            const studentsQuery = query(collection(db, `${prefix}/students`));
+            const settingsDoc = doc(db, `${prefix}/settings`, 'app');
+            const observationsQuery = query(collection(db, `${prefix}/observations`));
 
-            // Load all partial data for all groups at once
-            const partials: PartialId[] = ['p1', 'p2', 'p3'];
-            const partialsDataPromises = initialGroups.map(async (group) => {
-              const groupPartials: { [key in PartialId]?: PartialData } = {};
-              for (const pId of partials) {
-                const docRef = doc(db, `${prefix}/groups/${group.id}/partials/${pId}/data/content`);
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
-                  groupPartials[pId] = docSnap.data() as PartialData;
-                }
-              }
-              return { groupId: group.id, data: groupPartials };
-            });
-
-            const allPartialsResults = await Promise.all(partialsDataPromises);
-            const allPartialsMap = allPartialsResults.reduce((acc, curr) => {
-                acc[curr.groupId] = curr.data;
-                return acc;
-            }, {} as AllPartialsData);
-            setAllPartialsData(allPartialsMap);
-
-            setIsLoading(false);
-            
-            // Set up listeners after initial load
-            onSnapshot(groupsQuery, snapshot => {
-              setGroups(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Group[]);
-            });
-
-            initialGroups.forEach(group => {
-              partials.forEach(pId => {
-                const docRef = doc(db, `${prefix}/groups/${group.id}/partials/${pId}/data/content`);
-                onSnapshot(docRef, (docSnap) => {
-                  setAllPartialsData(prev => ({
-                    ...prev,
-                    [group.id]: {
-                      ...prev[group.id],
-                      [pId]: docSnap.exists() ? (docSnap.data() as PartialData) : defaultPartialData
-                    }
-                  }));
-                });
-              });
-            });
-
-            // Listen to other collections
-            onSnapshot(query(collection(db, `${prefix}/students`)), s => setAllStudents(s.docs.map(d => ({id:d.id, ...d.data()})) as Student[]));
-            onSnapshot(doc(db, `${prefix}/settings`, 'app'), doc => setSettingsState(doc.exists() ? (doc.data() as typeof settings) : defaultSettings));
-            onSnapshot(query(collection(db, `${prefix}/observations`)), snapshot => {
+            unsubscribes.push(onSnapshot(groupsQuery, s => setGroups(s.docs.map(d => ({ id: d.id, ...d.data() })) as Group[])));
+            unsubscribes.push(onSnapshot(studentsQuery, s => setAllStudents(s.docs.map(d => ({ id: d.id, ...d.data() })) as Student[])));
+            unsubscribes.push(onSnapshot(settingsDoc, d => setSettingsState(d.exists() ? (d.data() as typeof settings) : defaultSettings)));
+            unsubscribes.push(onSnapshot(observationsQuery, snapshot => {
               const updatedObservations: { [key: string]: any[] } = {};
-              snapshot.docs.forEach(doc => {
-                  const item = { id: doc.id, ...doc.data() } as StudentObservation;
+              snapshot.docs.forEach(d => {
+                  const item = { id: d.id, ...d.data() } as StudentObservation;
                   if (item.date && item.date instanceof Timestamp) item.date = item.date.toDate().toISOString();
                   item.followUpUpdates = (item.followUpUpdates || []).map(f => ({ ...f, date: f.date && f.date instanceof Timestamp ? f.date.toDate().toISOString() : f.date }));
                   const key = item.studentId;
@@ -300,6 +256,28 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                   }
               });
               setAllObservations(updatedObservations);
+            }));
+
+            setIsLoading(false); // UI is now interactive
+
+            // STEP 2: Lazy load all partial data in the background
+            const allGroupsSnap = await getDocs(groupsQuery);
+            const initialGroups = allGroupsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Group[];
+            const partials: PartialId[] = ['p1', 'p2', 'p3'];
+
+            initialGroups.forEach(group => {
+              partials.forEach(pId => {
+                const docRef = doc(db, `${prefix}/groups/${group.id}/partials/${pId}/data/content`);
+                unsubscribes.push(onSnapshot(docRef, (docSnap) => {
+                  setAllPartialsData(prev => ({
+                    ...prev,
+                    [group.id]: {
+                      ...prev[group.id],
+                      [pId]: docSnap.exists() ? (docSnap.data() as PartialData) : defaultPartialData
+                    }
+                  }));
+                }));
+              });
             });
 
           } catch (err: any) {
@@ -309,16 +287,18 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
           }
         };
 
-        loadAndListen();
+        setupListeners();
 
         const storedGroupId = localStorage.getItem('activeGroupId_v1');
         if (storedGroupId) {
             setActiveGroupIdState(storedGroupId);
         }
 
+        return () => {
+            unsubscribes.forEach(unsub => unsub());
+        };
     }, [user, authLoading]);
     
-    // Get the current partial data based on active group/partial
     const partialData = useMemo(() => {
         if (!activeGroupId || !allPartialsData[activeGroupId]) return defaultPartialData;
         return allPartialsData[activeGroupId][activePartialId] || defaultPartialData;
@@ -328,13 +308,14 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         if (allPartialsData[groupId] && allPartialsData[groupId][partialId]) {
             return allPartialsData[groupId][partialId] as PartialData;
         }
-        // Fallback to fetch if not in memory, though the new logic should prevent this.
         if (!user) return null;
         const docRef = doc(db, `users/${user.uid}/groups/${groupId}/partials/${partialId}/data/content`);
         try {
             const docSnap = await getDoc(docRef);
             if(docSnap.exists()){
-                return docSnap.data() as PartialData;
+                const data = docSnap.data() as PartialData;
+                setAllPartialsData(prev => ({ ...prev, [groupId]: { ...prev[groupId], [partialId]: data }}));
+                return data;
             }
             return defaultPartialData;
         } catch (e) {
@@ -414,7 +395,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         return calculateDetailedFinalGrade(studentId, data).finalGrade;
     }, [calculateDetailedFinalGrade, partialData]);
 
-    // Derived State
     const setActiveGroupId = (groupId: string | null) => {
         if(groupId !== activeGroupId) {
             setActiveGroupIdState(groupId);
@@ -435,21 +415,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         return groups.find(g => g.id === activeGroupId) || null;
     }, [groups, activeGroupId]);
     
-    const activeStudentsInGroups = useMemo(() => {
-        const studentSet = new Set<string>();
-        const uniqueStudents: Student[] = [];
-        groups.forEach(group => {
-            group.students.forEach(student => {
-                const fullStudent = allStudents.find(s => s.id === student.id);
-                if (fullStudent && !studentSet.has(student.id)) {
-                    studentSet.add(student.id);
-                    uniqueStudents.push(fullStudent);
-                }
-            });
-        });
-        return uniqueStudents;
-    }, [groups, allStudents]);
-
     const addStudentsToGroup = useCallback(async (groupId: string, students: Student[]) => {
         if (!user) return;
         const batch = writeBatch(db);
@@ -652,7 +617,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         settings,
         activeGroup,
         activePartialId,
-        activeStudentsInGroups,
         partialData,
         groupAverages,
         atRiskStudents,
@@ -694,3 +658,5 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
+
+    
