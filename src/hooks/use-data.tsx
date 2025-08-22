@@ -155,6 +155,7 @@ interface DataContextType {
   groupAverages: {[groupId: string]: number};
   atRiskStudents: StudentWithRisk[];
   overallAverageParticipation: number;
+  activeStudentsInGroups: Student[];
 
   // Setters / Updaters
   addStudentsToGroup: (groupId: string, students: Student[]) => Promise<void>;
@@ -444,6 +445,15 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         return groups.find(g => g.id === activeGroupId) || null;
     }, [groups, activeGroupId]);
 
+    const activeStudentsInGroups = useMemo(() => {
+        const studentSet = new Set<Student>();
+        groups.forEach(group => {
+            group.students.forEach(student => {
+                studentSet.add(student);
+            });
+        });
+        return Array.from(studentSet);
+    }, [groups]);
 
     const addStudentsToGroup = useCallback(async (groupId: string, students: Student[]) => {
         if (!user) return;
@@ -643,6 +653,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         groupAverages,
         atRiskStudents,
         overallAverageParticipation,
+        activeStudentsInGroups,
         addStudentsToGroup,
         removeStudentFromGroup,
         updateGroup,
@@ -680,5 +691,3 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
-
-    
