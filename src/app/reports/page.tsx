@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -254,43 +253,6 @@ export default function ReportsPage() {
                     <p className="text-3xl font-bold text-purple-600">{quickStats?.approvedCount}</p>
                     <p className="text-sm text-muted-foreground">Aprobados (≥60)</p>
                 </div>
-            </CardContent>
-        </Card>
-        <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2"><User /> Informes Individuales de Estudiantes</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <div>
-                  <Label>Seleccionar Estudiante:</Label>
-                   <Select onValueChange={handleStudentChange} defaultValue={selectedStudent?.id}>
-                      <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar Estudiante..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                          {activeGroup.students.sort((a,b) => a.name.localeCompare(b.name)).map(student => (
-                              <SelectItem key={student.id} value={student.id}>
-                                  {student.name}
-                              </SelectItem>
-                          ))}
-                      </SelectContent>
-                  </Select>
-                </div>
-                {selectedStudent && (
-                    <div className="p-4 rounded-md bg-muted/50 border border-muted-foreground/20">
-                        <h4 className="font-semibold">{selectedStudent.name}</h4>
-                        <p className="text-sm text-muted-foreground">
-                            Informe completo con perfil del estudiante, calificaciones detalladas, asistencia y fechas específicas.
-                        </p>
-                        <div className="mt-4 flex flex-wrap gap-2">
-                             <Button asChild>
-                                <Link href={`/students/${selectedStudent.id}`}>
-                                    <FileText className="mr-2 h-4 w-4" /> Generar Informe
-                                </Link>
-                            </Button>
-                        </div>
-                    </div>
-                )}
             </CardContent>
         </Card>
     </div>
