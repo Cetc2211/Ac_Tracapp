@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -14,18 +15,19 @@ import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, Download, User, Mail, Phone, Wand2, Loader2, MessageSquare, BookText, Edit, Save } from 'lucide-react';
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useData } from '@/hooks/use-data';
 import { Badge } from '@/components/ui/badge';
 import { getPartialLabel } from '@/lib/utils';
-import type { PartialId, StudentObservation, Student } from '@/hooks/use-data';
+import type { PartialId, StudentObservation, Student, PartialData } from '@/hooks/use-data';
 import { StudentObservationLogDialog } from '@/components/student-observation-log-dialog';
 import { WhatsAppDialog } from '@/components/whatsapp-dialog';
 import { generateStudentFeedback } from '@/ai/flows/student-feedback';
 import type { StudentFeedbackInput, StudentFeedbackOutput } from '@/ai/flows/student-feedback';
+import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 
@@ -46,7 +48,6 @@ export default function StudentProfilePage() {
     allObservations,
     isLoading: isDataLoading,
     fetchPartialData,
-    activePartialId,
   } = useData();
 
   const [studentStatsByPartial, setStudentStatsByPartial] = useState<StudentStats[]>([]);
@@ -70,60 +71,58 @@ export default function StudentProfilePage() {
 
   useEffect(() => {
     const calculateStats = async () => {
-      if (isDataLoading) return;
-      
-      if (!student || studentGroups.length === 0) {
-        setIsPageLoading(false);
-        return;
-      }
-      
-      setIsPageLoading(true);
-      const stats: StudentStats[] = [];
-      
-      const partialsToLoad: PartialId[] = [];
-      if (activePartialId === 'p1') partialsToLoad.push('p1');
-      if (activePartialId === 'p2') partialsToLoad.push('p1', 'p2');
-      if (activePartialId === 'p3') partialsToLoad.push('p1', 'p2', 'p3');
-      
-      try {
-        const primaryGroupId = studentGroups[0].id;
+        if (isDataLoading) return;
         
-        for (const pId of partialsToLoad) {
-          const partialData = await fetchPartialData(primaryGroupId, pId);
-          
-          if (partialData && partialData.criteria && partialData.criteria.length > 0) {
-            const gradeDetails = calculateDetailedFinalGrade(student.id, partialData);
-
-            let p = 0, a = 0, total = 0;
-            const safeAttendance = partialData.attendance || {};
-            Object.keys(safeAttendance).forEach((date) => {
-              if (safeAttendance[date]?.[studentId] !== undefined) {
-                total++;
-                if (safeAttendance[date][studentId]) p++; else a++;
-              }
-            });
-
-            const partialObservations = (allObservations[studentId] || []).filter((obs) => obs.partialId === pId);
-            
-            stats.push({
-              ...gradeDetails,
-              partialId: pId,
-              attendance: { p, a, total, rate: total > 0 ? (p / total) * 100 : 100 },
-              observations: partialObservations,
-            });
-          }
+        if (!student || studentGroups.length === 0) {
+          setIsPageLoading(false);
+          return;
         }
-        setStudentStatsByPartial(stats);
-      } catch (e) {
-        console.error('Error calculating stats:', e);
-        toast({ variant: 'destructive', title: 'Error', description: 'No se pudieron calcular las estadísticas.' });
-      } finally {
-        setIsPageLoading(false);
-      }
+        
+        setIsPageLoading(true);
+        const stats: StudentStats[] = [];
+        const partials: PartialId[] = ['p1', 'p2', 'p3'];
+
+        try {
+            const primaryGroupId = studentGroups[0].id;
+            
+            for (const pId of partials) {
+                const partialData = await fetchPartialData(primaryGroupId, pId);
+                
+                if (partialData && partialData.criteria && partialData.criteria.length > 0) {
+                    const gradeDetails = calculateDetailedFinalGrade(student.id, partialData);
+
+                    let p = 0, a = 0, total = 0;
+                    const safeAttendance = partialData.attendance || {};
+                    Object.keys(safeAttendance).forEach((date) => {
+                        if (safeAttendance[date]?.[studentId] !== undefined) {
+                            total++;
+                            if (safeAttendance[date][studentId]) p++; else a++;
+                        }
+                    });
+
+                    const partialObservations = (allObservations[studentId] || []).filter((obs) => obs.partialId === pId);
+                    
+                    stats.push({
+                        ...gradeDetails,
+                        partialId: pId,
+                        attendance: { p, a, total, rate: total > 0 ? (p / total) * 100 : 100 },
+                        observations: partialObservations,
+                    });
+                }
+            }
+            setStudentStatsByPartial(stats);
+        } catch (e) {
+            console.error('Error calculating stats:', e);
+            toast({ variant: 'destructive', title: 'Error', description: 'No se pudieron calcular las estadísticas.' });
+        } finally {
+            setIsPageLoading(false);
+        }
     };
     
     calculateStats();
-  }, [isDataLoading, student, studentGroups, activePartialId, fetchPartialData, calculateDetailedFinalGrade, allObservations, toast, studentId]);
+
+  }, [isDataLoading, student, studentGroups, studentId, fetchPartialData, calculateDetailedFinalGrade, allObservations, toast]);
+
 
   const semesterAverage = useMemo(() => {
     if (studentStatsByPartial.length === 0) return 0;
@@ -262,7 +261,7 @@ export default function StudentProfilePage() {
   }
   
   if (!student) {
-    return notFound();
+      return notFound();
   }
 
   const allSemesterObservations = Object.values(allObservations)
@@ -410,19 +409,19 @@ export default function StudentProfilePage() {
                   )}
                 </CardContent>
               </Card>
-              {activePartialId === 'p3' && studentStatsByPartial.length > 0 && (
+              {studentStatsByPartial.length > 0 && (
                 <Card>
-                  <CardHeader>
+                    <CardHeader>
                     <CardTitle className="text-base text-center">Calificación Final Semestral</CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-center">
+                    </CardHeader>
+                    <CardContent className="text-center">
                     <p
-                      className="text-5xl font-bold"
-                      style={{ color: semesterAverage >= 60 ? 'hsl(var(--chart-2))' : 'hsl(var(--destructive))' }}
+                        className="text-5xl font-bold"
+                        style={{ color: semesterAverage >= 60 ? 'hsl(var(--chart-2))' : 'hsl(var(--destructive))' }}
                     >
-                      {semesterAverage.toFixed(1)}%
+                        {semesterAverage.toFixed(1)}%
                     </p>
-                  </CardContent>
+                    </CardContent>
                 </Card>
               )}
             </div>
@@ -516,6 +515,15 @@ export default function StudentProfilePage() {
                 </CardContent>
               )
             )}
+            <CardFooter>
+              <div className="w-full mt-12 pt-12 text-center text-sm">
+                <div className="inline-block">
+                  <div className="border-t border-foreground w-48 mx-auto"></div>
+                  <p className="font-semibold">{facilitatorName}</p>
+                  <p className="text-muted-foreground">Firma del Docente</p>
+                </div>
+              </div>
+            </CardFooter>
           </Card>
         </div>
       </div>
