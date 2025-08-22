@@ -180,7 +180,7 @@ interface DataContextType {
   addStudentObservation: (observation: Omit<StudentObservation, 'id' | 'date' | 'followUpUpdates' | 'isClosed'>) => Promise<void>;
   updateStudentObservation: (studentId: string, observationId: string, updateText: string, isClosing: boolean) => Promise<void>;
   calculateFinalGrade: (studentId: string, forGroupId?: string, forPartialId?: PartialId, forPartialData?: PartialData) => number;
-  calculateDetailedFinalGrade: (studentId: string, groupId: string, partialId: PartialId, partialData: PartialData) => { finalGrade: number, criteriaDetails: CriteriaDetail[] };
+  calculateDetailedFinalGrade: (studentId: string, pData: PartialData) => { finalGrade: number, criteriaDetails: CriteriaDetail[] };
   getStudentRiskLevel: (finalGrade: number, pAttendance: AttendanceRecord, studentId: string) => CalculatedRisk;
   fetchPartialData: (groupId: string, partialId: PartialId) => Promise<PartialData | null>;
   takeAttendanceForDate: (groupId: string, date: string) => Promise<void>;
@@ -377,9 +377,9 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const setActivityRecords = useMemo(() => createSetter('activityRecords'), [createSetter]);
 
 
-    const calculateDetailedFinalGrade = useCallback((studentId: string, groupId: string, partialId: PartialId, pData: PartialData): { finalGrade: number, criteriaDetails: CriteriaDetail[] } => {
+    const calculateDetailedFinalGrade = useCallback((studentId: string, pData: PartialData): { finalGrade: number, criteriaDetails: CriteriaDetail[] } => {
         const data = pData;
-        if (!groupId || !data || !data.criteria) return { finalGrade: 0, criteriaDetails: [] };
+        if (!data || !data.criteria) return { finalGrade: 0, criteriaDetails: [] };
         
         let finalGrade = 0;
         const criteriaDetails: CriteriaDetail[] = [];
@@ -421,7 +421,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         const groupId = forGroupId || activeGroupId;
         if(!groupId || !forPartialId) return 0;
 
-        return calculateDetailedFinalGrade(studentId, groupId, forPartialId, data).finalGrade;
+        return calculateDetailedFinalGrade(studentId, data).finalGrade;
     }, [calculateDetailedFinalGrade, partialData, activeGroupId]);
 
     // Derived State
@@ -446,13 +446,15 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }, [groups, activeGroupId]);
 
     const activeStudentsInGroups = useMemo(() => {
-        const studentSet = new Set<Student>();
+        const studentMap = new Map<string, Student>();
         groups.forEach(group => {
             group.students.forEach(student => {
-                studentSet.add(student);
+                if (!studentMap.has(student.id)) {
+                    studentMap.set(student.id, student);
+                }
             });
         });
-        return Array.from(studentSet);
+        return Array.from(studentMap.values());
     }, [groups]);
 
     const addStudentsToGroup = useCallback(async (groupId: string, students: Student[]) => {
@@ -691,3 +693,5 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
+
+    

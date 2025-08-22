@@ -71,6 +71,8 @@ export default function StudentProfilePage() {
 
   useEffect(() => {
     const calculateStats = async () => {
+        if (isDataLoading) return;
+        
         if (!student || studentGroups.length === 0) {
           setIsPageLoading(false);
           return;
@@ -87,7 +89,7 @@ export default function StudentProfilePage() {
                 const partialData = await fetchPartialData(primaryGroupId, pId);
                 
                 if (partialData && partialData.criteria && partialData.criteria.length > 0) {
-                    const gradeDetails = calculateDetailedFinalGrade(student.id, primaryGroupId, pId, partialData);
+                    const gradeDetails = calculateDetailedFinalGrade(student.id, partialData);
 
                     let p = 0, a = 0, total = 0;
                     const safeAttendance = partialData.attendance || {};
@@ -117,9 +119,7 @@ export default function StudentProfilePage() {
         }
     };
     
-    if(!isDataLoading){
-      calculateStats();
-    }
+    calculateStats();
 
   }, [isDataLoading, student, studentGroups, studentId, fetchPartialData, calculateDetailedFinalGrade, allObservations, toast]);
 
@@ -234,7 +234,7 @@ export default function StudentProfilePage() {
     if (generatedFeedback) {
       setEditedFeedback({
         feedback: generatedFeedback.feedback,
-        recommendations: generatedFeedback.recommendations.join('\\n'),
+        recommendations: generatedFeedback.recommendations.join('\n'),
       });
       setIsEditingFeedback(true);
     }
@@ -244,7 +244,7 @@ export default function StudentProfilePage() {
     if (generatedFeedback) {
       setGeneratedFeedback({
         feedback: editedFeedback.feedback,
-        recommendations: editedFeedback.recommendations.split('\\n').filter((r) => r.trim() !== ''),
+        recommendations: editedFeedback.recommendations.split('\n').filter((r) => r.trim() !== ''),
       });
       setIsEditingFeedback(false);
       toast({ title: 'Feedback actualizado' });
@@ -528,3 +528,5 @@ export default function StudentProfilePage() {
     </>
   );
 }
+
+    
