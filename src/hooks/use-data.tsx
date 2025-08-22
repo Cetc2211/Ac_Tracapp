@@ -419,8 +419,10 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const activeStudentsInGroups = useMemo(() => {
       const studentSet = new Map<string, Student>();
       groups.forEach(group => {
-        group.students.forEach(student => {
-          studentSet.set(student.id, student);
+        (group.students || []).forEach(student => {
+          if (student && student.id) {
+            studentSet.set(student.id, student);
+          }
         });
       });
       return Array.from(studentSet.values());
@@ -670,7 +672,5 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
-
-    
 
     
