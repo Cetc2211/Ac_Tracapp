@@ -225,86 +225,79 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             return;
         }
         
+        setIsLoading(true);
         const prefix = `users/${user.uid}`;
+        const listeners: (() => void)[] = [];
         
-        const setupListeners = async () => {
-            setIsLoading(true);
-            const listeners: (() => void)[] = [];
+        // Setup state to track if initial data load is complete for each listener
+        const totalListeners = 4; // groups, students, observations, settings
+        let loadedCount = 0;
+        let initialLoadDone = false;
 
-            const createListener = <T>(collectionName: string, setter: React.Dispatch<React.SetStateAction<T[] | {}>>, dataTransformer: (doc: any) => any = (doc) => ({ id: doc.id, ...doc.data() })) => {
-                return new Promise<void>((resolve, reject) => {
-                    const q = query(collection(db, `${prefix}/${collectionName}`));
-                    const unsubscribe = onSnapshot(q, (snapshot) => {
-                        if (Array.isArray(setter(s => s))) {
-                           (setter as React.Dispatch<React.SetStateAction<T[]>>)(snapshot.docs.map(dataTransformer));
-                        } else {
-                            const data: { [key: string]: any[] } = {};
-                            snapshot.docs.forEach(doc => {
-                                const item = dataTransformer(doc);
-                                const key = item.studentId;
-                                if (key) {
-                                    if (!data[key]) data[key] = [];
-                                    data[key].push(item);
-                                }
-                            });
-                             (setter as React.Dispatch<React.SetStateAction<{}>>)(data);
-                        }
-                        resolve();
-                    }, (err) => {
-                        console.error(`Error in ${collectionName} listener:`, err);
-                        setError(err);
-                        reject(err);
-                    });
-                    listeners.push(unsubscribe);
-                });
-            };
-
-            const settingsListener = new Promise<void>((resolve, reject) => {
-                const settingsDoc = doc(db, `${prefix}/settings`, 'app');
-                 const unsubscribe = onSnapshot(settingsDoc, (doc) => {
-                    setSettingsState(doc.exists() ? (doc.data() as typeof settings) : defaultSettings);
-                    resolve();
-                }, (err) => {
-                    console.error("Error in settings listener:", err);
-                    setError(err);
-                    reject(err);
-                });
-                 listeners.push(unsubscribe);
-            });
-
-            try {
-                await Promise.all([
-                    createListener<Group>('groups', setGroups),
-                    createListener<Student>('students', setAllStudents),
-                    createListener<StudentObservation>('observations', setAllObservations, (doc) => {
-                        const obs = { id: doc.id, ...doc.data() } as StudentObservation;
-                        if (obs.date && obs.date instanceof Timestamp) obs.date = obs.date.toDate().toISOString();
-                        obs.followUpUpdates = (obs.followUpUpdates || []).map(f => ({
-                            ...f,
-                            date: f.date && f.date instanceof Timestamp ? f.date.toDate().toISOString() : f.date
-                        }));
-                        return obs;
-                    }),
-                    settingsListener
-                ]);
-            } catch (err: any) {
-                setError(err);
-            } finally {
-                setIsLoading(false);
+        const checkAllLoaded = () => {
+            if (!initialLoadDone) {
+                loadedCount++;
+                if (loadedCount === totalListeners) {
+                    setIsLoading(false);
+                    initialLoadDone = true;
+                }
             }
+        };
 
-            return () => listeners.forEach(unsub => unsub());
+        const handleError = (err: Error) => {
+            console.error("Firebase listener error:", err);
+            setError(err);
+            setIsLoading(false);
+        };
+
+        const createListener = <T>(collectionName: string, setter: React.Dispatch<React.SetStateAction<T[] | {}>>, dataTransformer: (doc: any) => any = (doc) => ({ id: doc.id, ...doc.data() })) => {
+            const q = query(collection(db, `${prefix}/${collectionName}`));
+            const unsubscribe = onSnapshot(q, (snapshot) => {
+                if (Array.isArray(setter(s => s))) {
+                   (setter as React.Dispatch<React.SetStateAction<T[]>>)(snapshot.docs.map(dataTransformer));
+                } else {
+                    const data: { [key: string]: any[] } = {};
+                    snapshot.docs.forEach(doc => {
+                        const item = dataTransformer(doc);
+                        const key = item.studentId;
+                        if (key) {
+                            if (!data[key]) data[key] = [];
+                            data[key].push(item);
+                        }
+                    });
+                     (setter as React.Dispatch<React.SetStateAction<{}>>)(data);
+                }
+                checkAllLoaded();
+            }, handleError);
+            listeners.push(unsubscribe);
         };
         
-        const unsubscribePromise = setupListeners();
-        
+        createListener<Group>('groups', setGroups);
+        createListener<Student>('students', setAllStudents);
+        createListener<StudentObservation>('observations', setAllObservations, (doc) => {
+            const obs = { id: doc.id, ...doc.data() } as StudentObservation;
+            if (obs.date && obs.date instanceof Timestamp) obs.date = obs.date.toDate().toISOString();
+            obs.followUpUpdates = (obs.followUpUpdates || []).map(f => ({
+                ...f,
+                date: f.date && f.date instanceof Timestamp ? f.date.toDate().toISOString() : f.date
+            }));
+            return obs;
+        });
+
+        const settingsDoc = doc(db, `${prefix}/settings`, 'app');
+        const settingsUnsubscribe = onSnapshot(settingsDoc, (doc) => {
+            setSettingsState(doc.exists() ? (doc.data() as typeof settings) : defaultSettings);
+            checkAllLoaded();
+        }, handleError);
+        listeners.push(settingsUnsubscribe);
+
         const storedGroupId = localStorage.getItem('activeGroupId_v1');
         if (storedGroupId) {
             setActiveGroupIdState(storedGroupId);
         }
 
         return () => {
-            unsubscribePromise.then(cleanup => cleanup());
+            listeners.forEach(unsub => unsub());
         };
     }, [user, authLoading]);
     

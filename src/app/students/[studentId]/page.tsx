@@ -47,12 +47,10 @@ export default function StudentProfilePage() {
     allObservations,
     isLoading: isDataLoading,
     fetchPartialData,
-    error: dataError,
   } = useData();
 
   const [studentStatsByPartial, setStudentStatsByPartial] = useState<StudentStats[]>([]);
-  const [isCalculatingStats, setIsCalculatingStats] = useState(true);
-  const [pageError, setPageError] = useState<string | null>(null);
+  const [isCalculating, setIsCalculating] = useState(true);
   
   const [isLogOpen, setIsLogOpen] = useState(false);
   const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false);
@@ -71,25 +69,22 @@ export default function StudentProfilePage() {
   const studentGroups = useMemo(() => groups.filter((g) => g.students.some((s) => s.id === studentId)), [groups, studentId]);
 
   useEffect(() => {
-    if (isDataLoading) {
-      return;
-    }
-
     const calculateStats = async () => {
+        if (isDataLoading) {
+            return;
+        }
+
         if (!student) {
-            setPageError("Estudiante no encontrado.");
-            setIsCalculatingStats(false);
+            setIsCalculating(false);
             return;
         }
 
         if (studentGroups.length === 0) {
-            setPageError("El estudiante no pertenece a ningún grupo.");
-            setIsCalculatingStats(false);
+            setIsCalculating(false);
             return;
         }
 
-        setIsCalculatingStats(true);
-        setPageError(null);
+        setIsCalculating(true);
 
         try {
             const primaryGroupId = studentGroups[0].id;
@@ -122,22 +117,18 @@ export default function StudentProfilePage() {
             });
 
             const allStats = (await Promise.all(allStatsPromises)).filter((s): s is StudentStats => s !== null);
-            
-            if (allStats.length === 0) {
-              setPageError("No se encontraron datos de calificación válidos para ningún parcial.");
-            }
             setStudentStatsByPartial(allStats);
         } catch (e) {
             console.error('Error calculating stats:', e);
-            setPageError('No se pudieron calcular las estadísticas del estudiante.');
+            toast({ variant: 'destructive', title: 'Error', description: 'No se pudieron calcular las estadísticas.' });
         } finally {
-            setIsCalculatingStats(false);
+            setIsCalculating(false);
         }
     };
     
     calculateStats();
 
-  }, [isDataLoading, student, studentGroups, studentId, fetchPartialData, calculateDetailedFinalGrade, allObservations]);
+  }, [isDataLoading, student, studentGroups, studentId, fetchPartialData, calculateDetailedFinalGrade, allObservations, toast]);
 
 
   const semesterAverage = useMemo(() => {
@@ -267,7 +258,7 @@ export default function StudentProfilePage() {
     }
   };
 
-  if (isDataLoading || isCalculatingStats) {
+  if (isDataLoading || isCalculating) {
     return (
       <div className="flex justify-center items-center h-full">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -276,10 +267,10 @@ export default function StudentProfilePage() {
     );
   }
   
-  if (pageError || dataError || !student) {
+  if (!student) {
       return (
         <div className="flex flex-col justify-center items-center h-full text-center">
-            <p className="text-lg font-semibold text-destructive">{pageError || dataError?.message || 'Estudiante no encontrado.'}</p>
+            <p className="text-lg font-semibold text-destructive">Estudiante no encontrado.</p>
             <Button asChild className="mt-4">
               <Link href="/dashboard">Volver al Dashboard</Link>
             </Button>
