@@ -306,47 +306,43 @@ export default function AtRiskReportPage() {
             const partials: PartialId[] = ['p1', 'p2', 'p3'];
             const atRiskStudentMap = new Map<string, StudentReportData>();
             
-            const allPartialsData = await Promise.all(
-                partials.map(pId => fetchPartialData(group.id, pId))
-            );
-
-            partials.forEach((partialId, index) => {
-                const partialData = allPartialsData[index];
-
-                for (const student of group.students) {
-                    const { finalGrade, criteriaDetails } = calculateDetailedFinalGrade(student.id, group.id, partialId, partialData);
-                    const riskLevel = getStudentRiskLevel(finalGrade, partialData.attendance, student.id);
-                    
-                    if (riskLevel.level === 'high' || riskLevel.level === 'medium') {
-                        const existingEntry = atRiskStudentMap.get(student.id);
-                        if (!existingEntry || riskLevel.level === 'high' || (riskLevel.level === 'medium' && existingEntry.riskLevel !== 'high')) {
-                            const attendanceStats = { p: 0, a: 0, total: 0 };
-                            Object.keys(partialData.attendance).forEach(date => {
-                                if (partialData.attendance[date]?.[student.id] !== undefined) {
-                                    attendanceStats.total++;
-                                    if (partialData.attendance[date][student.id]) attendanceStats.p++; else attendanceStats.a++;
-                                }
-                            });
-                            
-                            atRiskStudentMap.set(student.id, {
-                              id: student.id,
-                              name: student.name,
-                              photo: student.photo,
-                              email: student.email,
-                              tutorName: student.tutorName,
-                              tutorPhone: student.tutorPhone,
-                              riskLevel: riskLevel.level,
-                              riskReason: riskLevel.reason,
-                              finalGrade: finalGrade,
-                              attendance: attendanceStats,
-                              criteriaDetails,
-                              observations: (allObservations[student.id] || []).filter(obs => obs.partialId === partialId),
-                            });
+            for (const partialId of partials) {
+                const partialData = await fetchPartialData(group.id, partialId);
+                if (partialData && partialData.criteria.length > 0) {
+                    for (const student of group.students) {
+                        const { finalGrade, criteriaDetails } = calculateDetailedFinalGrade(student.id, partialData);
+                        const riskLevel = getStudentRiskLevel(finalGrade, partialData.attendance, student.id);
+                        
+                        if (riskLevel.level === 'high' || riskLevel.level === 'medium') {
+                            const existingEntry = atRiskStudentMap.get(student.id);
+                            if (!existingEntry || riskLevel.level === 'high' || (riskLevel.level === 'medium' && existingEntry.riskLevel !== 'high')) {
+                                const attendanceStats = { p: 0, a: 0, total: 0 };
+                                Object.keys(partialData.attendance).forEach(date => {
+                                    if (partialData.attendance[date]?.[student.id] !== undefined) {
+                                        attendanceStats.total++;
+                                        if (partialData.attendance[date][student.id]) attendanceStats.p++; else attendanceStats.a++;
+                                    }
+                                });
+                                
+                                atRiskStudentMap.set(student.id, {
+                                  id: student.id,
+                                  name: student.name,
+                                  photo: student.photo,
+                                  email: student.email,
+                                  tutorName: student.tutorName,
+                                  tutorPhone: student.tutorPhone,
+                                  riskLevel: riskLevel.level,
+                                  riskReason: riskLevel.reason,
+                                  finalGrade: finalGrade,
+                                  attendance: attendanceStats,
+                                  criteriaDetails,
+                                  observations: (allObservations[student.id] || []).filter(obs => obs.partialId === partialId),
+                                });
+                            }
                         }
                     }
                 }
-            });
-            
+            }
             setReportData(Array.from(atRiskStudentMap.values()));
         }
         setIsLoading(false);
