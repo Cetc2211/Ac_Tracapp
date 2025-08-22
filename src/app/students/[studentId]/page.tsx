@@ -72,13 +72,10 @@ export default function StudentProfilePage() {
 
   useEffect(() => {
     if (isDataLoading) {
-      return; 
+      return;
     }
 
     const calculateStats = async () => {
-        setIsCalculatingStats(true);
-        setPageError(null);
-
         if (!student) {
             setPageError("Estudiante no encontrado.");
             setIsCalculatingStats(false);
@@ -91,12 +88,13 @@ export default function StudentProfilePage() {
             return;
         }
 
+        setIsCalculatingStats(true);
+        setPageError(null);
+
         try {
             const primaryGroupId = studentGroups[0].id;
             const partials: PartialId[] = ['p1', 'p2', 'p3'];
-            const allStats: StudentStats[] = [];
-
-            for (const pId of partials) {
+            const allStatsPromises = partials.map(async (pId) => {
                 const partialData = await fetchPartialData(primaryGroupId, pId);
                 
                 if (partialData && partialData.criteria && partialData.criteria.length > 0) {
@@ -113,14 +111,17 @@ export default function StudentProfilePage() {
 
                     const partialObservations = (allObservations[studentId] || []).filter((obs) => obs.partialId === pId);
                     
-                    allStats.push({
+                    return {
                         ...gradeDetails,
                         partialId: pId,
                         attendance: { p, a, total, rate: total > 0 ? (p / total) * 100 : 100 },
                         observations: partialObservations,
-                    });
+                    };
                 }
-            }
+                return null;
+            });
+
+            const allStats = (await Promise.all(allStatsPromises)).filter((s): s is StudentStats => s !== null);
             
             if (allStats.length === 0) {
               setPageError("No se encontraron datos de calificación válidos para ningún parcial.");
@@ -275,7 +276,7 @@ export default function StudentProfilePage() {
     );
   }
   
-  if (!student || pageError || dataError) {
+  if (pageError || dataError || !student) {
       return (
         <div className="flex flex-col justify-center items-center h-full text-center">
             <p className="text-lg font-semibold text-destructive">{pageError || dataError?.message || 'Estudiante no encontrado.'}</p>
@@ -551,3 +552,5 @@ export default function StudentProfilePage() {
     </>
   );
 }
+
+    
