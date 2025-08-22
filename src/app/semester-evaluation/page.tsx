@@ -24,8 +24,6 @@ import Link from 'next/link';
 import { Presentation, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { doc, getDoc } from 'firebase/firestore';
-import { db, auth } from '@/lib/firebase/client';
 import type { Student } from '@/lib/placeholder-data';
 
 interface SemesterGrade {
@@ -43,7 +41,7 @@ export default function SemesterEvaluationPage() {
 
     useEffect(() => {
         const calculateGrades = async () => {
-            if (!activeGroup || !auth.currentUser) {
+            if (!activeGroup) {
                 setIsCalculating(false);
                 return;
             };
@@ -51,7 +49,6 @@ export default function SemesterEvaluationPage() {
             setIsCalculating(true);
             const partials: PartialId[] = ['p1', 'p2', 'p3'];
             
-            // Fetch all partial data in parallel
             const allPartialsData = await Promise.all(
                 partials.map(pId => fetchPartialData(activeGroup.id, pId))
             );
