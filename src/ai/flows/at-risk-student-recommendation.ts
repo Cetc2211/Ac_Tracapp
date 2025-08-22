@@ -9,7 +9,7 @@
  * - AtRiskStudentOutput - The return type for the function.
  */
 
-import { ai } from '@/ai';
+import { ai, geminiModel, standardModelConfig } from '@/ai';
 import { z } from 'zod';
 
 const GradeDetailSchema = z.object({
@@ -59,6 +59,10 @@ const prompt = ai.definePrompt({
   name: 'atRiskStudentPrompt',
   input: { schema: AtRiskStudentInputSchema },
   output: { schema: AtRiskStudentOutputSchema },
+  config: {
+    model: geminiModel,
+    ...standardModelConfig,
+  },
   prompt: `
     You are an expert educational psychologist and academic advisor. Your task is to provide a detailed analysis and actionable recommendations for an at-risk student.
 

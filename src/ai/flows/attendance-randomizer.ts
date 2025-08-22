@@ -9,7 +9,7 @@
  * - AttendanceRandomizerOutput - The return type for the attendanceRandomizer function.
  */
 
-import {ai} from '@/ai';
+import {ai, geminiModel, standardModelConfig} from '@/ai';
 import {z} from 'genkit';
 
 const StudentParticipationSchema = z.object({
@@ -35,6 +35,10 @@ const prompt = ai.definePrompt({
   name: 'attendanceRandomizerPrompt',
   input: {schema: AttendanceRandomizerInputSchema},
   output: {schema: AttendanceRandomizerOutputSchema},
+  config: {
+    model: geminiModel,
+    ...standardModelConfig,
+  },
   prompt: `From the following list of students, randomly select one to call on. Prioritize students who have participated less frequently.
 
 Student List & Participation Counts:

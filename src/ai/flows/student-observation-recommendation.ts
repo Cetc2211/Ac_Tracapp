@@ -9,7 +9,7 @@
  * - ObservationRecommendationOutput - The return type for the function.
  */
 
-import {ai} from '@/ai';
+import {ai, geminiModel, standardModelConfig} from '@/ai';
 import {z} from 'genkit';
 
 const FollowUpUpdateSchema = z.object({
@@ -39,6 +39,10 @@ const prompt = ai.definePrompt({
   name: 'observationRecommendationPrompt',
   input: {schema: ObservationRecommendationInputSchema},
   output: {schema: ObservationRecommendationOutputSchema},
+  config: {
+    model: geminiModel,
+    ...standardModelConfig,
+  },
   prompt: `
     You are an expert educational psychologist and school counselor. Your task is to provide a concise analysis and actionable recommendations for a teacher based on a specific student observation and its follow-up log.
 
