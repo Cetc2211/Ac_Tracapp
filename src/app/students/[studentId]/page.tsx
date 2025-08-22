@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -80,11 +79,11 @@ export default function StudentProfilePage() {
         
         setIsPageLoading(true);
         const stats: StudentStats[] = [];
+        const partials: PartialId[] = ['p1', 'p2', 'p3'];
 
         try {
             const primaryGroupId = studentGroups[0].id;
-            const partials: PartialId[] = ['p1', 'p2', 'p3'];
-
+            
             for (const pId of partials) {
                 const partialData = await fetchPartialData(primaryGroupId, pId);
                 
@@ -119,8 +118,9 @@ export default function StudentProfilePage() {
         }
     };
     
-    calculateStats();
-
+    if(!isDataLoading) {
+      calculateStats();
+    }
   }, [isDataLoading, student, studentGroups, studentId, fetchPartialData, calculateDetailedFinalGrade, allObservations, toast]);
 
 
