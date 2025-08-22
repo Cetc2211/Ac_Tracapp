@@ -135,6 +135,14 @@ const mockStudents: Student[] = [
     { id: 'S5', name: 'Valeria Gómez Ramírez', email: 'valeria.gomez@example.com', phone: '555-0105', tutorName: 'David Gómez', tutorPhone: '555-0205', photo: 'https://placehold.co/100x100.png?text=VG' },
 ];
 
+const testStudents: Student[] = [
+    { id: 'S6', name: 'Jorge Navarro', email: 'jorge.n@example.com', phone: '555-0106', tutorName: 'Ana Navarro', tutorPhone: '555-0206', photo: 'https://placehold.co/100x100.png?text=JN' },
+    { id: 'S7', name: 'Mariana Castillo', email: 'mariana.c@example.com', phone: '555-0107', tutorName: 'Pedro Castillo', tutorPhone: '555-0207', photo: 'https://placehold.co/100x100.png?text=MC' },
+    { id: 'S8', name: 'Fernando Ortega', email: 'fernando.o@example.com', phone: '555-0108', tutorName: 'Isabel Ortega', tutorPhone: '555-0208', photo: 'https://placehold.co/100x100.png?text=FO' },
+    { id: 'S9', name: 'Daniela Reyes', email: 'daniela.r@example.com', phone: '555-0109', tutorName: 'Miguel Reyes', tutorPhone: '555-0209', photo: 'https://placehold.co/100x100.png?text=DR' },
+    { id: 'S10', name: 'Roberto Morales', email: 'roberto.m@example.com', phone: '555-0110', tutorName: 'Laura Morales', tutorPhone: '555-0210', photo: 'https://placehold.co/100x100.png?text=RM' },
+];
+
 const mockGroups: Group[] = [
     {
         id: 'G1',
@@ -143,8 +151,44 @@ const mockGroups: Group[] = [
         groupName: '401A',
         facilitator: 'Prof. Angélica Rosas',
         students: mockStudents,
+    },
+    {
+        id: 'G2',
+        subject: 'Química Orgánica',
+        semester: 'Sexto',
+        groupName: '602B',
+        facilitator: 'Dr. Ernesto Valdés',
+        students: testStudents,
     }
 ];
+
+const mockAllStudents = [...mockStudents, ...testStudents];
+
+const mockPartialsData: AllPartialsData = {
+    "G2": {
+        "p1": {
+            "criteria": [
+                { id: "C1", name: "Actividades", weight: 30, expectedValue: 10 },
+                { id: "C2", name: "Examen", weight: 40, expectedValue: 100 },
+                { id: "C3", name: "Proyecto Final", weight: 20, expectedValue: 1 },
+                { id: "C4", name: "Participación", weight: 10, expectedValue: 0, isAutomated: true }
+            ],
+            "grades": {},
+            "attendance": {
+                "2024-05-20": { "S6": true, "S7": true, "S8": false, "S9": true, "S10": true },
+                "2024-05-21": { "S6": true, "S7": true, "S8": true, "S9": false, "S10": true },
+                "2024-05-22": { "S6": true, "S7": false, "S8": true, "S9": true, "S10": false },
+            },
+            "participations": {
+                 "2024-05-20": { "S6": true, "S7": false, "S9": true },
+                 "2024-05-21": { "S7": true, "S8": true, "S10": true },
+            },
+            "activities": [],
+            "activityRecords": {}
+        }
+    }
+};
+
 // --- END OF MOCK DATA ---
 
 
@@ -227,10 +271,10 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             const storedSettings = localStorage.getItem('app_settings');
             
             setGroups(storedGroups ? JSON.parse(storedGroups) : mockGroups);
-            setAllStudents(storedStudents ? JSON.parse(storedStudents) : mockStudents);
+            setAllStudents(storedStudents ? JSON.parse(storedStudents) : mockAllStudents);
+            setAllPartialsData(storedPartials ? JSON.parse(storedPartials) : mockPartialsData);
 
             if (storedObservations) setAllObservations(JSON.parse(storedObservations));
-            if (storedPartials) setAllPartialsData(JSON.parse(storedPartials));
             if (storedSettings) setSettingsState(JSON.parse(storedSettings));
             
             const storedGroupId = localStorage.getItem('activeGroupId_v1');
@@ -592,5 +636,7 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
+
+    
 
     
