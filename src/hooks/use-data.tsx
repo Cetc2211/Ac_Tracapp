@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
@@ -16,7 +15,6 @@ import {
   getDocs,
   getDoc,
   updateDoc,
-  addDoc,
   serverTimestamp,
   Timestamp,
   arrayUnion,
@@ -146,7 +144,6 @@ interface DataContextType {
   groups: Group[];
   allStudents: Student[];
   allObservations: {[studentId: string]: StudentObservation[]};
-  activeStudentsInGroups: Student[];
   settings: { institutionName: string; logo: string; theme: string };
   
   activeGroup: Group | null;
@@ -183,7 +180,7 @@ interface DataContextType {
   calculateFinalGrade: (studentId: string, forGroupId?: string, forPartialId?: PartialId, forPartialData?: PartialData) => number;
   calculateDetailedFinalGrade: (studentId: string, forGroupId?: string, forPartialId?: PartialId, forPartialData?: PartialData) => { finalGrade: number, criteriaDetails: CriteriaDetail[] };
   getStudentRiskLevel: (finalGrade: number, pAttendance: AttendanceRecord, studentId: string) => CalculatedRisk;
-  fetchPartialData: (groupId: string, partialId: PartialId) => Promise<PartialData>;
+  fetchPartialData: (groupId: string, partialId: PartialId) => Promise<PartialData | null>;
   takeAttendanceForDate: (groupId: string, date: string) => Promise<void>;
 }
 
@@ -227,9 +224,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         }
         
         const prefix = `users/${user.uid}`;
-        const listeners: (() => void)[] = [];
 
-        const loadInitialDataAndSetupListeners = async () => {
+        const loadInitialData = async () => {
           try {
             setIsLoading(true);
 
@@ -245,12 +241,9 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
               getDocs(observationsQuery),
               getDoc(settingsDocRef)
             ]);
-
-            const initialGroups = groupsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Group[];
-            setGroups(initialGroups);
             
-            const initialStudents = studentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Student[];
-            setAllStudents(initialStudents);
+            setGroups(groupsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Group[]);
+            setAllStudents(studentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Student[]);
             
             const initialObservations: { [key: string]: any[] } = {};
             observationsSnapshot.docs.forEach(doc => {
@@ -270,34 +263,37 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
             setSettingsState(settingsDoc.exists() ? (settingsDoc.data() as typeof settings) : defaultSettings);
             
-            // Now that initial data is loaded, set up listeners for real-time updates
-            listeners.push(onSnapshot(groupsQuery, snapshot => setGroups(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Group[])));
-            listeners.push(onSnapshot(studentsQuery, snapshot => setAllStudents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Student[])));
-            listeners.push(onSnapshot(observationsQuery, snapshot => {
-              const updatedObservations: { [key: string]: any[] } = {};
-              snapshot.docs.forEach(doc => {
-                  const item = { id: doc.id, ...doc.data() } as StudentObservation;
-                  if (item.date && item.date instanceof Timestamp) item.date = item.date.toDate().toISOString();
-                  item.followUpUpdates = (item.followUpUpdates || []).map(f => ({ ...f, date: f.date && f.date instanceof Timestamp ? f.date.toDate().toISOString() : f.date }));
-                  const key = item.studentId;
-                  if (key) {
-                      if (!updatedObservations[key]) updatedObservations[key] = [];
-                      updatedObservations[key].push(item);
-                  }
-              });
-              setAllObservations(updatedObservations);
-            }));
-            listeners.push(onSnapshot(settingsDocRef, doc => setSettingsState(doc.exists() ? (doc.data() as typeof settings) : defaultSettings)));
+            setIsLoading(false);
 
           } catch (err: any) {
             console.error("Firebase data loading error:", err);
             setError(err);
-          } finally {
             setIsLoading(false);
           }
         };
 
-        loadInitialDataAndSetupListeners();
+        loadInitialData();
+
+        // Now, set up listeners for real-time updates
+        const listeners: (() => void)[] = [];
+        listeners.push(onSnapshot(query(collection(db, `${prefix}/groups`)), snapshot => setGroups(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Group[]), (e) => {console.error("groups listener error", e); setError(e);}));
+        listeners.push(onSnapshot(query(collection(db, `${prefix}/students`)), snapshot => setAllStudents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Student[]), (e) => {console.error("students listener error", e); setError(e);}));
+        listeners.push(onSnapshot(query(collection(db, `${prefix}/observations`)), snapshot => {
+          const updatedObservations: { [key: string]: any[] } = {};
+          snapshot.docs.forEach(doc => {
+              const item = { id: doc.id, ...doc.data() } as StudentObservation;
+              if (item.date && item.date instanceof Timestamp) item.date = item.date.toDate().toISOString();
+              item.followUpUpdates = (item.followUpUpdates || []).map(f => ({ ...f, date: f.date && f.date instanceof Timestamp ? f.date.toDate().toISOString() : f.date }));
+              const key = item.studentId;
+              if (key) {
+                  if (!updatedObservations[key]) updatedObservations[key] = [];
+                  updatedObservations[key].push(item);
+              }
+          });
+          setAllObservations(updatedObservations);
+        }, (e) => {console.error("observations listener error", e); setError(e);}));
+        listeners.push(onSnapshot(doc(db, `${prefix}/settings`, 'app'), doc => setSettingsState(doc.exists() ? (doc.data() as typeof settings) : defaultSettings), (e) => {console.error("settings listener error", e); setError(e);}));
+
 
         const storedGroupId = localStorage.getItem('activeGroupId_v1');
         if (storedGroupId) {
@@ -332,8 +328,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         }
     }, [activeGroupId, activePartialId, user, isLoading]);
     
-    const fetchPartialData = useCallback(async (groupId: string, partialId: PartialId): Promise<PartialData> => {
-        if (!user) return defaultPartialData;
+    const fetchPartialData = useCallback(async (groupId: string, partialId: PartialId): Promise<PartialData | null> => {
+        if (!user) return null;
         const docRef = doc(db, `users/${user.uid}/groups/${groupId}/partials/${partialId}/data/content`);
         try {
             const docSnap = await getDoc(docRef);
@@ -349,10 +345,11 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                     activityRecords: data.activityRecords || {},
                 };
             }
+            return null;
         } catch (e) {
             console.error("Failed to fetch partial data:", e);
+            return null;
         }
-        return defaultPartialData;
     }, [user]);
 
     const getPartialDataDocRef = useCallback(() => {
@@ -372,9 +369,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     
     const setSettings = useCallback(async (newSettings: { institutionName: string; logo: string; theme: string }) => {
         if (!user) throw new Error("User not authenticated");
-        if (isLoading) return;
         await setDoc(doc(db, `users/${user.uid}/settings`, 'app'), newSettings);
-    }, [user, isLoading]);
+    }, [user]);
 
     const setCriteria = useMemo(() => createSetter('criteria'), [createSetter]);
     const setGrades = useMemo(() => createSetter('grades'), [createSetter]);
@@ -450,20 +446,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }, [groups, activeGroupId]);
 
 
-    const activeStudentsInGroups = useMemo(() => {
-        const studentSet = new Set<Student>();
-        const studentIdSet = new Set<string>();
-        groups.forEach(group => {
-            group.students.forEach(student => {
-                if (!studentIdSet.has(student.id)) {
-                    studentSet.add(student);
-                    studentIdSet.add(student.id);
-                }
-            });
-        });
-        return Array.from(studentSet);
-    }, [groups]);
-
     const addStudentsToGroup = useCallback(async (groupId: string, students: Student[]) => {
         if (!user) return;
         const batch = writeBatch(db);
@@ -473,7 +455,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             students: arrayUnion(...students)
         });
 
-        // Also add students to the global student list
         for (const student of students) {
             const studentRef = doc(db, `users/${user.uid}/students`, student.id);
             batch.set(studentRef, student, { merge: true });
@@ -503,8 +484,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const deleteGroup = useCallback(async (groupId: string) => {
         if (!user) return;
         await deleteDoc(doc(db, `users/${user.uid}/groups`, groupId));
-        // Note: Deleting subcollections (partials) needs a more complex implementation, often a cloud function.
-        // For now, we only delete the group doc.
     }, [user]);
 
     const updateGroup = useCallback(async (groupId: string, data: Partial<Omit<Group, 'id' | 'students'>>) => {
@@ -545,11 +524,9 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const updateStudent = useCallback(async (studentId: string, data: Partial<Student>) => {
         if (!user) return;
         
-        // Update in the master student list
         const studentRef = doc(db, `users/${user.uid}/students`, studentId);
         await updateDoc(studentRef, data);
         
-        // Update in all groups the student belongs to
         const batch = writeBatch(db);
         const userGroups = groups.filter(g => g.students.some(s => s.id === studentId));
 
@@ -654,13 +631,12 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }, [user, groups, getPartialDataDocRef]);
 
 
-    const contextValue: DataContextType = useMemo(() => ({
+    const contextValue: DataContextType = {
         isLoading,
         error,
         groups,
         allStudents,
         allObservations,
-        activeStudentsInGroups,
         settings,
         activeGroup,
         activePartialId,
@@ -689,12 +665,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         calculateDetailedFinalGrade,
         fetchPartialData,
         takeAttendanceForDate,
-    }), [
-        isLoading, error, groups, allStudents, allObservations, activeStudentsInGroups, settings,
-        activeGroup, activePartialId, partialData, groupAverages, atRiskStudents,
-        overallAverageParticipation, calculateFinalGrade, getStudentRiskLevel,
-        calculateDetailedFinalGrade, fetchPartialData, addStudentsToGroup, removeStudentFromGroup, updateGroup, updateStudent, setSettings, deleteGroup, addStudentObservation, updateStudentObservation, takeAttendanceForDate, setCriteria, setGrades, setAttendance, setParticipations, setActivities, setActivityRecords
-    ]);
+    };
 
     return (
         <DataContext.Provider value={contextValue}>
@@ -710,7 +681,4 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
-
-
-
     

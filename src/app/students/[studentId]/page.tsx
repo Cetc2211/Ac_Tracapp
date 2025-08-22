@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -22,7 +21,7 @@ import html2canvas from 'html2canvas';
 import { useData } from '@/hooks/use-data';
 import { Badge } from '@/components/ui/badge';
 import { getPartialLabel } from '@/lib/utils';
-import type { PartialId, StudentObservation, Student } from '@/hooks/use-data';
+import type { PartialId, StudentObservation, Student, PartialData } from '@/hooks/use-data';
 import { StudentObservationLogDialog } from '@/components/student-observation-log-dialog';
 import { WhatsAppDialog } from '@/components/whatsapp-dialog';
 import { generateStudentFeedback } from '@/ai/flows/student-feedback';
@@ -71,10 +70,6 @@ export default function StudentProfilePage() {
 
   useEffect(() => {
     const calculateStats = async () => {
-        if (isDataLoading) {
-            return;
-        }
-
         if (!student) {
             setIsCalculating(false);
             return;
@@ -127,7 +122,9 @@ export default function StudentProfilePage() {
         }
     };
     
-    calculateStats();
+    if(!isDataLoading){
+      calculateStats();
+    }
 
   }, [isDataLoading, student, studentGroups, studentId, fetchPartialData, calculateDetailedFinalGrade, allObservations, toast]);
 
@@ -269,14 +266,7 @@ export default function StudentProfilePage() {
   }
   
   if (!student) {
-      return (
-        <div className="flex flex-col justify-center items-center h-full text-center">
-            <p className="text-lg font-semibold text-destructive">Estudiante no encontrado.</p>
-            <Button asChild className="mt-4">
-              <Link href="/dashboard">Volver al Dashboard</Link>
-            </Button>
-        </div>
-      )
+      return notFound();
   }
 
   const allSemesterObservations = Object.values(allObservations)
@@ -520,11 +510,10 @@ export default function StudentProfilePage() {
                 )}
               </CardContent>
             ) : (
-              !hasAnyDataForFeedback && (
+              !hasAnyDataForFeedback && !isDataLoading && !isCalculating && (
                 <CardContent>
-                  <div className="text-center text-sm text-destructive bg-destructive/10 p-4 rounded-md">
-                    <p className="font-bold">Sin datos</p>
-                    <p>No hay datos para generar feedback en el.</p>
+                  <div className="text-center text-sm text-muted-foreground bg-muted/50 p-4 rounded-md">
+                    <p>No hay datos de calificaciones para generar un feedback automatizado.</p>
                   </div>
                 </CardContent>
               )
@@ -544,3 +533,4 @@ export default function StudentProfilePage() {
     </>
   );
 }
+    
