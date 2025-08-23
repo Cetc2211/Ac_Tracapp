@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -84,58 +85,6 @@ export default function ReportsPage() {
         criteriaCount: criteria.length,
     };
   }, [activeGroup, calculateFinalGrade, groupAverages, partialData, activePartialId, isLoading, attendance, criteria]);
-
-
-  const handleDownloadCsv = () => {
-    if (!activeGroup) return;
-
-    let csvContent = "data:text/csv;charset=utf-8,";
-    const headers = ["ID Estudiante", "Nombre", ...criteria.map(c => `${c.name} (${c.weight}%)`), "Calificacion Final"];
-    csvContent += headers.join(",") + "\r\n";
-
-    activeGroup.students.forEach(student => {
-        const row = [student.id, student.name];
-        const finalGrade = calculateFinalGrade(student.id, activeGroup.id, activePartialId);
-        
-        criteria.forEach(criterion => {
-            let performanceRatio = 0;
-            if (criterion.name === 'Actividades' || criterion.name === 'Portafolio') {
-                const totalActivities = activities.length;
-                if (totalActivities > 0) {
-                    const deliveredActivities = Object.values(activityRecords[student.id] || {}).filter(Boolean).length;
-                    performanceRatio = deliveredActivities / totalActivities;
-                }
-            } else if(criterion.name === 'Participación') {
-                 const participationDates = Object.keys(participations);
-                if (participationDates.length > 0) {
-                    const studentParticipations = Object.values(participations).filter(p => p[student.id]).length;
-                    performanceRatio = studentParticipations / participationDates.length;
-                }
-            } else {
-                const gradeDetail = grades[student.id]?.[criterion.id];
-                const delivered = gradeDetail?.delivered ?? 0;
-                const expected = criterion.expectedValue;
-                if(expected > 0) {
-                    performanceRatio = delivered / expected;
-                }
-            }
-            const earnedPercentage = performanceRatio * criterion.weight;
-            row.push(earnedPercentage.toFixed(2));
-        });
-        
-        row.push(finalGrade.toFixed(2));
-        csvContent += row.join(",") + "\r\n";
-    });
-
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `calificaciones_${activeGroup.subject.replace(/\s+/g, '_')}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast({title: 'CSV Generado', description: 'La descarga de calificaciones ha comenzado.'});
-  };
   
   if (isLoading) {
       return (
@@ -240,17 +189,6 @@ export default function ReportsPage() {
                         <Link href={`/students/${selectedStudentId}`}>
                            <Printer className="mr-2 h-4 w-4" /> Generar Informe Individual
                         </Link>
-                    </Button>
-                </CardFooter>
-            </Card>
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Download /> Exportar Calificaciones (CSV)</CardTitle>
-                    <CardDescription>Descarga los datos de calificaciones en formato CSV para usar en Excel.</CardDescription>
-                </CardHeader>
-                <CardFooter>
-                    <Button variant="secondary" className="w-full" onClick={handleDownloadCsv}>
-                        <Download className="mr-2 h-4 w-4" /> Descargar CSV
                     </Button>
                 </CardFooter>
             </Card>
