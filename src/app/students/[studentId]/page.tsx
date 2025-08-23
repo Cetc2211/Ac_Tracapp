@@ -231,7 +231,7 @@ export default function StudentProfilePage() {
     if (generatedFeedback) {
       setEditedFeedback({
         feedback: generatedFeedback.feedback,
-        recommendations: generatedFeedback.recommendations.join('\n'),
+        recommendations: generatedFeedback.recommendations.join('\\n'),
       });
       setIsEditingFeedback(true);
     }
@@ -241,7 +241,7 @@ export default function StudentProfilePage() {
     if (generatedFeedback) {
       setGeneratedFeedback({
         feedback: editedFeedback.feedback,
-        recommendations: editedFeedback.recommendations.split('\n').filter((r) => r.trim() !== ''),
+        recommendations: editedFeedback.recommendations.split('\\n').filter((r) => r.trim() !== ''),
       });
       setIsEditingFeedback(false);
       toast({ title: 'Feedback actualizado' });
