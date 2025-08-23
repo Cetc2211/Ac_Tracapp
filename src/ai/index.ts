@@ -26,11 +26,6 @@ export const standardModelConfig = {
       threshold: 'BLOCK_NONE',
     },
   ],
-  // Increased timeout for potentially long-running flows.
-  // This is particularly useful for flows that make multiple API calls.
-  clientOptions: {
-    timeout: 300000, // 5 minutes
-  },
 };
 
 export const ai = genkit({
@@ -40,6 +35,11 @@ export const ai = genkit({
       text: {
         model: geminiModel,
         ...standardModelConfig
+      },
+      // Specify the default model for all generation tasks.
+      defaultGenerationOptions: {
+        model: geminiModel,
+        ...standardModelConfig,
       }
     }),
   ],
@@ -47,4 +47,9 @@ export const ai = genkit({
   logLevel: 'error',
   // Ensure that telemetry is exported to the console for debugging purposes.
   enableTracing: true,
+  // Increased timeout for potentially long-running flows.
+  // This is particularly useful for flows that make multiple API calls.
+  clientOptions: {
+    timeout: 300000, // 5 minutes
+  },
 });
