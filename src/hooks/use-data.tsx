@@ -403,9 +403,10 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const calculateFinalGrade = useCallback((studentId: string, forGroupId?: string, forPartialId?: PartialId, forPartialData?: PartialData): number => {
         const gId = forGroupId || activeGroupId;
         const pId = forPartialId || activePartialId;
-        const data = forPartialData || (gId ? allPartialsData[gId]?.[pId] : undefined) || partialData;
+        const data = forPartialData || (gId ? allPartialsData[gId]?.[pId] : undefined);
+        if (!data) return 0;
         return calculateDetailedFinalGrade(studentId, data).finalGrade;
-    }, [calculateDetailedFinalGrade, partialData, activeGroupId, activePartialId, allPartialsData]);
+    }, [calculateDetailedFinalGrade, activeGroupId, activePartialId, allPartialsData]);
 
     const setActiveGroupId = (groupId: string | null) => {
         if(groupId !== activeGroupId) {

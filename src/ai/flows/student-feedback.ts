@@ -23,10 +23,14 @@ const ObservationSchema = z.object({
   details: z.string().describe('The details of the observation.'),
 });
 
+const GroupGradeSchema = z.object({
+  group: z.string().describe('The subject or group name.'),
+  grade: z.number().describe('The final grade for the subject.'),
+});
+
 const StudentFeedbackInputSchema = z.object({
   studentName: z.string().describe('The name of the student.'),
-  groupName: z.string().describe('The subject or group name.'),
-  finalGrade: z.number().describe('The final grade for the subject.'),
+  gradesByGroup: z.array(GroupGradeSchema).describe('An array of grades for each group/subject.'),
   attendance: AttendanceSchema.describe('The student\'s attendance record.'),
   observations: z.array(ObservationSchema).optional().describe('A list of observations made by the teacher.'),
 });
@@ -57,7 +61,10 @@ const prompt = ai.definePrompt({
 
     **Data for {{{studentName}}}:**
 
-    1.  **Grade (out of 100) for {{{groupName}}}:** {{{finalGrade}}}
+    1.  **Grades (out of 100):**
+    {{#each gradesByGroup}}
+    - {{{group}}}: {{{grade}}}%
+    {{/each}}
 
     2.  **Attendance:**
         - Attended: {{{attendance.p}}}
