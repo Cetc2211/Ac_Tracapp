@@ -35,11 +35,6 @@ export const standardModelConfig = {
 export const ai = genkit({
   plugins: [
     googleAI({
-      // Specify the default model for text generation.
-      text: {
-        model: geminiModel,
-        ...standardModelConfig
-      },
       // Specify the default model for all generation tasks.
       defaultGenerationOptions: {
         model: geminiModel,
