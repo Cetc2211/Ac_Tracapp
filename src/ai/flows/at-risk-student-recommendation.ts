@@ -97,7 +97,7 @@ const prompt = ai.definePrompt({
     1.  **Analysis ('analysis' field):**
         - Write a concise paragraph explaining the **root causes** of the student's situation.
         - Synthesize information from all data points. Do not just list the data.
-        - **Connect the dots:** For example, link poor grades in a specific subject to negative observations or low performance in a specific criterion (e.g., "El bajo rendimiento en Matemáticas ({{gradesByGroup.[0].grade}}%) parece estar directamente relacionado con su dificultad en el criterio 'Examen', donde solo obtuvo un {{gradesByGroup.[0].criteriaDetails.[0].earned}}% de {{gradesByGroup.[0].criteriaDetails.[0].weight}}%. Esto, sumado a las observaciones sobre 'Problema de conducta', sugiere una posible frustración o desinterés en la materia.")
+        - **Connect the dots:** For example, link poor grades in a specific subject to negative observations or low performance in a specific criterion.
         - Mention attendance if it's a contributing factor.
 
     2.  **Recommendations ('recommendations' field):**
