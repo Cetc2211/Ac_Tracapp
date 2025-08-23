@@ -378,11 +378,19 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                     performanceRatio = deliveredActivities / totalActivities;
                 }
             } else if (criterion.name === 'Participación') {
-                const participationDates = Object.keys(pData.participations || {});
-                const studentParticipationOpportunities = participationDates.filter(date => Object.prototype.hasOwnProperty.call(pData.participations?.[date], studentId)).length;
+                 const participationDates = Object.keys(pData.participations || {});
+                 const studentAttendedDates = Object.keys(pData.attendance || {}).filter(date => pData.attendance?.[date]?.[studentId] === true);
+                 const studentParticipationOpportunities = participationDates.filter(date => studentAttendedDates.includes(date)).length;
+
                 if (studentParticipationOpportunities > 0) {
                     const studentParticipations = Object.values(pData.participations || {}).filter(p => p[studentId]).length;
                     performanceRatio = studentParticipations / studentParticipationOpportunities;
+                } else if (studentAttendedDates.length === 0 && participationDates.length > 0) {
+                    // If student never attended, but there were participation opportunities, ratio is 0
+                    performanceRatio = 0;
+                } else {
+                    // If there were no participation opportunities or student attended all, ratio is 1 (or based on what's fair)
+                    performanceRatio = 1;
                 }
             } else {
                 const delivered = pData.grades?.[studentId]?.[criterion.id]?.delivered ?? 0;
@@ -397,6 +405,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         }
         
         const grade = Math.max(0, Math.min(100, finalGrade));
+        console.log(`Calculated grade for ${studentId}: ${grade}`, { details: criteriaDetails });
         return { finalGrade: grade, criteriaDetails: criteriaDetails };
     }, []);
 
