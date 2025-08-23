@@ -207,12 +207,8 @@ export default function StudentProfilePage() {
     try {
       const inputData: StudentFeedbackInput = {
         studentName: student.name,
-        gradesByGroup: [
-          {
-            group: studentGroups.find((g) => g.students.some((s) => s.id === studentId))?.subject || 'Clase',
-            grade: dataToUse.finalGrade,
-          },
-        ],
+        groupName: studentGroups.find((g) => g.students.some((s) => s.id === studentId))?.subject || 'Clase',
+        finalGrade: dataToUse.finalGrade,
         attendance: dataToUse.attendance,
         observations: dataToUse.observations.map((obs) => ({ type: obs.type, details: obs.details })),
       };
