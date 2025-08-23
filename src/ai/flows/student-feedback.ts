@@ -63,7 +63,7 @@ const prompt = ai.definePrompt({
         - Absences: {{{attendance.a}}}
         - Total: {{{attendance.total}}}
 
-    {{#if observations.length}}
+    {{#if observations}}
     3.  **Teacher's Observations:**
         {{#each observations}}
         - Type: {{{type}}}, Details: {{{details}}}
