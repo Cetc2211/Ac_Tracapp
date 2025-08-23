@@ -100,12 +100,7 @@ const studentFeedbackFlow = ai.defineFlow(
     outputSchema: StudentFeedbackOutputSchema,
   },
   async (input) => {
-    try {
-        const { output } = await prompt(input);
-        return output!;
-    } catch (e: any) {
-        console.error('AI call failed.', e.message, e);
-        throw new Error(`AI call failed: ${e.message}`);
-    }
+    const { output } = await prompt(input);
+    return output!;
   }
 );
