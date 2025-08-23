@@ -207,12 +207,8 @@ export default function StudentProfilePage() {
     try {
       const inputData: StudentFeedbackInput = {
         studentName: student.name,
-        gradesByGroup: [
-            {
-                group: studentGroups.find(g => g.students.some(s => s.id === studentId))?.subject || 'Clase',
-                grade: dataToUse.finalGrade
-            }
-        ],
+        groupName: studentGroups.find(g => g.students.some(s => s.id === studentId))?.subject || 'Clase',
+        finalGrade: dataToUse.finalGrade,
         attendance: {
             p: dataToUse.attendance.p,
             a: dataToUse.attendance.a,
@@ -235,7 +231,7 @@ export default function StudentProfilePage() {
     if (generatedFeedback) {
       setEditedFeedback({
         feedback: generatedFeedback.feedback,
-        recommendations: generatedFeedback.recommendations.join('\\n'),
+        recommendations: generatedFeedback.recommendations.join('\n'),
       });
       setIsEditingFeedback(true);
     }
@@ -245,7 +241,7 @@ export default function StudentProfilePage() {
     if (generatedFeedback) {
       setGeneratedFeedback({
         feedback: editedFeedback.feedback,
-        recommendations: editedFeedback.recommendations.split('\\n').filter((r) => r.trim() !== ''),
+        recommendations: editedFeedback.recommendations.split('\n').filter((r) => r.trim() !== ''),
       });
       setIsEditingFeedback(false);
       toast({ title: 'Feedback actualizado' });
