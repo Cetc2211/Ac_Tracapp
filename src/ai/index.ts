@@ -44,7 +44,7 @@ export const ai = genkit({
     }),
   ],
   // Log all errors to the console.
-  logLevel: 'debug',
+  logLevel: 'error',
   // Ensure that telemetry is exported to the console for debugging purposes.
   enableTracing: true,
 });
