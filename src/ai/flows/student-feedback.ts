@@ -43,7 +43,6 @@ const StudentFeedbackOutputSchema = z.object({
 export type StudentFeedbackOutput = z.infer<typeof StudentFeedbackOutputSchema>;
 
 export async function generateStudentFeedback(input: StudentFeedbackInput): Promise<StudentFeedbackOutput> {
-  console.log('DIAGNOSIS: Input received by studentFeedbackFlow:', JSON.stringify(input, null, 2));
   return studentFeedbackFlow(input);
 }
 
@@ -108,7 +107,14 @@ const studentFeedbackFlow = ai.defineFlow(
     outputSchema: StudentFeedbackOutputSchema,
   },
   async (input) => {
-    const { output } = await prompt(input);
-    return output!;
+    console.log('TESTING: Attempting to generate feedback with new API key.');
+    try {
+        const { output } = await prompt(input);
+        console.log('TEST SUCCESS: AI call completed successfully.');
+        return output!;
+    } catch (e: any) {
+        console.error('TEST FAILED: AI call failed.', e.message);
+        throw new Error(`AI call failed: ${e.message}`);
+    }
   }
 );
