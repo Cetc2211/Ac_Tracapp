@@ -3,6 +3,10 @@ import {genkit} from 'genkit';
 import {googleAI} from '@genkit-ai/googleai';
 import {GenkitError} from 'genkit';
 
+if (!process.env.GEMINI_API_KEY) {
+  console.error("ERROR: La variable de entorno GEMINI_API_KEY no está definida. Por favor, crea un archivo .env y añade tu clave.");
+}
+
 export const geminiModel = 'gemini-1.5-flash-latest';
 
 export const standardModelConfig = {
