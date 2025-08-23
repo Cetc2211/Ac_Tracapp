@@ -39,6 +39,7 @@ const StudentFeedbackOutputSchema = z.object({
 export type StudentFeedbackOutput = z.infer<typeof StudentFeedbackOutputSchema>;
 
 export async function generateStudentFeedback(input: StudentFeedbackInput): Promise<StudentFeedbackOutput> {
+  console.log('DIAGNOSIS: Input received by studentFeedbackFlow:', JSON.stringify(input, null, 2));
   return studentFeedbackFlow(input);
 }
 
@@ -100,7 +101,6 @@ const studentFeedbackFlow = ai.defineFlow(
     outputSchema: StudentFeedbackOutputSchema,
   },
   async (input) => {
-    console.log('DIAGNOSIS: Input received by studentFeedbackFlow:', JSON.stringify(input, null, 2));
     const { output } = await prompt(input);
     return output!;
   }
