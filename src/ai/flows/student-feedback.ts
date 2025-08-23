@@ -63,7 +63,7 @@ const prompt = ai.definePrompt({
         - Absences: {{{attendance.a}}}
         - Total: {{{attendance.total}}}
 
-    {{#if observations}}
+    {{#if observations.length}}
     3.  **Teacher's Observations:**
         {{#each observations}}
         - Type: {{{type}}}, Details: {{{details}}}
@@ -78,7 +78,6 @@ const prompt = ai.definePrompt({
         - Highlight one or two key strengths (e.g., high grades, excellent attendance, positive observations like 'Mérito').
         - Gently introduce areas of opportunity based on the data (low grades, absences, negative observations). Frame them constructively.
         - End on a positive and motivational note, expressing confidence in the student's ability to succeed.
-        - Example: "Hola {{{studentName}}}, hemos revisado tu progreso y queremos felicitarte por tu excelente calificación en '{{{groupName}}}', ¡es un gran logro! Notamos que el área presenta un desafío, pero con tu dedicación, estamos seguros de que puedes mejorar. Tu constancia, reflejada en tu buena asistencia, es clave para alcanzar todas tus metas. ¡Sigue así!"
 
     2.  **'recommendations' field (array of strings):**
         - Provide a list of 2 to 3 concise, concrete, and actionable recommendations.
@@ -105,4 +104,3 @@ const studentFeedbackFlow = ai.defineFlow(
     return output!;
   }
 );
-
