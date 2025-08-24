@@ -196,7 +196,7 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 
 // DATA PROVIDER COMPONENT
 export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
-    // Core data states initialized directly from localStorage
+    // Core data states initialized directly with empty/default values
     const [allStudents, setAllStudents] = useState<Student[]>([]);
     const [allObservations, setAllObservations] = useState<{[studentId: string]: StudentObservation[]}>({});
     const [groups, setGroups] = useState<Group[]>([]);
@@ -225,7 +225,16 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             setAllObservations(storedObservations);
             setAllPartialsData(storedPartialsData);
             setSettingsState(storedSettings);
-            setActiveGroupIdState(storedActiveGroupId);
+
+            // Validate that the active group ID still exists
+            const activeGroupExists = storedGroups.some((g: Group) => g.id === storedActiveGroupId);
+            if (storedActiveGroupId && activeGroupExists) {
+                setActiveGroupIdState(storedActiveGroupId);
+            } else {
+                 setActiveGroupIdState(null);
+                 localStorage.removeItem('activeGroupId_v1');
+            }
+
         } catch (e) {
              console.error("Failed to load data from localStorage", e);
              setError(e as Error);
