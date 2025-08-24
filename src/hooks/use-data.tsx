@@ -129,11 +129,7 @@ const defaultPartialData: PartialData = {
     activityRecords: {},
 };
 
-// Helper function to load data from localStorage safely
 const loadFromStorage = <T>(key: string, defaultValue: T): T => {
-    if (typeof window === 'undefined') {
-        return defaultValue;
-    }
     try {
         const storedValue = localStorage.getItem(key);
         return storedValue ? JSON.parse(storedValue) : defaultValue;
@@ -158,7 +154,7 @@ interface DataContextType {
   activeGroup: Group | null;
   activePartialId: PartialId;
   
-  partialData: PartialData; // Data for the active group and partial
+  partialData: PartialData;
   allPartialsDataForActiveGroup: AllPartialsDataForGroup;
 
 
@@ -273,26 +269,28 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         return allPartialsData[groupId]?.[partialId] || defaultPartialData;
     }, [allPartialsData]);
 
-    const createSetter = useCallback((field: keyof PartialData) => async (setter: React.SetStateAction<any>) => {
-        if (!activeGroupId) return;
-        
-        setAllPartialsData(prevAllData => {
-            const currentGroupData = prevAllData[activeGroupId] || {};
-            const currentPartialData = currentGroupData[activePartialId] || defaultPartialData;
-            
-            const newValue = typeof setter === 'function' ? setter(currentPartialData[field]) : setter;
+    const createSetter = useCallback((field: keyof PartialData) => {
+        return (setter: React.SetStateAction<any>) => {
+            if (!activeGroupId) return Promise.resolve();
 
-            const newPartialData = { ...currentPartialData, [field]: newValue };
+            setAllPartialsData(prevAllData => {
+                const currentGroupData = prevAllData[activeGroupId] || {};
+                const currentPartialData = currentGroupData[activePartialId] || defaultPartialData;
+                
+                const newValue = typeof setter === 'function' ? setter(currentPartialData[field]) : setter;
 
-            return {
-                ...prevAllData,
-                [activeGroupId]: {
-                    ...currentGroupData,
-                    [activePartialId]: newPartialData,
-                }
-            };
-        });
+                const newPartialData = { ...currentPartialData, [field]: newValue };
 
+                return {
+                    ...prevAllData,
+                    [activeGroupId]: {
+                        ...currentGroupData,
+                        [activePartialId]: newPartialData,
+                    }
+                };
+            });
+            return Promise.resolve();
+        };
     }, [activeGroupId, activePartialId]);
     
     const setSettings = useCallback(async (newSettings: { institutionName: string; logo: string; theme: string }) => {
@@ -631,3 +629,5 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
+
+    
