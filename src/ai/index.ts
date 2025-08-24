@@ -23,11 +23,11 @@ export const ai = genkit({
                 model: 'gemini-1.5-flash-latest',
                 ...standardModelConfig,
             },
+            clientOptions: {
+                timeout: 300000, // 5 minutes
+            }
         }),
     ],
     logLevel: 'debug',
     enableTracing: true,
-    clientOptions: {
-        timeout: 300000, // 5 minutes
-    }
 });
