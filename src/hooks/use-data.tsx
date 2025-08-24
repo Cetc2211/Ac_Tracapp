@@ -164,6 +164,7 @@ interface DataContextType {
   setActivityRecords: (setter: React.SetStateAction<ActivityRecord>) => Promise<void>;
   setSettings: (settings: { institutionName: string; logo: string; theme: string }) => Promise<void>;
   setGroups: React.Dispatch<React.SetStateAction<Group[]>>;
+  resetAllData: () => Promise<void>;
 
 
   // Functions
@@ -200,6 +201,18 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     useEffect(() => {
         setIsLoading(true);
         try {
+            const migrationStatus = localStorage.getItem('app_migration_v2');
+            if (!migrationStatus) {
+                // This is a user with old data. Clear it out.
+                localStorage.removeItem('app_groups');
+                localStorage.removeItem('app_students');
+                localStorage.removeItem('app_partialsData');
+                localStorage.removeItem('app_observations');
+                localStorage.removeItem('app_settings');
+                localStorage.removeItem('activeGroupId_v1');
+                localStorage.setItem('app_migration_v2', 'completed');
+            }
+
             const storedGroups = localStorage.getItem('app_groups');
             const storedStudents = localStorage.getItem('app_students');
             const storedPartials = localStorage.getItem('app_partialsData');
@@ -531,6 +544,35 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         
     }, [groups, activeGroupId, activePartialId, allPartialsData]);
 
+    const resetAllData = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            localStorage.removeItem('app_groups');
+            localStorage.removeItem('app_students');
+            localStorage.removeItem('app_observations');
+            localStorage.removeItem('app_partialsData');
+            localStorage.removeItem('app_settings');
+            localStorage.removeItem('activeGroupId_v1');
+            
+            setGroups([]);
+            setAllStudents([]);
+            setAllObservations({});
+            setAllPartialsData({});
+            setSettingsState(defaultSettings);
+            setActiveGroupIdState(null);
+            
+        } catch (e) {
+            console.error("Failed to reset data", e);
+            setError(e as Error);
+        } finally {
+            // Short delay to allow state to propagate before reloading
+            setTimeout(() => {
+                setIsLoading(false);
+                window.location.reload();
+            }, 500);
+        }
+    }, []);
+
 
     const contextValue: DataContextType = {
         isLoading,
@@ -568,6 +610,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         calculateDetailedFinalGrade,
         fetchPartialData,
         takeAttendanceForDate,
+        resetAllData,
     };
 
     return (

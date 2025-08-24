@@ -49,7 +49,7 @@ type ExportData = {
 
 
 export default function SettingsPage() {
-    const { settings, isLoading, groups, allStudents, allObservations, fetchPartialData, setSettings: setSettingsInDb } = useData();
+    const { settings, isLoading, groups, allStudents, allObservations, fetchPartialData, setSettings: setSettingsInDb, resetAllData } = useData();
     const [localSettings, setLocalSettings] = useState(settings);
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
     const { toast } = useToast();
@@ -202,23 +202,9 @@ export default function SettingsPage() {
     const handleResetApp = async () => {
        setIsSaving(true);
         toast({ title: 'Restableciendo datos...', description: 'Este proceso es irreversible y puede tardar.' });
-        try {
-            localStorage.removeItem('app_groups');
-            localStorage.removeItem('app_students');
-            localStorage.removeItem('app_observations');
-            localStorage.removeItem('app_partialsData');
-            localStorage.removeItem('app_settings');
-            localStorage.removeItem('activeGroupId_v1');
-            
-            toast({ title: 'Datos eliminados', description: 'La aplicación ha sido restablecida.' });
-            setTimeout(() => window.location.reload(), 2000);
-        } catch(e) {
-            console.error("Reset error:", e);
-            toast({ variant: 'destructive', title: "Error al restablecer", description: "No se pudieron eliminar los datos." });
-        } finally {
-            setIsSaving(false);
-            setIsResetDialogOpen(false);
-        }
+        await resetAllData();
+        setIsSaving(false);
+        setIsResetDialogOpen(false);
     }
 
     if (isLoading) {
@@ -359,7 +345,7 @@ export default function SettingsPage() {
                             <AlertDialogHeader>
                                 <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                    Esta acción borrará permanentemente TODOS tus datos de la aplicación, incluyendo grupos, estudiantes, calificaciones y ajustes.
+                                    Esta acción borrará permanentemente TODOS tus datos de la aplicación, incluyendo grupos, estudiantes, calificaciones y ajustes. La página se recargará.
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
