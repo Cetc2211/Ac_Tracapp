@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
@@ -126,6 +127,20 @@ const defaultPartialData: PartialData = {
     activityRecords: {},
 };
 
+// Helper function to load data from localStorage safely
+const loadFromStorage = <T>(key: string, defaultValue: T): T => {
+    if (typeof window === 'undefined') {
+        return defaultValue;
+    }
+    try {
+        const storedValue = localStorage.getItem(key);
+        return storedValue ? JSON.parse(storedValue) : defaultValue;
+    } catch (error) {
+        console.error(`Error loading ${key} from localStorage`, error);
+        return defaultValue;
+    }
+};
+
 
 // CONTEXT TYPE
 interface DataContextType {
@@ -182,76 +197,22 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 
 // DATA PROVIDER COMPONENT
 export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
-    // Core data
-    const [allStudents, setAllStudents] = useState<Student[]>([]);
-    const [allObservations, setAllObservations] = useState<{[studentId: string]: StudentObservation[]}>({});
-    const [groups, setGroups] = useState<Group[]>([]);
-    const [settings, setSettingsState] = useState(defaultSettings);
+    // Core data states initialized directly from localStorage
+    const [allStudents, setAllStudents] = useState<Student[]>(() => loadFromStorage('app_students', []));
+    const [allObservations, setAllObservations] = useState<{[studentId: string]: StudentObservation[]}>(() => loadFromStorage('app_observations', {}));
+    const [groups, setGroups] = useState<Group[]>(() => loadFromStorage('app_groups', []));
+    const [settings, setSettingsState] = useState(() => loadFromStorage('app_settings', defaultSettings));
+    const [allPartialsData, setAllPartialsData] = useState<AllPartialsData>(() => loadFromStorage('app_partialsData', {}));
     
     // Active state
-    const [activeGroupId, setActiveGroupIdState] = useState<string | null>(null);
+    const [activeGroupId, setActiveGroupIdState] = useState<string | null>(() => loadFromStorage('activeGroupId_v1', null));
     const [activePartialId, setActivePartialIdState] = useState<PartialId>('p1');
-    
-    const [allPartialsData, setAllPartialsData] = useState<AllPartialsData>({});
 
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
 
-    // This effect runs once on mount to load data from localStorage or initialize with an empty state.
-    useEffect(() => {
-        setIsLoading(true);
-        try {
-            const migrationStatus = localStorage.getItem('app_migration_v2');
-            if (!migrationStatus) {
-                // This is a user with old data. Clear it out.
-                localStorage.removeItem('app_groups');
-                localStorage.removeItem('app_students');
-                localStorage.removeItem('app_partialsData');
-                localStorage.removeItem('app_observations');
-                localStorage.removeItem('app_settings');
-                localStorage.removeItem('activeGroupId_v1');
-                localStorage.setItem('app_migration_v2', 'completed');
-            }
-
-            const storedGroups = localStorage.getItem('app_groups');
-            const storedStudents = localStorage.getItem('app_students');
-            const storedPartials = localStorage.getItem('app_partialsData');
-            const storedObservations = localStorage.getItem('app_observations');
-            const storedSettings = localStorage.getItem('app_settings');
-            const storedGroupId = localStorage.getItem('activeGroupId_v1');
-
-            const initialGroups = storedGroups ? JSON.parse(storedGroups) : [];
-            setGroups(initialGroups);
-            setAllStudents(storedStudents ? JSON.parse(storedStudents) : []);
-            setAllPartialsData(storedPartials ? JSON.parse(storedPartials) : {});
-            setAllObservations(storedObservations ? JSON.parse(storedObservations) : {});
-            setSettingsState(storedSettings ? JSON.parse(storedSettings) : defaultSettings);
-            
-            if (storedGroupId && initialGroups.some((g: Group) => g.id === storedGroupId)) {
-                setActiveGroupIdState(storedGroupId);
-            } else if (initialGroups.length > 0) {
-                setActiveGroupIdState(initialGroups[0].id);
-            } else {
-                setActiveGroupIdState(null);
-            }
-
-        } catch (e) {
-            console.error("Failed to load data from localStorage", e);
-            setError(e as Error);
-            // Fallback to empty state on error
-            setGroups([]);
-            setAllStudents([]);
-            setAllPartialsData({});
-            setSettingsState(defaultSettings);
-            setActiveGroupIdState(null);
-        } finally {
-            setIsLoading(false);
-        }
-    }, []); // Empty dependency array ensures this runs only once on mount.
-    
     // This effect runs whenever data changes to save it to localStorage.
     useEffect(() => {
-        if (isLoading) return; // Don't save while initially loading
         try {
             localStorage.setItem('app_groups', JSON.stringify(groups));
             localStorage.setItem('app_students', JSON.stringify(allStudents));
@@ -266,7 +227,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         } catch (e) {
             console.error("Failed to save data to localStorage", e);
         }
-    }, [groups, allStudents, allObservations, allPartialsData, settings, activeGroupId, isLoading]);
+    }, [groups, allStudents, allObservations, allPartialsData, settings, activeGroupId]);
 
     const partialData = useMemo(() => {
         if (!activeGroupId || !allPartialsData[activeGroupId]) return defaultPartialData;
@@ -627,3 +588,4 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
+
