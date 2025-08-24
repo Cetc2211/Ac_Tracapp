@@ -1,6 +1,6 @@
 'use server';
 
-import { genkit } from 'genkit';
+import { genkit, geminiModel } from 'genkit';
 import { googleAI } from '@genkit-ai/googleai';
 
 const standardModelConfig = {
@@ -15,7 +15,6 @@ const standardModelConfig = {
         { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
     ],
 };
-
 
 export const ai = genkit({
     plugins: [
