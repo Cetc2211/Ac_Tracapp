@@ -196,6 +196,7 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 
 // DATA PROVIDER COMPONENT
 export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
+    const [isHydrated, setIsHydrated] = useState(false);
     // Core data states initialized directly with empty/default values
     const [allStudents, setAllStudents] = useState<Student[]>([]);
     const [allObservations, setAllObservations] = useState<{[studentId: string]: StudentObservation[]}>({});
@@ -207,7 +208,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const [activeGroupId, setActiveGroupIdState] = useState<string | null>(null);
     const [activePartialId, setActivePartialIdState] = useState<PartialId>('p1');
 
-    const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
 
     // This effect runs ONCE on the client to load all data from localStorage
@@ -232,17 +232,20 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 setActiveGroupIdState(storedActiveGroupId);
             } else {
                  setActiveGroupIdState(null);
-                 localStorage.removeItem('activeGroupId_v1');
+                 if (typeof window !== 'undefined') {
+                    localStorage.removeItem('activeGroupId_v1');
+                 }
             }
 
         } catch (e) {
              console.error("Failed to load data from localStorage", e);
              setError(e as Error);
         } finally {
-            setIsLoading(false);
+            setIsHydrated(true);
         }
     }, []);
 
+    const isLoading = !isHydrated;
 
     // This effect runs whenever data changes to save it to localStorage.
     useEffect(() => {
@@ -540,7 +543,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }, [groups, activeGroupId, activePartialId, allPartialsData]);
 
     const resetAllData = useCallback(async () => {
-        setIsLoading(true);
+        setIsHydrated(false);
         try {
             localStorage.removeItem('app_groups');
             localStorage.removeItem('app_students');
@@ -562,7 +565,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         } finally {
             // Short delay to allow state to propagate before reloading
             setTimeout(() => {
-                setIsLoading(false);
+                setIsHydrated(true);
                 window.location.reload();
             }, 500);
         }
