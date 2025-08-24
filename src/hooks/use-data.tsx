@@ -299,12 +299,12 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         setSettingsState(newSettings);
     }, []);
 
-    const setCriteria = useMemo(() => createSetter('criteria'), [createSetter]);
-    const setGrades = useMemo(() => createSetter('grades'), [createSetter]);
-    const setAttendance = useMemo(() => createSetter('attendance'), [createSetter]);
-    const setParticipations = useMemo(() => createSetter('participations'), [createSetter]);
-    const setActivities = useMemo(() => createSetter('activities'), [createSetter]);
-    const setActivityRecords = useMemo(() => createSetter('activityRecords'), [createSetter]);
+    const setCriteria = createSetter('criteria');
+    const setGrades = createSetter('grades');
+    const setAttendance = createSetter('attendance');
+    const setParticipations = createSetter('participations');
+    const setActivities = createSetter('activities');
+    const setActivityRecords = createSetter('activityRecords');
 
 
     const calculateDetailedFinalGrade = useCallback((studentId: string, pData: PartialData): { finalGrade: number, criteriaDetails: CriteriaDetail[] } => {
