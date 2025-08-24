@@ -128,6 +128,9 @@ const defaultPartialData: PartialData = {
 // Helper function to load data from localStorage safely
 const loadFromStorage = <T>(key: string, defaultValue: T): T => {
     // This function will only run on the client, so we can safely use window
+    if (typeof window === 'undefined') {
+        return defaultValue;
+    }
     try {
         const storedValue = localStorage.getItem(key);
         return storedValue ? JSON.parse(storedValue) : defaultValue;
@@ -196,7 +199,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
 
-    // Initialize state with empty values to match server render
     const [groups, setGroups] = useState<Group[]>([]);
     const [allStudents, setAllStudents] = useState<Student[]>([]);
     const [allObservations, setAllObservations] = useState<{[studentId: string]: StudentObservation[]}>({});
@@ -205,9 +207,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const [activeGroupId, setActiveGroupIdState] = useState<string | null>(null);
     const [activePartialId, setActivePartialIdState] = useState<PartialId>('p1');
 
-    // This useEffect runs only on the client, after the initial render.
-    // This is the correct place to access localStorage and hydrate the state.
     useEffect(() => {
+        // This effect runs only once on the client to hydrate the state
         try {
             const storedGroups = loadFromStorage<Group[]>('app_groups', []);
             const storedStudents = loadFromStorage<Student[]>('app_students', []);
@@ -222,9 +223,12 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             setAllPartialsData(storedPartialsData);
             setSettingsState(storedSettings);
 
-            // Ensure the active group ID is valid before setting it
+            // Crucially, validate the active group ID against the just-loaded groups
             if (storedActiveGroupId && storedGroups.some(g => g.id === storedActiveGroupId)) {
                 setActiveGroupIdState(storedActiveGroupId);
+            } else {
+                // If the stored ID is invalid or doesn't exist, clear it.
+                setActiveGroupIdState(null);
             }
         } catch (e) {
             console.error("Error hydrating data from localStorage", e);
@@ -281,7 +285,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const createSetter = useCallback((field: keyof PartialData) => async (setter: React.SetStateAction<any>) => {
         if (!activeGroupId) return;
         const currentData = allPartialsData[activeGroupId]?.[activePartialId] || defaultPartialData;
-        const newValue = typeof setter === 'function' ? setter(currentData[field]) : setter;
+        const newValue = typeof setter === 'function' ? setter(currentData[field]) : setter(newValue);
         const newPartialData = { ...currentData, [field]: newValue };
         setPartialDataState(activeGroupId, activePartialId, newPartialData);
 
@@ -613,3 +617,5 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
+
+    
