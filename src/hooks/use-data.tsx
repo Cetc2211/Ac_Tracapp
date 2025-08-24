@@ -388,14 +388,12 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                  const studentParticipationOpportunities = participationDates.filter(date => studentAttendedDates.includes(date)).length;
 
                 if (studentParticipationOpportunities > 0) {
-                    const studentParticipations = Object.values(pData.participations || {}).filter(p => p[studentId]).length;
+                    const studentParticipations = participationDates.reduce((count, date) => {
+                        return count + (pData.participations?.[date]?.[studentId] ? 1 : 0);
+                    }, 0);
                     performanceRatio = studentParticipations / studentParticipationOpportunities;
-                } else if (studentAttendedDates.length === 0 && participationDates.length > 0) {
-                    // If student never attended, but there were participation opportunities, ratio is 0
-                    performanceRatio = 0;
                 } else {
-                    // If there were no participation opportunities or student attended all, ratio is 1 (or based on what's fair)
-                    performanceRatio = 1;
+                    performanceRatio = 1; // If no opportunities while present, grant full points to not penalize
                 }
             } else {
                 const delivered = pData.grades?.[studentId]?.[criterion.id]?.delivered ?? 0;
