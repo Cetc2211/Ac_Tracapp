@@ -128,9 +128,7 @@ const defaultPartialData: PartialData = {
 
 // Helper function to load data from localStorage safely
 const loadFromStorage = <T>(key: string, defaultValue: T): T => {
-    if (typeof window === 'undefined') {
-        return defaultValue;
-    }
+    // This function will only run on the client, so we can safely use window
     try {
         const storedValue = localStorage.getItem(key);
         return storedValue ? JSON.parse(storedValue) : defaultValue;
@@ -199,15 +197,17 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
 
+    // Initialize state with empty values to match server render
     const [groups, setGroups] = useState<Group[]>([]);
     const [allStudents, setAllStudents] = useState<Student[]>([]);
     const [allObservations, setAllObservations] = useState<{[studentId: string]: StudentObservation[]}>({});
     const [allPartialsData, setAllPartialsData] = useState<AllPartialsData>({});
     const [settings, setSettingsState] = useState(defaultSettings);
-    
-    const [activePartialId, setActivePartialIdState] = useState<PartialId>('p1');
     const [activeGroupId, setActiveGroupIdState] = useState<string | null>(null);
+    const [activePartialId, setActivePartialIdState] = useState<PartialId>('p1');
 
+    // This useEffect runs only on the client, after the initial render.
+    // This is the correct place to access localStorage and hydrate the state.
     useEffect(() => {
         try {
             const storedGroups = loadFromStorage<Group[]>('app_groups', []);
@@ -223,6 +223,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             setAllPartialsData(storedPartialsData);
             setSettingsState(storedSettings);
 
+            // Ensure the active group ID is valid before setting it
             if (storedActiveGroupId && storedGroups.some(g => g.id === storedActiveGroupId)) {
                 setActiveGroupIdState(storedActiveGroupId);
             }
@@ -230,19 +231,23 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             console.error("Error hydrating data from localStorage", e);
             setError(e instanceof Error ? e : new Error('An unknown error occurred during data hydration'));
         } finally {
+            // Once all data is loaded from localStorage, set loading to false.
             setIsLoading(false);
         }
     }, []);
 
+    // This useEffect persists any state changes back to localStorage
     useEffect(() => {
-        if (isLoading) return; 
+        // Don't save during the initial load, only after hydration is complete
+        if (isLoading) return;
+        
         try {
             localStorage.setItem('app_groups', JSON.stringify(groups));
             localStorage.setItem('app_students', JSON.stringify(allStudents));
             localStorage.setItem('app_observations', JSON.stringify(allObservations));
             localStorage.setItem('app_partialsData', JSON.stringify(allPartialsData));
             localStorage.setItem('app_settings', JSON.stringify(settings));
-            if(activeGroupId) {
+            if (activeGroupId) {
                 localStorage.setItem('activeGroupId_v1', activeGroupId);
             } else {
                 localStorage.removeItem('activeGroupId_v1');
@@ -263,7 +268,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         }
         return defaultPartialData;
     }, [allPartialsData]);
-
 
     const setPartialDataState = (groupId: string, partialId: PartialId, newPartialData: PartialData) => {
         setAllPartialsData(prev => ({
@@ -372,7 +376,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }, [groups]);
     
     const addStudentsToGroup = useCallback(async (groupId: string, students: Student[]) => {
-        setAllStudents(prev => [...prev, ...students]);
+        const newStudentIds = new Set(students.map(s => s.id));
+        setAllStudents(prev => [...prev.filter(s => !newStudentIds.has(s.id)), ...students]);
         setGroups(prev => prev.map(g => g.id === groupId ? {...g, students: [...g.students, ...students]} : g));
     }, []);
 
@@ -386,7 +391,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     const deleteGroup = useCallback(async (groupId: string) => {
         setGroups(prev => prev.filter(g => g.id !== groupId));
-        if(activeGroupId === groupId) setActiveGroupId(null);
+        if(activeGroupId === groupId) setActiveGroupIdState(null);
     }, [activeGroupId]);
 
     const updateGroup = useCallback(async (groupId: string, data: Partial<Omit<Group, 'id' | 'students'>>) => {
@@ -549,9 +554,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             console.error("Failed to reset data", e);
             setError(e as Error);
         } finally {
-            // Short delay to allow state to propagate before reloading
             setTimeout(() => {
-                setIsLoading(false);
                 window.location.reload();
             }, 500);
         }
