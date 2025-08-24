@@ -18,20 +18,14 @@ import {
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, Download, FileText, Loader2, Wand2, User, Mail, Phone, Check, X, AlertTriangle, ListChecks, MessageSquare, BadgeInfo, Edit, Save } from 'lucide-react';
+import { ArrowLeft, Download, FileText, Loader2, User, Mail, Phone, Check, X, AlertTriangle, ListChecks, MessageSquare, BadgeInfo } from 'lucide-react';
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useData } from '@/hooks/use-data';
-import { generateAtRiskStudentRecommendation } from '@/ai/flows/at-risk-student-recommendation';
-import type { AtRiskStudentOutput, AtRiskStudentInput } from '@/ai/flows/at-risk-student-recommendation';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import { useParams, notFound } from 'next/navigation';
 import type { PartialData, Student, PartialId, StudentObservation, EvaluationCriteria, Grades, ParticipationRecord, ActivityRecord, Activity, AttendanceRecord, CalculatedRisk } from '@/hooks/use-data';
 
@@ -56,14 +50,9 @@ type StudentReportData = {
 };
 
 
-const AtRiskStudentCard = ({ studentData, groupSubject }: { studentData: StudentReportData, groupSubject: string }) => {
+const AtRiskStudentCard = ({ studentData }: { studentData: StudentReportData }) => {
     const reportRef = useRef<HTMLDivElement>(null);
     const { toast } = useToast();
-    const [isGenerating, setIsGenerating] = useState(false);
-    const [aiResponse, setAiResponse] = useState<AtRiskStudentOutput | null>(null);
-    const [isEditing, setIsEditing] = useState(false);
-    const [editedAnalysis, setEditedAnalysis] = useState('');
-    const [editedRecommendations, setEditedRecommendations] = useState('');
 
     const handleDownloadPdf = () => {
         const input = reportRef.current;
@@ -87,59 +76,6 @@ const AtRiskStudentCard = ({ studentData, groupSubject }: { studentData: Student
         }
     };
     
-    const handleGenerateRecommendation = async () => {
-        setIsGenerating(true);
-        setAiResponse(null);
-        setIsEditing(false);
-        try {
-            const input: AtRiskStudentInput = {
-                studentName: studentData.name,
-                riskReason: studentData.riskReason,
-                gradesByGroup: [{
-                    group: groupSubject,
-                    grade: studentData.finalGrade,
-                    criteriaDetails: studentData.criteriaDetails
-                }],
-                attendance: studentData.attendance,
-                observations: studentData.observations.map(obs => ({ type: obs.type, details: obs.details })),
-            };
-            const result = await generateAtRiskStudentRecommendation(input);
-            setAiResponse(result);
-        } catch(e) {
-            console.error(e);
-            toast({
-                variant: 'destructive',
-                title: 'Error de IA',
-                description: 'No se pudo generar el análisis. Inténtalo de nuevo.'
-            });
-        } finally {
-            setIsGenerating(false);
-        }
-    }
-    
-    const handleEdit = () => {
-        if(aiResponse) {
-            setEditedAnalysis(aiResponse.analysis);
-            setEditedRecommendations(aiResponse.recommendations.join('\\n'));
-            setIsEditing(true);
-        }
-    }
-    
-    const handleSaveEdit = () => {
-        if (aiResponse) {
-            setAiResponse({
-                analysis: editedAnalysis,
-                recommendations: editedRecommendations.split('\\n').filter(r => r.trim() !== '')
-            });
-            setIsEditing(false);
-            toast({ title: 'Cambios guardados', description: 'El informe ha sido actualizado.'});
-        }
-    }
-
-    const handleCancelEdit = () => {
-        setIsEditing(false);
-    }
-
     const attendanceRate = studentData.attendance.total > 0 ? (studentData.attendance.p / studentData.attendance.total) * 100 : 100;
 
     return (
@@ -221,59 +157,10 @@ const AtRiskStudentCard = ({ studentData, groupSubject }: { studentData: Student
                             </div>
                          )}
                      </div>
-
-                    {aiResponse && (
-                        <div className="mt-6 space-y-4">
-                             <h4 className="font-semibold flex items-center gap-2 text-primary"><BadgeInfo />Análisis y Recomendaciones</h4>
-                              <div className="p-3 border-l-4 border-primary bg-primary/10 rounded-r-md text-sm space-y-4">
-                                {isEditing ? (
-                                    <div className="space-y-4">
-                                        <div>
-                                            <Label htmlFor="edited-analysis" className="font-bold">Análisis de la Situación:</Label>
-                                            <Textarea id="edited-analysis" value={editedAnalysis} onChange={(e) => setEditedAnalysis(e.target.value)} rows={4} />
-                                        </div>
-                                        <div>
-                                            <Label htmlFor="edited-recommendations" className="font-bold">Plan de Acción Recomendado:</Label>
-                                            <Textarea id="edited-recommendations" value={editedRecommendations} onChange={(e) => setEditedRecommendations(e.target.value)} rows={5} placeholder="Una recomendación por línea"/>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <div>
-                                            <h5 className="font-bold">Análisis de la Situación:</h5>
-                                            <p className="mt-1 whitespace-pre-wrap">{aiResponse.analysis}</p>
-                                        </div>
-                                        <div>
-                                            <h5 className="font-bold">Plan de Acción Recomendado:</h5>
-                                            <ul className="list-disc pl-5 mt-2 space-y-1">
-                                                {aiResponse.recommendations.map((rec, i) => (
-                                                    <li key={i}>{rec}</li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        </div>
-                    )}
                 </CardContent>
             </div>
 
             <CardFooter className="bg-muted/50 p-3 flex justify-end gap-2">
-                 <Button onClick={handleGenerateRecommendation} disabled={isGenerating || isEditing}>
-                    {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Wand2 className="mr-2 h-4 w-4" />}
-                    {isGenerating ? 'Analizando...' : 'Generar Análisis'}
-                </Button>
-                {aiResponse && (
-                    isEditing ? (
-                        <>
-                            <Button onClick={handleSaveEdit}><Save className="mr-2 h-4 w-4" /> Guardar</Button>
-                            <Button variant="outline" onClick={handleCancelEdit}>Cancelar</Button>
-                        </>
-                    ) : (
-                        <Button variant="secondary" onClick={handleEdit}><Edit className="mr-2 h-4 w-4" /> Editar</Button>
-                    )
-                )}
                 <Button variant="outline" onClick={handleDownloadPdf}>
                     <Download className="mr-2 h-4 w-4"/> PDF
                 </Button>
@@ -401,7 +288,7 @@ export default function AtRiskReportPage() {
                         }
                     </AccordionTrigger>
                     <AccordionContent className="border-x border-b rounded-b-lg p-0">
-                       <AtRiskStudentCard studentData={student} groupSubject={group.subject}/>
+                       <AtRiskStudentCard studentData={student}/>
                     </AccordionContent>
                 </AccordionItem>
             ))}

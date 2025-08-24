@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, Download, CheckCircle, XCircle, TrendingUp, BarChart, Users, Eye, AlertTriangle, Loader2, Wand2 } from 'lucide-react';
+import { ArrowLeft, Download, CheckCircle, XCircle, TrendingUp, BarChart, Users, Eye, AlertTriangle, Loader2 } from 'lucide-react';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -31,7 +31,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ChevronDown } from 'lucide-react';
-import { generateReportSummary } from '@/ai/flows/report-summary-generator';
 import { Textarea } from '@/components/ui/textarea';
 
 
@@ -63,7 +62,6 @@ export default function GroupReportPage() {
   
   const [summary, setSummary] = useState<ReportSummary | null>(null);
   const [reportText, setReportText] = useState('');
-  const [isGeneratingText, setIsGeneratingText] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -191,27 +189,6 @@ export default function GroupReportPage() {
       });
     }
   };
-
-  const handleGenerateText = async () => {
-      if (!summary || !group) return;
-      setIsGeneratingText(true);
-      try {
-        const result = await generateReportSummary({
-            groupName: group.subject,
-            studentCount: summary.totalStudents,
-            averageGrade: summary.groupAverage,
-            approvalRate: summary.totalStudents > 0 ? (summary.approvedCount / summary.totalStudents) * 100 : 0,
-            attendanceRate: summary.attendanceRate,
-            highRiskCount: summary.highRiskCount,
-            mediumRiskCount: summary.mediumRiskCount,
-        });
-        setReportText(result.summary);
-      } catch (e) {
-          toast({ variant: 'destructive', title: 'Error', description: 'No se pudo generar el texto.'});
-      } finally {
-        setIsGeneratingText(false);
-      }
-  }
   
   if (isDataLoading || !summary) {
     return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /> <span className="ml-2">Generando informe...</span></div>;
@@ -302,10 +279,6 @@ export default function GroupReportPage() {
         <section>
             <div className='flex justify-between items-center'>
                 <h2 className="text-xl font-semibold mb-4">Resumen General del Grupo</h2>
-                <Button size="sm" onClick={handleGenerateText} disabled={isGeneratingText}>
-                    {isGeneratingText ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Wand2 className="mr-2 h-4 w-4" />}
-                    Generar Redacción con IA
-                </Button>
             </div>
             <Textarea 
                 value={reportText}
@@ -355,7 +328,7 @@ export default function GroupReportPage() {
             <div className="mt-12 pt-12">
                 <div className="inline-block">
                     <div className="border-t border-foreground w-48 mx-auto"></div>
-                    <p className="mt-2 font-semibold">{group.facilitator || 'Docente'}</p>
+                    <p className="font-semibold">{group.facilitator || 'Docente'}</p>
                     <p>Firma del Docente</p>
                 </div>
             </div>

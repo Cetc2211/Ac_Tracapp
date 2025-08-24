@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, Download, User, Mail, Phone, Wand2, Loader2, MessageSquare, BookText, Edit, Save } from 'lucide-react';
+import { ArrowLeft, Download, User, Mail, Phone, Loader2, MessageSquare, BookText } from 'lucide-react';
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
@@ -25,11 +25,7 @@ import { getPartialLabel } from '@/lib/utils';
 import type { PartialId, StudentObservation, Student, PartialData } from '@/hooks/use-data';
 import { StudentObservationLogDialog } from '@/components/student-observation-log-dialog';
 import { WhatsAppDialog } from '@/components/whatsapp-dialog';
-import { generateStudentFeedback } from '@/ai/flows/student-feedback';
-import type { StudentFeedbackInput, StudentFeedbackOutput } from '@/ai/flows/student-feedback';
 import { Separator } from '@/components/ui/separator';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 
 type StudentStats = ReturnType<typeof useData>['calculateDetailedFinalGrade'] & {
   partialId: PartialId;
@@ -55,13 +51,6 @@ export default function StudentProfilePage() {
   
   const [isLogOpen, setIsLogOpen] = useState(false);
   const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false);
-  const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
-  const [generatedFeedback, setGeneratedFeedback] = useState<StudentFeedbackOutput | null>(null);
-  const [isEditingFeedback, setIsEditingFeedback] = useState(false);
-  const [editedFeedback, setEditedFeedback] = useState<{ feedback: string; recommendations: string }>({
-    feedback: '',
-    recommendations: '',
-  });
 
   const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -180,71 +169,6 @@ export default function StudentProfilePage() {
       elementsToHide.forEach((el) => {
         el.style.display = originalDisplays.get(el) || '';
       });
-    }
-  };
-
-  const handleGenerateFeedback = async () => {
-    if (!student) return;
-
-    const partialsWithData = studentStatsByPartial
-      .filter((s) => s.criteriaDetails.length > 0)
-      .sort((a, b) => parseInt(b.partialId.slice(1)) - parseInt(a.partialId.slice(1)));
-
-    const dataToUse = partialsWithData.length > 0 ? partialsWithData[0] : null;
-
-    if (!dataToUse) {
-      toast({
-        variant: 'destructive',
-        title: 'Sin datos',
-        description: 'No hay datos de ningún parcial para generar feedback.',
-      });
-      return;
-    }
-
-    toast({ title: `Generando feedback...`, description: `Usando datos de: ${getPartialLabel(dataToUse.partialId)}` });
-    setIsGeneratingFeedback(true);
-    setGeneratedFeedback(null);
-    try {
-      const inputData: StudentFeedbackInput = {
-        studentName: student.name,
-        groupName: studentGroups.find(g => g.students.some(s => s.id === studentId))?.subject || 'Clase',
-        finalGrade: dataToUse.finalGrade,
-        attendance: {
-            p: dataToUse.attendance.p,
-            a: dataToUse.attendance.a,
-            total: dataToUse.attendance.total,
-        },
-        observations: dataToUse.observations.map((obs) => ({ type: obs.type, details: obs.details })),
-      };
-
-      const feedback = await generateStudentFeedback(inputData);
-      setGeneratedFeedback(feedback);
-    } catch (error) {
-      console.error('Error generating feedback:', error);
-      toast({ variant: 'destructive', title: 'Error de IA', description: 'No se pudo generar el feedback.' });
-    } finally {
-      setIsGeneratingFeedback(false);
-    }
-  };
-
-  const handleEditFeedback = () => {
-    if (generatedFeedback) {
-      setEditedFeedback({
-        feedback: generatedFeedback.feedback,
-        recommendations: generatedFeedback.recommendations.join('\\n'),
-      });
-      setIsEditingFeedback(true);
-    }
-  };
-
-  const handleSaveFeedback = () => {
-    if (generatedFeedback) {
-      setGeneratedFeedback({
-        feedback: editedFeedback.feedback,
-        recommendations: editedFeedback.recommendations.split('\\n').filter((r) => r.trim() !== ''),
-      });
-      setIsEditingFeedback(false);
-      toast({ title: 'Feedback actualizado' });
     }
   };
 
@@ -429,87 +353,13 @@ export default function StudentProfilePage() {
                   <CardTitle>Recomendaciones y retroalimentación</CardTitle>
                   <CardDescription>Resumen personalizado del rendimiento del estudiante.</CardDescription>
                 </div>
-                <div id="feedback-buttons-container" className="flex gap-2">
-                  <Button
-                    onClick={handleGenerateFeedback}
-                    disabled={isGeneratingFeedback || isEditingFeedback || !hasAnyDataForFeedback}
-                  >
-                    {isGeneratingFeedback ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Wand2 className="mr-2 h-4 w-4" />
-                    )}
-                    {isGeneratingFeedback ? 'Generando...' : 'Generar Feedback'}
-                  </Button>
-                  {generatedFeedback && !isEditingFeedback && (
-                    <Button variant="secondary" onClick={handleEditFeedback}>
-                      <Edit className="mr-2 h-4 w-4" /> Editar
-                    </Button>
-                  )}
-                </div>
               </div>
             </CardHeader>
-            {generatedFeedback ? (
-              <CardContent>
-                {isEditingFeedback ? (
-                  <div className="p-4 border rounded-md space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="editedFeedback" className="font-bold">
-                        Feedback General:
-                      </Label>
-                      <Textarea
-                        id="editedFeedback"
-                        value={editedFeedback.feedback}
-                        onChange={(e) => setEditedFeedback((prev) => ({ ...prev, feedback: e.target.value }))}
-                        rows={4}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="editedRecommendations" className="font-bold">
-                        Recomendaciones:
-                      </Label>
-                      <Textarea
-                        id="editedRecommendations"
-                        value={editedFeedback.recommendations}
-                        onChange={(e) => setEditedFeedback((prev) => ({ ...prev, recommendations: e.target.value }))}
-                        rows={5}
-                      />
-                    </div>
-                    <div className="flex justify-end gap-2">
-                      <Button variant="outline" onClick={() => setIsEditingFeedback(false)}>
-                        Cancelar
-                      </Button>
-                      <Button onClick={handleSaveFeedback}>
-                        <Save className="mr-2 h-4 w-4" /> Guardar Cambios
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="p-4 border-l-4 border-primary bg-primary/10 rounded-r-md space-y-4">
-                    <div>
-                      <h4 className="font-bold">Feedback General:</h4>
-                      <p className="text-sm">{generatedFeedback.feedback}</p>
-                    </div>
-                    <div>
-                      <h4 className="font-bold">Recomendaciones:</h4>
-                      <ul className="list-disc pl-5 mt-2 space-y-1 text-sm">
-                        {generatedFeedback.recommendations.map((rec, i) => (
-                          <li key={i}>{rec}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                )}
+             <CardContent>
+                <div className="text-center text-sm text-muted-foreground bg-muted/50 p-4 rounded-md">
+                  <p>La funcionalidad de IA ha sido deshabilitada.</p>
+                </div>
               </CardContent>
-            ) : (
-              !hasAnyDataForFeedback && !isDataLoading && !isPageLoading && (
-                <CardContent>
-                  <div className="text-center text-sm text-muted-foreground bg-muted/50 p-4 rounded-md">
-                    <p>No hay datos de calificaciones para generar un feedback automatizado.</p>
-                  </div>
-                </CardContent>
-              )
-            )}
             <CardFooter>
               <div className="w-full mt-12 pt-12 text-center text-sm">
                 <div className="inline-block">
