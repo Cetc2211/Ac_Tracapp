@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
@@ -126,6 +125,19 @@ const defaultPartialData: PartialData = {
     activityRecords: {},
 };
 
+// Helper function to load data from localStorage safely
+const loadFromStorage = <T>(key: string, defaultValue: T): T => {
+    // This function will only run on the client, so we can safely use window
+    try {
+        const storedValue = localStorage.getItem(key);
+        return storedValue ? JSON.parse(storedValue) : defaultValue;
+    } catch (error) {
+        console.error(`Error loading ${key} from localStorage`, error);
+        return defaultValue;
+    }
+};
+
+
 // CONTEXT TYPE
 interface DataContextType {
   // State
@@ -179,26 +191,12 @@ interface DataContextType {
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
-// Helper function to load data from localStorage safely
-const loadFromStorage = <T>(key: string, defaultValue: T): T => {
-    if (typeof window === 'undefined') {
-        return defaultValue;
-    }
-    try {
-        const storedValue = localStorage.getItem(key);
-        return storedValue ? JSON.parse(storedValue) : defaultValue;
-    } catch (error) {
-        console.error(`Error loading ${key} from localStorage`, error);
-        return defaultValue;
-    }
-};
-
-
 // DATA PROVIDER COMPONENT
 export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
 
+    // Initialize state with empty values to match server render
     const [groups, setGroups] = useState<Group[]>([]);
     const [allStudents, setAllStudents] = useState<Student[]>([]);
     const [allObservations, setAllObservations] = useState<{[studentId: string]: StudentObservation[]}>({});
@@ -223,21 +221,23 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             setAllObservations(storedObservations);
             setAllPartialsData(storedPartialsData);
             setSettingsState(storedSettings);
-            
+
+            // Ensure the active group ID is valid before setting it
             if (storedActiveGroupId && storedGroups.some(g => g.id === storedActiveGroupId)) {
                 setActiveGroupIdState(storedActiveGroupId);
             }
-
         } catch (e) {
             console.error("Error hydrating data from localStorage", e);
             setError(e instanceof Error ? e : new Error('An unknown error occurred during data hydration'));
         } finally {
+            // Once all data is loaded from localStorage, set loading to false.
             setIsLoading(false);
         }
     }, []);
 
     // This useEffect persists any state changes back to localStorage
     useEffect(() => {
+        // Don't save during the initial load, only after hydration is complete
         if (isLoading) return;
         
         try {
