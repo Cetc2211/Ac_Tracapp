@@ -99,11 +99,14 @@ export type PartialData = {
     activityRecords: ActivityRecord;
 };
 
-export type AllPartialsData = {
-  [groupId: string]: {
+export type AllPartialsDataForGroup = {
     [partialId in PartialId]?: PartialData;
-  };
 };
+
+export type AllPartialsData = {
+  [groupId: string]: AllPartialsDataForGroup;
+};
+
 
 export type UserProfile = {
     name: string;
@@ -128,7 +131,9 @@ const defaultPartialData: PartialData = {
 
 // Helper function to load data from localStorage safely
 const loadFromStorage = <T>(key: string, defaultValue: T): T => {
-    // This function will only run on the client, so we can safely use window
+    if (typeof window === 'undefined') {
+        return defaultValue;
+    }
     try {
         const storedValue = localStorage.getItem(key);
         return storedValue ? JSON.parse(storedValue) : defaultValue;
@@ -153,7 +158,9 @@ interface DataContextType {
   activeGroup: Group | null;
   activePartialId: PartialId;
   
-  partialData: PartialData;
+  partialData: PartialData; // Data for the active group and partial
+  allPartialsDataForActiveGroup: AllPartialsDataForGroup;
+
 
   groupAverages: {[groupId: string]: number};
   atRiskStudents: StudentWithRisk[];
@@ -186,7 +193,7 @@ interface DataContextType {
   calculateFinalGrade: (studentId: string, forGroupId?: string, forPartialId?: PartialId, forPartialData?: PartialData) => number;
   calculateDetailedFinalGrade: (studentId: string, pData: PartialData) => { finalGrade: number, criteriaDetails: CriteriaDetail[] };
   getStudentRiskLevel: (finalGrade: number, pAttendance: AttendanceRecord, studentId: string) => CalculatedRisk;
-  fetchPartialData: (groupId: string, partialId: PartialId) => Promise<PartialData | null>;
+  fetchPartialData: (groupId: string, partialId: PartialId) => Promise<PartialData>;
   takeAttendanceForDate: (groupId: string, date: string) => Promise<void>;
 }
 
@@ -197,7 +204,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
 
-    // Initialize state with empty values to match server render
     const [groups, setGroups] = useState<Group[]>([]);
     const [allStudents, setAllStudents] = useState<Student[]>([]);
     const [allObservations, setAllObservations] = useState<{[studentId: string]: StudentObservation[]}>({});
@@ -206,8 +212,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const [activeGroupId, setActiveGroupIdState] = useState<string | null>(null);
     const [activePartialId, setActivePartialIdState] = useState<PartialId>('p1');
 
-    // This useEffect runs only on the client, after the initial render.
-    // This is the correct place to access localStorage and hydrate the state.
     useEffect(() => {
         try {
             const storedGroups = loadFromStorage<Group[]>('app_groups', []);
@@ -223,22 +227,21 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             setAllPartialsData(storedPartialsData);
             setSettingsState(storedSettings);
 
-            // Ensure the active group ID is valid before setting it
             if (storedActiveGroupId && storedGroups.some(g => g.id === storedActiveGroupId)) {
                 setActiveGroupIdState(storedActiveGroupId);
+            } else if (storedGroups.length > 0) {
+                 setActiveGroupIdState(storedGroups[0].id);
             }
+
         } catch (e) {
             console.error("Error hydrating data from localStorage", e);
             setError(e instanceof Error ? e : new Error('An unknown error occurred during data hydration'));
         } finally {
-            // Once all data is loaded from localStorage, set loading to false.
             setIsLoading(false);
         }
     }, []);
 
-    // This useEffect persists any state changes back to localStorage
     useEffect(() => {
-        // Don't save during the initial load, only after hydration is complete
         if (isLoading) return;
         
         try {
@@ -256,17 +259,18 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             console.error("Failed to save data to localStorage", e);
         }
     }, [groups, allStudents, allObservations, allPartialsData, settings, activeGroupId, isLoading]);
+    
+    const allPartialsDataForActiveGroup = useMemo(() => {
+        if (!activeGroupId) return {};
+        return allPartialsData[activeGroupId] || {};
+    }, [activeGroupId, allPartialsData]);
 
     const partialData = useMemo(() => {
-        if (!activeGroupId || !allPartialsData[activeGroupId]) return defaultPartialData;
-        return allPartialsData[activeGroupId][activePartialId] || defaultPartialData;
-    }, [activeGroupId, activePartialId, allPartialsData]);
+        return allPartialsDataForActiveGroup[activePartialId] || defaultPartialData;
+    }, [allPartialsDataForActiveGroup, activePartialId]);
     
-    const fetchPartialData = useCallback(async (groupId: string, partialId: PartialId): Promise<PartialData | null> => {
-        if (allPartialsData[groupId] && allPartialsData[groupId][partialId]) {
-            return allPartialsData[groupId][partialId] as PartialData;
-        }
-        return defaultPartialData;
+    const fetchPartialData = useCallback(async (groupId: string, partialId: PartialId): Promise<PartialData> => {
+        return allPartialsData[groupId]?.[partialId] || defaultPartialData;
     }, [allPartialsData]);
 
     const setPartialDataState = (groupId: string, partialId: PartialId, newPartialData: PartialData) => {
@@ -572,6 +576,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         activeGroup,
         activePartialId,
         partialData,
+        allPartialsDataForActiveGroup,
         groupAverages,
         atRiskStudents,
         overallAverageParticipation,
