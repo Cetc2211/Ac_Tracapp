@@ -405,7 +405,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         }
         
         const grade = Math.max(0, Math.min(100, finalGrade));
-        console.log(`Calculated grade for ${studentId}: ${grade}`, { details: criteriaDetails });
         return { finalGrade: grade, criteriaDetails: criteriaDetails };
     }, []);
 
