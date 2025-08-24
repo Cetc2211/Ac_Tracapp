@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, Download, User, Mail, Phone, Loader2, MessageSquare, BookText } from 'lucide-react';
+import { ArrowLeft, Download, User, Mail, Phone, Loader2, MessageSquare, BookText, Sparkles } from 'lucide-react';
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
@@ -26,6 +26,9 @@ import type { PartialId, StudentObservation, Student, PartialData } from '@/hook
 import { StudentObservationLogDialog } from '@/components/student-observation-log-dialog';
 import { WhatsAppDialog } from '@/components/whatsapp-dialog';
 import { Separator } from '@/components/ui/separator';
+import { generateStudentFeedback, StudentFeedbackInput } from '@/ai/flows/student-feedback';
+import ReactMarkdown from 'react-markdown';
+
 
 type StudentStats = ReturnType<typeof useData>['calculateDetailedFinalGrade'] & {
   partialId: PartialId;
@@ -51,6 +54,8 @@ export default function StudentProfilePage() {
   
   const [isLogOpen, setIsLogOpen] = useState(false);
   const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false);
+  const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
+  const [feedback, setFeedback] = useState('');
 
   const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -171,6 +176,42 @@ export default function StudentProfilePage() {
       });
     }
   };
+
+  const handleGenerateFeedback = useCallback(async () => {
+    if (!student || studentStatsByPartial.length === 0) {
+        toast({ variant: 'destructive', title: 'Faltan datos', description: 'No hay suficientes datos de rendimiento para generar retroalimentación.' });
+        return;
+    }
+
+    setIsGeneratingFeedback(true);
+    toast({ title: 'Generando retroalimentación con IA...' });
+
+    try {
+        const latestPartial = studentStatsByPartial[studentStatsByPartial.length - 1];
+        
+        const input: StudentFeedbackInput = {
+            studentName: student.name,
+            groupName: studentGroups[0]?.subject || 'este grupo',
+            finalGrade: latestPartial.finalGrade,
+            attendance: latestPartial.attendance,
+            criteriaDetails: latestPartial.criteriaDetails,
+            observations: latestPartial.observations.map(o => ({ type: o.type, details: o.details })),
+        };
+        
+        const result = await generateStudentFeedback(input);
+        setFeedback(result.feedback);
+
+    } catch (error: any) {
+        console.error('Error generating feedback:', error);
+        toast({
+            variant: 'destructive',
+            title: 'Error de IA',
+            description: 'No se pudo generar la retroalimentación. Verifica la consola para más detalles.'
+        });
+    } finally {
+        setIsGeneratingFeedback(false);
+    }
+}, [student, studentStatsByPartial, studentGroups, toast]);
 
   if (isDataLoading || isPageLoading) {
     return (
@@ -353,12 +394,26 @@ export default function StudentProfilePage() {
                   <CardTitle>Recomendaciones y retroalimentación</CardTitle>
                   <CardDescription>Resumen personalizado del rendimiento del estudiante.</CardDescription>
                 </div>
+                 <div id="feedback-buttons-container">
+                    <Button onClick={handleGenerateFeedback} disabled={isGeneratingFeedback || !hasAnyDataForFeedback}>
+                        {isGeneratingFeedback ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Sparkles className="mr-2 h-4 w-4" />}
+                        {isGeneratingFeedback ? 'Generando...' : 'Generar Retroalimentación con IA'}
+                    </Button>
+                </div>
               </div>
             </CardHeader>
              <CardContent>
-                <div className="text-center text-sm text-muted-foreground bg-muted/50 p-4 rounded-md">
-                  <p>La funcionalidad de IA ha sido deshabilitada.</p>
-                </div>
+                {isGeneratingFeedback && <Skeleton className="h-32 w-full" />}
+                {!isGeneratingFeedback && feedback && (
+                  <div className="prose prose-sm dark:prose-invert max-w-none bg-muted/30 p-4 rounded-md">
+                      <ReactMarkdown>{feedback}</ReactMarkdown>
+                  </div>
+                )}
+                 {!isGeneratingFeedback && !feedback && (
+                  <div className="text-center text-sm text-muted-foreground bg-muted/50 p-4 rounded-md">
+                    <p>Haz clic en el botón para generar una retroalimentación personalizada para el último parcial.</p>
+                  </div>
+                 )}
               </CardContent>
             <CardFooter>
               <div className="w-full mt-12 pt-12 text-center text-sm">

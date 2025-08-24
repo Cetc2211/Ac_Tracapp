@@ -2,5 +2,5 @@
 import { config } from 'dotenv';
 config();
 
-// AI Flows have been removed.
-
+import './flows/student-feedback';
+import './flows/report-summary-generator';

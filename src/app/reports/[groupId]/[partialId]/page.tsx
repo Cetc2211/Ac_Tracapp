@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, Download, CheckCircle, XCircle, TrendingUp, BarChart, Users, Eye, AlertTriangle, Loader2 } from 'lucide-react';
+import { ArrowLeft, Download, CheckCircle, XCircle, TrendingUp, BarChart, Users, Eye, AlertTriangle, Loader2, Sparkles } from 'lucide-react';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { ChevronDown } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
+import { generateReportSummary } from '@/ai/flows/report-summary-generator';
 
 
 type ReportSummary = {
@@ -63,6 +64,7 @@ export default function GroupReportPage() {
   const [summary, setSummary] = useState<ReportSummary | null>(null);
   const [reportText, setReportText] = useState('');
   const [isClient, setIsClient] = useState(false);
+  const [isGeneratingText, setIsGeneratingText] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -152,7 +154,7 @@ export default function GroupReportPage() {
       };
 
       setSummary(reportSummary);
-      setReportText(`Por medio del presente, se muestran los resultados generales obtenidos durante el parcial actual para el grupo de ${group.subject}, que cuenta con un total de ${reportSummary.totalStudents} estudiante(s).`);
+      setReportText(`Resultados generales obtenidos durante el ${getPartialLabel(partialId)} para el grupo de ${group.subject}.`);
 
     } catch (e) {
       console.error("Failed to generate report data", e);
@@ -187,6 +189,25 @@ export default function GroupReportPage() {
         pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
         pdf.save(`informe_grupal_${group?.subject.replace(/\s+/g, '_') || 'reporte'}.pdf`);
       });
+    }
+  };
+
+  const handleGenerateSummary = async () => {
+    if (!summary || !group) return;
+    
+    setIsGeneratingText(true);
+    toast({ title: 'Generando análisis con IA...', description: 'Por favor espera.' });
+    try {
+      const result = await generateReportSummary({
+        groupName: group.subject,
+        ...summary,
+      });
+      setReportText(result.summaryText);
+    } catch (error) {
+      console.error("AI error:", error);
+      toast({ variant: 'destructive', title: 'Error de IA', description: 'No se pudo generar el resumen. Por favor, verifica tu clave de API y la configuración.' });
+    } finally {
+      setIsGeneratingText(false);
     }
   };
   
@@ -235,7 +256,6 @@ export default function GroupReportPage() {
             </DropdownMenu>
          </div>
          <div className='flex gap-2'>
-            <Button variant="outline">Incluir Gráficas</Button>
             <Button onClick={handleDownloadPdf}>
                 <Download className="mr-2 h-4 w-4"/>
                 Descargar Informe
@@ -279,13 +299,18 @@ export default function GroupReportPage() {
         <section>
             <div className='flex justify-between items-center'>
                 <h2 className="text-xl font-semibold mb-4">Resumen General del Grupo</h2>
+                <Button size="sm" onClick={handleGenerateSummary} disabled={isGeneratingText}>
+                    {isGeneratingText ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Sparkles className="mr-2 h-4 w-4" />}
+                    {isGeneratingText ? 'Generando...' : 'Generar con IA'}
+                </Button>
             </div>
             <Textarea 
                 value={reportText}
                 onChange={(e) => setReportText(e.target.value)}
                 className="leading-relaxed mt-2"
-                rows={4}
+                rows={isGeneratingText ? 6 : 4}
             />
+            {isGeneratingText && <Skeleton className="h-24 w-full mt-2" />}
 
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 my-6">
                 <Card className="text-center">
