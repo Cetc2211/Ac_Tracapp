@@ -126,81 +126,6 @@ const defaultPartialData: PartialData = {
     activityRecords: {},
 };
 
-// --- START OF MOCK DATA ---
-const mockStudents: Student[] = [
-    { id: 'S1', name: 'Ana García Pérez', email: 'ana.garcia@example.com', phone: '555-0101', tutorName: 'Ricardo García', tutorPhone: '555-0201', photo: 'https://placehold.co/100x100.png?text=AG' },
-    { id: 'S2', name: 'Luis Martínez Hernández', email: 'luis.martinez@example.com', phone: '555-0102', tutorName: 'Elena Hernández', tutorPhone: '555-0202', photo: 'https://placehold.co/100x100.png?text=LM' },
-    { id: 'S3', name: 'Sofía Rodríguez López', email: 'sofia.rodriguez@example.com', phone: '555-0103', tutorName: 'Javier Rodríguez', tutorPhone: '555-0203', photo: 'https://placehold.co/100x100.png?text=SR' },
-    { id: 'S4', name: 'Carlos González Sánchez', email: 'carlos.gonzalez@example.com', phone: '555-0104', tutorName: 'Marta Sánchez', tutorPhone: '555-0204', photo: 'https://placehold.co/100x100.png?text=CG' },
-    { id: 'S5', name: 'Valeria Gómez Ramírez', email: 'valeria.gomez@example.com', phone: '555-0105', tutorName: 'David Gómez', tutorPhone: '555-0205', photo: 'https://placehold.co/100x100.png?text=VG' },
-];
-
-const testStudents: Student[] = [
-    { id: 'S6', name: 'Jorge Navarro', email: 'jorge.n@example.com', phone: '555-0106', tutorName: 'Ana Navarro', tutorPhone: '555-0206', photo: 'https://placehold.co/100x100.png?text=JN' },
-    { id: 'S7', name: 'Mariana Castillo', email: 'mariana.c@example.com', phone: '555-0107', tutorName: 'Pedro Castillo', tutorPhone: '555-0207', photo: 'https://placehold.co/100x100.png?text=MC' },
-    { id: 'S8', name: 'Fernando Ortega', email: 'fernando.o@example.com', phone: '555-0108', tutorName: 'Isabel Ortega', tutorPhone: '555-0208', photo: 'https://placehold.co/100x100.png?text=FO' },
-    { id: 'S9', name: 'Daniela Reyes', email: 'daniela.r@example.com', phone: '555-0109', tutorName: 'Miguel Reyes', tutorPhone: '555-0209', photo: 'https://placehold.co/100x100.png?text=DR' },
-    { id: 'S10', name: 'Roberto Morales', email: 'roberto.m@example.com', phone: '555-0110', tutorName: 'Laura Morales', tutorPhone: '555-0210', photo: 'https://placehold.co/100x100.png?text=RM' },
-];
-
-const mockGroups: Group[] = [
-    {
-        id: 'G1',
-        subject: 'Historia del Arte',
-        semester: 'Cuarto',
-        groupName: '401A',
-        facilitator: 'Prof. Angélica Rosas',
-        students: mockStudents,
-    },
-    {
-        id: 'G2',
-        subject: 'Química Orgánica',
-        semester: 'Sexto',
-        groupName: '602B',
-        facilitator: 'Dr. Ernesto Valdés',
-        students: testStudents,
-    }
-];
-
-const mockAllStudents = [...mockStudents, ...testStudents];
-
-const mockPartialsData: AllPartialsData = {
-    "G1": {
-        "p1": {
-            "criteria": [],
-            "grades": {},
-            "attendance": {},
-            "participations": {},
-            "activities": [],
-            "activityRecords": {}
-        }
-    },
-    "G2": {
-        "p1": {
-            "criteria": [
-                { id: "C1", name: "Actividades", weight: 30, expectedValue: 10 },
-                { id: "C2", name: "Examen", weight: 40, expectedValue: 100 },
-                { id: "C3", name: "Proyecto Final", weight: 20, expectedValue: 1 },
-                { id: "C4", name: "Participación", weight: 10, expectedValue: 0, isAutomated: true }
-            ],
-            "grades": {},
-            "attendance": {
-                "2024-05-20": { "S6": true, "S7": true, "S8": false, "S9": true, "S10": true },
-                "2024-05-21": { "S6": true, "S7": true, "S8": true, "S9": false, "S10": true },
-                "2024-05-22": { "S6": true, "S7": false, "S8": true, "S9": true, "S10": false },
-            },
-            "participations": {
-                 "2024-05-20": { "S6": true, "S7": false, "S9": true },
-                 "2024-05-21": { "S7": true, "S8": true, "S10": true },
-            },
-            "activities": [],
-            "activityRecords": {}
-        }
-    }
-};
-
-// --- END OF MOCK DATA ---
-
 
 // CONTEXT TYPE
 interface DataContextType {
@@ -271,7 +196,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
 
-    // This effect runs once on mount to load data from localStorage or initialize with mock data.
+    // This effect runs once on mount to load data from localStorage or initialize with an empty state.
     useEffect(() => {
         setIsLoading(true);
         try {
@@ -282,39 +207,30 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             const storedSettings = localStorage.getItem('app_settings');
             const storedGroupId = localStorage.getItem('activeGroupId_v1');
 
-            let initialGroups: Group[];
-            if (storedGroups) {
-                initialGroups = JSON.parse(storedGroups);
-                setGroups(initialGroups);
-                setAllStudents(JSON.parse(storedStudents!));
-                setAllPartialsData(storedPartials ? JSON.parse(storedPartials) : {});
-                setAllObservations(storedObservations ? JSON.parse(storedObservations) : {});
-                setSettingsState(storedSettings ? JSON.parse(storedSettings) : defaultSettings);
-            } else {
-                // First time load, use mock data
-                initialGroups = mockGroups;
-                setGroups(mockGroups);
-                setAllStudents(mockAllStudents);
-                setAllPartialsData(mockPartialsData);
-                setAllObservations({});
-                setSettingsState(defaultSettings);
-            }
+            const initialGroups = storedGroups ? JSON.parse(storedGroups) : [];
+            setGroups(initialGroups);
+            setAllStudents(storedStudents ? JSON.parse(storedStudents) : []);
+            setAllPartialsData(storedPartials ? JSON.parse(storedPartials) : {});
+            setAllObservations(storedObservations ? JSON.parse(storedObservations) : {});
+            setSettingsState(storedSettings ? JSON.parse(storedSettings) : defaultSettings);
             
             if (storedGroupId && initialGroups.some((g: Group) => g.id === storedGroupId)) {
                 setActiveGroupIdState(storedGroupId);
             } else if (initialGroups.length > 0) {
                 setActiveGroupIdState(initialGroups[0].id);
+            } else {
+                setActiveGroupIdState(null);
             }
 
         } catch (e) {
             console.error("Failed to load data from localStorage", e);
             setError(e as Error);
-            // Fallback to mock data on error
-            setGroups(mockGroups);
-            setAllStudents(mockAllStudents);
-            setAllPartialsData(mockPartialsData);
+            // Fallback to empty state on error
+            setGroups([]);
+            setAllStudents([]);
+            setAllPartialsData({});
             setSettingsState(defaultSettings);
-            setActiveGroupIdState(mockGroups.length > 0 ? mockGroups[0].id : null);
+            setActiveGroupIdState(null);
         } finally {
             setIsLoading(false);
         }
@@ -668,5 +584,3 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
-
-    
