@@ -20,44 +20,52 @@ export const ReportSummaryOutputSchema = z.object({
 });
 export type ReportSummaryOutput = z.infer<typeof ReportSummaryOutputSchema>;
 
-const prompt = ai.definePrompt({
-    name: 'reportSummaryPrompt',
-    input: { schema: ReportSummaryInputSchema },
-    output: { schema: ReportSummaryOutputSchema },
-    prompt: `
-        Eres un asistente de análisis académico para un profesor.
-        Tu tarea es redactar un resumen conciso y profesional del rendimiento de un grupo de estudiantes basado en los datos proporcionados.
-        El resumen debe ser formal, objetivo y fácil de entender.
+// const prompt = ai.definePrompt({
+//     name: 'reportSummaryPrompt',
+//     input: { schema: ReportSummaryInputSchema },
+//     output: { schema: ReportSummaryOutputSchema },
+//     prompt: `
+//         Eres un asistente de análisis académico para un profesor.
+//         Tu tarea es redactar un resumen conciso y profesional del rendimiento de un grupo de estudiantes basado en los datos proporcionados.
+//         El resumen debe ser formal, objetivo y fácil de entender.
 
-        Datos del Grupo:
-        - Asignatura: {{groupName}}
-        - Total de Estudiantes: {{totalStudents}}
-        - Aprobados (calificación >= 60%): {{approvedCount}}
-        - Reprobados: {{failedCount}}
-        - Calificación Promedio del Grupo: {{groupAverage}}%
-        - Tasa de Asistencia General: {{attendanceRate}}%
-        - Estudiantes en Riesgo Alto: {{highRiskCount}}
-        - Estudiantes en Riesgo Medio: {{mediumRiskCount}}
+//         Datos del Grupo:
+//         - Asignatura: {{groupName}}
+//         - Total de Estudiantes: {{totalStudents}}
+//         - Aprobados (calificación >= 60%): {{approvedCount}}
+//         - Reprobados: {{failedCount}}
+//         - Calificación Promedio del Grupo: {{groupAverage}}%
+//         - Tasa de Asistencia General: {{attendanceRate}}%
+//         - Estudiantes en Riesgo Alto: {{highRiskCount}}
+//         - Estudiantes en Riesgo Medio: {{mediumRiskCount}}
 
-        Instrucciones:
-        1.  Comienza con una introducción que mencione el nombre de la asignatura y el número total de estudiantes.
-        2.  Describe el rendimiento general en términos de aprobación y calificación promedio.
-        3.  Menciona la tasa de asistencia y cómo podría relacionarse con el rendimiento general.
-        4.  Si hay estudiantes en riesgo, menciónalo como un punto clave que requiere atención.
-        5.  Concluye con una breve frase que resuma la situación del grupo.
-        6.  No uses viñetas ni enumeraciones. Redacta el resultado como un texto fluido en párrafos.
-        7.  El tono debe ser informativo y de apoyo para el profesor.
-    `,
-});
+//         Instrucciones:
+//         1.  Comienza con una introducción que mencione el nombre de la asignatura y el número total de estudiantes.
+//         2.  Describe el rendimiento general en términos de aprobación y calificación promedio.
+//         3.  Menciona la tasa de asistencia y cómo podría relacionarse con el rendimiento general.
+//         4.  Si hay estudiantes en riesgo, menciónalo como un punto clave que requiere atención.
+//         5.  Concluye con una breve frase que resuma la situación del grupo.
+//         6.  No uses viñetas ni enumeraciones. Redacta el resultado como un texto fluido en párrafos.
+//         7.  El tono debe ser informativo y de apoyo para el profesor.
+//     `,
+// });
 
-export const generateReportSummary = ai.defineFlow(
-    {
-        name: 'generateReportSummary',
-        inputSchema: ReportSummaryInputSchema,
-        outputSchema: ReportSummaryOutputSchema,
-    },
-    async (input) => {
-        const { output } = await prompt(input);
-        return output!;
-    }
-);
+// export const generateReportSummary = ai.defineFlow(
+//     {
+//         name: 'generateReportSummary',
+//         inputSchema: ReportSummaryInputSchema,
+//         outputSchema: ReportSummaryOutputSchema,
+//     },
+//     async (input) => {
+//         const { output } = await prompt(input);
+//         return output!;
+//     }
+// );
+
+export const generateReportSummary = async (input: ReportSummaryInput): Promise<ReportSummaryOutput> => {
+    console.log("AI function called, but Genkit is disabled. Returning placeholder.", input);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return {
+        summaryText: "La función de IA está actualmente en mantenimiento. Este es un texto de ejemplo que muestra cómo se vería un resumen generado automáticamente del rendimiento del grupo, analizando las estadísticas de aprobación, el promedio general y los estudiantes que podrían necesitar más atención."
+    };
+};
