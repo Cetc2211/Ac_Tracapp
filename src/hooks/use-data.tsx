@@ -273,24 +273,27 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         return allPartialsData[groupId]?.[partialId] || defaultPartialData;
     }, [allPartialsData]);
 
-    const setPartialDataState = (groupId: string, partialId: PartialId, newPartialData: PartialData) => {
-        setAllPartialsData(prev => ({
-            ...prev,
-            [groupId]: {
-                ...(prev[groupId] || {}),
-                [partialId]: newPartialData,
-            }
-        }));
-    };
-
     const createSetter = useCallback((field: keyof PartialData) => async (setter: React.SetStateAction<any>) => {
         if (!activeGroupId) return;
-        const currentData = allPartialsData[activeGroupId]?.[activePartialId] || defaultPartialData;
-        const newValue = typeof setter === 'function' ? setter(currentData[field]) : setter;
-        const newPartialData = { ...currentData, [field]: newValue };
-        setPartialDataState(activeGroupId, activePartialId, newPartialData);
+        
+        setAllPartialsData(prevAllData => {
+            const currentGroupData = prevAllData[activeGroupId] || {};
+            const currentPartialData = currentGroupData[activePartialId] || defaultPartialData;
+            
+            const newValue = typeof setter === 'function' ? setter(currentPartialData[field]) : setter;
 
-    }, [activeGroupId, activePartialId, allPartialsData]);
+            const newPartialData = { ...currentPartialData, [field]: newValue };
+
+            return {
+                ...prevAllData,
+                [activeGroupId]: {
+                    ...currentGroupData,
+                    [activePartialId]: newPartialData,
+                }
+            };
+        });
+
+    }, [activeGroupId, activePartialId]);
     
     const setSettings = useCallback(async (newSettings: { institutionName: string; logo: string; theme: string }) => {
         setSettingsState(newSettings);
@@ -532,7 +535,13 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         if (activeGroupId) {
             const currentData = allPartialsData[activeGroupId]?.[activePartialId] || defaultPartialData;
             const newPartialData = { ...currentData, attendance: { ...currentData.attendance, [date]: newAttendanceForDate } };
-            setPartialDataState(activeGroupId, activePartialId, newPartialData);
+             setAllPartialsData(prev => ({
+                ...prev,
+                [activeGroupId]: {
+                    ...(prev[activeGroupId] || {}),
+                    [activePartialId]: newPartialData,
+                }
+            }));
         }
         
     }, [groups, activeGroupId, activePartialId, allPartialsData]);
