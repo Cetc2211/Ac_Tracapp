@@ -282,14 +282,23 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             const storedSettings = localStorage.getItem('app_settings');
             const storedGroupId = localStorage.getItem('activeGroupId_v1');
 
-            const hasStoredData = storedGroups && storedStudents;
-            
-            const initialGroups = hasStoredData ? JSON.parse(storedGroups!) : mockGroups;
-            setGroups(initialGroups);
-            setAllStudents(hasStoredData ? JSON.parse(storedStudents!) : mockAllStudents);
-            setAllPartialsData(hasStoredData && storedPartials ? JSON.parse(storedPartials) : mockPartialsData);
-            setAllObservations(hasStoredData && storedObservations ? JSON.parse(storedObservations) : {});
-            setSettingsState(hasStoredData && storedSettings ? JSON.parse(storedSettings) : defaultSettings);
+            let initialGroups: Group[];
+            if (storedGroups) {
+                initialGroups = JSON.parse(storedGroups);
+                setGroups(initialGroups);
+                setAllStudents(JSON.parse(storedStudents!));
+                setAllPartialsData(storedPartials ? JSON.parse(storedPartials) : {});
+                setAllObservations(storedObservations ? JSON.parse(storedObservations) : {});
+                setSettingsState(storedSettings ? JSON.parse(storedSettings) : defaultSettings);
+            } else {
+                // First time load, use mock data
+                initialGroups = mockGroups;
+                setGroups(mockGroups);
+                setAllStudents(mockAllStudents);
+                setAllPartialsData(mockPartialsData);
+                setAllObservations({});
+                setSettingsState(defaultSettings);
+            }
             
             if (storedGroupId && initialGroups.some((g: Group) => g.id === storedGroupId)) {
                 setActiveGroupIdState(storedGroupId);
@@ -356,7 +365,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const createSetter = useCallback((field: keyof PartialData) => async (setter: React.SetStateAction<any>) => {
         if (!activeGroupId) return;
         const currentData = allPartialsData[activeGroupId]?.[activePartialId] || defaultPartialData;
-        const newValue = typeof setter === 'function' ? setter(currentData[field]) : setter(currentData[field]);
+        const newValue = typeof setter === 'function' ? setter(currentData[field]) : setter;
         const newPartialData = { ...currentData, [field]: newValue };
         setPartialDataState(activeGroupId, activePartialId, newPartialData);
 
