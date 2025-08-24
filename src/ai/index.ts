@@ -1,7 +1,7 @@
 'use server';
 
 import { genkit, configureGenkit } from 'genkit';
-// import { googleAI } from '@genkit-ai/googleai';
+import { googleAI } from '@genkit-ai/googleai';
 
 const standardModelConfig = {
     temperature: 0.7,
@@ -18,13 +18,13 @@ const standardModelConfig = {
 
 export const ai = genkit({
     plugins: [
-        // googleAI({
-        //     apiVersion: "v1beta",
-        //     defaultGenerationOptions: {
-        //         model: 'gemini-pro',
-        //         ...standardModelConfig,
-        //     },
-        // }),
+        googleAI({
+            apiVersion: "v1beta",
+            defaultGenerationOptions: {
+                model: 'gemini-pro',
+                ...standardModelConfig,
+            },
+        }),
     ],
     logLevel: 'debug',
     enableTracing: true,
