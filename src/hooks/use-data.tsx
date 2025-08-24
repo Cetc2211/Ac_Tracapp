@@ -282,24 +282,20 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             const storedSettings = localStorage.getItem('app_settings');
             const storedGroupId = localStorage.getItem('activeGroupId_v1');
 
-            if (storedGroups && storedStudents) {
-                setGroups(JSON.parse(storedGroups));
-                setAllStudents(JSON.parse(storedStudents));
-                if(storedPartials) setAllPartialsData(JSON.parse(storedPartials));
-                if (storedObservations) setAllObservations(JSON.parse(storedObservations));
-                if (storedSettings) setSettingsState(JSON.parse(storedSettings));
-                if (storedGroupId) setActiveGroupIdState(storedGroupId);
-            } else {
-                // If no data, initialize with mock data
-                setGroups(mockGroups);
-                setAllStudents(mockAllStudents);
-                setAllPartialsData(mockPartialsData);
-                setAllObservations({});
-                setSettingsState(defaultSettings);
-                if (mockGroups.length > 0) {
-                    setActiveGroupIdState(mockGroups[0].id);
-                }
+            const hasStoredData = storedGroups && storedStudents;
+
+            setGroups(hasStoredData ? JSON.parse(storedGroups!) : mockGroups);
+            setAllStudents(hasStoredData ? JSON.parse(storedStudents!) : mockAllStudents);
+            setAllPartialsData(hasStoredData && storedPartials ? JSON.parse(storedPartials) : mockPartialsData);
+            setAllObservations(hasStoredData && storedObservations ? JSON.parse(storedObservations) : {});
+            setSettingsState(hasStoredData && storedSettings ? JSON.parse(storedSettings) : defaultSettings);
+            
+            if (storedGroupId) {
+                setActiveGroupIdState(storedGroupId);
+            } else if (!hasStoredData && mockGroups.length > 0) {
+                setActiveGroupIdState(mockGroups[0].id);
             }
+
         } catch (e) {
             console.error("Failed to load data from localStorage", e);
             setError(e as Error);
@@ -667,3 +663,5 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
+
+    
