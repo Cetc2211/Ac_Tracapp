@@ -1,6 +1,6 @@
 'use server';
 
-import { genkit, geminiModel } from 'genkit';
+import { genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/googleai';
 
 const standardModelConfig = {
@@ -20,12 +20,9 @@ export const ai = genkit({
     plugins: [
         googleAI({
             defaultGenerationOptions: {
-                model: 'gemini-1.5-flash-latest',
+                model: 'gemini-1.0-pro',
                 ...standardModelConfig,
             },
-            clientOptions: {
-                timeout: 300000, // 5 minutes
-            }
         }),
     ],
     logLevel: 'debug',
