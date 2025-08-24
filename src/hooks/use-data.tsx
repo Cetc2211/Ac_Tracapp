@@ -533,18 +533,21 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         }), {} as {[studentId: string]: boolean});
         
         if (activeGroupId) {
-            const currentData = allPartialsData[activeGroupId]?.[activePartialId] || defaultPartialData;
-            const newPartialData = { ...currentData, attendance: { ...currentData.attendance, [date]: newAttendanceForDate } };
-             setAllPartialsData(prev => ({
-                ...prev,
-                [activeGroupId]: {
-                    ...(prev[activeGroupId] || {}),
-                    [activePartialId]: newPartialData,
-                }
-            }));
+            setAllPartialsData(prevAllData => {
+                const currentGroupData = prevAllData[activeGroupId] || {};
+                const currentPartialData = currentGroupData[activePartialId] || defaultPartialData;
+                const newPartialData = { ...currentPartialData, attendance: { ...currentPartialData.attendance, [date]: newAttendanceForDate } };
+                return {
+                    ...prevAllData,
+                    [activeGroupId]: {
+                        ...currentGroupData,
+                        [activePartialId]: newPartialData,
+                    }
+                };
+            });
         }
         
-    }, [groups, activeGroupId, activePartialId, allPartialsData]);
+    }, [groups, activeGroupId, activePartialId, setAllPartialsData]);
 
     const resetAllData = useCallback(async () => {
         setIsLoading(true);
