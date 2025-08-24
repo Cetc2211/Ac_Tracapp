@@ -1,8 +1,7 @@
 'use server';
 
-import { genkit, GenerationCommonConfigSchema, ModelArgument } from 'genkit';
-import { googleAI, geminiModel } from '@genkit-ai/googleai';
-import { z } from 'zod';
+import { genkit } from 'genkit';
+import { googleAI } from '@genkit-ai/googleai';
 
 const standardModelConfig = {
     temperature: 0.7,
@@ -15,14 +14,14 @@ const standardModelConfig = {
         { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
         { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
     ],
-} as z.infer<typeof GenerationCommonConfigSchema>;
+};
 
 
 export const ai = genkit({
     plugins: [
         googleAI({
             defaultGenerationOptions: {
-                model: geminiModel('gemini-1.5-flash-latest'),
+                model: 'gemini-1.5-flash-latest',
                 ...standardModelConfig,
             },
         }),
