@@ -199,30 +199,43 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
 
-    // Core data states initialized with a function to read from localStorage immediately on the client.
-    const [groups, setGroups] = useState<Group[]>(() => loadFromStorage('app_groups', []));
-    const [allStudents, setAllStudents] = useState<Student[]>(() => loadFromStorage('app_students', []));
-    const [allObservations, setAllObservations] = useState<{[studentId: string]: StudentObservation[]}>(() => loadFromStorage('app_observations', {}));
-    const [allPartialsData, setAllPartialsData] = useState<AllPartialsData>(() => loadFromStorage('app_partialsData', {}));
-    const [settings, setSettingsState] = useState(() => loadFromStorage('app_settings', defaultSettings));
+    const [groups, setGroups] = useState<Group[]>([]);
+    const [allStudents, setAllStudents] = useState<Student[]>([]);
+    const [allObservations, setAllObservations] = useState<{[studentId: string]: StudentObservation[]}>({});
+    const [allPartialsData, setAllPartialsData] = useState<AllPartialsData>({});
+    const [settings, setSettingsState] = useState(defaultSettings);
     
-    // Active state initialization
     const [activePartialId, setActivePartialIdState] = useState<PartialId>('p1');
-    const [activeGroupId, setActiveGroupIdState] = useState<string | null>(() => {
-        const storedGroups = loadFromStorage('app_groups', []);
-        const storedActiveGroupId = loadFromStorage('activeGroupId_v1', null);
-        const activeGroupExists = storedGroups.some((g: Group) => g.id === storedActiveGroupId);
-        return activeGroupExists ? storedActiveGroupId : null;
-    });
+    const [activeGroupId, setActiveGroupIdState] = useState<string | null>(null);
 
-    // This effect runs ONCE on the client after initial render to mark loading as complete.
     useEffect(() => {
-        setIsLoading(false);
+        try {
+            const storedGroups = loadFromStorage<Group[]>('app_groups', []);
+            const storedStudents = loadFromStorage<Student[]>('app_students', []);
+            const storedObservations = loadFromStorage<{[studentId: string]: StudentObservation[]}>('app_observations', {});
+            const storedPartialsData = loadFromStorage<AllPartialsData>('app_partialsData', {});
+            const storedSettings = loadFromStorage('app_settings', defaultSettings);
+            const storedActiveGroupId = loadFromStorage<string | null>('activeGroupId_v1', null);
+
+            setGroups(storedGroups);
+            setAllStudents(storedStudents);
+            setAllObservations(storedObservations);
+            setAllPartialsData(storedPartialsData);
+            setSettingsState(storedSettings);
+
+            if (storedActiveGroupId && storedGroups.some(g => g.id === storedActiveGroupId)) {
+                setActiveGroupIdState(storedActiveGroupId);
+            }
+        } catch (e) {
+            console.error("Error hydrating data from localStorage", e);
+            setError(e instanceof Error ? e : new Error('An unknown error occurred during data hydration'));
+        } finally {
+            setIsLoading(false);
+        }
     }, []);
 
-    // This effect runs whenever data changes to save it to localStorage.
     useEffect(() => {
-        if (isLoading) return; // Don't save while initially loading
+        if (isLoading) return; 
         try {
             localStorage.setItem('app_groups', JSON.stringify(groups));
             localStorage.setItem('app_students', JSON.stringify(allStudents));
