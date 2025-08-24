@@ -20,7 +20,7 @@ export const ai = genkit({
     plugins: [
         googleAI({
             defaultGenerationOptions: {
-                model: 'gemini-1.0-pro',
+                model: 'gemini-pro', // Changed from gemini-1.0-pro
                 ...standardModelConfig,
             },
         }),
