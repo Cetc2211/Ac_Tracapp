@@ -9,7 +9,7 @@
  * - ReportSummaryOutput - The return type for the function.
  */
 
-import { ai, geminiModel, standardModelConfig } from '@/ai';
+import { ai } from '@/ai';
 import { z } from 'zod';
 
 const ReportSummaryInputSchema = z.object({
@@ -36,10 +36,6 @@ const prompt = ai.definePrompt({
   name: 'reportSummaryPrompt',
   input: { schema: ReportSummaryInputSchema },
   output: { schema: ReportSummaryOutputSchema },
-  config: {
-    model: geminiModel,
-    ...standardModelConfig,
-  },
   prompt: `
     You are an expert academic assistant tasked with writing the introductory summary for a group performance report.
     Based on the data provided, write a formal and objective paragraph in Spanish.

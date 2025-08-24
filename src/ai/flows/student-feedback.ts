@@ -9,7 +9,7 @@
  * - StudentFeedbackOutput - The return type for the generateStudentFeedback function.
  */
 
-import { ai, geminiModel, standardModelConfig } from '@/ai';
+import { ai } from '@/ai';
 import { z } from 'zod';
 
 const AttendanceSchema = z.object({
@@ -46,10 +46,6 @@ const prompt = ai.definePrompt({
   name: 'studentFeedbackPrompt',
   input: { schema: StudentFeedbackInputSchema },
   output: { schema: StudentFeedbackOutputSchema },
-  config: {
-    model: geminiModel,
-    ...standardModelConfig,
-  },
   prompt: `
     You are an expert educational psychologist. Generate brief, constructive, and personalized feedback for a student in Spanish.
     The output must be a JSON object with two fields: 'feedback' and 'recommendations'.
