@@ -28,6 +28,7 @@ import { WhatsAppDialog } from '@/components/whatsapp-dialog';
 import { Separator } from '@/components/ui/separator';
 import { generateStudentFeedback, StudentFeedbackInput } from '@/ai/flows/student-feedback';
 import ReactMarkdown from 'react-markdown';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 type StudentStats = ReturnType<typeof useData>['calculateDetailedFinalGrade'] & {
@@ -193,7 +194,7 @@ export default function StudentProfilePage() {
             studentName: student.name,
             groupName: studentGroups[0]?.subject || 'este grupo',
             finalGrade: latestPartial.finalGrade,
-            attendance: latestPartial.attendance,
+            attendance: { ...latestPartial.attendance, rate: latestPartial.attendance.rate },
             criteriaDetails: latestPartial.criteriaDetails,
             observations: latestPartial.observations.map(o => ({ type: o.type, details: o.details })),
         };
