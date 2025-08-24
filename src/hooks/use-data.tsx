@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
@@ -272,6 +271,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
 
+    // This effect runs once on mount to load data from localStorage or initialize with mock data.
     useEffect(() => {
         setIsLoading(true);
         try {
@@ -283,17 +283,18 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             const storedGroupId = localStorage.getItem('activeGroupId_v1');
 
             const hasStoredData = storedGroups && storedStudents;
-
-            setGroups(hasStoredData ? JSON.parse(storedGroups!) : mockGroups);
+            
+            const initialGroups = hasStoredData ? JSON.parse(storedGroups!) : mockGroups;
+            setGroups(initialGroups);
             setAllStudents(hasStoredData ? JSON.parse(storedStudents!) : mockAllStudents);
             setAllPartialsData(hasStoredData && storedPartials ? JSON.parse(storedPartials) : mockPartialsData);
             setAllObservations(hasStoredData && storedObservations ? JSON.parse(storedObservations) : {});
             setSettingsState(hasStoredData && storedSettings ? JSON.parse(storedSettings) : defaultSettings);
             
-            if (storedGroupId) {
+            if (storedGroupId && initialGroups.some((g: Group) => g.id === storedGroupId)) {
                 setActiveGroupIdState(storedGroupId);
-            } else if (!hasStoredData && mockGroups.length > 0) {
-                setActiveGroupIdState(mockGroups[0].id);
+            } else if (initialGroups.length > 0) {
+                setActiveGroupIdState(initialGroups[0].id);
             }
 
         } catch (e) {
@@ -303,25 +304,31 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             setGroups(mockGroups);
             setAllStudents(mockAllStudents);
             setAllPartialsData(mockPartialsData);
+            setSettingsState(defaultSettings);
+            setActiveGroupIdState(mockGroups.length > 0 ? mockGroups[0].id : null);
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, []); // Empty dependency array ensures this runs only once on mount.
     
-    // Save to localStorage whenever data changes
+    // This effect runs whenever data changes to save it to localStorage.
     useEffect(() => {
+        if (isLoading) return; // Don't save while initially loading
         try {
-            if(!isLoading) {
-                localStorage.setItem('app_groups', JSON.stringify(groups));
-                localStorage.setItem('app_students', JSON.stringify(allStudents));
-                localStorage.setItem('app_observations', JSON.stringify(allObservations));
-                localStorage.setItem('app_partialsData', JSON.stringify(allPartialsData));
-                localStorage.setItem('app_settings', JSON.stringify(settings));
+            localStorage.setItem('app_groups', JSON.stringify(groups));
+            localStorage.setItem('app_students', JSON.stringify(allStudents));
+            localStorage.setItem('app_observations', JSON.stringify(allObservations));
+            localStorage.setItem('app_partialsData', JSON.stringify(allPartialsData));
+            localStorage.setItem('app_settings', JSON.stringify(settings));
+            if(activeGroupId) {
+                localStorage.setItem('activeGroupId_v1', activeGroupId);
+            } else {
+                localStorage.removeItem('activeGroupId_v1');
             }
         } catch (e) {
             console.error("Failed to save data to localStorage", e);
         }
-    }, [groups, allStudents, allObservations, allPartialsData, settings, isLoading]);
+    }, [groups, allStudents, allObservations, allPartialsData, settings, activeGroupId, isLoading]);
 
     const partialData = useMemo(() => {
         if (!activeGroupId || !allPartialsData[activeGroupId]) return defaultPartialData;
@@ -349,7 +356,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const createSetter = useCallback((field: keyof PartialData) => async (setter: React.SetStateAction<any>) => {
         if (!activeGroupId) return;
         const currentData = allPartialsData[activeGroupId]?.[activePartialId] || defaultPartialData;
-        const newValue = typeof setter === 'function' ? setter(currentData[field]) : setter;
+        const newValue = typeof setter === 'function' ? setter(currentData[field]) : setter(currentData[field]);
         const newPartialData = { ...currentData, [field]: newValue };
         setPartialDataState(activeGroupId, activePartialId, newPartialData);
 
@@ -422,15 +429,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const setActiveGroupId = (groupId: string | null) => {
         if(groupId !== activeGroupId) {
             setActiveGroupIdState(groupId);
-            try {
-                if (groupId) {
-                    localStorage.setItem('activeGroupId_v1', groupId);
-                } else {
-                    localStorage.removeItem('activeGroupId_v1');
-                }
-            } catch(e) {
-                console.warn("Could not access localStorage to set active group ID.")
-            }
         }
     };
 
