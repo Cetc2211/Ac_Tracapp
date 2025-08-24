@@ -42,17 +42,17 @@ const prompt = ai.definePrompt({
   prompt: `
     You are an expert educational psychologist and school counselor. Your task is to provide a concise analysis and actionable recommendations for a teacher based on a specific student observation and its follow-up log.
 
-    **Student:** {{{studentName}}}
+    **Student:** {{studentName}}
 
     **Initial Observation:**
-    - **Type:** {{{observationType}}}
-    - **Details:** {{{initialObservation}}}
+    - **Type:** {{observationType}}
+    - **Details:** {{initialObservation}}
 
     {{#if followUpUpdates}}
     **Follow-up Log:**
     {{#each followUpUpdates}}
-    - **Date:** {{{date}}}
-      **Update:** {{{update}}}
+    - **Date:** {{date}}
+      **Update:** {{update}}
     {{/each}}
     {{/if}}
 
@@ -61,18 +61,18 @@ const prompt = ai.definePrompt({
     1.  **Analysis ('analysis' field):**
         - Write a very brief paragraph (2-3 sentences) synthesizing the situation.
         - Identify the core issue or positive behavior.
-        - If there are follow-ups, comment on the progression (e.g., "La situación de conducta de {{{studentName}}} parece persistir a pesar de la intervención inicial...") or ("El mérito inicial de {{{studentName}}} se ha visto reforzado por su continua participación...").
+        - If there are follow-ups, comment on the progression (e.g., "La situación de conducta de {{studentName}} parece persistir a pesar de la intervención inicial...") or ("El mérito inicial de {{studentName}} se ha visto reforzado por su continua participación...").
         - If there are no follow-ups, analyze the initial observation on its own.
 
     2.  **Recommendations ('recommendations' field):**
         - Provide a list of 2 to 4 concrete, actionable, and future-oriented steps for the teacher.
         - Recommendations should be tailored to the specific situation.
         - **Good examples for negative behavior:**
-          - "Establecer una señal no verbal con {{{studentName}}} para indicarle que su conducta es inapropiada sin interrumpir la clase."
+          - "Establecer una señal no verbal con {{studentName}} para indicarle que su conducta es inapropiada sin interrumpir la clase."
           - "Agendar una breve reunión con el tutor para presentar el registro de seguimiento y crear un plan de acción conjunto."
           - "Referir el caso a la psicóloga del colegio para una evaluación más profunda, presentando esta bitácora como antecedente."
         - **Good examples for positive behavior:**
-          - "Asignar a {{{studentName}}} un rol de liderazgo en el próximo proyecto en equipo para capitalizar su iniciativa."
+          - "Asignar a {{studentName}} un rol de liderazgo en el próximo proyecto en equipo para capitalizar su iniciativa."
           - "Enviar una nota de felicitación a casa destacando el mérito observado."
           - "Mencionar públicamente su contribución como un ejemplo positivo para la clase."
 

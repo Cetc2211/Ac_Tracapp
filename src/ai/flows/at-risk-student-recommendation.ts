@@ -63,28 +63,28 @@ const prompt = ai.definePrompt({
     You are an expert educational psychologist and academic advisor. Your task is to provide a detailed analysis and actionable recommendations for an at-risk student.
 
     **Student Profile:**
-    - **Name:** {{{studentName}}}
-    - **Identified Risk:** {{{riskReason}}}
+    - **Name:** {{studentName}}
+    - **Identified Risk:** {{riskReason}}
 
     **Academic & Behavioral Data:**
 
     **1. Academic Performance (Grades are out of 100):**
     {{#each gradesByGroup}}
-    - **Subject: {{{group}}} (Final Grade: {{{grade}}})**
+    - **Subject: {{group}} (Final Grade: {{grade}})**
       {{#each criteriaDetails}}
-      - Criterion: {{{name}}} (Weight: {{{weight}}}%, Earned: {{{earned}}}%)
+      - Criterion: {{name}} (Weight: {{weight}}%, Earned: {{earned}}%)
       {{/each}}
     {{/each}}
 
     **2. Attendance Record:**
-    - Present: {{{attendance.p}}}
-    - Absences: {{{attendance.a}}}
-    - Total Classes: {{{attendance.total}}}
+    - Present: {{attendance.p}}
+    - Absences: {{attendance.a}}
+    - Total Classes: {{attendance.total}}
 
     {{#if observations}}
     **3. Teacher's Observations:**
     {{#each observations}}
-    - Type: {{{type}}}, Details: {{{details}}}
+    - Type: {{type}}, Details: {{details}}
     {{/each}}
     {{/if}}
 

@@ -41,13 +41,13 @@ const prompt = ai.definePrompt({
     Based on the data provided, write a formal and objective paragraph in Spanish.
 
     **Data:**
-    - Group Name: {{{groupName}}}
-    - Student Count: {{{studentCount}}}
-    - Average Grade: {{{averageGrade}}}%
-    - Approval Rate: {{{approvalRate}}}%
-    - Attendance Rate: {{{attendanceRate}}}%
-    - High-Risk Students: {{{highRiskCount}}}
-    - Medium-Risk Students: {{{mediumRiskCount}}}
+    - Group Name: {{groupName}}
+    - Student Count: {{studentCount}}
+    - Average Grade: {{averageGrade}}%
+    - Approval Rate: {{approvalRate}}%
+    - Attendance Rate: {{attendanceRate}}%
+    - High-Risk Students: {{highRiskCount}}
+    - Medium-Risk Students: {{mediumRiskCount}}
 
     **Instructions:**
     - Start with a formal opening.
@@ -58,7 +58,7 @@ const prompt = ai.definePrompt({
     - Do not add a closing or signature.
 
     **Example Output:**
-    "Por medio del presente, se informa sobre el rendimiento académico del grupo de {{{groupName}}}, compuesto por {{{studentCount}}} estudiantes. Durante el periodo evaluado, el grupo alcanzó un promedio general de {{{averageGrade}}}%, con una tasa de aprobación del {{{approvalRate}}}%. La asistencia se mantuvo en un {{{attendanceRate}}}%. Es importante notar que se han identificado {{{highRiskCount}}} estudiantes en riesgo alto y {{{mediumRiskCount}}} en riesgo medio, lo cual requerirá atención y estrategias de seguimiento específicas."
+    "Por medio del presente, se informa sobre el rendimiento académico del grupo de {{groupName}}, compuesto por {{studentCount}} estudiantes. Durante el periodo evaluado, el grupo alcanzó un promedio general de {{averageGrade}}%, con una tasa de aprobación del {{approvalRate}}%. La asistencia se mantuvo en un {{attendanceRate}}%. Es importante notar que se han identificado {{highRiskCount}} estudiantes en riesgo alto y {{mediumRiskCount}} en riesgo medio, lo cual requerirá atención y estrategias de seguimiento específicas."
 
     Generate a summary based on the provided data.
   `,

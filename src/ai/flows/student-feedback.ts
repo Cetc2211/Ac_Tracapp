@@ -50,19 +50,19 @@ const prompt = ai.definePrompt({
     You are an expert educational psychologist. Generate brief, constructive, and personalized feedback for a student in Spanish.
     The output must be a JSON object with two fields: 'feedback' and 'recommendations'.
 
-    **Data for {{{studentName}}}:**
+    **Data for {{studentName}}:**
 
-    1.  **Grade in {{{groupName}}}:** {{{finalGrade}}}%
+    1.  **Grade in {{groupName}}:** {{finalGrade}}%
 
     2.  **Attendance:**
-        - Attended: {{{attendance.p}}}
-        - Absences: {{{attendance.a}}}
-        - Total: {{{attendance.total}}}
+        - Attended: {{attendance.p}}
+        - Absences: {{attendance.a}}
+        - Total: {{attendance.total}}
 
     {{#if observations}}
     3.  **Teacher's Observations:**
     {{#each observations}}
-    - Type: {{{type}}}, Details: {{{details}}}
+    - Type: {{type}}, Details: {{details}}
     {{/each}}
     {{/if}}
 
