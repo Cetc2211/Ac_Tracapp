@@ -1,6 +1,7 @@
+
 'use server';
 
-import { ai } from '@/ai';
+import { ai } from '@/ai/index';
 import { z } from 'zod';
 
 export const StudentFeedbackInputSchema = z.object({

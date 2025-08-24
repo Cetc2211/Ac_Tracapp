@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -193,9 +194,17 @@ export default function StudentProfilePage() {
         const input: StudentFeedbackInput = {
             studentName: student.name,
             groupName: studentGroups[0]?.subject || 'este grupo',
-            finalGrade: latestPartial.finalGrade,
-            attendance: { ...latestPartial.attendance, rate: latestPartial.attendance.rate },
-            criteriaDetails: latestPartial.criteriaDetails,
+            finalGrade: parseFloat(latestPartial.finalGrade.toFixed(1)),
+            attendance: { 
+              p: latestPartial.attendance.p,
+              a: latestPartial.attendance.a,
+              rate: parseFloat(latestPartial.attendance.rate.toFixed(1)) 
+            },
+            criteriaDetails: latestPartial.criteriaDetails.map(c => ({
+              ...c,
+              earned: parseFloat(c.earned.toFixed(1)),
+              weight: parseFloat(c.weight.toFixed(1)),
+            })),
             observations: latestPartial.observations.map(o => ({ type: o.type, details: o.details })),
         };
         
