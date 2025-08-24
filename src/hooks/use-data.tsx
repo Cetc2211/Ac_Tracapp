@@ -196,56 +196,29 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 
 // DATA PROVIDER COMPONENT
 export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
-    const [isHydrated, setIsHydrated] = useState(false);
-    // Core data states initialized directly with empty/default values
-    const [allStudents, setAllStudents] = useState<Student[]>([]);
-    const [allObservations, setAllObservations] = useState<{[studentId: string]: StudentObservation[]}>({});
-    const [groups, setGroups] = useState<Group[]>([]);
-    const [settings, setSettingsState] = useState(defaultSettings);
-    const [allPartialsData, setAllPartialsData] = useState<AllPartialsData>({});
-    
-    // Active state
-    const [activeGroupId, setActiveGroupIdState] = useState<string | null>(null);
-    const [activePartialId, setActivePartialIdState] = useState<PartialId>('p1');
-
+    const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
 
-    // This effect runs ONCE on the client to load all data from localStorage
+    // Core data states initialized with a function to read from localStorage immediately on the client.
+    const [groups, setGroups] = useState<Group[]>(() => loadFromStorage('app_groups', []));
+    const [allStudents, setAllStudents] = useState<Student[]>(() => loadFromStorage('app_students', []));
+    const [allObservations, setAllObservations] = useState<{[studentId: string]: StudentObservation[]}>(() => loadFromStorage('app_observations', {}));
+    const [allPartialsData, setAllPartialsData] = useState<AllPartialsData>(() => loadFromStorage('app_partialsData', {}));
+    const [settings, setSettingsState] = useState(() => loadFromStorage('app_settings', defaultSettings));
+    
+    // Active state initialization
+    const [activePartialId, setActivePartialIdState] = useState<PartialId>('p1');
+    const [activeGroupId, setActiveGroupIdState] = useState<string | null>(() => {
+        const storedGroups = loadFromStorage('app_groups', []);
+        const storedActiveGroupId = loadFromStorage('activeGroupId_v1', null);
+        const activeGroupExists = storedGroups.some((g: Group) => g.id === storedActiveGroupId);
+        return activeGroupExists ? storedActiveGroupId : null;
+    });
+
+    // This effect runs ONCE on the client after initial render to mark loading as complete.
     useEffect(() => {
-        try {
-            const storedGroups = loadFromStorage('app_groups', []);
-            const storedStudents = loadFromStorage('app_students', []);
-            const storedObservations = loadFromStorage('app_observations', {});
-            const storedPartialsData = loadFromStorage('app_partialsData', {});
-            const storedSettings = loadFromStorage('app_settings', defaultSettings);
-            const storedActiveGroupId = loadFromStorage('activeGroupId_v1', null);
-            
-            setGroups(storedGroups);
-            setAllStudents(storedStudents);
-            setAllObservations(storedObservations);
-            setAllPartialsData(storedPartialsData);
-            setSettingsState(storedSettings);
-
-            // Validate that the active group ID still exists
-            const activeGroupExists = storedGroups.some((g: Group) => g.id === storedActiveGroupId);
-            if (storedActiveGroupId && activeGroupExists) {
-                setActiveGroupIdState(storedActiveGroupId);
-            } else {
-                 setActiveGroupIdState(null);
-                 if (typeof window !== 'undefined') {
-                    localStorage.removeItem('activeGroupId_v1');
-                 }
-            }
-
-        } catch (e) {
-             console.error("Failed to load data from localStorage", e);
-             setError(e as Error);
-        } finally {
-            setIsHydrated(true);
-        }
+        setIsLoading(false);
     }, []);
-
-    const isLoading = !isHydrated;
 
     // This effect runs whenever data changes to save it to localStorage.
     useEffect(() => {
@@ -543,7 +516,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }, [groups, activeGroupId, activePartialId, allPartialsData]);
 
     const resetAllData = useCallback(async () => {
-        setIsHydrated(false);
+        setIsLoading(true);
         try {
             localStorage.removeItem('app_groups');
             localStorage.removeItem('app_students');
@@ -565,7 +538,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         } finally {
             // Short delay to allow state to propagate before reloading
             setTimeout(() => {
-                setIsHydrated(true);
+                setIsLoading(false);
                 window.location.reload();
             }, 500);
         }
