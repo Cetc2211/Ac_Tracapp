@@ -32,7 +32,6 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { ChevronDown } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
-import { generateReportSummary } from '@/ai/flows/report-summary-generator';
 
 
 type ReportSummary = {
@@ -64,7 +63,6 @@ export default function GroupReportPage() {
   const [summary, setSummary] = useState<ReportSummary | null>(null);
   const [reportText, setReportText] = useState('');
   const [isClient, setIsClient] = useState(false);
-  const [isGeneratingText, setIsGeneratingText] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -191,25 +189,6 @@ export default function GroupReportPage() {
       });
     }
   };
-
-  const handleGenerateSummary = async () => {
-    if (!summary || !group) return;
-    
-    setIsGeneratingText(true);
-    toast({ title: 'Generando análisis con IA...', description: 'Por favor espera.' });
-    try {
-      const result = await generateReportSummary({
-        groupName: group.subject,
-        ...summary,
-      });
-      setReportText(result.summaryText);
-    } catch (error) {
-      console.error("AI error:", error);
-      toast({ variant: 'destructive', title: 'Error de IA', description: 'No se pudo generar el resumen. Por favor, verifica tu clave de API y la configuración.' });
-    } finally {
-      setIsGeneratingText(false);
-    }
-  };
   
   if (isDataLoading || !summary) {
     return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /> <span className="ml-2">Generando informe...</span></div>;
@@ -297,20 +276,13 @@ export default function GroupReportPage() {
         </header>
 
         <section>
-            <div className='flex justify-between items-center'>
-                <h2 className="text-xl font-semibold mb-4">Resumen General del Grupo</h2>
-                <Button size="sm" onClick={handleGenerateSummary} disabled={isGeneratingText}>
-                    {isGeneratingText ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Sparkles className="mr-2 h-4 w-4" />}
-                    {isGeneratingText ? 'Generando...' : 'Generar con IA'}
-                </Button>
-            </div>
+            <h2 className="text-xl font-semibold mb-4">Resumen General del Grupo</h2>
             <Textarea 
                 value={reportText}
                 onChange={(e) => setReportText(e.target.value)}
                 className="leading-relaxed mt-2"
-                rows={isGeneratingText ? 6 : 4}
+                rows={4}
             />
-            {isGeneratingText && <Skeleton className="h-24 w-full mt-2" />}
 
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 my-6">
                 <Card className="text-center">
