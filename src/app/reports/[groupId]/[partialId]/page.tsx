@@ -13,9 +13,9 @@ import { Button } from '@/components/ui/button';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, Download, CheckCircle, XCircle, TrendingUp, BarChart, Users, Eye, AlertTriangle, Loader2, Sparkles } from 'lucide-react';
+import { ArrowLeft, Download, CheckCircle, XCircle, TrendingUp, BarChart, Users, Eye, AlertTriangle, Loader2, Sparkles, Calendar as CalendarIcon, ChevronDown } from 'lucide-react';
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { format } from 'date-fns';
+import { format, addYears } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
@@ -30,8 +30,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { ChevronDown } from 'lucide-react';
-import { Textarea } from '@/components/ui/textarea';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
+import { DateRange } from "react-day-picker"
+import { cn } from "@/lib/utils"
 
 
 type ReportSummary = {
@@ -61,10 +67,19 @@ export default function GroupReportPage() {
   const { attendance, participations } = partialData;
   
   const [summary, setSummary] = useState<ReportSummary | null>(null);
-  const [reportText, setReportText] = useState('');
   const [isClient, setIsClient] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  const [semesterDate, setSemesterDate] = React.useState<DateRange | undefined>({
+    from: new Date(),
+    to: new Date(new Date().setMonth(new Date().getMonth() + 4)),
+  })
+  const [cycleDate, setCycleDate] = React.useState<DateRange | undefined>({
+    from: new Date(),
+    to: addYears(new Date(), 1),
+  })
+
 
   useEffect(() => {
     setIsClient(true);
@@ -90,7 +105,6 @@ export default function GroupReportPage() {
               highRiskCount: 0,
               mediumRiskCount: 0,
           });
-          setReportText(`Análisis del grupo ${group.subject}.`);
           return;
       }
       
@@ -152,7 +166,6 @@ export default function GroupReportPage() {
       };
 
       setSummary(reportSummary);
-      setReportText(`Resultados generales obtenidos durante el ${getPartialLabel(partialId)} para el grupo de ${group.subject}.`);
 
     } catch (e) {
       console.error("Failed to generate report data", e);
@@ -163,6 +176,10 @@ export default function GroupReportPage() {
     const input = reportRef.current;
     if (input) {
       toast({ title: 'Generando PDF...', description: 'Esto puede tardar un momento.' });
+      
+      const elementsToHide = input.querySelectorAll('[data-hide-for-pdf="true"]');
+      elementsToHide.forEach(el => (el as HTMLElement).style.display = 'none');
+
       html2canvas(input, { scale: 2, useCORS: true }).then((canvas) => {
         const imgData = canvas.toDataURL('image/png');
         const pdf = new jsPDF('p', 'mm', 'a4');
@@ -186,6 +203,8 @@ export default function GroupReportPage() {
         
         pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
         pdf.save(`informe_grupal_${group?.subject.replace(/\s+/g, '_') || 'reporte'}.pdf`);
+      }).finally(() => {
+        elementsToHide.forEach(el => (el as HTMLElement).style.display = '');
       });
     }
   };
@@ -200,9 +219,21 @@ export default function GroupReportPage() {
 
   const partials: PartialId[] = ['p1', 'p2', 'p3'];
 
+  const formatMonth = (date: Date) => format(date, 'MMMM', { locale: es });
+  const formatYear = (date: Date) => format(date, 'yyyy', { locale: es });
+  
+  const semesterString = semesterDate?.from && semesterDate?.to
+    ? `${formatMonth(semesterDate.from)} ${formatYear(semesterDate.from)} - ${formatMonth(semesterDate.to)} ${formatYear(semesterDate.to)}`
+    : "No definido";
+
+  const cycleString = cycleDate?.from && cycleDate?.to
+    ? `${formatMonth(cycleDate.from)} ${formatYear(cycleDate.from)} - ${formatMonth(cycleDate.to)} ${formatYear(cycleDate.to)}`
+    : "No definido";
+
+
   return (
     <div className="flex flex-col gap-6">
-       <div className="flex items-center justify-between">
+       <div className="flex items-center justify-between flex-wrap gap-4">
          <div className="flex items-center gap-4">
             <Button asChild variant="outline" size="icon">
               <Link href="/reports">
@@ -216,6 +247,8 @@ export default function GroupReportPage() {
                   Resumen global de "{group.subject}"
               </p>
             </div>
+         </div>
+         <div className='flex items-center gap-2 flex-wrap'>
              <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                     <Button variant="outline">
@@ -233,14 +266,97 @@ export default function GroupReportPage() {
                     ))}
                 </DropdownMenuContent>
             </DropdownMenu>
-         </div>
-         <div className='flex gap-2'>
             <Button onClick={handleDownloadPdf}>
                 <Download className="mr-2 h-4 w-4"/>
                 Descargar Informe
             </Button>
          </div>
       </div>
+      
+      <Card data-hide-for-pdf="true" className="p-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid gap-2">
+            <span className="font-semibold text-sm">Semestre:</span>
+             <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  id="date"
+                  variant={"outline"}
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !semesterDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {semesterDate?.from ? (
+                    semesterDate.to ? (
+                      <>
+                        {format(semesterDate.from, "LLL, y", { locale: es })} -{" "}
+                        {format(semesterDate.to, "LLL, y", { locale: es })}
+                      </>
+                    ) : (
+                      format(semesterDate.from, "LLL, y", { locale: es })
+                    )
+                  ) : (
+                    <span>Elige un rango</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  defaultMonth={semesterDate?.from}
+                  selected={semesterDate}
+                  onSelect={setSemesterDate}
+                  numberOfMonths={2}
+                  locale={es}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+           <div className="grid gap-2">
+            <span className="font-semibold text-sm">Ciclo Escolar:</span>
+             <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  id="date"
+                  variant={"outline"}
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !cycleDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {cycleDate?.from ? (
+                    cycleDate.to ? (
+                      <>
+                        {format(cycleDate.from, "LLL, y", { locale: es })} -{" "}
+                        {format(cycleDate.to, "LLL, y", { locale: es })}
+                      </>
+                    ) : (
+                      format(cycleDate.from, "LLL, y", { locale: es })
+                    )
+                  ) : (
+                    <span>Elige un rango</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  defaultMonth={cycleDate?.from}
+                  selected={cycleDate}
+                  onSelect={setCycleDate}
+                  numberOfMonths={2}
+                  locale={es}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+        </div>
+      </Card>
 
       <Card ref={reportRef} id="report-content" className="p-4 sm:p-6 md:p-8">
         <header className="border-b pb-6 mb-6">
@@ -264,10 +380,6 @@ export default function GroupReportPage() {
                     <span className="font-semibold text-foreground">Asignatura: </span>
                     <span>{group.subject}</span>
                 </div>
-                 <div>
-                    <span className="font-semibold text-foreground">Parcial: </span>
-                    <span>{getPartialLabel(partialId)}</span>
-                </div>
                 <div>
                     <span className="font-semibold text-foreground">Fecha del Informe: </span>
                     <span>{format(new Date(), 'PPP', {locale: es})}</span>
@@ -275,61 +387,60 @@ export default function GroupReportPage() {
            </div>
         </header>
 
-        <section>
-            <h2 className="text-xl font-semibold mb-4">Resumen General del Grupo</h2>
-            <Textarea 
-                value={reportText}
-                onChange={(e) => setReportText(e.target.value)}
-                className="leading-relaxed mt-2"
-                rows={4}
-            />
-
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 my-6">
-                <Card className="text-center">
-                    <CardHeader><CardTitle className="text-base">Aprobación</CardTitle></CardHeader>
-                    <CardContent>
-                        <p className="text-3xl font-bold">{summary.approvedCount} <span className="text-base font-normal text-muted-foreground">de {summary.totalStudents}</span></p>
-                         <p className="text-sm text-green-600 flex items-center justify-center gap-1"><CheckCircle className="h-4 w-4"/> Aprobados</p>
-                         <p className="text-sm text-red-600 flex items-center justify-center gap-1"><XCircle className="h-4 w-4"/> Reprobados: {summary.failedCount}</p>
-                    </CardContent>
-                </Card>
-                 <Card className="text-center">
-                    <CardHeader><CardTitle className="text-base">Promedio General</CardTitle></CardHeader>
-                    <CardContent>
-                         <p className="text-3xl font-bold">{summary.groupAverage.toFixed(1)} <span className="text-base font-normal text-muted-foreground">/ 100</span></p>
-                         <p className="text-sm text-muted-foreground flex items-center justify-center gap-1"><TrendingUp className="h-4 w-4"/> Calificación media del grupo</p>
-                    </CardContent>
-                </Card>
-                 <Card className="text-center">
-                    <CardHeader><CardTitle className="text-base">Asistencia y Participación</CardTitle></CardHeader>
-                     <CardContent>
-                         <p className="text-3xl font-bold">{summary.attendanceRate.toFixed(1)}%</p>
-                         <p className="text-sm text-muted-foreground flex items-center justify-center gap-1"><BarChart className="h-4 w-4"/> Tasa de Asistencia General</p>
-                         <p className="text-xl font-bold mt-2">{summary.participationRate.toFixed(1)}%</p>
-                         <p className="text-sm text-muted-foreground flex items-center justify-center gap-1"><BarChart className="h-4 w-4"/> Tasa de Participación</p>
-                    </CardContent>
-                </Card>
-             </div>
-             
-              <div className="space-y-4 text-muted-foreground leading-relaxed">
-                {(summary.highRiskCount > 0 || summary.mediumRiskCount > 0) && (
-                    <p>
-                        Se ha identificado que <span className="font-bold text-destructive">{summary.highRiskCount} estudiante(s)</span> se encuentran en <span className="font-bold text-destructive">riesgo alto</span> y 
-                        <span className="font-bold text-amber-600"> {summary.mediumRiskCount} estudiante(s)</span> en <span className="font-bold text-amber-600">riesgo medio</span>, basado en su rendimiento y asistencia.
-                    </p>
-                )}
+        <section className="space-y-6">
+            <p className="leading-relaxed">
+              Informe de resultados correspondiente al <strong>{getPartialLabel(partialId).toLowerCase()}</strong> del semestre <strong>{semesterString}</strong>, ciclo escolar <strong>{cycleString}</strong>.
+            </p>
+            <p className="leading-relaxed">
+              Durante este periodo se atendieron <strong>{summary.totalStudents}</strong> estudiantes, con los siguientes resultados e indicadores:
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 my-6">
+              <Card className="text-center">
+                  <CardHeader><CardTitle className="text-base">Aprobación</CardTitle></CardHeader>
+                  <CardContent>
+                      <p className="text-3xl font-bold">{summary.approvedCount} <span className="text-base font-normal text-muted-foreground">de {summary.totalStudents}</span></p>
+                       <p className="text-sm text-green-600 flex items-center justify-center gap-1"><CheckCircle className="h-4 w-4"/> Aprobados</p>
+                       <p className="text-sm text-red-600 flex items-center justify-center gap-1"><XCircle className="h-4 w-4"/> Reprobados: {summary.failedCount}</p>
+                  </CardContent>
+              </Card>
+               <Card className="text-center">
+                  <CardHeader><CardTitle className="text-base">Promedio General</CardTitle></CardHeader>
+                  <CardContent>
+                       <p className="text-3xl font-bold">{summary.groupAverage.toFixed(1)} <span className="text-base font-normal text-muted-foreground">/ 100</span></p>
+                       <p className="text-sm text-muted-foreground flex items-center justify-center gap-1"><TrendingUp className="h-4 w-4"/> Calificación media del grupo</p>
+                  </CardContent>
+              </Card>
+               <Card className="text-center">
+                  <CardHeader><CardTitle className="text-base">Asistencia y Participación</CardTitle></CardHeader>
+                   <CardContent>
+                       <p className="text-3xl font-bold">{summary.attendanceRate.toFixed(1)}%</p>
+                       <p className="text-sm text-muted-foreground flex items-center justify-center gap-1"><BarChart className="h-4 w-4"/> Tasa de Asistencia General</p>
+                       <p className="text-xl font-bold mt-2">{summary.participationRate.toFixed(1)}%</p>
+                       <p className="text-sm text-muted-foreground flex items-center justify-center gap-1"><BarChart className="h-4 w-4"/> Tasa de Participación</p>
+                  </CardContent>
+              </Card>
+            </div>
+            
+             <div className="space-y-4 text-muted-foreground leading-relaxed">
+              {(summary.highRiskCount > 0 || summary.mediumRiskCount > 0) && (
+                  <p>
+                      Se ha identificado que <span className="font-bold text-destructive">{summary.highRiskCount} estudiante(s)</span> se encuentran en <span className="font-bold text-destructive">riesgo alto</span> y 
+                      <span className="font-bold text-amber-600"> {summary.mediumRiskCount} estudiante(s)</span> en <span className="font-bold text-amber-600">riesgo medio</span>, basado en su rendimiento y asistencia.
+                  </p>
+              )}
             </div>
         </section>
 
-        <footer className="border-t mt-8 pt-6 text-center text-xs text-muted-foreground">
-            <div className="mt-12 pt-12">
+        <footer className="border-t mt-8 pt-6 text-sm">
+            <p className="leading-relaxed">
+              Sin más por el momento, quedo a sus órdenes para cualquier aclaración.
+            </p>
+            <div className="mt-16 pt-12 text-center">
                 <div className="inline-block">
-                    <div className="border-t border-foreground w-48 mx-auto"></div>
-                    <p className="font-semibold">{group.facilitator || 'Docente'}</p>
-                    <p>Firma del Docente</p>
+                    <div className="border-t border-foreground w-64 mx-auto"></div>
+                    <p className="font-semibold mt-2">{group.facilitator || 'Docente'}</p>
                 </div>
             </div>
-            <p className="mt-8">Fin del informe.</p>
         </footer>
       </Card>
     </div>
