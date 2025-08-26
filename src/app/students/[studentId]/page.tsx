@@ -47,6 +47,7 @@ export default function StudentProfilePage() {
     allObservations,
     isLoading: isDataLoading,
     fetchPartialData,
+    activePartialId,
   } = useData();
 
   const [studentStatsByPartial, setStudentStatsByPartial] = useState<StudentStats[]>([]);
@@ -121,6 +122,39 @@ export default function StudentProfilePage() {
     const total = partialsWithGrades.reduce((sum, stats) => sum + stats.finalGrade, 0);
     return total / partialsWithGrades.length;
   }, [studentStatsByPartial]);
+
+  const finalGradeCard = useMemo(() => {
+    const p3Stats = studentStatsByPartial.find(s => s.partialId === 'p3');
+    
+    if (p3Stats && studentStatsByPartial.length === 3) {
+      return {
+        title: 'Calificación Final Semestral',
+        grade: semesterAverage,
+      };
+    }
+    
+    const activePartialStats = studentStatsByPartial.find(s => s.partialId === activePartialId);
+    if (activePartialStats) {
+      return {
+        title: `Calificación del ${getPartialLabel(activePartialId)}`,
+        grade: activePartialStats.finalGrade,
+      };
+    }
+    
+    // Fallback if active partial has no grade, find first available
+    const firstAvailablePartial = studentStatsByPartial[0];
+    if (firstAvailablePartial) {
+      return {
+        title: `Calificación del ${getPartialLabel(firstAvailablePartial.partialId)}`,
+        grade: firstAvailablePartial.finalGrade,
+      };
+    }
+    
+    return {
+      title: 'Calificación Final',
+      grade: 0,
+    };
+  }, [studentStatsByPartial, semesterAverage, activePartialId]);
 
   const handleDownloadPdf = async () => {
     const reportElement = reportRef.current;
@@ -345,14 +379,14 @@ export default function StudentProfilePage() {
               </Card>
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base text-center">Calificación Final Semestral</CardTitle>
+                   <CardTitle className="text-base text-center">{finalGradeCard.title}</CardTitle>
                 </CardHeader>
                 <CardContent className="text-center">
                   <p
                     className="text-5xl font-bold"
-                    style={{ color: semesterAverage >= 60 ? 'hsl(var(--chart-2))' : 'hsl(var(--destructive))' }}
+                    style={{ color: finalGradeCard.grade >= 60 ? 'hsl(var(--chart-2))' : 'hsl(var(--destructive))' }}
                   >
-                    {semesterAverage.toFixed(1)}%
+                    {finalGradeCard.grade.toFixed(1)}%
                   </p>
                 </CardContent>
               </Card>
