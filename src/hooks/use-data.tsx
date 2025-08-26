@@ -197,6 +197,7 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 
 // DATA PROVIDER COMPONENT
 export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
+    const [isClient, setIsClient] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
 
@@ -209,6 +210,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const [activePartialId, setActivePartialIdState] = useState<PartialId>('p1');
 
     useEffect(() => {
+        setIsClient(true);
         try {
             const storedGroups = loadFromStorage<Group[]>('app_groups', []);
             const storedStudents = loadFromStorage<Student[]>('app_students', []);
@@ -238,7 +240,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }, []);
 
     useEffect(() => {
-        if (isLoading) return;
+        if (isLoading || !isClient) return;
         
         try {
             localStorage.setItem('app_groups', JSON.stringify(groups));
@@ -254,7 +256,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         } catch (e) {
             console.error("Failed to save data to localStorage", e);
         }
-    }, [groups, allStudents, allObservations, allPartialsData, settings, activeGroupId, isLoading]);
+    }, [groups, allStudents, allObservations, allPartialsData, settings, activeGroupId, isLoading, isClient]);
     
     const allPartialsDataForActiveGroup = useMemo(() => {
         if (!activeGroupId) return {};
@@ -270,7 +272,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }, [allPartialsData]);
 
     const createSetter = useCallback((field: keyof PartialData) => {
-        return (setter: React.SetStateAction<any>) => {
+        return async (setter: React.SetStateAction<any>) => {
             if (!activeGroupId) return Promise.resolve();
 
             setAllPartialsData(prevAllData => {
@@ -448,27 +450,36 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         const studentAttendanceDays = Object.keys(safeAttendance).filter(date => Object.prototype.hasOwnProperty.call(safeAttendance[date], studentId));
         const totalDaysForStudent = studentAttendanceDays.length;
 
-        let absences = 0;
-        if (totalDaysForStudent > 0) {
-            absences = studentAttendanceDays.reduce((count, date) => {
-                return safeAttendance[date][studentId] === false ? count + 1 : count;
-            }, 0);
+        const absences = studentAttendanceDays.reduce((count, date) => {
+            return safeAttendance[date][studentId] === false ? count + 1 : count;
+        }, 0);
+        
+        if (absences > 3) {
+            return {
+                level: 'high',
+                reason: `Ausentismo crítico (${absences} faltas). Requiere atención independientemente del promedio.`
+            };
+        }
+
+        if (finalGrade < 50 && absences >= 2) {
+             return {
+                level: 'high',
+                reason: `Promedio de ${finalGrade.toFixed(0)}% y ${absences} faltas.`
+            };
         }
         
-        const absencePercentage = totalDaysForStudent > 0 ? (absences / totalDaysForStudent) * 100 : 0;
-        const reason = `Promedio de ${finalGrade.toFixed(0)}% y ${absencePercentage.toFixed(0)}% de ausencias.`;
-
-        if (finalGrade < 70 || absencePercentage > 20) {
-            return {level: 'high', reason };
-        }
-        if (finalGrade < 80 || absencePercentage > 10) {
-           return {level: 'medium', reason };
+        if (finalGrade <= 70 && absences >= 2) {
+            return {
+                level: 'medium',
+                reason: `Promedio de ${finalGrade.toFixed(0)}% y ${absences} faltas.`
+            };
         }
         
         return {level: 'low', reason: 'Sin riesgo detectado' };
     }, []);
     
     const groupAverages = useMemo(() => {
+        if (!isClient) return {};
         const averages: { [groupId: string]: number } = {};
         groups.forEach(group => {
             const groupData = allPartialsData[group.id]?.[activePartialId];
@@ -481,9 +492,10 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             averages[group.id] = groupGrades.length > 0 ? total / groupGrades.length : 0;
         });
         return averages;
-    }, [groups, activePartialId, calculateFinalGrade, allPartialsData]);
+    }, [groups, activePartialId, calculateFinalGrade, allPartialsData, isClient]);
     
     const atRiskStudents: StudentWithRisk[] = useMemo(() => {
+        if (!isClient) return [];
         const studentsAtRiskInPartial = new Map<string, StudentWithRisk>();
         groups.forEach(group => {
             const groupPartialData = allPartialsData[group.id]?.[activePartialId];
@@ -500,10 +512,10 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         });
 
         return Array.from(studentsAtRiskInPartial.values());
-    }, [groups, activePartialId, getStudentRiskLevel, calculateFinalGrade, allPartialsData]);
+    }, [groups, activePartialId, getStudentRiskLevel, calculateFinalGrade, allPartialsData, isClient]);
     
     const overallAverageParticipation = useMemo(() => {
-        if (!activeGroup) return 100;
+        if (!activeGroup || !isClient) return 100;
         let totalRatio = 0;
         let studentsWithOpportunities = 0;
 
@@ -520,7 +532,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         if (studentsWithOpportunities === 0) return 100;
         return (totalRatio / studentsWithOpportunities) * 100;
 
-    }, [activeGroup, partialData.participations]);
+    }, [activeGroup, partialData.participations, isClient]);
 
     const takeAttendanceForDate = useCallback(async (groupId: string, date: string) => {
         const group = groups.find(g => g.id === groupId);
@@ -545,7 +557,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             });
         }
         
-    }, [groups, activeGroupId, activePartialId, setAllPartialsData]);
+    }, [groups, activeGroupId, activePartialId]);
 
     const resetAllData = useCallback(async () => {
         setIsLoading(true);
@@ -629,5 +641,3 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
-
-    
