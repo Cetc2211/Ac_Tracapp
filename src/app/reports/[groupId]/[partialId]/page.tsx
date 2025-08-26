@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, Download, CheckCircle, XCircle, TrendingUp, BarChart, Users, Eye, AlertTriangle, Loader2, Sparkles, Calendar as CalendarIcon, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Download, CheckCircle, XCircle, TrendingUp, BarChart, Users, Eye, AlertTriangle, Loader2, Sparkles, Calendar as CalendarIcon, ChevronDown, BookText } from 'lucide-react';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -23,9 +23,10 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useData } from '@/hooks/use-data';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { PartialId } from '@/hooks/use-data';
+import type { PartialId, StudentObservation } from '@/hooks/use-data';
 import { getPartialLabel } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 
 
 type ReportSummary = {
@@ -35,8 +36,6 @@ type ReportSummary = {
     groupAverage: number;
     attendanceRate: number;
     participationRate: number;
-    highRiskCount: number;
-    mediumRiskCount: number;
 }
 
 export default function GroupReportPage() {
@@ -48,7 +47,8 @@ export default function GroupReportPage() {
       groups,
       settings,
       calculateFinalGrade,
-      getStudentRiskLevel,
+      atRiskStudents,
+      allObservations,
       partialData,
       isLoading: isDataLoading
   } = useData();
@@ -62,6 +62,7 @@ export default function GroupReportPage() {
   const [partialInput, setPartialInput] = useState(getPartialLabel(partialId) || '');
   const [semesterInput, setSemesterInput] = useState('');
   const [cycleInput, setCycleInput] = useState('');
+  const [narrativeAnalysis, setNarrativeAnalysis] = useState('');
 
 
   useEffect(() => {
@@ -71,8 +72,32 @@ export default function GroupReportPage() {
 
   const group = useMemo(() => groups.find(g => g.id === groupId), [groups, groupId]);
 
+  const atRiskStudentsForGroup = useMemo(() => {
+    if (!group) return [];
+    const studentIdsInGroup = new Set(group.students.map(s => s.id));
+    return atRiskStudents.filter(s => studentIdsInGroup.has(s.id));
+  }, [atRiskStudents, group]);
+
+  const highRiskCount = useMemo(() => atRiskStudentsForGroup.filter(s => s.calculatedRisk.level === 'high').length, [atRiskStudentsForGroup]);
+  const mediumRiskCount = useMemo(() => atRiskStudentsForGroup.filter(s => s.calculatedRisk.level === 'medium').length, [atRiskStudentsForGroup]);
+
+  const recentObservations = useMemo(() => {
+    if (!group) return [];
+    
+    const observations: (StudentObservation & { studentName: string })[] = [];
+    group.students.forEach(student => {
+      const studentObs = (allObservations[student.id] || []).filter(obs => obs.partialId === partialId);
+      studentObs.forEach(obs => {
+        observations.push({ ...obs, studentName: student.name });
+      });
+    });
+    return observations.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
+
+  }, [allObservations, group, partialId]);
+
+
   useEffect(() => {
-    if (!group || !partialId || isDataLoading) {
+    if (!group || isDataLoading) {
         return;
     }
 
@@ -86,8 +111,6 @@ export default function GroupReportPage() {
               groupAverage: 0,
               attendanceRate: 100,
               participationRate: 100,
-              highRiskCount: 0,
-              mediumRiskCount: 0,
           });
           return;
       }
@@ -102,17 +125,9 @@ export default function GroupReportPage() {
         return finalGrade;
       });
 
-      const highRiskStudents = new Set<string>();
-      const mediumRiskStudents = new Set<string>();
-
-      group.students.forEach((student, index) => {
-        const finalGrade = studentGrades[index];
-        totalGroupGrade += finalGrade;
-        if (finalGrade >= 60) approved++;
-
-        const risk = getStudentRiskLevel(finalGrade, attendance, student.id);
-        if (risk.level === 'high') highRiskStudents.add(student.id);
-        else if (risk.level === 'medium') mediumRiskStudents.add(student.id);
+      studentGrades.forEach(grade => {
+          totalGroupGrade += grade;
+          if (grade >= 60) approved++;
       });
       
       let totalParticipations = 0;
@@ -145,8 +160,6 @@ export default function GroupReportPage() {
           groupAverage: studentCount > 0 ? totalGroupGrade / studentCount : 0,
           attendanceRate: totalPossibleAttendance > 0 ? (totalPresent / totalPossibleAttendance) * 100 : 100,
           participationRate: totalParticipationOpportunities > 0 ? (totalParticipations / totalParticipationOpportunities) * 100 : 100,
-          highRiskCount: highRiskStudents.size,
-          mediumRiskCount: mediumRiskStudents.size,
       };
 
       setSummary(reportSummary);
@@ -154,7 +167,7 @@ export default function GroupReportPage() {
     } catch (e) {
       console.error("Failed to generate report data", e);
     }
-  }, [group, partialId, calculateFinalGrade, getStudentRiskLevel, isDataLoading, attendance, participations]);
+  }, [group, partialId, calculateFinalGrade, isDataLoading, attendance, participations]);
 
   const handleDownloadPdf = () => {
     const input = reportRef.current;
@@ -256,7 +269,7 @@ export default function GroupReportPage() {
         </header>
 
         <section className="space-y-6">
-            <div className="leading-relaxed flex flex-wrap items-center gap-x-2 gap-y-2">
+            <div className="leading-relaxed flex flex-wrap items-center gap-x-2 gap-y-2" data-hide-for-pdf="true">
               <span>Informe de resultados correspondiente al</span>
               <Input
                 value={partialInput}
@@ -279,9 +292,14 @@ export default function GroupReportPage() {
                 className="inline-block w-auto h-8 p-1 border-b border-gray-400 focus:border-primary focus:ring-0 rounded-none min-w-[200px]"
               />.
             </div>
-            <p className="leading-relaxed">
-              Durante este periodo se atendieron <strong>{summary.totalStudents}</strong> estudiantes, con los siguientes resultados e indicadores:
-            </p>
+             <div className="leading-relaxed">
+                <p>
+                    Informe de resultados correspondiente al {partialInput} del semestre {semesterInput}, ciclo escolar {cycleInput}.
+                </p>
+                <p className="mt-2">
+                  Durante este periodo se atendieron <strong>{summary.totalStudents}</strong> estudiantes, con los siguientes resultados e indicadores:
+                </p>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 my-6">
               <Card className="text-center">
                   <CardHeader><CardTitle className="text-base">Aprobación</CardTitle></CardHeader>
@@ -309,14 +327,51 @@ export default function GroupReportPage() {
               </Card>
             </div>
             
-             <div className="space-y-4 text-muted-foreground leading-relaxed">
-              {(summary.highRiskCount > 0 || summary.mediumRiskCount > 0) && (
-                  <p>
-                      Se ha identificado que <span className="font-bold text-destructive">{summary.highRiskCount} estudiante(s)</span> se encuentran en <span className="font-bold text-destructive">riesgo alto</span> y 
-                      <span className="font-bold text-amber-600"> {summary.mediumRiskCount} estudiante(s)</span> en <span className="font-bold text-amber-600">riesgo medio</span>, basado en su rendimiento y asistencia.
-                  </p>
-              )}
-            </div>
+             <Card>
+                <CardHeader>
+                    <CardTitle>Análisis y Observaciones</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div>
+                        <h4 className="font-semibold text-base mb-2">Análisis Narrativo</h4>
+                         <div data-hide-for-pdf="true">
+                            <Textarea 
+                                placeholder="Escribe aquí tu análisis cualitativo sobre el rendimiento general del grupo, fortalezas, áreas de oportunidad y estrategias a seguir..."
+                                value={narrativeAnalysis}
+                                onChange={(e) => setNarrativeAnalysis(e.target.value)}
+                                rows={5}
+                            />
+                        </div>
+                        <div className="prose prose-sm max-w-none dark:prose-invert mt-2 whitespace-pre-wrap min-h-[50px]">
+                           {narrativeAnalysis}
+                        </div>
+                    </div>
+                    
+                    <div className="space-y-2 pt-4">
+                        <h4 className="font-semibold text-base flex items-center gap-2"><AlertTriangle/> Estudiantes en Riesgo</h4>
+                         {(highRiskCount > 0 || mediumRiskCount > 0) ? (
+                            <p className="text-sm text-muted-foreground">
+                                Se ha identificado que <span className="font-bold text-destructive">{highRiskCount} estudiante(s)</span> se encuentran en <span className="font-bold text-destructive">riesgo alto</span> y 
+                                <span className="font-bold text-amber-600"> {mediumRiskCount} estudiante(s)</span> en <span className="font-bold text-amber-600">riesgo medio</span>, basado en su rendimiento y asistencia para este parcial.
+                            </p>
+                         ) : (
+                            <p className="text-sm text-muted-foreground">No se han identificado estudiantes en riesgo para este parcial.</p>
+                         )}
+                    </div>
+                     {recentObservations.length > 0 && (
+                        <div className="space-y-2 pt-4">
+                            <h4 className="font-semibold text-base flex items-center gap-2"><BookText/> Observaciones Recientes de la Bitácora</h4>
+                            <div className="p-3 border rounded-md text-sm space-y-2 bg-muted/30">
+                                {recentObservations.map(obs => (
+                                    <p key={obs.id}>
+                                        <span className="font-semibold">{obs.studentName} ({obs.type}):</span> {obs.details.substring(0, 100)}{obs.details.length > 100 ? '...' : ''}
+                                    </p>
+                                ))}
+                            </div>
+                        </div>
+                     )}
+                </CardContent>
+            </Card>
         </section>
 
         <footer className="border-t mt-8 pt-6 text-sm">
