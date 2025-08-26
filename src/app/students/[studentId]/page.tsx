@@ -27,8 +27,7 @@ import type { PartialId, StudentObservation, Student, PartialData } from '@/hook
 import { StudentObservationLogDialog } from '@/components/student-observation-log-dialog';
 import { WhatsAppDialog } from '@/components/whatsapp-dialog';
 import { Separator } from '@/components/ui/separator';
-import ReactMarkdown from 'react-markdown';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Textarea } from '@/components/ui/textarea';
 
 
 type StudentStats = ReturnType<typeof useData>['calculateDetailedFinalGrade'] & {
@@ -55,7 +54,7 @@ export default function StudentProfilePage() {
   
   const [isLogOpen, setIsLogOpen] = useState(false);
   const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false);
-  const [feedback, setFeedback] = useState('');
+  const [manualFeedback, setManualFeedback] = useState('');
 
   const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -139,6 +138,13 @@ export default function StudentProfilePage() {
       originalDisplays.set(el, el.style.display);
       el.style.display = 'none';
     });
+    
+    // Hide the textarea and show the content for the PDF
+    const textareaElement = reportElement.querySelector('#manual-feedback-textarea');
+    const pdfContentElement = reportElement.querySelector('#manual-feedback-pdf-content');
+    if (textareaElement) (textareaElement as HTMLElement).style.display = 'none';
+    if (pdfContentElement) (pdfContentElement as HTMLElement).style.display = 'block';
+
 
     try {
       const canvas = await html2canvas(reportElement, { scale: 2, useCORS: true });
@@ -174,6 +180,9 @@ export default function StudentProfilePage() {
       elementsToHide.forEach((el) => {
         el.style.display = originalDisplays.get(el) || '';
       });
+      // Restore textarea and hide content
+      if (textareaElement) (textareaElement as HTMLElement).style.display = 'block';
+      if (pdfContentElement) (pdfContentElement as HTMLElement).style.display = 'none';
     }
   };
 
@@ -360,9 +369,18 @@ export default function StudentProfilePage() {
               </div>
             </CardHeader>
              <CardContent>
-                  <div className="text-center text-sm text-muted-foreground bg-muted/50 p-4 rounded-md">
-                    <p>Las funciones de generación de retroalimentación con IA han sido deshabilitadas.</p>
-                  </div>
+                <div id="manual-feedback-textarea">
+                    <Textarea 
+                        placeholder="Escribe aquí tu retroalimentación, análisis de fortalezas, áreas de oportunidad y recomendaciones para el estudiante..."
+                        value={manualFeedback}
+                        onChange={(e) => setManualFeedback(e.target.value)}
+                        rows={8}
+                        className="w-full"
+                    />
+                </div>
+                <div id="manual-feedback-pdf-content" className="prose prose-sm max-w-none dark:prose-invert mt-2 whitespace-pre-wrap min-h-[50px]" style={{ display: 'none' }}>
+                    {manualFeedback}
+                </div>
               </CardContent>
             <CardFooter>
               <div className="w-full mt-12 pt-12 text-center text-sm">
@@ -379,3 +397,5 @@ export default function StudentProfilePage() {
     </>
   );
 }
+
+    
