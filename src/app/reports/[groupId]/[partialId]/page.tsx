@@ -16,7 +16,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, Download, CheckCircle, XCircle, TrendingUp, BarChart, Users, Eye, AlertTriangle, Loader2, Sparkles, Calendar as CalendarIcon, ChevronDown } from 'lucide-react';
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { format, addYears } from 'date-fns';
+import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
@@ -25,20 +25,7 @@ import { useData } from '@/hooks/use-data';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { PartialId } from '@/hooks/use-data';
 import { getPartialLabel } from '@/lib/utils';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import { Calendar } from "@/components/ui/calendar"
-import { DateRange } from "react-day-picker"
-import { cn } from "@/lib/utils"
+import { Input } from '@/components/ui/input';
 
 
 type ReportSummary = {
@@ -72,19 +59,15 @@ export default function GroupReportPage() {
   const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  const [semesterDate, setSemesterDate] = React.useState<DateRange | undefined>({
-    from: new Date(),
-    to: new Date(new Date().setMonth(new Date().getMonth() + 4)),
-  })
-  const [cycleDate, setCycleDate] = React.useState<DateRange | undefined>({
-    from: new Date(),
-    to: addYears(new Date(), 1),
-  })
+  const [partialInput, setPartialInput] = useState(getPartialLabel(partialId) || '');
+  const [semesterInput, setSemesterInput] = useState('');
+  const [cycleInput, setCycleInput] = useState('');
 
 
   useEffect(() => {
     setIsClient(true);
-  }, []);
+    setPartialInput(getPartialLabel(partialId) || '');
+  }, [partialId]);
 
   const group = useMemo(() => groups.find(g => g.id === groupId), [groups, groupId]);
 
@@ -218,20 +201,6 @@ export default function GroupReportPage() {
     return notFound();
   }
 
-  const partials: PartialId[] = ['p1', 'p2', 'p3'];
-
-  const formatMonth = (date: Date) => format(date, 'MMMM', { locale: es });
-  const formatYear = (date: Date) => format(date, 'yyyy', { locale: es });
-  
-  const semesterString = semesterDate?.from && semesterDate?.to
-    ? `${formatMonth(semesterDate.from)} ${formatYear(semesterDate.from)} - ${formatMonth(semesterDate.to)} ${formatYear(semesterDate.to)}`
-    : "No definido";
-
-  const cycleString = cycleDate?.from && cycleDate?.to
-    ? `${formatMonth(cycleDate.from)} ${formatYear(cycleDate.from)} - ${formatMonth(cycleDate.to)} ${formatYear(cycleDate.to)}`
-    : "No definido";
-
-
   return (
     <div className="flex flex-col gap-6">
        <div className="flex items-center justify-between flex-wrap gap-4">
@@ -250,23 +219,6 @@ export default function GroupReportPage() {
             </div>
          </div>
          <div className='flex items-center gap-2 flex-wrap'>
-             <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button variant="outline">
-                        {getPartialLabel(partialId)}
-                        <ChevronDown className="ml-2 h-4 w-4" />
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                    {partials.map(p => (
-                        <Link href={`/reports/${groupId}/${p}`} key={p}>
-                            <DropdownMenuItem disabled={p === partialId}>
-                                {getPartialLabel(p)}
-                            </DropdownMenuItem>
-                        </Link>
-                    ))}
-                </DropdownMenuContent>
-            </DropdownMenu>
             <Button onClick={handleDownloadPdf}>
                 <Download className="mr-2 h-4 w-4"/>
                 Descargar Informe
@@ -274,91 +226,6 @@ export default function GroupReportPage() {
          </div>
       </div>
       
-      <Card data-hide-for-pdf="true" className="p-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="grid gap-2">
-            <span className="font-semibold text-sm">Semestre:</span>
-             <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  id="date"
-                  variant={"outline"}
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !semesterDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {semesterDate?.from ? (
-                    semesterDate.to ? (
-                      <>
-                        {format(semesterDate.from, "LLL, y", { locale: es })} -{" "}
-                        {format(semesterDate.to, "LLL, y", { locale: es })}
-                      </>
-                    ) : (
-                      format(semesterDate.from, "LLL, y", { locale: es })
-                    )
-                  ) : (
-                    <span>Elige un rango</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  initialFocus
-                  mode="range"
-                  defaultMonth={semesterDate?.from}
-                  selected={semesterDate}
-                  onSelect={setSemesterDate}
-                  numberOfMonths={2}
-                  locale={es}
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-           <div className="grid gap-2">
-            <span className="font-semibold text-sm">Ciclo Escolar:</span>
-             <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  id="date"
-                  variant={"outline"}
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !cycleDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {cycleDate?.from ? (
-                    cycleDate.to ? (
-                      <>
-                        {format(cycleDate.from, "LLL, y", { locale: es })} -{" "}
-                        {format(cycleDate.to, "LLL, y", { locale: es })}
-                      </>
-                    ) : (
-                      format(cycleDate.from, "LLL, y", { locale: es })
-                    )
-                  ) : (
-                    <span>Elige un rango</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  initialFocus
-                  mode="range"
-                  defaultMonth={cycleDate?.from}
-                  selected={cycleDate}
-                  onSelect={setCycleDate}
-                  numberOfMonths={2}
-                  locale={es}
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-        </div>
-      </Card>
-
       <Card ref={reportRef} id="report-content" className="p-4 sm:p-6 md:p-8">
         <header className="border-b pb-6 mb-6">
            <div className="flex justify-between items-start">
@@ -389,9 +256,29 @@ export default function GroupReportPage() {
         </header>
 
         <section className="space-y-6">
-            <p className="leading-relaxed">
-              Informe de resultados correspondiente al <strong>{getPartialLabel(partialId).toLowerCase()}</strong> del semestre <strong>{semesterString}</strong>, ciclo escolar <strong>{cycleString}</strong>.
-            </p>
+            <div className="leading-relaxed flex flex-wrap items-center gap-x-2 gap-y-2">
+              <span>Informe de resultados correspondiente al</span>
+              <Input
+                value={partialInput}
+                onChange={(e) => setPartialInput(e.target.value)}
+                placeholder="parcial"
+                className="inline-block w-auto h-8 p-1 border-b border-gray-400 focus:border-primary focus:ring-0 rounded-none"
+              />
+              <span>del semestre</span>
+              <Input
+                value={semesterInput}
+                onChange={(e) => setSemesterInput(e.target.value)}
+                placeholder="agosto 2025 - enero 2026"
+                className="inline-block w-auto h-8 p-1 border-b border-gray-400 focus:border-primary focus:ring-0 rounded-none min-w-[200px]"
+              />
+              <span>, ciclo escolar</span>
+              <Input
+                value={cycleInput}
+                onChange={(e) => setCycleInput(e.target.value)}
+                placeholder="agosto 2025 - julio 2026"
+                className="inline-block w-auto h-8 p-1 border-b border-gray-400 focus:border-primary focus:ring-0 rounded-none min-w-[200px]"
+              />.
+            </div>
             <p className="leading-relaxed">
               Durante este periodo se atendieron <strong>{summary.totalStudents}</strong> estudiantes, con los siguientes resultados e indicadores:
             </p>
