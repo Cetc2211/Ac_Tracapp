@@ -18,7 +18,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useData } from '@/hooks/use-data';
-import { useMemo, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import type { PartialId } from '@/hooks/use-data';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -37,13 +37,14 @@ interface SemesterGrade {
     p1?: PartialGradeInfo;
     p2?: PartialGradeInfo;
     p3?: PartialGradeInfo;
-    average: number;
+    average?: number;
 }
 
 export default function SemesterEvaluationPage() {
     const { activeGroup, calculateDetailedFinalGrade, isLoading: isDataLoading, fetchPartialData } = useData();
     const [semesterGrades, setSemesterGrades] = useState<SemesterGrade[]>([]);
     const [isCalculating, setIsCalculating] = useState(true);
+    const [availablePartials, setAvailablePartials] = useState<PartialId[]>([]);
 
     useEffect(() => {
         const calculateGrades = async () => {
@@ -54,10 +55,18 @@ export default function SemesterEvaluationPage() {
 
             setIsCalculating(true);
             const partials: PartialId[] = ['p1', 'p2', 'p3'];
+            const gradedPartials: PartialId[] = [];
             
             const allPartialsData = await Promise.all(
                 partials.map(pId => fetchPartialData(activeGroup.id, pId))
             );
+
+            allPartialsData.forEach((pData, index) => {
+                if (pData && (Object.keys(pData.grades).length > 0 || Object.keys(pData.recoveryGrades).length > 0)) {
+                    gradedPartials.push(partials[index]);
+                }
+            });
+            setAvailablePartials(gradedPartials);
 
             const studentPromises = activeGroup.students.map(async (student) => {
                 const grades: {[key in PartialId]?: PartialGradeInfo} = {};
@@ -75,7 +84,8 @@ export default function SemesterEvaluationPage() {
                     }
                 });
                 
-                const semesterAverage = partialsWithGrades > 0 ? gradeSum / partialsWithGrades : 0;
+                // Only calculate average if all three partials have grades.
+                const semesterAverage = partialsWithGrades === 3 ? gradeSum / 3 : undefined;
                 
                 return {
                     student,
@@ -133,7 +143,6 @@ export default function SemesterEvaluationPage() {
         )
     }
     
-    
     const GradeCell = ({ data }: { data?: PartialGradeInfo }) => {
       if (data === undefined) return <span className="text-muted-foreground">N/A</span>;
       return (
@@ -149,7 +158,7 @@ export default function SemesterEvaluationPage() {
             <div>
                 <h1 className="text-3xl font-bold">Evaluación Semestral</h1>
                 <p className="text-muted-foreground">
-                    Resumen de calificaciones de los tres parciales y promedio final para el grupo: {activeGroup.subject}
+                    Resumen de calificaciones de los parciales y promedio final para el grupo: {activeGroup.subject}
                 </p>
             </div>
             <Card>
@@ -158,9 +167,9 @@ export default function SemesterEvaluationPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead className="w-[300px]">Estudiante</TableHead>
-                                <TableHead className="text-center bg-partial-1-bg text-partial-1-foreground-alt">Primer Parcial</TableHead>
-                                <TableHead className="text-center bg-partial-2-bg text-partial-2-foreground-alt">Segundo Parcial</TableHead>
-                                <TableHead className="text-center bg-partial-3-bg text-partial-3-foreground-alt">Tercer Parcial</TableHead>
+                                {availablePartials.includes('p1') && <TableHead className="text-center bg-partial-1-bg text-partial-1-foreground-alt">Primer Parcial</TableHead>}
+                                {availablePartials.includes('p2') && <TableHead className="text-center bg-partial-2-bg text-partial-2-foreground-alt">Segundo Parcial</TableHead>}
+                                {availablePartials.includes('p3') && <TableHead className="text-center bg-partial-3-bg text-partial-3-foreground-alt">Tercer Parcial</TableHead>}
                                 <TableHead className="text-center font-bold">Promedio Semestral</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -171,17 +180,15 @@ export default function SemesterEvaluationPage() {
                                         <Image src={student.photo} alt={student.name} width={40} height={40} className="rounded-full"/>
                                         {student.name}
                                     </TableCell>
-                                    <TableCell className="text-center font-semibold">
-                                        <GradeCell data={p1} />
-                                    </TableCell>
-                                    <TableCell className="text-center font-semibold">
-                                        <GradeCell data={p2} />
-                                    </TableCell>
-                                    <TableCell className="text-center font-semibold">
-                                        <GradeCell data={p3} />
-                                    </TableCell>
+                                    {availablePartials.includes('p1') && <TableCell className="text-center font-semibold"><GradeCell data={p1} /></TableCell>}
+                                    {availablePartials.includes('p2') && <TableCell className="text-center font-semibold"><GradeCell data={p2} /></TableCell>}
+                                    {availablePartials.includes('p3') && <TableCell className="text-center font-semibold"><GradeCell data={p3} /></TableCell>}
                                     <TableCell className="text-center">
-                                        <Badge className={cn("text-base", average >= 60 ? 'bg-primary' : 'bg-destructive')}>{average.toFixed(1)}%</Badge>
+                                        {average !== undefined ? (
+                                            <Badge className={cn("text-base", average >= 60 ? 'bg-primary' : 'bg-destructive')}>{average.toFixed(1)}%</Badge>
+                                        ) : (
+                                            <Badge variant="outline">Pendiente</Badge>
+                                        )}
                                     </TableCell>
                                 </TableRow>
                             ))}

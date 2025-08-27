@@ -94,7 +94,7 @@ export default function StudentProfilePage() {
             for (const pId of partials) {
                 const pData = await fetchPartialData(primaryGroup.id, pId);
                 
-                if (pData && (primaryGroup.criteria.length > 0 || Object.keys(pData.recoveryGrades || {}).length > 0)) {
+                if (pData && (Object.keys(pData.grades).length > 0 || Object.keys(pData.recoveryGrades).length > 0)) {
                     const gradeDetails = calculateDetailedFinalGrade(student.id, pData, primaryGroup.criteria);
 
                     let p = 0, a = 0, total = 0;
@@ -156,12 +156,12 @@ export default function StudentProfilePage() {
       };
     }
     
-    // Fallback if active partial has no grade, find first available
-    const firstAvailablePartial = studentStatsByPartial[0];
-    if (firstAvailablePartial) {
+    // Fallback if active partial has no grade, find latest available
+    const lastAvailablePartial = [...studentStatsByPartial].pop();
+    if (lastAvailablePartial) {
       return {
-        title: `Calificación del ${getPartialLabel(firstAvailablePartial.partialId)}`,
-        grade: firstAvailablePartial.finalGrade,
+        title: `Calificación del ${getPartialLabel(lastAvailablePartial.partialId)}`,
+        grade: lastAvailablePartial.finalGrade,
       };
     }
     
