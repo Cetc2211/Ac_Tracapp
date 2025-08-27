@@ -165,7 +165,7 @@ export default function BitacoraPage() {
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
-                 <div className="max-h-40 overflow-y-auto mt-2 space-y-1 pr-2">
+                 <div className="max-h-96 overflow-y-auto mt-2 space-y-1 pr-2">
                     {studentsInGroup.map(student => (
                         <div
                             key={student.id}
