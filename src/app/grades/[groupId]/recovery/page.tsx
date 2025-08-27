@@ -66,17 +66,23 @@ export default function RecoveryPage() {
       toast({ variant: 'destructive', title: 'Calificación inválida', description: 'La calificación debe ser un número entre 0 y 100.' });
       return;
     }
-    setRecoveryGrades(prev => ({
-      ...prev,
-      [studentId]: { ...(prev[studentId] || { applied: false }), grade }
-    }));
+    setRecoveryGrades(prev => {
+        const safePrev = prev || {};
+        return {
+            ...safePrev,
+            [studentId]: { ...(safePrev[studentId] || { applied: false }), grade }
+        }
+    });
   };
 
   const handleApplyChange = (studentId: string, checked: boolean) => {
-    setRecoveryGrades(prev => ({
-      ...prev,
-      [studentId]: { ...(prev[studentId] || { grade: 0 }), applied: checked }
-    }));
+    setRecoveryGrades(prev => {
+        const safePrev = prev || {};
+        return {
+            ...safePrev,
+            [studentId]: { ...(safePrev[studentId] || { grade: 0 }), applied: checked }
+        }
+    });
   };
 
   if (!activeGroup) {
