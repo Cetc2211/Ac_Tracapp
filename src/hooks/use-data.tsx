@@ -101,6 +101,7 @@ export type PartialData = {
     recoveryGrades: RecoveryGrades;
     feedbacks: { [studentId: string]: string };
     groupAnalysis?: string;
+    criteria: EvaluationCriteria[];
 };
 
 export type AllPartialsDataForGroup = {
@@ -135,6 +136,7 @@ const defaultPartialData: PartialData = {
     recoveryGrades: {},
     feedbacks: {},
     groupAnalysis: '',
+    criteria: [],
 };
 
 const loadFromStorage = <T>(key: string, defaultValue: T): T => {
@@ -292,12 +294,17 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }, [activeGroupId, allPartialsData]);
 
     const partialData = useMemo(() => {
-        return allPartialsDataForActiveGroup[activePartialId] || defaultPartialData;
-    }, [allPartialsDataForActiveGroup, activePartialId]);
+        if (!activeGroupId) return defaultPartialData;
+        const group = groups.find(g => g.id === activeGroupId);
+        const pData = allPartialsDataForActiveGroup[activePartialId] || defaultPartialData;
+        return {...pData, criteria: group?.criteria || []};
+    }, [allPartialsDataForActiveGroup, activePartialId, activeGroupId, groups]);
     
     const fetchPartialData = useCallback(async (groupId: string, partialId: PartialId): Promise<PartialData> => {
-        return allPartialsData[groupId]?.[partialId] || defaultPartialData;
-    }, [allPartialsData]);
+        const group = groups.find(g => g.id === groupId);
+        const pData = allPartialsData[groupId]?.[partialId] || defaultPartialData;
+        return {...pData, criteria: group?.criteria || []};
+    }, [allPartialsData, groups]);
 
     const createSetter = useCallback((field: keyof PartialData) => {
         return async (setter: React.SetStateAction<any>) => {
@@ -374,7 +381,9 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }, [activeGroupId, activePartialId]);
 
     const calculateDetailedFinalGrade = useCallback((studentId: string, pData: PartialData, criteria: EvaluationCriteria[]): { finalGrade: number, criteriaDetails: CriteriaDetail[], isRecovery: boolean } => {
-        if (!pData || !criteria) return { finalGrade: 0, criteriaDetails: [], isRecovery: false };
+        if (!pData || !criteria || criteria.length === 0) {
+            return { finalGrade: 0, criteriaDetails: [], isRecovery: false };
+        }
 
         const recoveryInfo = pData.recoveryGrades?.[studentId];
         if (recoveryInfo?.applied) {
@@ -563,7 +572,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         const averages: { [groupId: string]: number } = {};
         groups.forEach(group => {
             const groupPartialData = allPartialsData[group.id]?.[activePartialId];
-            if (!groupPartialData || !group.criteria) {
+            if (!groupPartialData || !group.criteria || group.criteria.length === 0) {
                 averages[group.id] = 0;
                 return;
             }
@@ -578,8 +587,9 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         if (!isClient) return [];
         const studentsAtRiskInPartial = new Map<string, StudentWithRisk>();
         groups.forEach(group => {
+            if (!group.criteria || group.criteria.length === 0) return;
             const groupPartialData = allPartialsData[group.id]?.[activePartialId];
-            if (!groupPartialData || !group.criteria) return;
+            if (!groupPartialData) return;
 
             group.students.forEach(student => {
                 const finalGrade = calculateDetailedFinalGrade(student.id, groupPartialData, group.criteria).finalGrade;
@@ -743,7 +753,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         const prompt = `
             Actúa como un analista educativo experto redactando un informe para un docente. Tu tarea es generar un análisis narrativo profesional, objetivo y fluido sobre el rendimiento de un grupo de estudiantes para el [${partialLabel}].
             Sintetiza los datos cuantitativos y cualitativos proporcionados en un texto coherente. La redacción debe ser formal, directa y constructiva, como si la hubiera escrito el propio docente para sus archivos o para un directivo.
-            Evita frases como "según los datos" o "el análisis muestra". Integra los hallazgos de forma natural en la prosa.
             
             IMPORTANTE: No utilices asteriscos (*) para listas o para dar énfasis. Si necesitas resaltar algo, usa negritas o, preferiblemente, intégralo en la redacción de forma natural. No uses "lenguaje de IA" o formatos típicos de chatbot.
 
@@ -828,3 +837,4 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
+
