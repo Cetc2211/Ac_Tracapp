@@ -15,18 +15,17 @@ import { Button } from '@/components/ui/button';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, Download, User, Mail, Phone, Loader2, MessageSquare, BookText, Sparkles } from 'lucide-react';
-import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { ArrowLeft, Download, User, Mail, Phone, Loader2, MessageSquare, BookText, Edit, Save, XCircle } from 'lucide-react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useData } from '@/hooks/use-data';
 import { Badge } from '@/components/ui/badge';
 import { getPartialLabel } from '@/lib/utils';
-import type { PartialId, StudentObservation, Student, PartialData } from '@/hooks/use-data';
+import type { PartialId, StudentObservation, Student } from '@/hooks/use-data';
 import { StudentObservationLogDialog } from '@/components/student-observation-log-dialog';
 import { WhatsAppDialog } from '@/components/whatsapp-dialog';
-import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 
 
@@ -48,6 +47,8 @@ export default function StudentProfilePage() {
     isLoading: isDataLoading,
     fetchPartialData,
     activePartialId,
+    partialData,
+    setStudentFeedback,
   } = useData();
 
   const [studentStatsByPartial, setStudentStatsByPartial] = useState<StudentStats[]>([]);
@@ -55,13 +56,24 @@ export default function StudentProfilePage() {
   
   const [isLogOpen, setIsLogOpen] = useState(false);
   const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false);
-  const [manualFeedback, setManualFeedback] = useState('');
+  
+  const [isEditingFeedback, setIsEditingFeedback] = useState(false);
+  const [currentFeedback, setCurrentFeedback] = useState('');
 
   const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   
   const student = useMemo(() => allStudents.find((s) => s.id === studentId), [allStudents, studentId]);
   const studentGroups = useMemo(() => groups.filter((g) => g.students.some((s) => s.id === studentId)), [groups, studentId]);
+  
+  const savedFeedback = useMemo(() => {
+      return partialData.feedbacks?.[studentId] || '';
+  }, [partialData.feedbacks, studentId]);
+
+  useEffect(() => {
+    setCurrentFeedback(savedFeedback);
+  }, [savedFeedback]);
+
 
   useEffect(() => {
     const calculateStats = async () => {
@@ -77,13 +89,13 @@ export default function StudentProfilePage() {
         
         try {
             for (const pId of partials) {
-                const partialData = await fetchPartialData(primaryGroupId, pId);
+                const pData = await fetchPartialData(primaryGroupId, pId);
                 
-                if (partialData && (partialData.criteria.length > 0 || Object.keys(partialData.recoveryGrades || {}).length > 0)) {
-                    const gradeDetails = calculateDetailedFinalGrade(student.id, partialData);
+                if (pData && (pData.criteria.length > 0 || Object.keys(pData.recoveryGrades || {}).length > 0)) {
+                    const gradeDetails = calculateDetailedFinalGrade(student.id, pData);
 
                     let p = 0, a = 0, total = 0;
-                    const safeAttendance = partialData.attendance || {};
+                    const safeAttendance = pData.attendance || {};
                     Object.keys(safeAttendance).forEach((date) => {
                         if (safeAttendance[date]?.[studentId] !== undefined) {
                             total++;
@@ -173,14 +185,12 @@ export default function StudentProfilePage() {
       el.style.display = 'none';
     });
     
-    // Hide the textarea and show the content for the PDF
-    const textareaElement = reportElement.querySelector('#manual-feedback-textarea');
-    const pdfContentElement = reportElement.querySelector('#manual-feedback-pdf-content');
-    if (textareaElement) (textareaElement as HTMLElement).style.display = 'none';
-    if (pdfContentElement) (pdfContentElement as HTMLElement).style.display = 'block';
+    const wasEditing = isEditingFeedback;
+    if(wasEditing) setIsEditingFeedback(false);
 
 
     try {
+      await new Promise(resolve => setTimeout(resolve, 100));
       const canvas = await html2canvas(reportElement, { scale: 2, useCORS: true });
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
@@ -214,11 +224,20 @@ export default function StudentProfilePage() {
       elementsToHide.forEach((el) => {
         el.style.display = originalDisplays.get(el) || '';
       });
-      // Restore textarea and hide content
-      if (textareaElement) (textareaElement as HTMLElement).style.display = 'block';
-      if (pdfContentElement) (pdfContentElement as HTMLElement).style.display = 'none';
+      if(wasEditing) setIsEditingFeedback(true);
     }
   };
+
+  const handleSaveFeedback = async () => {
+    await setStudentFeedback(studentId, currentFeedback);
+    setIsEditingFeedback(false);
+    toast({ title: 'Retroalimentación guardada' });
+  };
+  
+  const handleCancelFeedback = () => {
+      setCurrentFeedback(savedFeedback);
+      setIsEditingFeedback(false);
+  }
 
   if (isDataLoading || isPageLoading) {
     return (
@@ -254,7 +273,7 @@ export default function StudentProfilePage() {
             </Button>
             <div>
               <h1 className="text-3xl font-bold">Perfil del Estudiante</h1>
-              <p className="text-muted-foreground">Información detallada de {student.name}.</p>
+              <p className="text-muted-foreground">Información detallada de {student.name} para el {getPartialLabel(activePartialId)}.</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -396,26 +415,44 @@ export default function StudentProfilePage() {
 
           <Card className="mt-6">
             <CardHeader>
-              <div className="flex justify-between items-center">
+              <div id="feedback-buttons-container" className="flex justify-between items-center w-full">
                 <div>
                   <CardTitle>Recomendaciones y retroalimentación</CardTitle>
-                  <CardDescription>Resumen personalizado del rendimiento del estudiante.</CardDescription>
+                  <CardDescription>Análisis personalizado del docente sobre el rendimiento del estudiante.</CardDescription>
                 </div>
+                 {!isEditingFeedback && (
+                    <Button variant="outline" size="sm" onClick={() => setIsEditingFeedback(true)}>
+                        <Edit className="mr-2" /> Editar
+                    </Button>
+                )}
               </div>
             </CardHeader>
              <CardContent>
-                <div id="manual-feedback-textarea">
-                    <Textarea 
-                        placeholder="Escribe aquí tu retroalimentación, análisis de fortalezas, áreas de oportunidad y recomendaciones para el estudiante..."
-                        value={manualFeedback}
-                        onChange={(e) => setManualFeedback(e.target.value)}
-                        rows={8}
-                        className="w-full"
-                    />
-                </div>
-                <div id="manual-feedback-pdf-content" className="prose prose-sm max-w-none dark:prose-invert mt-2 whitespace-pre-wrap min-h-[50px]" style={{ display: 'none' }}>
-                    {manualFeedback}
-                </div>
+                {isEditingFeedback ? (
+                    <div className="space-y-2">
+                        <Textarea 
+                            placeholder="Escribe aquí tu retroalimentación, análisis de fortalezas, áreas de oportunidad y recomendaciones para el estudiante..."
+                            value={currentFeedback}
+                            onChange={(e) => setCurrentFeedback(e.target.value)}
+                            rows={8}
+                            className="w-full"
+                        />
+                        <div className="flex justify-end gap-2 pt-2">
+                            <Button variant="ghost" size="sm" onClick={handleCancelFeedback}>
+                                <XCircle className="mr-2"/>
+                                Cancelar
+                            </Button>
+                            <Button size="sm" onClick={handleSaveFeedback}>
+                                <Save className="mr-2"/>
+                                Guardar Retroalimentación
+                            </Button>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="prose prose-sm max-w-none dark:prose-invert mt-2 whitespace-pre-wrap min-h-[100px] p-3 bg-muted/30 rounded-md">
+                        {savedFeedback || <p className="text-muted-foreground italic">No hay retroalimentación para este parcial. Haz clic en "Editar" para agregar una.</p>}
+                    </div>
+                )}
               </CardContent>
             <CardFooter>
               <div className="w-full mt-12 pt-12 text-center text-sm">

@@ -107,6 +107,7 @@ export type PartialData = {
     activities: Activity[];
     activityRecords: ActivityRecord;
     recoveryGrades: RecoveryGrades;
+    feedbacks: { [studentId: string]: string };
 };
 
 export type AllPartialsDataForGroup = {
@@ -138,6 +139,7 @@ const defaultPartialData: PartialData = {
     activities: [],
     activityRecords: {},
     recoveryGrades: {},
+    feedbacks: {},
 };
 
 const loadFromStorage = <T>(key: string, defaultValue: T): T => {
@@ -189,6 +191,7 @@ interface DataContextType {
   setActivities: (setter: React.SetStateAction<Activity[]>) => Promise<void>;
   setActivityRecords: (setter: React.SetStateAction<ActivityRecord>) => Promise<void>;
   setRecoveryGrades: (setter: React.SetStateAction<RecoveryGrades>) => Promise<void>;
+  setStudentFeedback: (studentId: string, feedback: string) => Promise<void>;
   setSettings: (settings: { institutionName: string; logo: string; theme: string }) => Promise<void>;
   setGroups: React.Dispatch<React.SetStateAction<Group[]>>;
   resetAllData: () => Promise<void>;
@@ -318,6 +321,26 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const setActivities = createSetter('activities');
     const setActivityRecords = createSetter('activityRecords');
     const setRecoveryGrades = createSetter('recoveryGrades');
+    
+    const setStudentFeedback = useCallback(async (studentId: string, feedback: string) => {
+        if (!activeGroupId) return;
+
+        setAllPartialsData(prevAllData => {
+            const groupData = prevAllData[activeGroupId] || {};
+            const pData = groupData[activePartialId] || defaultPartialData;
+            
+            const newFeedbacks = { ...(pData.feedbacks || {}), [studentId]: feedback };
+            const newPartialData = { ...pData, feedbacks: newFeedbacks };
+
+            return {
+                ...prevAllData,
+                [activeGroupId]: {
+                    ...groupData,
+                    [activePartialId]: newPartialData,
+                },
+            };
+        });
+    }, [activeGroupId, activePartialId]);
 
 
     const calculateDetailedFinalGrade = useCallback((studentId: string, pData: PartialData): { finalGrade: number, criteriaDetails: CriteriaDetail[], isRecovery: boolean } => {
@@ -637,6 +660,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         setActivities,
         setActivityRecords,
         setRecoveryGrades,
+        setStudentFeedback,
         setSettings,
         setGroups,
         deleteGroup,
