@@ -66,8 +66,9 @@ export default function SemesterEvaluationPage() {
                 
                 partials.forEach((partialId, index) => {
                     const partialData = allPartialsData[index];
-                     if (partialData && (Array.isArray(activeGroup.criteria) && activeGroup.criteria.length > 0 || Object.keys(partialData.recoveryGrades || {}).length > 0)) {
-                        const { finalGrade, isRecovery } = calculateDetailedFinalGrade(student.id, partialData, activeGroup.criteria);
+                    const groupCriteria = activeGroup.criteria || [];
+                     if (partialData && (groupCriteria.length > 0 || Object.keys(partialData.recoveryGrades || {}).length > 0)) {
+                        const { finalGrade, isRecovery } = calculateDetailedFinalGrade(student.id, partialData, groupCriteria);
                         grades[partialId] = { grade: finalGrade, isRecovery };
                         gradeSum += finalGrade;
                         partialsWithGrades++;
