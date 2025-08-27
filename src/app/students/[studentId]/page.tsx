@@ -79,7 +79,7 @@ export default function StudentProfilePage() {
             for (const pId of partials) {
                 const partialData = await fetchPartialData(primaryGroupId, pId);
                 
-                if (partialData && partialData.criteria && partialData.criteria.length > 0) {
+                if (partialData && (partialData.criteria.length > 0 || Object.keys(partialData.recoveryGrades || {}).length > 0)) {
                     const gradeDetails = calculateDetailedFinalGrade(student.id, partialData);
 
                     let p = 0, a = 0, total = 0;
@@ -117,7 +117,7 @@ export default function StudentProfilePage() {
 
   const semesterAverage = useMemo(() => {
     if (studentStatsByPartial.length === 0) return 0;
-    const partialsWithGrades = studentStatsByPartial.filter((s) => s.criteriaDetails.length > 0);
+    const partialsWithGrades = studentStatsByPartial.filter(s => s.finalGrade !== undefined);
     if (partialsWithGrades.length === 0) return 0;
     const total = partialsWithGrades.reduce((sum, stats) => sum + stats.finalGrade, 0);
     return total / partialsWithGrades.length;
@@ -318,6 +318,7 @@ export default function StudentProfilePage() {
                             Calificación Final:{' '}
                             <Badge className={stats.finalGrade >= 60 ? 'bg-green-500' : 'bg-destructive'}>
                               {stats.finalGrade.toFixed(1)}%
+                               {stats.isRecovery && <span className="ml-1 font-bold text-red-500">(R)</span>}
                             </Badge>{' '}
                             | Asistencia: <Badge variant="secondary">{stats.attendance.rate.toFixed(1)}%</Badge>
                           </CardDescription>
@@ -328,7 +329,7 @@ export default function StudentProfilePage() {
                             {stats.criteriaDetails.map((c) => (
                               <div key={c.name} className="flex justify-between">
                                 <span>
-                                  {c.name} <span className="text-xs text-muted-foreground">({c.weight}%)</span>
+                                  {c.name} {c.name !== 'Recuperación' && <span className="text-xs text-muted-foreground">({c.weight}%)</span>}
                                 </span>
                                 <span className="font-medium">{c.earned.toFixed(1)}%</span>
                               </div>
@@ -431,5 +432,3 @@ export default function StudentProfilePage() {
     </>
   );
 }
-
-    

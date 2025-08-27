@@ -26,16 +26,21 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { Student } from '@/lib/placeholder-data';
 
+interface PartialGradeInfo {
+    grade: number;
+    isRecovery: boolean;
+}
+
 interface SemesterGrade {
     student: Student;
-    p1?: number;
-    p2?: number;
-    p3?: number;
+    p1?: PartialGradeInfo;
+    p2?: PartialGradeInfo;
+    p3?: PartialGradeInfo;
     average: number;
 }
 
 export default function SemesterEvaluationPage() {
-    const { activeGroup, calculateFinalGrade, isLoading: isDataLoading, fetchPartialData } = useData();
+    const { activeGroup, calculateDetailedFinalGrade, isLoading: isDataLoading, fetchPartialData } = useData();
     const [semesterGrades, setSemesterGrades] = useState<SemesterGrade[]>([]);
     const [isCalculating, setIsCalculating] = useState(true);
 
@@ -54,16 +59,16 @@ export default function SemesterEvaluationPage() {
             );
 
             const studentPromises = activeGroup.students.map(async (student) => {
-                const grades: {[key in PartialId]?: number} = {};
+                const grades: {[key in PartialId]?: PartialGradeInfo} = {};
                 let gradeSum = 0;
                 let partialsWithGrades = 0;
                 
                 partials.forEach((partialId, index) => {
                     const partialData = allPartialsData[index];
-                     if (partialData && partialData.criteria.length > 0) {
-                        const grade = calculateFinalGrade(student.id, activeGroup.id, partialId, partialData);
-                        grades[partialId] = grade;
-                        gradeSum += grade;
+                     if (partialData && (partialData.criteria.length > 0 || Object.keys(partialData.recoveryGrades).length > 0)) {
+                        const { finalGrade, isRecovery } = calculateDetailedFinalGrade(student.id, partialData);
+                        grades[partialId] = { grade: finalGrade, isRecovery };
+                        gradeSum += finalGrade;
                         partialsWithGrades++;
                     }
                 });
@@ -89,7 +94,7 @@ export default function SemesterEvaluationPage() {
         } else if (!activeGroup) {
             setIsCalculating(false);
         }
-    }, [activeGroup, calculateFinalGrade, fetchPartialData, isDataLoading]);
+    }, [activeGroup, calculateDetailedFinalGrade, fetchPartialData, isDataLoading]);
 
 
     if (isDataLoading) {
@@ -112,6 +117,16 @@ export default function SemesterEvaluationPage() {
     
     if (isCalculating) {
         return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /> <span className="ml-2">Calculando calificaciones semestrales...</span></div>;
+    }
+    
+    const GradeCell = ({ data }: { data?: PartialGradeInfo }) => {
+      if (data === undefined) return <span className="text-muted-foreground">N/A</span>;
+      return (
+        <div className="flex items-center justify-center gap-2">
+            <span>{data.grade.toFixed(1)}%</span>
+            {data.isRecovery && <span className="text-red-500 font-bold">R</span>}
+        </div>
+      );
     }
 
     return (
@@ -142,13 +157,13 @@ export default function SemesterEvaluationPage() {
                                         {student.name}
                                     </TableCell>
                                     <TableCell className="text-center font-semibold">
-                                        {p1 !== undefined ? `${p1.toFixed(1)}%` : 'N/A'}
+                                        <GradeCell data={p1} />
                                     </TableCell>
                                     <TableCell className="text-center font-semibold">
-                                        {p2 !== undefined ? `${p2.toFixed(1)}%` : 'N/A'}
+                                        <GradeCell data={p2} />
                                     </TableCell>
                                     <TableCell className="text-center font-semibold">
-                                        {p3 !== undefined ? `${p3.toFixed(1)}%` : 'N/A'}
+                                        <GradeCell data={p3} />
                                     </TableCell>
                                     <TableCell className="text-center">
                                         <Badge className={cn("text-base", average >= 60 ? 'bg-primary' : 'bg-destructive')}>{average.toFixed(1)}%</Badge>

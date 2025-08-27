@@ -19,7 +19,7 @@ import { Button } from '@/components/ui/button';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, ShieldCheck } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
@@ -46,7 +46,7 @@ export default function GroupGradesPage() {
     activePartialId,
     partialData,
     setGrades,
-    calculateFinalGrade,
+    calculateDetailedFinalGrade,
   } = useData();
 
   const { criteria, grades, participations, activities, activityRecords } = partialData;
@@ -86,13 +86,13 @@ export default function GroupGradesPage() {
     const calculatedGrades: {[studentId: string]: number} = {};
     if (activeGroup) {
       for (const student of activeGroup.students) {
-        calculatedGrades[student.id] = calculateFinalGrade(
-          student.id
-        );
+        calculatedGrades[student.id] = calculateDetailedFinalGrade(
+          student.id, partialData
+        ).finalGrade;
       }
     }
     return calculatedGrades;
-  }, [activeGroup, calculateFinalGrade]);
+  }, [activeGroup, calculateDetailedFinalGrade, partialData]);
 
   const studentsInGroup = useMemo(() => {
       if (!activeGroup || !activeGroup.students) return [];
@@ -171,10 +171,18 @@ export default function GroupGradesPage() {
             </p>
             </div>
          </div>
-         <Button onClick={handleSaveGrades}>
-            <Save className="mr-2 h-4 w-4"/>
-            Guardar Calificaciones
-         </Button>
+         <div className="flex items-center gap-2">
+            <Button asChild variant="secondary">
+                <Link href={`/grades/${groupId}/recovery`}>
+                    <ShieldCheck className="mr-2 h-4 w-4" />
+                    Recuperación
+                </Link>
+            </Button>
+            <Button onClick={handleSaveGrades}>
+                <Save className="mr-2 h-4 w-4"/>
+                Guardar Calificaciones
+            </Button>
+         </div>
       </div>
 
       <Card>

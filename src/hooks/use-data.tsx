@@ -24,6 +24,15 @@ export type Grades = {
   };
 };
 
+export type RecoveryGrade = {
+    grade: number;
+    applied: boolean;
+};
+
+export type RecoveryGrades = {
+    [studentId: string]: RecoveryGrade;
+};
+
 export type AttendanceRecord = {
   [date: string]: {
     [studentId: string]: boolean;
@@ -97,6 +106,7 @@ export type PartialData = {
     participations: ParticipationRecord;
     activities: Activity[];
     activityRecords: ActivityRecord;
+    recoveryGrades: RecoveryGrades;
 };
 
 export type AllPartialsDataForGroup = {
@@ -127,6 +137,7 @@ const defaultPartialData: PartialData = {
     participations: {},
     activities: [],
     activityRecords: {},
+    recoveryGrades: {},
 };
 
 const loadFromStorage = <T>(key: string, defaultValue: T): T => {
@@ -177,6 +188,7 @@ interface DataContextType {
   setParticipations: (setter: React.SetStateAction<ParticipationRecord>) => Promise<void>;
   setActivities: (setter: React.SetStateAction<Activity[]>) => Promise<void>;
   setActivityRecords: (setter: React.SetStateAction<ActivityRecord>) => Promise<void>;
+  setRecoveryGrades: (setter: React.SetStateAction<RecoveryGrades>) => Promise<void>;
   setSettings: (settings: { institutionName: string; logo: string; theme: string }) => Promise<void>;
   setGroups: React.Dispatch<React.SetStateAction<Group[]>>;
   resetAllData: () => Promise<void>;
@@ -187,7 +199,7 @@ interface DataContextType {
   addStudentObservation: (observation: Omit<StudentObservation, 'id' | 'date' | 'followUpUpdates' | 'isClosed'>) => Promise<void>;
   updateStudentObservation: (studentId: string, observationId: string, updateText: string, isClosing: boolean) => Promise<void>;
   calculateFinalGrade: (studentId: string, forGroupId?: string, forPartialId?: PartialId, forPartialData?: PartialData) => number;
-  calculateDetailedFinalGrade: (studentId: string, pData: PartialData) => { finalGrade: number, criteriaDetails: CriteriaDetail[] };
+  calculateDetailedFinalGrade: (studentId: string, pData: PartialData) => { finalGrade: number, criteriaDetails: CriteriaDetail[], isRecovery: boolean };
   getStudentRiskLevel: (finalGrade: number, pAttendance: AttendanceRecord, studentId: string) => CalculatedRisk;
   fetchPartialData: (groupId: string, partialId: PartialId) => Promise<PartialData>;
   takeAttendanceForDate: (groupId: string, date: string) => Promise<void>;
@@ -305,10 +317,20 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const setParticipations = createSetter('participations');
     const setActivities = createSetter('activities');
     const setActivityRecords = createSetter('activityRecords');
+    const setRecoveryGrades = createSetter('recoveryGrades');
 
 
-    const calculateDetailedFinalGrade = useCallback((studentId: string, pData: PartialData): { finalGrade: number, criteriaDetails: CriteriaDetail[] } => {
-        if (!pData || !pData.criteria) return { finalGrade: 0, criteriaDetails: [] };
+    const calculateDetailedFinalGrade = useCallback((studentId: string, pData: PartialData): { finalGrade: number, criteriaDetails: CriteriaDetail[], isRecovery: boolean } => {
+        if (!pData || !pData.criteria) return { finalGrade: 0, criteriaDetails: [], isRecovery: false };
+
+        const recoveryInfo = pData.recoveryGrades?.[studentId];
+        if (recoveryInfo?.applied) {
+            return {
+                finalGrade: recoveryInfo.grade,
+                criteriaDetails: [{ name: 'Recuperación', earned: recoveryInfo.grade, weight: 100 }],
+                isRecovery: true,
+            };
+        }
         
         let finalGrade = 0;
         const criteriaDetails: CriteriaDetail[] = [];
@@ -348,7 +370,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         }
         
         const grade = Math.max(0, Math.min(100, finalGrade));
-        return { finalGrade: grade, criteriaDetails: criteriaDetails };
+        return { finalGrade: grade, criteriaDetails: criteriaDetails, isRecovery: false };
     }, []);
 
     const calculateFinalGrade = useCallback((studentId: string, forGroupId?: string, forPartialId?: PartialId, forPartialData?: PartialData): number => {
@@ -614,6 +636,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         setParticipations,
         setActivities,
         setActivityRecords,
+        setRecoveryGrades,
         setSettings,
         setGroups,
         deleteGroup,
