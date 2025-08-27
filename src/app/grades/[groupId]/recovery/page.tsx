@@ -46,7 +46,7 @@ export default function RecoveryPage() {
   } = useData();
 
   const { toast } = useToast();
-  const { recoveryGrades } = partialData;
+  const { recoveryGrades = {} } = partialData;
 
   const studentsInGroup = useMemo(() => {
       if (!activeGroup || !activeGroup.students) return [];
@@ -68,14 +68,14 @@ export default function RecoveryPage() {
     }
     setRecoveryGrades(prev => ({
       ...prev,
-      [studentId]: { ...prev[studentId], grade }
+      [studentId]: { ...(prev[studentId] || { applied: false }), grade }
     }));
   };
 
   const handleApplyChange = (studentId: string, checked: boolean) => {
     setRecoveryGrades(prev => ({
       ...prev,
-      [studentId]: { ...prev[studentId], applied: checked }
+      [studentId]: { ...(prev[studentId] || { grade: 0 }), applied: checked }
     }));
   };
 
