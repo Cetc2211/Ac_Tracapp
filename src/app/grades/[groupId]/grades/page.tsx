@@ -141,7 +141,7 @@ export default function GroupGradesPage() {
         const delivered = grades[studentId]?.[criterion.id]?.delivered ?? 0;
         const expected = criterion.expectedValue;
         if (expected > 0) {
-            performanceRatio = delivered / expected;
+            performanceRatio = (delivered ?? 0) / expected;
         }
     }
     return performanceRatio * criterion.weight;
