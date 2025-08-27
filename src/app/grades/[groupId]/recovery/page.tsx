@@ -1,3 +1,4 @@
+
 'use client';
 import {
   Card,
@@ -61,8 +62,8 @@ export default function RecoveryPage() {
   }, [studentsInGroup, calculateDetailedFinalGrade, partialData, criteria]);
 
   const handleGradeChange = (studentId: string, value: string) => {
-    const grade = value === '' ? 0 : parseFloat(value);
-    if (isNaN(grade) || grade < 0 || grade > 100) {
+    const grade = value === '' ? null : parseFloat(value);
+    if (grade !== null && (isNaN(grade) || grade < 0 || grade > 100)) {
       toast({ variant: 'destructive', title: 'Calificación inválida', description: 'La calificación debe ser un número entre 0 y 100.' });
       return;
     }
@@ -70,7 +71,7 @@ export default function RecoveryPage() {
         const safePrev = prev || {};
         return {
             ...safePrev,
-            [studentId]: { ...(safePrev[studentId] || { applied: false }), grade }
+            [studentId]: { ...(safePrev[studentId] || { applied: false }), grade: grade === null ? 0 : grade }
         }
     });
   };
