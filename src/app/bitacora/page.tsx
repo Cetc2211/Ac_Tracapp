@@ -28,6 +28,7 @@ import { Student, PartialId, StudentObservation } from '@/lib/placeholder-data';
 import { BookText, User, Search, AlertCircle, CheckCircle } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const observationTypes = ['Problema de conducta', 'Episodio emocional', 'Mérito', 'Demérito', 'Asesoría académica', 'Otros'];
 const canalizationTargets = ['Tutor', 'Atención psicológica', 'Directivo', 'Padre/Madre/Tutor legal', 'Otros'];
@@ -165,7 +166,7 @@ export default function BitacoraPage() {
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
-                 <div className="max-h-96 overflow-y-auto mt-2 space-y-1 pr-2">
+                 <ScrollArea className="max-h-64 overflow-y-auto mt-2 space-y-1">
                     {studentsInGroup.map(student => (
                         <div
                             key={student.id}
@@ -173,10 +174,10 @@ export default function BitacoraPage() {
                             className={`p-2 flex items-center gap-3 rounded-md cursor-pointer ${selectedStudent?.id === student.id ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
                         >
                             <Image src={student.photo} alt={student.name} width={32} height={32} className="rounded-full" />
-                            <span className="font-medium">{student.name}</span>
+                            <span className="font-medium text-sm">{student.name}</span>
                         </div>
                     ))}
-                 </div>
+                 </ScrollArea>
                  {selectedStudent && (
                     <div className="mt-2 text-sm font-semibold text-primary p-2 bg-primary/10 rounded-md flex items-center gap-2">
                         <User className="h-4 w-4"/>
