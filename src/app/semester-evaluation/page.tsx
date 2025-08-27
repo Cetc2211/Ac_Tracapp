@@ -66,7 +66,7 @@ export default function SemesterEvaluationPage() {
                 
                 partials.forEach((partialId, index) => {
                     const partialData = allPartialsData[index];
-                     if (partialData && ((activeGroup.criteria?.length ?? 0) > 0 || Object.keys(partialData.recoveryGrades || {}).length > 0)) {
+                     if (partialData && (Array.isArray(activeGroup.criteria) && activeGroup.criteria.length > 0 || Object.keys(partialData.recoveryGrades || {}).length > 0)) {
                         const { finalGrade, isRecovery } = calculateDetailedFinalGrade(student.id, partialData, activeGroup.criteria);
                         grades[partialId] = { grade: finalGrade, isRecovery };
                         gradeSum += finalGrade;
@@ -99,6 +99,10 @@ export default function SemesterEvaluationPage() {
     if (isDataLoading) {
         return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>;
     }
+    
+    if (isCalculating) {
+        return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /> <span className="ml-2">Calculando calificaciones semestrales...</span></div>;
+    }
 
     if (!activeGroup) {
         return (
@@ -114,10 +118,6 @@ export default function SemesterEvaluationPage() {
         );
     }
     
-    if (isCalculating) {
-        return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /> <span className="ml-2">Calculando calificaciones semestrales...</span></div>;
-    }
-
     if (!activeGroup.criteria || activeGroup.criteria.length === 0) {
         return (
              <Card>
