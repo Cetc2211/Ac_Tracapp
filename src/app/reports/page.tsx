@@ -53,7 +53,7 @@ export default function ReportsPage() {
   const { toast } = useToast();
 
   const quickStats = useMemo(() => {
-    if (!activeGroup || isLoading) return null;
+    if (!activeGroup || isLoading || !activeGroup.criteria || activeGroup.criteria.length === 0) return null;
 
     const studentCount = activeGroup.students.length;
     
@@ -108,6 +108,24 @@ export default function ReportsPage() {
                     <CardTitle>No hay un grupo activo</CardTitle>
                     <CardDescription>
                         Para ver esta sección, por favor <Link href="/groups" className="text-primary underline">selecciona un grupo</Link> primero.
+                    </CardDescription>
+                </CardContent>
+            </Card>
+        </div>
+      )
+  }
+
+  if (!activeGroup.criteria || activeGroup.criteria.length === 0) {
+      return (
+        <div className="flex flex-col gap-6">
+            <Card className="md:col-span-2 lg:col-span-3">
+                <CardContent className="flex flex-col items-center justify-center text-center p-12 gap-4">
+                    <div className="bg-muted rounded-full p-4">
+                        <AlertTriangle className="h-12 w-12 text-muted-foreground" />
+                    </div>
+                    <CardTitle>Faltan Criterios de Evaluación</CardTitle>
+                    <CardDescription>
+                        Para generar informes y estadísticas, primero debes <Link href={`/grades/${activeGroup.id}/criteria`} className="text-primary underline">definir los criterios de evaluación</Link> para este grupo.
                     </CardDescription>
                 </CardContent>
             </Card>
