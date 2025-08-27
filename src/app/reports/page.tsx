@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -72,7 +73,7 @@ export default function ReportsPage() {
 
     let approvedCount = 0;
     activeGroup.students.forEach(student => {
-        const finalGrade = calculateFinalGrade(student.id);
+        const finalGrade = calculateFinalGrade(student.id, activeGroup.id, activePartialId);
         if (finalGrade >= 60) approvedCount++;
     });
 

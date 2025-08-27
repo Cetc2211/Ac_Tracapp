@@ -212,7 +212,7 @@ interface DataContextType {
   deleteGroup: (groupId: string) => Promise<void>;
   addStudentObservation: (observation: Omit<StudentObservation, 'id' | 'date' | 'followUpUpdates' | 'isClosed'>) => Promise<void>;
   updateStudentObservation: (studentId: string, observationId: string, updateText: string, isClosing: boolean) => Promise<void>;
-  calculateFinalGrade: (studentId: string) => number;
+  calculateFinalGrade: (studentId: string, groupId: string, partialId: PartialId) => number;
   calculateDetailedFinalGrade: (studentId: string, pData: PartialData, criteria: EvaluationCriteria[]) => { finalGrade: number, criteriaDetails: CriteriaDetail[], isRecovery: boolean };
   getStudentRiskLevel: (finalGrade: number, pAttendance: AttendanceRecord, studentId: string) => CalculatedRisk;
   fetchPartialData: (groupId: string, partialId: PartialId) => Promise<PartialData>;
@@ -426,12 +426,13 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         return { finalGrade: grade, criteriaDetails: criteriaDetails, isRecovery: false };
     }, []);
 
-    const calculateFinalGrade = useCallback((studentId: string): number => {
-        if (!activeGroup) return 0;
-        const data = allPartialsData[activeGroup.id]?.[activePartialId];
+    const calculateFinalGrade = useCallback((studentId: string, groupId: string, partialId: PartialId): number => {
+        const group = groups.find(g => g.id === groupId);
+        if (!group) return 0;
+        const data = allPartialsData[groupId]?.[partialId];
         if (!data) return 0;
-        return calculateDetailedFinalGrade(studentId, data, activeGroup.criteria).finalGrade;
-    }, [calculateDetailedFinalGrade, activeGroup, activePartialId, allPartialsData]);
+        return calculateDetailedFinalGrade(studentId, data, group.criteria).finalGrade;
+    }, [calculateDetailedFinalGrade, allPartialsData, groups]);
 
     const setActiveGroupId = (groupId: string | null) => {
         if(groupId !== activeGroupId) {
@@ -562,7 +563,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         const averages: { [groupId: string]: number } = {};
         groups.forEach(group => {
             const groupPartialData = allPartialsData[group.id]?.[activePartialId];
-            if (!groupPartialData) {
+            if (!groupPartialData || !group.criteria) {
                 averages[group.id] = 0;
                 return;
             }
