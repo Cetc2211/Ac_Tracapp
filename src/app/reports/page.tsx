@@ -24,6 +24,7 @@ import {
   Printer,
   Loader2,
   AlertTriangle,
+  FileClock,
 } from 'lucide-react';
 import { Student } from '@/lib/placeholder-data';
 import { useState, useMemo } from 'react';
@@ -33,6 +34,7 @@ import { Label } from '@/components/ui/label';
 import { useData } from '@/hooks/use-data';
 import type { EvaluationCriteria, Grades, ParticipationRecord, Activity, ActivityRecord } from '@/hooks/use-data';
 import { useToast } from '@/hooks/use-toast';
+import { Tooltip, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 
 export default function ReportsPage() {
@@ -141,7 +143,7 @@ export default function ReportsPage() {
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><FileText /> Reporte General del Grupo</CardTitle>
-                    <CardDescription>Reporte integral con calificaciones, asistencia y estadísticas del grupo.</CardDescription>
+                    <CardDescription>Reporte integral con calificaciones, asistencia y estadísticas del grupo para el parcial activo.</CardDescription>
                 </CardHeader>
                 <CardFooter>
                     <Button className="w-full" asChild>
@@ -154,7 +156,7 @@ export default function ReportsPage() {
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><AlertTriangle className="text-destructive" /> Reporte de Riesgo</CardTitle>
-                    <CardDescription>Análisis detallado de estudiantes en riesgo, con recomendaciones de IA.</CardDescription>
+                    <CardDescription>Análisis detallado de estudiantes en riesgo a lo largo del semestre.</CardDescription>
                 </CardHeader>
                 <CardFooter>
                     <Button className="w-full" variant="destructive" asChild>
@@ -162,6 +164,28 @@ export default function ReportsPage() {
                             <Eye className="mr-2 h-4 w-4" /> Ver Informe de Riesgo
                         </Link>
                     </Button>
+                </CardFooter>
+            </Card>
+            <Card className="md:col-span-2">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><FileClock /> Informe General Semestral</CardTitle>
+                    <CardDescription>Análisis consolidado del semestre con recomendaciones y áreas de oportunidad. (Próximamente)</CardDescription>
+                </CardHeader>
+                 <CardFooter>
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <div className="w-full">
+                                    <Button className="w-full" disabled>
+                                        <Eye className="mr-2 h-4 w-4" /> Generar Informe Semestral
+                                    </Button>
+                                </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Esta función estará disponible en futuras actualizaciones.</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
                 </CardFooter>
             </Card>
              <Card className="md:col-span-2">

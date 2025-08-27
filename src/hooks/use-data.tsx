@@ -5,6 +5,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { Student, Group, PartialId, StudentObservation } from '@/lib/placeholder-data';
 import { format } from 'date-fns';
+import { getPartialLabel } from '@/lib/utils';
 
 // TYPE DEFINITIONS
 export type EvaluationCriteria = {
@@ -722,6 +723,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }, [callGoogleAI]);
 
     const generateGroupAnalysisWithAI = useCallback(async (group: Group, summary: GroupReportSummary, recoverySummary: RecoverySummary, atRisk: StudentWithRisk[], observations: (StudentObservation & { studentName: string })[]): Promise<string> => {
+        const partialLabel = getPartialLabel(activePartialId);
+
         const atRiskSummary = atRisk.length > 0
             ? `Se han identificado ${atRisk.length} estudiantes en riesgo (${atRisk.filter(s=>s.calculatedRisk.level==='high').length} en riesgo alto y ${atRisk.filter(s=>s.calculatedRisk.level==='medium').length} en riesgo medio).`
             : "No se han identificado estudiantes en riesgo significativo en este parcial.";
@@ -735,7 +738,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             : `No hubo estudiantes que requirieran calificación de recuperación en este parcial, lo cual es un indicador positivo.`;
 
         const prompt = `
-            Actúa como un analista educativo experto redactando un informe para un docente. Tu tarea es generar un análisis narrativo profesional, objetivo y fluido sobre el rendimiento de un grupo de estudiantes.
+            Actúa como un analista educativo experto redactando un informe para un docente. Tu tarea es generar un análisis narrativo profesional, objetivo y fluido sobre el rendimiento de un grupo de estudiantes para el [${partialLabel}].
             Sintetiza los datos cuantitativos y cualitativos proporcionados en un texto coherente. La redacción debe ser formal, directa y constructiva, como si la hubiera escrito el propio docente para sus archivos o para un directivo.
             Evita frases como "según los datos" o "el análisis muestra". Integra los hallazgos de forma natural en la prosa.
             
@@ -743,6 +746,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
             DATOS DEL GRUPO A ANALIZAR:
             - Asignatura: ${group.subject}
+            - Parcial: ${partialLabel}
             - Número de estudiantes: ${summary.totalStudents}
             - Promedio general del grupo: ${summary.groupAverage.toFixed(1)}%
             - Tasa de aprobación (incluyendo recuperación): ${(summary.approvedCount / summary.totalStudents * 100).toFixed(1)}% (${summary.approvedCount} de ${summary.totalStudents} estudiantes)
@@ -751,15 +755,15 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             - Resumen de la bitácora: ${observationsSummary}
             - Análisis de recuperación: ${recoveryContext}
 
-            Basado en estos datos, redacta el análisis cualitativo. Enfócate en:
-            1. Un párrafo inicial con el panorama general del rendimiento del grupo, mencionando el promedio y la tasa de aprobación.
+            Basado en estos datos, redacta el análisis cualitativo. Estructura el informe de la siguiente manera:
+            1. Un párrafo inicial con el panorama general del rendimiento del grupo en el ${partialLabel}, mencionando el promedio y la tasa de aprobación.
             2. Un segundo párrafo analizando las posibles causas o correlaciones (ej. relación entre asistencia, observaciones de bitácora y rendimiento).
-            3. Un tercer párrafo enfocado en la estrategia de recuperación, comentando su efectividad y sugiriendo acciones para los estudiantes que no lograron aprobar ni con esta medida.
-            4. Un párrafo final con recomendaciones generales o siguientes pasos a considerar para el grupo.
+            3. Un tercer párrafo enfocado en la estrategia de recuperación (si aplica), comentando su efectividad y sugiriendo acciones para los estudiantes que no lograron aprobar ni con esta medida.
+            4. Un párrafo final de cierre y recomendaciones. En este párrafo, se debe exhortar de manera profesional a que el personal directivo (director, subdirector académico), tutores de grupo y responsables de programas de apoyo (tutorías, atención socioemocional, psicología) se mantengan atentos y aborden a los estudiantes con bajo rendimiento, ausentismo o cualquier situación de riesgo identificada, así como a aquellos que aprobaron en recuperación, para asegurar su éxito en periodos ordinarios futuros.
         `;
 
         return callGoogleAI(prompt);
-    }, [callGoogleAI]);
+    }, [callGoogleAI, activePartialId]);
 
 
     const contextValue: DataContextType = {
