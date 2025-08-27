@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
@@ -128,7 +129,8 @@ export type UserProfile = {
 const defaultSettings = {
     institutionName: "Mi Institución",
     logo: "",
-    theme: "theme-mint"
+    theme: "theme-mint",
+    apiKey: ""
 };
 
 const defaultPartialData: PartialData = {
@@ -162,7 +164,7 @@ interface DataContextType {
   allStudents: Student[];
   activeStudentsInGroups: Student[];
   allObservations: {[studentId: string]: StudentObservation[]};
-  settings: { institutionName: string; logo: string; theme: string };
+  settings: { institutionName: string; logo: string; theme: string; apiKey: string };
   
   activeGroup: Group | null;
   activePartialId: PartialId;
@@ -192,7 +194,7 @@ interface DataContextType {
   setActivityRecords: (setter: React.SetStateAction<ActivityRecord>) => Promise<void>;
   setRecoveryGrades: (setter: React.SetStateAction<RecoveryGrades>) => Promise<void>;
   setStudentFeedback: (studentId: string, feedback: string) => Promise<void>;
-  setSettings: (settings: { institutionName: string; logo: string; theme: string }) => Promise<void>;
+  setSettings: (settings: { institutionName: string; logo: string; theme: string; apiKey: string }) => Promise<void>;
   setGroups: React.Dispatch<React.SetStateAction<Group[]>>;
   resetAllData: () => Promise<void>;
 
@@ -310,7 +312,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         };
     }, [activeGroupId, activePartialId]);
     
-    const setSettings = useCallback(async (newSettings: { institutionName: string; logo: string; theme: string }) => {
+    const setSettings = useCallback(async (newSettings: { institutionName: string; logo: string; theme: string; apiKey: string }) => {
         setSettingsState(newSettings);
     }, []);
 

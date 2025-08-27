@@ -373,6 +373,19 @@ export default function StudentProfilePage() {
             <div className="space-y-6">
               <Card>
                 <CardHeader>
+                   <CardTitle className="text-base text-center">{finalGradeCard.title}</CardTitle>
+                </CardHeader>
+                <CardContent className="text-center">
+                  <p
+                    className="text-5xl font-bold"
+                    style={{ color: finalGradeCard.grade >= 60 ? 'hsl(var(--chart-2))' : 'hsl(var(--destructive))' }}
+                  >
+                    {finalGradeCard.grade.toFixed(1)}%
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <BookText className="h-5 w-5" /> Bitácora del Semestre
                   </CardTitle>
@@ -395,19 +408,6 @@ export default function StudentProfilePage() {
                   ) : (
                     <p className="text-sm text-muted-foreground text-center py-4">No hay observaciones.</p>
                   )}
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                   <CardTitle className="text-base text-center">{finalGradeCard.title}</CardTitle>
-                </CardHeader>
-                <CardContent className="text-center">
-                  <p
-                    className="text-5xl font-bold"
-                    style={{ color: finalGradeCard.grade >= 60 ? 'hsl(var(--chart-2))' : 'hsl(var(--destructive))' }}
-                  >
-                    {finalGradeCard.grade.toFixed(1)}%
-                  </p>
                 </CardContent>
               </Card>
             </div>
