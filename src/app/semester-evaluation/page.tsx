@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -65,7 +66,7 @@ export default function SemesterEvaluationPage() {
                 
                 partials.forEach((partialId, index) => {
                     const partialData = allPartialsData[index];
-                     if (partialData && (activeGroup.criteria.length > 0 || Object.keys(partialData.recoveryGrades).length > 0)) {
+                     if (partialData && (activeGroup.criteria?.length ?? 0 > 0 || Object.keys(partialData.recoveryGrades).length > 0)) {
                         const { finalGrade, isRecovery } = calculateDetailedFinalGrade(student.id, partialData, activeGroup.criteria);
                         grades[partialId] = { grade: finalGrade, isRecovery };
                         gradeSum += finalGrade;
@@ -113,6 +114,20 @@ export default function SemesterEvaluationPage() {
                 </CardHeader>
             </Card>
         );
+    }
+
+    if (!activeGroup.criteria || activeGroup.criteria.length === 0) {
+        return (
+             <Card>
+                <CardHeader className="text-center">
+                     <Presentation className="mx-auto h-12 w-12 text-muted-foreground" />
+                    <CardTitle>Faltan Criterios de Evaluación</CardTitle>
+                    <CardDescription>
+                       Para calcular la evaluación semestral, primero debes <Link href={`/grades/${activeGroup.id}/criteria`} className="text-primary underline">definir los criterios de evaluación</Link> para el grupo "{activeGroup.subject}".
+                    </CardDescription>
+                </CardHeader>
+            </Card>
+        )
     }
     
     if (isCalculating) {

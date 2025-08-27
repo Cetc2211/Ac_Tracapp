@@ -215,7 +215,7 @@ interface DataContextType {
   calculateFinalGrade: (studentId: string, groupId: string, partialId: PartialId) => number;
   calculateDetailedFinalGrade: (studentId: string, pData: PartialData, criteria: EvaluationCriteria[]) => { finalGrade: number, criteriaDetails: CriteriaDetail[], isRecovery: boolean };
   getStudentRiskLevel: (finalGrade: number, pAttendance: AttendanceRecord, studentId: string) => CalculatedRisk;
-  fetchPartialData: (groupId: string, partialId: PartialId) => Promise<PartialData & { criteria: EvaluationCriteria[] }>;
+  fetchPartialData: (groupId: string, partialId: PartialId) => Promise<(PartialData & { criteria: EvaluationCriteria[] }) | null>;
   takeAttendanceForDate: (groupId: string, date: string) => Promise<void>;
   generateFeedbackWithAI: (student: Student, stats: StudentStats) => Promise<string>;
   generateGroupAnalysisWithAI: (group: Group, summary: GroupReportSummary, recoverySummary: RecoverySummary, atRisk: StudentWithRisk[], observations: (StudentObservation & { studentName: string })[]) => Promise<string>;
@@ -296,8 +296,9 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         return allPartialsDataForActiveGroup[activePartialId] || defaultPartialData;
     }, [allPartialsDataForActiveGroup, activePartialId, activeGroupId]);
     
-    const fetchPartialData = useCallback(async (groupId: string, partialId: PartialId): Promise<PartialData & { criteria: EvaluationCriteria[] }> => {
+    const fetchPartialData = useCallback(async (groupId: string, partialId: PartialId): Promise<(PartialData & { criteria: EvaluationCriteria[] }) | null> => {
         const group = groups.find(g => g.id === groupId);
+        if (!group) return null;
         const pData = allPartialsData[groupId]?.[partialId] || defaultPartialData;
         return {...pData, criteria: group?.criteria || []};
     }, [allPartialsData, groups]);
@@ -587,7 +588,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         if (!isClient) return [];
         const studentsAtRiskInPartial = new Map<string, StudentWithRisk>();
         groups.forEach(group => {
-            if (!group.criteria || group.criteria.length === 0) return;
+            if (!group || !group.criteria || group.criteria.length === 0) return;
             const groupPartialData = allPartialsData[group.id]?.[activePartialId];
             if (!groupPartialData) return;
 
@@ -770,7 +771,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             Basado en estos datos, redacta el análisis cualitativo. Estructura el informe de la siguiente manera:
             1. Un párrafo inicial con el panorama general del rendimiento del grupo en el ${partialLabel}, mencionando el promedio y la tasa de aprobación.
             2. Un segundo párrafo analizando las posibles causas o correlaciones (ej. relación entre asistencia, observaciones de bitácora y rendimiento).
-            3. Un tercer párrafo enfocado en la estrategia de recuperación (si aplica), comentando su efectividad y sugiriendo acciones para los estudiantes que no lograron aprobar ni con esta medida.
+            3. Un tercer párrafo enfocado en la estrategia de recuperación (si aplica), comentando su efectividad y sugiriendo acciones para los estudiantes que no lograron aprobar ni con esta medida, para asegurar su éxito en periodos ordinarios futuros.
             4. Un párrafo final de cierre y recomendaciones. En este párrafo, se debe exhortar de manera profesional a que el personal directivo (director, subdirector académico), tutores de grupo y responsables de programas de apoyo (tutorías, atención socioemocional, psicología) se mantengan atentos y aborden a los estudiantes con bajo rendimiento, ausentismo o cualquier situación de riesgo identificada, así como a aquellos que aprobaron en recuperación, para asegurar su éxito en periodos ordinarios futuros.
         `;
 
@@ -837,3 +838,4 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
+
