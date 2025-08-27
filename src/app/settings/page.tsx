@@ -269,14 +269,7 @@ export default function SettingsPage() {
             <CardContent>
                 <ThemeSwitcher selectedTheme={localSettings.theme} onThemeChange={handleThemeChange} />
             </CardContent>
-            <CardFooter className="border-t px-6 py-4">
-            <Button onClick={handleSave} disabled={isSaving || isLoading}>
-                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                Guardar Cambios
-            </Button>
-            </CardFooter>
-        </Card>
-        <Card>
+            <Separator className="my-4" />
             <CardHeader>
                 <CardTitle>Integración con Inteligencia Artificial</CardTitle>
                 <CardDescription>
@@ -301,7 +294,14 @@ export default function SettingsPage() {
                     </p>
                 </div>
             </CardContent>
+            <CardFooter className="border-t px-6 py-4">
+            <Button onClick={handleSave} disabled={isSaving || isLoading}>
+                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                Guardar Cambios
+            </Button>
+            </CardFooter>
         </Card>
+        
         <Card>
             <CardHeader>
                 <CardTitle>Copia de Seguridad y Restauración</CardTitle>
