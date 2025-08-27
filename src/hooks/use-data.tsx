@@ -714,9 +714,11 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             : `No hubo estudiantes que requirieran calificación de recuperación en este parcial, lo cual es un indicador positivo.`;
 
         const prompt = `
-            Actúa como un analista educativo experto redactando un informe para un docente. Tu tarea es generar un análisis narrativo profesional y objetivo sobre el rendimiento de un grupo de estudiantes.
+            Actúa como un analista educativo experto redactando un informe para un docente. Tu tarea es generar un análisis narrativo profesional, objetivo y fluido sobre el rendimiento de un grupo de estudiantes.
             Sintetiza los datos cuantitativos y cualitativos proporcionados en un texto coherente. La redacción debe ser formal, directa y constructiva, como si la hubiera escrito el propio docente para sus archivos o para un directivo.
-            Evita frases como "según los datos" o "el análisis muestra". Simplemente presenta los hallazgos.
+            Evita frases como "según los datos" o "el análisis muestra". Integra los hallazgos de forma natural en la prosa.
+            
+            IMPORTANTE: No utilices asteriscos (*) para listas o para dar énfasis. Si necesitas resaltar algo, intégralo en la redacción de forma natural. No uses "lenguaje de IA" o formatos típicos de chatbot.
 
             DATOS DEL GRUPO A ANALIZAR:
             - Asignatura: ${group.subject}
