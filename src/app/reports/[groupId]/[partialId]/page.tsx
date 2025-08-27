@@ -178,6 +178,18 @@ export default function GroupReportPage() {
       
       const elementsToHide = input.querySelectorAll('[data-hide-for-pdf="true"]');
       elementsToHide.forEach(el => (el as HTMLElement).style.display = 'none');
+      
+      const textarea = input.querySelector('textarea');
+      const analysisDiv = document.createElement('div');
+      if (textarea) {
+        analysisDiv.innerHTML = textarea.value.replace(/\n/g, '<br>');
+        analysisDiv.className = textarea.className;
+        analysisDiv.style.whiteSpace = 'pre-wrap';
+        analysisDiv.style.minHeight = textarea.style.minHeight || '100px'; 
+        textarea.style.display = 'none';
+        textarea.parentNode?.insertBefore(analysisDiv, textarea);
+      }
+
 
       html2canvas(input, { scale: 2, useCORS: true }).then((canvas) => {
         const imgData = canvas.toDataURL('image/png');
@@ -204,6 +216,10 @@ export default function GroupReportPage() {
         pdf.save(`informe_grupal_${group?.subject.replace(/\s+/g, '_') || 'reporte'}.pdf`);
       }).finally(() => {
         elementsToHide.forEach(el => (el as HTMLElement).style.display = '');
+         if (textarea) {
+            textarea.style.display = 'block';
+            analysisDiv.remove();
+        }
       });
     }
   };
@@ -213,7 +229,7 @@ export default function GroupReportPage() {
     
     setIsGeneratingAnalysis(true);
     try {
-        const analysis = await generateGroupAnalysisWithAI(group, summary, atRiskStudentsForGroup);
+        const analysis = await generateGroupAnalysisWithAI(group, summary, atRiskStudentsForGroup, recentObservations);
         setNarrativeAnalysis(analysis);
         toast({
             title: 'Análisis generado',
@@ -293,30 +309,7 @@ export default function GroupReportPage() {
         </header>
 
         <section className="space-y-6">
-            <div className="leading-relaxed flex flex-wrap items-center gap-x-2 gap-y-2" data-hide-for-pdf="true">
-              <span>Informe de resultados correspondiente al</span>
-              <Input
-                value={partialInput}
-                onChange={(e) => setPartialInput(e.target.value)}
-                placeholder="parcial"
-                className="inline-block w-auto h-8 p-1 border-b border-gray-400 focus:border-primary focus:ring-0 rounded-none"
-              />
-              <span>del semestre</span>
-              <Input
-                value={semesterInput}
-                onChange={(e) => setSemesterInput(e.target.value)}
-                placeholder="agosto 2025 - enero 2026"
-                className="inline-block w-auto h-8 p-1 border-b border-gray-400 focus:border-primary focus:ring-0 rounded-none min-w-[200px]"
-              />
-              <span>, ciclo escolar</span>
-              <Input
-                value={cycleInput}
-                onChange={(e) => setCycleInput(e.target.value)}
-                placeholder="agosto 2025 - julio 2026"
-                className="inline-block w-auto h-8 p-1 border-b border-gray-400 focus:border-primary focus:ring-0 rounded-none min-w-[200px]"
-              />.
-            </div>
-             <div className="leading-relaxed">
+            <div className="leading-relaxed hidden" data-hide-for-pdf="false">
                 <p>
                     Informe de resultados correspondiente al {partialInput} del semestre {semesterInput}, ciclo escolar {cycleInput}.
                 </p>
@@ -324,6 +317,34 @@ export default function GroupReportPage() {
                   Durante este periodo se atendieron <strong>{summary.totalStudents}</strong> estudiantes, con los siguientes resultados e indicadores:
                 </p>
             </div>
+            
+             <div className="leading-relaxed" data-hide-for-pdf="true">
+               <span>Informe de resultados correspondiente al</span>
+                <Input
+                    value={partialInput}
+                    onChange={(e) => setPartialInput(e.target.value)}
+                    placeholder="parcial"
+                    className="inline-block w-auto h-8 p-1 border-b border-gray-400 focus:border-primary focus:ring-0 rounded-none bg-transparent"
+                />
+                <span>del semestre</span>
+                <Input
+                    value={semesterInput}
+                    onChange={(e) => setSemesterInput(e.target.value)}
+                    placeholder="agosto 2025 - enero 2026"
+                    className="inline-block w-auto h-8 p-1 border-b border-gray-400 focus:border-primary focus:ring-0 rounded-none min-w-[200px] bg-transparent"
+                />
+                <span>, ciclo escolar</span>
+                <Input
+                    value={cycleInput}
+                    onChange={(e) => setCycleInput(e.target.value)}
+                    placeholder="agosto 2025 - julio 2026"
+                    className="inline-block w-auto h-8 p-1 border-b border-gray-400 focus:border-primary focus:ring-0 rounded-none min-w-[200px] bg-transparent"
+                />.
+                 <p className="mt-2">
+                  Durante este periodo se atendieron <strong>{summary.totalStudents}</strong> estudiantes, con los siguientes resultados e indicadores:
+                </p>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 my-6">
               <Card className="text-center">
                   <CardHeader><CardTitle className="text-base">Aprobación</CardTitle></CardHeader>
@@ -366,17 +387,13 @@ export default function GroupReportPage() {
                                 </Button>
                             </div>
                         </div>
-                         <div data-hide-for-pdf="true">
-                            <Textarea 
-                                placeholder="Escribe aquí tu análisis cualitativo sobre el rendimiento general del grupo, fortalezas, áreas de oportunidad y estrategias a seguir..."
-                                value={narrativeAnalysis}
-                                onChange={(e) => setNarrativeAnalysis(e.target.value)}
-                                rows={5}
-                            />
-                        </div>
-                        <div className="prose prose-sm max-w-none dark:prose-invert mt-2 whitespace-pre-wrap min-h-[50px]">
-                           {narrativeAnalysis}
-                        </div>
+                        <Textarea 
+                            placeholder="Escribe aquí tu análisis cualitativo sobre el rendimiento general del grupo, fortalezas, áreas de oportunidad y estrategias a seguir..."
+                            value={narrativeAnalysis}
+                            onChange={(e) => setNarrativeAnalysis(e.target.value)}
+                            rows={8}
+                            className="w-full"
+                        />
                     </div>
                     
                     <div className="space-y-2 pt-4">

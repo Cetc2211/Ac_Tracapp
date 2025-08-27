@@ -209,7 +209,7 @@ interface DataContextType {
   fetchPartialData: (groupId: string, partialId: PartialId) => Promise<PartialData>;
   takeAttendanceForDate: (groupId: string, date: string) => Promise<void>;
   generateFeedbackWithAI: (student: Student, stats: StudentStats) => Promise<string>;
-  generateGroupAnalysisWithAI: (group: Group, summary: GroupReportSummary, atRisk: StudentWithRisk[]) => Promise<string>;
+  generateGroupAnalysisWithAI: (group: Group, summary: GroupReportSummary, atRisk: StudentWithRisk[], observations: (StudentObservation & { studentName: string })[]) => Promise<string>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -694,25 +694,33 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         return callGoogleAI(prompt);
     }, [callGoogleAI]);
 
-    const generateGroupAnalysisWithAI = useCallback(async (group: Group, summary: GroupReportSummary, atRisk: StudentWithRisk[]): Promise<string> => {
+    const generateGroupAnalysisWithAI = useCallback(async (group: Group, summary: GroupReportSummary, atRisk: StudentWithRisk[], observations: (StudentObservation & { studentName: string })[]): Promise<string> => {
         const atRiskSummary = atRisk.length > 0
             ? `Se han identificado ${atRisk.length} estudiantes en riesgo (${atRisk.filter(s=>s.calculatedRisk.level==='high').length} en riesgo alto y ${atRisk.filter(s=>s.calculatedRisk.level==='medium').length} en riesgo medio).`
             : "No se han identificado estudiantes en riesgo significativo en este parcial.";
 
-        const prompt = `
-            Eres un asistente de docentes y analista educativo. Tu tarea es generar un análisis narrativo profesional sobre el rendimiento de un grupo de estudiantes para un informe.
-            El análisis debe ser objetivo, basado en los datos proporcionados, y debe identificar fortalezas, debilidades y sugerir posibles áreas de enfoque o estrategias.
-            Usa un tono formal y constructivo. No inventes información.
+        const observationsSummary = observations.length > 0
+            ? `Se han registrado ${observations.length} observaciones notables en la bitácora durante este periodo. Las más comunes son sobre: ${[...new Set(observations.map(o => o.type.toLowerCase()))].join(', ')}.`
+            : "No se han registrado observaciones significativas en la bitácora para este grupo en el parcial.";
 
-            DATOS DEL GRUPO:
+        const prompt = `
+            Actúa como un analista educativo experto redactando un informe para un docente. Tu tarea es generar un análisis narrativo profesional y objetivo sobre el rendimiento de un grupo de estudiantes.
+            Sintetiza los datos cuantitativos y cualitativos proporcionados en un texto coherente. La redacción debe ser formal, directa y constructiva, como si la hubiera escrito el propio docente para sus archivos o para un directivo.
+            Evita frases como "según los datos" o "el análisis muestra". Simplemente presenta los hallazgos.
+
+            DATOS DEL GRUPO A ANALIZAR:
             - Asignatura: ${group.subject}
             - Número de estudiantes: ${summary.totalStudents}
             - Promedio general del grupo: ${summary.groupAverage.toFixed(1)}%
             - Tasa de aprobación: ${(summary.approvedCount / summary.totalStudents * 100).toFixed(1)}% (${summary.approvedCount} de ${summary.totalStudents} estudiantes)
             - Tasa de asistencia general: ${summary.attendanceRate.toFixed(1)}%
             - Resumen de estudiantes en riesgo: ${atRiskSummary}
+            - Resumen de la bitácora: ${observationsSummary}
 
-            Basado en estos datos, redacta un breve análisis cualitativo sobre el rendimiento general del grupo, sus puntos fuertes, áreas de oportunidad y posibles recomendaciones.
+            Basado en estos datos, redacta el análisis cualitativo. Enfócate en:
+            1. Un párrafo inicial con el panorama general del rendimiento del grupo.
+            2. Un segundo párrafo analizando las posibles causas o correlaciones (ej. relación entre asistencia y aprobación, o entre observaciones de conducta y rendimiento).
+            3. Un párrafo final con recomendaciones o siguientes pasos a considerar.
         `;
 
         return callGoogleAI(prompt);
