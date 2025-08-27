@@ -60,17 +60,13 @@ export default function GroupReportPage() {
   const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  const [partialInput, setPartialInput] = useState(getPartialLabel(partialId) || '');
-  const [semesterInput, setSemesterInput] = useState('');
-  const [cycleInput, setCycleInput] = useState('');
   const [narrativeAnalysis, setNarrativeAnalysis] = useState('');
   const [isGeneratingAnalysis, setIsGeneratingAnalysis] = useState(false);
 
 
   useEffect(() => {
     setIsClient(true);
-    setPartialInput(getPartialLabel(partialId) || '');
-  }, [partialId]);
+  }, []);
 
   const group = useMemo(() => groups.find(g => g.id === groupId), [groups, groupId]);
 
@@ -185,7 +181,11 @@ export default function GroupReportPage() {
         analysisDiv.innerHTML = textarea.value.replace(/\n/g, '<br>');
         analysisDiv.className = textarea.className;
         analysisDiv.style.whiteSpace = 'pre-wrap';
-        analysisDiv.style.minHeight = textarea.style.minHeight || '100px'; 
+        analysisDiv.style.minHeight = textarea.style.minHeight || '100px';
+        analysisDiv.style.fontFamily = 'inherit';
+        analysisDiv.style.fontSize = 'inherit';
+        analysisDiv.style.lineHeight = 'inherit';
+        analysisDiv.style.color = 'inherit';
         textarea.style.display = 'none';
         textarea.parentNode?.insertBefore(analysisDiv, textarea);
       }
@@ -267,11 +267,11 @@ export default function GroupReportPage() {
             <div>
               <h1 className="text-3xl font-bold">Informe General del Grupo</h1>
               <p className="text-muted-foreground">
-                  Resumen global de "{group.subject}"
+                  Resumen global de "{group.subject}" para el {getPartialLabel(partialId)}
               </p>
             </div>
          </div>
-         <div className='flex items-center gap-2 flex-wrap'>
+         <div className='flex items-center gap-2 flex-wrap' data-hide-for-pdf="true">
             <Button onClick={handleDownloadPdf}>
                 <Download className="mr-2 h-4 w-4"/>
                 Descargar Informe
@@ -309,41 +309,9 @@ export default function GroupReportPage() {
         </header>
 
         <section className="space-y-6">
-            <div className="leading-relaxed hidden" data-hide-for-pdf="false">
-                <p>
-                    Informe de resultados correspondiente al {partialInput} del semestre {semesterInput}, ciclo escolar {cycleInput}.
-                </p>
-                <p className="mt-2">
-                  Durante este periodo se atendieron <strong>{summary.totalStudents}</strong> estudiantes, con los siguientes resultados e indicadores:
-                </p>
-            </div>
-            
-             <div className="leading-relaxed" data-hide-for-pdf="true">
-               <span>Informe de resultados correspondiente al</span>
-                <Input
-                    value={partialInput}
-                    onChange={(e) => setPartialInput(e.target.value)}
-                    placeholder="parcial"
-                    className="inline-block w-auto h-8 p-1 border-b border-gray-400 focus:border-primary focus:ring-0 rounded-none bg-transparent"
-                />
-                <span>del semestre</span>
-                <Input
-                    value={semesterInput}
-                    onChange={(e) => setSemesterInput(e.target.value)}
-                    placeholder="agosto 2025 - enero 2026"
-                    className="inline-block w-auto h-8 p-1 border-b border-gray-400 focus:border-primary focus:ring-0 rounded-none min-w-[200px] bg-transparent"
-                />
-                <span>, ciclo escolar</span>
-                <Input
-                    value={cycleInput}
-                    onChange={(e) => setCycleInput(e.target.value)}
-                    placeholder="agosto 2025 - julio 2026"
-                    className="inline-block w-auto h-8 p-1 border-b border-gray-400 focus:border-primary focus:ring-0 rounded-none min-w-[200px] bg-transparent"
-                />.
-                 <p className="mt-2">
-                  Durante este periodo se atendieron <strong>{summary.totalStudents}</strong> estudiantes, con los siguientes resultados e indicadores:
-                </p>
-            </div>
+            <p>
+              Durante este periodo se atendieron <strong>{summary.totalStudents}</strong> estudiantes, con los siguientes resultados e indicadores clave:
+            </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 my-6">
               <Card className="text-center">
@@ -378,9 +346,9 @@ export default function GroupReportPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div>
-                        <div className="flex justify-between items-center mb-2">
+                        <div className="flex justify-between items-center mb-2" data-hide-for-pdf="true">
                             <h4 className="font-semibold text-base">Análisis Narrativo</h4>
-                            <div data-hide-for-pdf="true">
+                            <div>
                                <Button variant="secondary" size="sm" onClick={handleGenerateAIAnalysis} disabled={isGeneratingAnalysis}>
                                     {isGeneratingAnalysis ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Sparkles className="mr-2 h-4 w-4"/>}
                                     Generar con IA
@@ -394,18 +362,6 @@ export default function GroupReportPage() {
                             rows={8}
                             className="w-full"
                         />
-                    </div>
-                    
-                    <div className="space-y-2 pt-4">
-                        <h4 className="font-semibold text-base flex items-center gap-2"><AlertTriangle/> Estudiantes en Riesgo</h4>
-                         {(highRiskCount > 0 || mediumRiskCount > 0) ? (
-                            <p className="text-sm text-muted-foreground">
-                                Se ha identificado que <span className="font-bold text-destructive">{highRiskCount} estudiante(s)</span> se encuentran en <span className="font-bold text-destructive">riesgo alto</span> y 
-                                <span className="font-bold text-amber-600"> {mediumRiskCount} estudiante(s)</span> en <span className="font-bold text-amber-600">riesgo medio</span>, basado en su rendimiento y asistencia para este parcial.
-                            </p>
-                         ) : (
-                            <p className="text-sm text-muted-foreground">No se han identificado estudiantes en riesgo para este parcial.</p>
-                         )}
                     </div>
                      {recentObservations.length > 0 && (
                         <div className="space-y-2 pt-4">
