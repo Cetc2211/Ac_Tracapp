@@ -101,7 +101,6 @@ export type PartialData = {
     recoveryGrades: RecoveryGrades;
     feedbacks: { [studentId: string]: string };
     groupAnalysis?: string;
-    criteria: EvaluationCriteria[];
 };
 
 export type AllPartialsDataForGroup = {
@@ -136,7 +135,6 @@ const defaultPartialData: PartialData = {
     recoveryGrades: {},
     feedbacks: {},
     groupAnalysis: '',
-    criteria: [],
 };
 
 const loadFromStorage = <T>(key: string, defaultValue: T): T => {
@@ -217,7 +215,7 @@ interface DataContextType {
   calculateFinalGrade: (studentId: string, groupId: string, partialId: PartialId) => number;
   calculateDetailedFinalGrade: (studentId: string, pData: PartialData, criteria: EvaluationCriteria[]) => { finalGrade: number, criteriaDetails: CriteriaDetail[], isRecovery: boolean };
   getStudentRiskLevel: (finalGrade: number, pAttendance: AttendanceRecord, studentId: string) => CalculatedRisk;
-  fetchPartialData: (groupId: string, partialId: PartialId) => Promise<PartialData>;
+  fetchPartialData: (groupId: string, partialId: PartialId) => Promise<PartialData & { criteria: EvaluationCriteria[] }>;
   takeAttendanceForDate: (groupId: string, date: string) => Promise<void>;
   generateFeedbackWithAI: (student: Student, stats: StudentStats) => Promise<string>;
   generateGroupAnalysisWithAI: (group: Group, summary: GroupReportSummary, recoverySummary: RecoverySummary, atRisk: StudentWithRisk[], observations: (StudentObservation & { studentName: string })[]) => Promise<string>;
@@ -293,14 +291,12 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         return allPartialsData[activeGroupId] || {};
     }, [activeGroupId, allPartialsData]);
 
-    const partialData = useMemo(() => {
+    const partialData = useMemo((): PartialData => {
         if (!activeGroupId) return defaultPartialData;
-        const group = groups.find(g => g.id === activeGroupId);
-        const pData = allPartialsDataForActiveGroup[activePartialId] || defaultPartialData;
-        return {...pData, criteria: group?.criteria || []};
-    }, [allPartialsDataForActiveGroup, activePartialId, activeGroupId, groups]);
+        return allPartialsDataForActiveGroup[activePartialId] || defaultPartialData;
+    }, [allPartialsDataForActiveGroup, activePartialId, activeGroupId]);
     
-    const fetchPartialData = useCallback(async (groupId: string, partialId: PartialId): Promise<PartialData> => {
+    const fetchPartialData = useCallback(async (groupId: string, partialId: PartialId): Promise<PartialData & { criteria: EvaluationCriteria[] }> => {
         const group = groups.find(g => g.id === groupId);
         const pData = allPartialsData[groupId]?.[partialId] || defaultPartialData;
         return {...pData, criteria: group?.criteria || []};
@@ -577,6 +573,10 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 return;
             }
             const groupGrades = group.students.map(s => calculateDetailedFinalGrade(s.id, groupPartialData, group.criteria).finalGrade);
+            if(groupGrades.length === 0) {
+                averages[group.id] = 0;
+                return;
+            }
             const total = groupGrades.reduce((sum, grade) => sum + grade, 0);
             averages[group.id] = groupGrades.length > 0 ? total / groupGrades.length : 0;
         });
@@ -751,7 +751,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             : `No hubo estudiantes que requirieran calificación de recuperación en este parcial, lo cual es un indicador positivo.`;
 
         const prompt = `
-            Actúa como un analista educativo experto redactando un informe para un docente. Tu tarea es generar un análisis narrativo profesional, objetivo y fluido sobre el rendimiento de un grupo de estudiantes para el [${partialLabel}].
+            Actúa como un analista educativo experto redactando un informe para un docente. Tu tarea es generar un análisis narrativo profesional, objetivo y fluido sobre el rendimiento de un grupo de estudiantes para el ${partialLabel}.
             Sintetiza los datos cuantitativos y cualitativos proporcionados en un texto coherente. La redacción debe ser formal, directa y constructiva, como si la hubiera escrito el propio docente para sus archivos o para un directivo.
             
             IMPORTANTE: No utilices asteriscos (*) para listas o para dar énfasis. Si necesitas resaltar algo, usa negritas o, preferiblemente, intégralo en la redacción de forma natural. No uses "lenguaje de IA" o formatos típicos de chatbot.
@@ -837,4 +837,3 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
-
