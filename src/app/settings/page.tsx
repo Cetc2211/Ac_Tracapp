@@ -19,7 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ThemeSwitcher, themes } from '@/components/theme-switcher';
 import { Separator } from '@/components/ui/separator';
 import { useData } from '@/hooks/use-data';
-import { Upload, Download, RotateCcw, Loader2 } from 'lucide-react';
+import { Upload, Download, RotateCcw, Loader2, KeyRound } from 'lucide-react';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -275,6 +275,32 @@ export default function SettingsPage() {
                 Guardar Cambios
             </Button>
             </CardFooter>
+        </Card>
+        <Card>
+            <CardHeader>
+                <CardTitle>Integración con Inteligencia Artificial</CardTitle>
+                <CardDescription>
+                    Para usar las funciones de IA, provee tu propia clave API de Google AI (Gemini). La clave se guarda de forma segura en tu navegador.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-2">
+                    <Label htmlFor="apiKey">API Key de Google AI</Label>
+                    <div className="flex items-center gap-2">
+                        <KeyRound className="h-4 w-4 text-muted-foreground" />
+                        <Input
+                            id="apiKey"
+                            type="password"
+                            value={localSettings.apiKey}
+                            onChange={handleInputChange}
+                            placeholder="Pega tu clave API aquí"
+                        />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                        Puedes obtener tu clave desde <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-primary underline">Google AI Studio</a>.
+                    </p>
+                </div>
+            </CardContent>
         </Card>
         <Card>
             <CardHeader>

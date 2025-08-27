@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, Download, User, Mail, Phone, Loader2, MessageSquare, BookText, Edit, Save, XCircle } from 'lucide-react';
+import { ArrowLeft, Download, User, Mail, Phone, Loader2, MessageSquare, BookText, Edit, Save, XCircle, Sparkles } from 'lucide-react';
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
@@ -49,6 +49,7 @@ export default function StudentProfilePage() {
     activePartialId,
     partialData,
     setStudentFeedback,
+    generateFeedbackWithAI,
   } = useData();
 
   const [studentStatsByPartial, setStudentStatsByPartial] = useState<StudentStats[]>([]);
@@ -59,6 +60,7 @@ export default function StudentProfilePage() {
   
   const [isEditingFeedback, setIsEditingFeedback] = useState(false);
   const [currentFeedback, setCurrentFeedback] = useState('');
+  const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
 
   const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -238,6 +240,39 @@ export default function StudentProfilePage() {
       setCurrentFeedback(savedFeedback);
       setIsEditingFeedback(false);
   }
+
+  const handleGenerateAIFeedback = async () => {
+    if (!student) return;
+    setIsGeneratingFeedback(true);
+
+    const activePartialStats = studentStatsByPartial.find(s => s.partialId === activePartialId);
+    if (!activePartialStats) {
+      toast({
+        variant: 'destructive',
+        title: 'Faltan datos',
+        description: 'No hay datos de calificación para este estudiante en el parcial activo.',
+      });
+      setIsGeneratingFeedback(false);
+      return;
+    }
+
+    try {
+      const result = await generateFeedbackWithAI(student, activePartialStats);
+      setCurrentFeedback(result);
+      toast({
+        title: 'Retroalimentación generada',
+        description: 'La IA ha creado una sugerencia de retroalimentación.',
+      });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error al generar retroalimentación',
+        description: error.message || 'No se pudo conectar con el servicio de IA.',
+      });
+    } finally {
+      setIsGeneratingFeedback(false);
+    }
+  };
 
   if (isDataLoading || isPageLoading) {
     return (
@@ -420,11 +455,17 @@ export default function StudentProfilePage() {
                   <CardTitle>Recomendaciones y retroalimentación</CardTitle>
                   <CardDescription>Análisis personalizado del docente sobre el rendimiento del estudiante.</CardDescription>
                 </div>
-                 {!isEditingFeedback && (
-                    <Button variant="outline" size="sm" onClick={() => setIsEditingFeedback(true)}>
-                        <Edit className="mr-2" /> Editar
-                    </Button>
-                )}
+                <div className="flex items-center gap-2">
+                  <Button variant="secondary" size="sm" onClick={handleGenerateAIFeedback} disabled={isGeneratingFeedback || isEditingFeedback}>
+                    {isGeneratingFeedback ? <Loader2 className="mr-2 animate-spin" /> : <Sparkles className="mr-2" />}
+                    Generar con IA
+                  </Button>
+                  {!isEditingFeedback && (
+                      <Button variant="outline" size="sm" onClick={() => setIsEditingFeedback(true)}>
+                          <Edit className="mr-2" /> Editar
+                      </Button>
+                  )}
+                </div>
               </div>
             </CardHeader>
              <CardContent>
@@ -450,7 +491,7 @@ export default function StudentProfilePage() {
                     </div>
                 ) : (
                     <div className="prose prose-sm max-w-none dark:prose-invert mt-2 whitespace-pre-wrap min-h-[100px] p-3 bg-muted/30 rounded-md">
-                        {savedFeedback || <p className="text-muted-foreground italic">No hay retroalimentación para este parcial. Haz clic en "Editar" para agregar una.</p>}
+                        {currentFeedback || <p className="text-muted-foreground italic">No hay retroalimentación para este parcial. Haz clic en "Editar" para agregar una o usa la IA para generar una sugerencia.</p>}
                     </div>
                 )}
               </CardContent>
