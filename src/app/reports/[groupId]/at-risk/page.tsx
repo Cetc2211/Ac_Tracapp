@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -195,9 +196,9 @@ export default function AtRiskReportPage() {
             
             for (const partialId of partials) {
                 const partialData = await fetchPartialData(group.id, partialId);
-                if (partialData && partialData.criteria.length > 0) {
+                if (partialData && (group.criteria.length > 0 || Object.keys(partialData.recoveryGrades || {}).length > 0)) {
                     for (const student of group.students) {
-                        const { finalGrade, criteriaDetails } = calculateDetailedFinalGrade(student.id, partialData);
+                        const { finalGrade, criteriaDetails } = calculateDetailedFinalGrade(student.id, partialData, group.criteria);
                         const riskLevel = getStudentRiskLevel(finalGrade, partialData.attendance, student.id);
                         
                         if (riskLevel.level === 'high' || riskLevel.level === 'medium') {

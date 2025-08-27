@@ -59,9 +59,11 @@ export default function GroupReportPage() {
       partialData,
       isLoading: isDataLoading,
       generateGroupAnalysisWithAI,
-      setGroupAnalysis
+      setGroupAnalysis,
+      activeGroup,
   } = useData();
   const { attendance, participations, recoveryGrades, groupAnalysis } = partialData;
+  const { criteria = [] } = activeGroup || {};
   
   const [summary, setSummary] = useState<ReportSummary | null>(null);
   const [recoverySummary, setRecoverySummary] = useState<RecoverySummary | null>(null);
@@ -135,7 +137,7 @@ export default function GroupReportPage() {
       let totalPresent = 0;
       
       const studentGrades = group.students.map(student => {
-        const { finalGrade } = calculateDetailedFinalGrade(student.id, partialData);
+        const { finalGrade } = calculateDetailedFinalGrade(student.id, partialData, criteria);
         return finalGrade;
       });
 
@@ -190,7 +192,7 @@ export default function GroupReportPage() {
     } catch (e) {
       console.error("Failed to generate report data", e);
     }
-  }, [group, partialId, calculateDetailedFinalGrade, isDataLoading, attendance, participations, recoveryGrades, partialData]);
+  }, [group, partialId, calculateDetailedFinalGrade, isDataLoading, attendance, participations, recoveryGrades, partialData, criteria]);
 
   const handleDownloadPdf = () => {
     const input = reportRef.current;

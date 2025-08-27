@@ -50,7 +50,8 @@ export default function GroupGradesPage() {
     calculateDetailedFinalGrade,
   } = useData();
 
-  const { criteria, grades, participations, activities, activityRecords } = partialData;
+  const { criteria = [] } = activeGroup || {};
+  const { grades, participations, activities, activityRecords } = partialData;
 
   const { toast } = useToast();
 
@@ -88,7 +89,7 @@ export default function GroupGradesPage() {
     if (activeGroup) {
       for (const student of activeGroup.students) {
         const { finalGrade, isRecovery } = calculateDetailedFinalGrade(
-          student.id, partialData
+          student.id, partialData, activeGroup.criteria
         );
         calculatedGrades[student.id] = { grade: finalGrade, isRecovery };
       }

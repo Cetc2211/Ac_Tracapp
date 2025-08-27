@@ -1,4 +1,6 @@
 
+import type { EvaluationCriteria } from "@/hooks/use-data";
+
 export type PartialId = 'p1' | 'p2' | 'p3';
 
 export type Student = {
@@ -15,6 +17,7 @@ export type Group = {
   id: string;
   subject: string;
   students: Student[];
+  criteria: EvaluationCriteria[];
   semester?: string;
   groupName?: string;
   facilitator?: string;

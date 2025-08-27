@@ -40,8 +40,9 @@ const weightOptions = ["10", "20", "30", "40", "50", "60", "70", "80", "90", "10
 export default function GroupCriteriaPage() {
   const params = useParams();
   const groupId = params.groupId as string;
-  const { activeGroup, partialData, setCriteria } = useData();
-  const { criteria, activities, participations } = partialData;
+  const { activeGroup, partialData, updateGroupCriteria } = useData();
+  const { criteria = [] } = activeGroup || {};
+  const { activities, participations } = partialData;
 
   const [selectedName, setSelectedName] = useState('');
   const [customName, setCustomName] = useState('');
@@ -84,7 +85,7 @@ export default function GroupCriteriaPage() {
         return;
     }
 
-    const totalWeight = (criteria || []).reduce((sum, c) => sum + c.weight, 0) + weight;
+    const totalWeight = criteria.reduce((sum, c) => sum + c.weight, 0) + weight;
     if (totalWeight > 100) {
         toast({
             variant: 'destructive',
@@ -101,7 +102,7 @@ export default function GroupCriteriaPage() {
         expectedValue: isSelectedCriterionAutomated ? 0 : expectedValue,
     };
 
-    setCriteria([...(criteria || []), newCriterion]);
+    updateGroupCriteria([...criteria, newCriterion]);
     setSelectedName('');
     setCustomName('');
     setSelectedWeight('');
@@ -111,8 +112,8 @@ export default function GroupCriteriaPage() {
   };
   
   const handleRemoveCriterion = (criterionId: string) => {
-    const newCriteria = (criteria || []).filter(c => c.id !== criterionId);
-    setCriteria(newCriteria);
+    const newCriteria = criteria.filter(c => c.id !== criterionId);
+    updateGroupCriteria(newCriteria);
     toast({ title: 'Criterio Eliminado', description: 'El criterio de evaluación ha sido eliminado.' });
   };
   
@@ -137,7 +138,7 @@ export default function GroupCriteriaPage() {
         return;
     }
 
-    const otherCriteriaWeight = (criteria || [])
+    const otherCriteriaWeight = criteria
       .filter(c => c.id !== editingCriterion.id)
       .reduce((sum, c) => sum + c.weight, 0);
 
@@ -156,8 +157,8 @@ export default function GroupCriteriaPage() {
         updatedCriterion.expectedValue = 0;
     }
 
-    const updatedCriteria = (criteria || []).map(c => c.id === updatedCriterion.id ? updatedCriterion : c);
-    setCriteria(updatedCriteria);
+    const updatedCriteria = criteria.map(c => c.id === updatedCriterion.id ? updatedCriterion : c);
+    updateGroupCriteria(updatedCriteria);
 
     setIsEditDialogOpen(false);
     setEditingCriterion(null);
@@ -166,7 +167,6 @@ export default function GroupCriteriaPage() {
 
 
   const totalWeight = useMemo(() => {
-    if (!criteria) return 0;
     return criteria.reduce((sum, c) => sum + c.weight, 0);
   }, [criteria]);
 
@@ -191,7 +191,7 @@ export default function GroupCriteriaPage() {
         <div>
           <h1 className="text-3xl font-bold">Criterios de Evaluación</h1>
           <p className="text-muted-foreground">
-            Gestiona los rubros para el grupo "{activeGroup.subject}".
+            Gestiona los rubros para el grupo "{activeGroup.subject}". Estos criterios se aplicarán a todos los parciales.
           </p>
         </div>
       </div>
@@ -273,14 +273,14 @@ export default function GroupCriteriaPage() {
           
           <h3 className="text-lg font-medium mb-2 mt-6">Lista de Criterios</h3>
           <div className="space-y-2">
-            {criteria && criteria.map(criterion => (
+            {criteria.map(criterion => (
                 <div key={criterion.id} className="flex items-center justify-between p-3 bg-muted rounded-md">
                     <div>
                         <span className="font-medium">{criterion.name}</span>
                         <p className="text-xs text-muted-foreground">
                           {criterion.name === 'Portafolio' || criterion.name === 'Actividades'
-                            ? `${(activities || []).length} entregas esperadas` : 
-                            criterion.name === 'Participación' ? `${Object.keys(participations || {}).length} clases registradas`
+                            ? `Automático (basado en entregas)` : 
+                            criterion.name === 'Participación' ? `Automático (basado en participaciones)`
                             : `${criterion.expectedValue} es el valor esperado`
                           }
                         </p>
@@ -304,7 +304,7 @@ export default function GroupCriteriaPage() {
           </div>
         </CardContent>
 
-        {(totalWeight > 0 || (criteria && criteria.length > 0)) && (
+        {(totalWeight > 0 || criteria.length > 0) && (
             <CardHeader className="border-t pt-4 mt-4">
                 <div className="flex justify-end">
                     {totalWeight > 0 && (

@@ -88,14 +88,14 @@ export default function StudentProfilePage() {
         setIsPageLoading(true);
         const stats: StudentStats[] = [];
         const partials: PartialId[] = ['p1', 'p2', 'p3'];
-        const primaryGroupId = studentGroups[0].id;
+        const primaryGroup = studentGroups[0];
         
         try {
             for (const pId of partials) {
-                const pData = await fetchPartialData(primaryGroupId, pId);
+                const pData = await fetchPartialData(primaryGroup.id, pId);
                 
-                if (pData && (pData.criteria.length > 0 || Object.keys(pData.recoveryGrades || {}).length > 0)) {
-                    const gradeDetails = calculateDetailedFinalGrade(student.id, pData);
+                if (pData && (primaryGroup.criteria.length > 0 || Object.keys(pData.recoveryGrades || {}).length > 0)) {
+                    const gradeDetails = calculateDetailedFinalGrade(student.id, pData, primaryGroup.criteria);
 
                     let p = 0, a = 0, total = 0;
                     const safeAttendance = pData.attendance || {};

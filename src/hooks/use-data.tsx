@@ -93,7 +93,6 @@ export type StudentStats = {
 
 
 export type PartialData = {
-    criteria: EvaluationCriteria[];
     grades: Grades;
     attendance: AttendanceRecord;
     participations: ParticipationRecord;
@@ -128,7 +127,6 @@ const defaultSettings = {
 };
 
 const defaultPartialData: PartialData = {
-    criteria: [],
     grades: {},
     attendance: {},
     participations: {},
@@ -192,11 +190,11 @@ interface DataContextType {
   removeStudentFromGroup: (groupId: string, studentId: string) => Promise<void>;
   updateGroup: (groupId: string, data: Partial<Omit<Group, 'id' | 'students'>>) => Promise<void>;
   updateStudent: (studentId: string, data: Partial<Student>) => Promise<void>;
+  updateGroupCriteria: (criteria: EvaluationCriteria[]) => Promise<void>;
   
   setActiveGroupId: (groupId: string | null) => void;
   setActivePartialId: (partialId: PartialId) => void;
   
-  setCriteria: (setter: React.SetStateAction<EvaluationCriteria[]>) => Promise<void>;
   setGrades: (setter: React.SetStateAction<Grades>) => Promise<void>;
   setAttendance: (setter: React.SetStateAction<AttendanceRecord>) => Promise<void>;
   setParticipations: (setter: React.SetStateAction<ParticipationRecord>) => Promise<void>;
@@ -214,8 +212,8 @@ interface DataContextType {
   deleteGroup: (groupId: string) => Promise<void>;
   addStudentObservation: (observation: Omit<StudentObservation, 'id' | 'date' | 'followUpUpdates' | 'isClosed'>) => Promise<void>;
   updateStudentObservation: (studentId: string, observationId: string, updateText: string, isClosing: boolean) => Promise<void>;
-  calculateFinalGrade: (studentId: string, forGroupId?: string, forPartialId?: PartialId, forPartialData?: PartialData) => number;
-  calculateDetailedFinalGrade: (studentId: string, pData: PartialData) => { finalGrade: number, criteriaDetails: CriteriaDetail[], isRecovery: boolean };
+  calculateFinalGrade: (studentId: string) => number;
+  calculateDetailedFinalGrade: (studentId: string, pData: PartialData, criteria: EvaluationCriteria[]) => { finalGrade: number, criteriaDetails: CriteriaDetail[], isRecovery: boolean };
   getStudentRiskLevel: (finalGrade: number, pAttendance: AttendanceRecord, studentId: string) => CalculatedRisk;
   fetchPartialData: (groupId: string, partialId: PartialId) => Promise<PartialData>;
   takeAttendanceForDate: (groupId: string, date: string) => Promise<void>;
@@ -329,7 +327,6 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         setSettingsState(newSettings);
     }, []);
 
-    const setCriteria = createSetter('criteria');
     const setGrades = createSetter('grades');
     const setAttendance = createSetter('attendance');
     const setParticipations = createSetter('participations');
@@ -376,8 +373,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         });
     }, [activeGroupId, activePartialId]);
 
-    const calculateDetailedFinalGrade = useCallback((studentId: string, pData: PartialData): { finalGrade: number, criteriaDetails: CriteriaDetail[], isRecovery: boolean } => {
-        if (!pData || !pData.criteria) return { finalGrade: 0, criteriaDetails: [], isRecovery: false };
+    const calculateDetailedFinalGrade = useCallback((studentId: string, pData: PartialData, criteria: EvaluationCriteria[]): { finalGrade: number, criteriaDetails: CriteriaDetail[], isRecovery: boolean } => {
+        if (!pData || !criteria) return { finalGrade: 0, criteriaDetails: [], isRecovery: false };
 
         const recoveryInfo = pData.recoveryGrades?.[studentId];
         if (recoveryInfo?.applied) {
@@ -391,7 +388,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         let finalGrade = 0;
         const criteriaDetails: CriteriaDetail[] = [];
         
-        for (const criterion of pData.criteria) {
+        for (const criterion of criteria) {
             let performanceRatio = 0;
 
              if (criterion.name === 'Actividades' || criterion.name === 'Portafolio') {
@@ -429,13 +426,12 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         return { finalGrade: grade, criteriaDetails: criteriaDetails, isRecovery: false };
     }, []);
 
-    const calculateFinalGrade = useCallback((studentId: string, forGroupId?: string, forPartialId?: PartialId, forPartialData?: PartialData): number => {
-        const gId = forGroupId || activeGroupId;
-        const pId = forPartialId || activePartialId;
-        const data = forPartialData || (gId ? allPartialsData[gId]?.[pId] : undefined);
+    const calculateFinalGrade = useCallback((studentId: string): number => {
+        if (!activeGroup) return 0;
+        const data = allPartialsData[activeGroup.id]?.[activePartialId];
         if (!data) return 0;
-        return calculateDetailedFinalGrade(studentId, data).finalGrade;
-    }, [calculateDetailedFinalGrade, activeGroupId, activePartialId, allPartialsData]);
+        return calculateDetailedFinalGrade(studentId, data, activeGroup.criteria).finalGrade;
+    }, [calculateDetailedFinalGrade, activeGroup, activePartialId, allPartialsData]);
 
     const setActiveGroupId = (groupId: string | null) => {
         if(groupId !== activeGroupId) {
@@ -483,6 +479,11 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         setGroups(prev => prev.map(g => g.id === groupId ? { ...g, ...data } : g));
     }, []);
     
+    const updateGroupCriteria = useCallback(async (criteria: EvaluationCriteria[]) => {
+        if (!activeGroupId) return;
+        setGroups(prev => prev.map(g => g.id === activeGroupId ? { ...g, criteria } : g));
+    }, [activeGroupId]);
+
     const addStudentObservation = useCallback(async (observation: Omit<StudentObservation, 'id' | 'date' | 'followUpUpdates' | 'isClosed'>) => {
         const newObservation: StudentObservation = {
             ...observation,
@@ -560,27 +561,27 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         if (!isClient) return {};
         const averages: { [groupId: string]: number } = {};
         groups.forEach(group => {
-            const groupData = allPartialsData[group.id]?.[activePartialId];
-            if (!groupData) {
+            const groupPartialData = allPartialsData[group.id]?.[activePartialId];
+            if (!groupPartialData) {
                 averages[group.id] = 0;
                 return;
             }
-            const groupGrades = group.students.map(s => calculateFinalGrade(s.id, group.id, activePartialId, groupData));
+            const groupGrades = group.students.map(s => calculateDetailedFinalGrade(s.id, groupPartialData, group.criteria).finalGrade);
             const total = groupGrades.reduce((sum, grade) => sum + grade, 0);
             averages[group.id] = groupGrades.length > 0 ? total / groupGrades.length : 0;
         });
         return averages;
-    }, [groups, activePartialId, calculateFinalGrade, allPartialsData, isClient]);
+    }, [groups, activePartialId, calculateDetailedFinalGrade, allPartialsData, isClient]);
     
     const atRiskStudents: StudentWithRisk[] = useMemo(() => {
         if (!isClient) return [];
         const studentsAtRiskInPartial = new Map<string, StudentWithRisk>();
         groups.forEach(group => {
             const groupPartialData = allPartialsData[group.id]?.[activePartialId];
-            if (!groupPartialData) return;
+            if (!groupPartialData || !group.criteria) return;
 
             group.students.forEach(student => {
-                const finalGrade = calculateFinalGrade(student.id, group.id, activePartialId, groupPartialData);
+                const finalGrade = calculateDetailedFinalGrade(student.id, groupPartialData, group.criteria).finalGrade;
                 const risk = getStudentRiskLevel(finalGrade, groupPartialData.attendance, student.id);
 
                 if (risk.level === 'high' || risk.level === 'medium') {
@@ -590,7 +591,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         });
 
         return Array.from(studentsAtRiskInPartial.values());
-    }, [groups, activePartialId, getStudentRiskLevel, calculateFinalGrade, allPartialsData, isClient]);
+    }, [groups, activePartialId, getStudentRiskLevel, calculateDetailedFinalGrade, allPartialsData, isClient]);
     
     const overallAverageParticipation = useMemo(() => {
         if (!activeGroup || !isClient) return 100;
@@ -743,7 +744,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             Sintetiza los datos cuantitativos y cualitativos proporcionados en un texto coherente. La redacción debe ser formal, directa y constructiva, como si la hubiera escrito el propio docente para sus archivos o para un directivo.
             Evita frases como "según los datos" o "el análisis muestra". Integra los hallazgos de forma natural en la prosa.
             
-            IMPORTANTE: No utilices asteriscos (*) para listas o para dar énfasis. Si necesitas resaltar algo, intégralo en la redacción de forma natural. No uses "lenguaje de IA" o formatos típicos de chatbot.
+            IMPORTANTE: No utilices asteriscos (*) para listas o para dar énfasis. Si necesitas resaltar algo, usa negritas o, preferiblemente, intégralo en la redacción de forma natural. No uses "lenguaje de IA" o formatos típicos de chatbot.
 
             DATOS DEL GRUPO A ANALIZAR:
             - Asignatura: ${group.subject}
@@ -786,9 +787,9 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         removeStudentFromGroup,
         updateGroup,
         updateStudent,
+        updateGroupCriteria,
         setActiveGroupId,
         setActivePartialId,
-        setCriteria,
         setGrades,
         setAttendance,
         setParticipations,

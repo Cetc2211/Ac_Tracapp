@@ -1,3 +1,4 @@
+
 'use client';
 import {
   Card,
@@ -83,7 +84,8 @@ export default function GroupDetailsPage() {
     updateStudent,
   } = useData();
   
-  const { criteria, attendance } = partialData;
+  const { attendance } = partialData;
+  const { criteria = [] } = activeGroup || {};
 
   const router = useRouter();
   const { toast } = useToast();
@@ -116,11 +118,11 @@ export default function GroupDetailsPage() {
     if (!activeGroup) return {};
     const riskMap: {[studentId: string]: CalculatedRisk} = {};
     activeGroup.students.forEach(s => {
-      const finalGrade = calculateFinalGrade(s.id, activeGroup.id, activePartialId);
+      const finalGrade = calculateFinalGrade(s.id);
       riskMap[s.id] = getStudentRiskLevel(finalGrade, attendance, s.id);
     });
     return riskMap;
-  }, [activeGroup, partialData, calculateFinalGrade, getStudentRiskLevel, activePartialId, attendance]);
+  }, [activeGroup, calculateFinalGrade, getStudentRiskLevel, partialData, attendance]);
 
   const handleRemoveStudents = (studentIds: string[]) => {
     if (!activeGroup) return;

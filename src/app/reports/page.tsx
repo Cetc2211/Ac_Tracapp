@@ -46,7 +46,7 @@ export default function ReportsPage() {
     activePartialId,
     isLoading,
   } = useData();
-  const { criteria, participations, activities, activityRecords, grades, attendance } = partialData;
+  const { participations, activities, activityRecords, grades, attendance } = partialData;
 
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const { toast } = useToast();
@@ -72,7 +72,7 @@ export default function ReportsPage() {
 
     let approvedCount = 0;
     activeGroup.students.forEach(student => {
-        const finalGrade = calculateFinalGrade(student.id, activeGroup.id, activePartialId);
+        const finalGrade = calculateFinalGrade(student.id);
         if (finalGrade >= 60) approvedCount++;
     });
 
@@ -84,9 +84,9 @@ export default function ReportsPage() {
         attendanceRate: parseFloat(attendanceRate.toFixed(1)),
         approvedCount,
         totalAttendanceRecords: presentCount,
-        criteriaCount: criteria.length,
+        criteriaCount: activeGroup.criteria.length,
     };
-  }, [activeGroup, calculateFinalGrade, groupAverages, partialData, activePartialId, isLoading, attendance, criteria]);
+  }, [activeGroup, calculateFinalGrade, groupAverages, partialData, activePartialId, isLoading, attendance]);
   
   if (isLoading) {
       return (
