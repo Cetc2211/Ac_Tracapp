@@ -105,8 +105,8 @@ export default function StudentProfilePage() {
                             if (safeAttendance[date][studentId]) p++; else a++;
                         }
                     });
-
-                    const partialObservations = (allObservations[studentId] || []).filter((obs) => obs.partialId === pId);
+                    
+                    const partialObservations = (allObservations[studentId] || []).filter(obs => obs.partialId === pId);
                     
                     stats.push({
                         ...gradeDetails,
@@ -232,7 +232,8 @@ export default function StudentProfilePage() {
   };
 
   const handleSaveFeedback = async () => {
-    await setStudentFeedback(studentId, currentFeedback);
+    if (!student) return;
+    await setStudentFeedback(student.id, currentFeedback);
     setIsEditingFeedback(false);
     toast({ title: 'Retroalimentación guardada' });
   };
@@ -453,7 +454,7 @@ export default function StudentProfilePage() {
             <CardHeader>
               <div id="feedback-buttons-container" className="flex justify-between items-center w-full">
                 <div>
-                  <CardTitle>Recomendaciones y retroalimentación</CardTitle>
+                  <CardTitle>Recomendaciones y retroalimentación ({getPartialLabel(activePartialId)})</CardTitle>
                   <CardDescription>Análisis personalizado del docente sobre el rendimiento del estudiante.</CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
