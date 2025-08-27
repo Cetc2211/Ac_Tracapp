@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { notFound, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, Download, CheckCircle, XCircle, TrendingUp, BarChart, Users, Eye, AlertTriangle, Loader2, Sparkles, Calendar as CalendarIcon, ChevronDown, BookText } from 'lucide-react';
+import { ArrowLeft, Download, CheckCircle, XCircle, TrendingUp, BarChart, Users, Eye, AlertTriangle, Loader2, Sparkles, BookText, Save } from 'lucide-react';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -59,8 +59,9 @@ export default function GroupReportPage() {
       partialData,
       isLoading: isDataLoading,
       generateGroupAnalysisWithAI,
+      setGroupAnalysis
   } = useData();
-  const { attendance, participations, recoveryGrades } = partialData;
+  const { attendance, participations, recoveryGrades, groupAnalysis } = partialData;
   
   const [summary, setSummary] = useState<ReportSummary | null>(null);
   const [recoverySummary, setRecoverySummary] = useState<RecoverySummary | null>(null);
@@ -70,6 +71,11 @@ export default function GroupReportPage() {
 
   const [narrativeAnalysis, setNarrativeAnalysis] = useState('');
   const [isGeneratingAnalysis, setIsGeneratingAnalysis] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    setNarrativeAnalysis(groupAnalysis || '');
+  }, [groupAnalysis]);
 
 
   useEffect(() => {
@@ -172,10 +178,9 @@ export default function GroupReportPage() {
 
       setSummary(reportSummary);
 
-      // Calculate recovery stats
-      const studentsWithRecovery = Object.values(recoveryGrades).filter(rg => rg.applied);
+      const studentsWithRecovery = Object.values(recoveryGrades || {}).filter(rg => rg.applied);
       const recoveryStats = {
-          recoveryStudentsCount: Object.keys(recoveryGrades).length,
+          recoveryStudentsCount: Object.keys(recoveryGrades || {}).length,
           approvedOnRecovery: studentsWithRecovery.filter(rg => rg.grade >= 60).length,
           failedOnRecovery: studentsWithRecovery.filter(rg => rg.grade < 60).length,
       };
@@ -185,7 +190,7 @@ export default function GroupReportPage() {
     } catch (e) {
       console.error("Failed to generate report data", e);
     }
-  }, [group, partialId, calculateDetailedFinalGrade, isDataLoading, attendance, participations, recoveryGrades]);
+  }, [group, partialId, calculateDetailedFinalGrade, isDataLoading, attendance, participations, recoveryGrades, partialData]);
 
   const handleDownloadPdf = () => {
     const input = reportRef.current;
@@ -266,6 +271,25 @@ export default function GroupReportPage() {
     }
   };
 
+  const handleSaveAnalysis = async () => {
+    setIsSaving(true);
+    try {
+      await setGroupAnalysis(narrativeAnalysis);
+      toast({
+        title: 'Análisis Guardado',
+        description: 'Tu análisis narrativo ha sido guardado para este parcial.',
+      });
+    } catch(e: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error al guardar',
+        description: 'No se pudo guardar el análisis.'
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   if (isDataLoading || !summary) {
     return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /> <span className="ml-2">Generando informe...</span></div>;
   }
@@ -329,7 +353,7 @@ export default function GroupReportPage() {
         </header>
 
         <section className="space-y-6">
-            <p>
+            <p className="prose dark:prose-invert max-w-none">
               Durante este periodo se atendieron <strong>{summary.totalStudents}</strong> estudiantes, con los siguientes resultados e indicadores clave:
             </p>
 
@@ -365,25 +389,29 @@ export default function GroupReportPage() {
                     <CardTitle>Análisis y Observaciones</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div>
-                        <div className="flex justify-between items-center mb-2" data-hide-for-pdf="true">
+                    <div data-hide-for-pdf="true">
+                        <div className="flex justify-between items-center mb-2">
                             <h4 className="font-semibold text-base">Análisis Narrativo</h4>
-                            <div>
+                            <div className='flex items-center gap-2'>
                                <Button variant="secondary" size="sm" onClick={handleGenerateAIAnalysis} disabled={isGeneratingAnalysis}>
                                     {isGeneratingAnalysis ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Sparkles className="mr-2 h-4 w-4"/>}
                                     Generar con IA
                                 </Button>
+                               <Button size="sm" onClick={handleSaveAnalysis} disabled={isSaving}>
+                                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4"/>}
+                                    Guardar Análisis
+                                </Button>
                             </div>
                         </div>
-                        <Textarea 
-                            placeholder="Escribe aquí tu análisis cualitativo sobre el rendimiento general del grupo, fortalezas, áreas de oportunidad y estrategias a seguir..."
-                            value={narrativeAnalysis}
-                            onChange={(e) => setNarrativeAnalysis(e.target.value)}
-                            rows={8}
-                            className="w-full text-base"
-                        />
                     </div>
-                     {recentObservations.length > 0 && (
+                    <Textarea 
+                        placeholder="Escribe aquí tu análisis cualitativo sobre el rendimiento general del grupo, fortalezas, áreas de oportunidad y estrategias a seguir..."
+                        value={narrativeAnalysis}
+                        onChange={(e) => setNarrativeAnalysis(e.target.value)}
+                        rows={8}
+                        className="w-full text-base"
+                    />
+                    {recentObservations.length > 0 && (
                         <div className="space-y-2 pt-4">
                             <h4 className="font-semibold text-base flex items-center gap-2"><BookText/> Observaciones Recientes de la Bitácora</h4>
                             <div className="p-3 border rounded-md text-sm space-y-2 bg-muted/30">
@@ -394,13 +422,13 @@ export default function GroupReportPage() {
                                 ))}
                             </div>
                         </div>
-                     )}
+                    )}
                 </CardContent>
             </Card>
         </section>
 
         <footer className="border-t mt-8 pt-6 text-sm">
-            <p className="leading-relaxed">
+            <p className="prose dark:prose-invert max-w-none">
               Sin más por el momento, quedo a sus órdenes para cualquier aclaración.
             </p>
             <div className="mt-16 pt-12 text-center">
@@ -414,4 +442,3 @@ export default function GroupReportPage() {
     </div>
   );
 }
-

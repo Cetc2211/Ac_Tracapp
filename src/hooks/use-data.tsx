@@ -100,6 +100,7 @@ export type PartialData = {
     activityRecords: ActivityRecord;
     recoveryGrades: RecoveryGrades;
     feedbacks: { [studentId: string]: string };
+    groupAnalysis?: string;
 };
 
 export type AllPartialsDataForGroup = {
@@ -133,6 +134,7 @@ const defaultPartialData: PartialData = {
     activityRecords: {},
     recoveryGrades: {},
     feedbacks: {},
+    groupAnalysis: '',
 };
 
 const loadFromStorage = <T>(key: string, defaultValue: T): T => {
@@ -200,6 +202,7 @@ interface DataContextType {
   setActivityRecords: (setter: React.SetStateAction<ActivityRecord>) => Promise<void>;
   setRecoveryGrades: (setter: React.SetStateAction<RecoveryGrades>) => Promise<void>;
   setStudentFeedback: (studentId: string, feedback: string) => Promise<void>;
+  setGroupAnalysis: (analysis: string) => Promise<void>;
   setSettings: (settings: { institutionName: string; logo: string; theme: string; apiKey: string }) => Promise<void>;
   setGroups: React.Dispatch<React.SetStateAction<Group[]>>;
   resetAllData: () => Promise<void>;
@@ -352,6 +355,24 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         });
     }, [activeGroupId, activePartialId]);
 
+    const setGroupAnalysis = useCallback(async (analysis: string) => {
+        if (!activeGroupId) return;
+
+        setAllPartialsData(prevAllData => {
+            const groupData = prevAllData[activeGroupId] || {};
+            const pData = groupData[activePartialId] || defaultPartialData;
+            
+            const newPartialData = { ...pData, groupAnalysis: analysis };
+
+            return {
+                ...prevAllData,
+                [activeGroupId]: {
+                    ...groupData,
+                    [activePartialId]: newPartialData,
+                },
+            };
+        });
+    }, [activeGroupId, activePartialId]);
 
     const calculateDetailedFinalGrade = useCallback((studentId: string, pData: PartialData): { finalGrade: number, criteriaDetails: CriteriaDetail[], isRecovery: boolean } => {
         if (!pData || !pData.criteria) return { finalGrade: 0, criteriaDetails: [], isRecovery: false };
@@ -770,6 +791,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         setActivityRecords,
         setRecoveryGrades,
         setStudentFeedback,
+        setGroupAnalysis,
         setSettings,
         setGroups,
         deleteGroup,
@@ -799,4 +821,3 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
-
