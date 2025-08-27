@@ -318,7 +318,7 @@ export default function StudentProfilePage() {
                             Calificación Final:{' '}
                             <Badge className={stats.finalGrade >= 60 ? 'bg-green-500' : 'bg-destructive'}>
                               {stats.finalGrade.toFixed(1)}%
-                               {stats.isRecovery && <span className="ml-1 font-bold text-red-500">(R)</span>}
+                               {stats.isRecovery && <span className="ml-1 font-bold text-white">(R)</span>}
                             </Badge>{' '}
                             | Asistencia: <Badge variant="secondary">{stats.attendance.rate.toFixed(1)}%</Badge>
                           </CardDescription>

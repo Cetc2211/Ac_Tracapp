@@ -83,12 +83,13 @@ export default function GroupGradesPage() {
   };
   
   const finalGrades = useMemo(() => {
-    const calculatedGrades: {[studentId: string]: number} = {};
+    const calculatedGrades: {[studentId: string]: { grade: number, isRecovery: boolean }} = {};
     if (activeGroup) {
       for (const student of activeGroup.students) {
-        calculatedGrades[student.id] = calculateDetailedFinalGrade(
+        const { finalGrade, isRecovery } = calculateDetailedFinalGrade(
           student.id, partialData
-        ).finalGrade;
+        );
+        calculatedGrades[student.id] = { grade: finalGrade, isRecovery };
       }
     }
     return calculatedGrades;
@@ -280,7 +281,8 @@ export default function GroupGradesPage() {
                     })}
                     <TableCell className="text-center font-bold text-lg sticky right-0 bg-card z-10">
                       <div className="flex items-center justify-center gap-2">
-                        <span>{`${(finalGrades[student.id] || 0).toFixed(0)}%`}</span>
+                        <span>{`${(finalGrades[student.id]?.grade || 0).toFixed(0)}%`}</span>
+                        {finalGrades[student.id]?.isRecovery && <span className="ml-1 font-bold text-red-500">R</span>}
                       </div>
                     </TableCell>
                   </TableRow>
