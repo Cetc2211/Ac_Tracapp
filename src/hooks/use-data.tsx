@@ -154,6 +154,12 @@ type GroupReportSummary = {
     participationRate: number;
 }
 
+type RecoverySummary = {
+    recoveryStudentsCount: number;
+    approvedOnRecovery: number;
+    failedOnRecovery: number;
+}
+
 
 // CONTEXT TYPE
 interface DataContextType {
@@ -209,7 +215,7 @@ interface DataContextType {
   fetchPartialData: (groupId: string, partialId: PartialId) => Promise<PartialData>;
   takeAttendanceForDate: (groupId: string, date: string) => Promise<void>;
   generateFeedbackWithAI: (student: Student, stats: StudentStats) => Promise<string>;
-  generateGroupAnalysisWithAI: (group: Group, summary: GroupReportSummary, atRisk: StudentWithRisk[], observations: (StudentObservation & { studentName: string })[]) => Promise<string>;
+  generateGroupAnalysisWithAI: (group: Group, summary: GroupReportSummary, recoverySummary: RecoverySummary, atRisk: StudentWithRisk[], observations: (StudentObservation & { studentName: string })[]) => Promise<string>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -694,7 +700,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         return callGoogleAI(prompt);
     }, [callGoogleAI]);
 
-    const generateGroupAnalysisWithAI = useCallback(async (group: Group, summary: GroupReportSummary, atRisk: StudentWithRisk[], observations: (StudentObservation & { studentName: string })[]): Promise<string> => {
+    const generateGroupAnalysisWithAI = useCallback(async (group: Group, summary: GroupReportSummary, recoverySummary: RecoverySummary, atRisk: StudentWithRisk[], observations: (StudentObservation & { studentName: string })[]): Promise<string> => {
         const atRiskSummary = atRisk.length > 0
             ? `Se han identificado ${atRisk.length} estudiantes en riesgo (${atRisk.filter(s=>s.calculatedRisk.level==='high').length} en riesgo alto y ${atRisk.filter(s=>s.calculatedRisk.level==='medium').length} en riesgo medio).`
             : "No se han identificado estudiantes en riesgo significativo en este parcial.";
@@ -702,6 +708,10 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         const observationsSummary = observations.length > 0
             ? `Se han registrado ${observations.length} observaciones notables en la bitácora durante este periodo. Las más comunes son sobre: ${[...new Set(observations.map(o => o.type.toLowerCase()))].join(', ')}.`
             : "No se han registrado observaciones significativas en la bitácora para este grupo en el parcial.";
+            
+        const recoveryContext = recoverySummary.recoveryStudentsCount > 0 
+            ? `Un total de ${recoverySummary.recoveryStudentsCount} estudiantes requirieron calificación de recuperación. De ellos, ${recoverySummary.approvedOnRecovery} lograron aprobar gracias a esta medida, mientras que ${recoverySummary.failedOnRecovery} no alcanzaron la calificación aprobatoria. Esto indica que la estrategia de recuperación fue parcialmente exitosa.`
+            : `No hubo estudiantes que requirieran calificación de recuperación en este parcial, lo cual es un indicador positivo.`;
 
         const prompt = `
             Actúa como un analista educativo experto redactando un informe para un docente. Tu tarea es generar un análisis narrativo profesional y objetivo sobre el rendimiento de un grupo de estudiantes.
@@ -712,15 +722,17 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             - Asignatura: ${group.subject}
             - Número de estudiantes: ${summary.totalStudents}
             - Promedio general del grupo: ${summary.groupAverage.toFixed(1)}%
-            - Tasa de aprobación: ${(summary.approvedCount / summary.totalStudents * 100).toFixed(1)}% (${summary.approvedCount} de ${summary.totalStudents} estudiantes)
+            - Tasa de aprobación (incluyendo recuperación): ${(summary.approvedCount / summary.totalStudents * 100).toFixed(1)}% (${summary.approvedCount} de ${summary.totalStudents} estudiantes)
             - Tasa de asistencia general: ${summary.attendanceRate.toFixed(1)}%
             - Resumen de estudiantes en riesgo: ${atRiskSummary}
             - Resumen de la bitácora: ${observationsSummary}
+            - Análisis de recuperación: ${recoveryContext}
 
             Basado en estos datos, redacta el análisis cualitativo. Enfócate en:
-            1. Un párrafo inicial con el panorama general del rendimiento del grupo.
-            2. Un segundo párrafo analizando las posibles causas o correlaciones (ej. relación entre asistencia y aprobación, o entre observaciones de conducta y rendimiento).
-            3. Un párrafo final con recomendaciones o siguientes pasos a considerar.
+            1. Un párrafo inicial con el panorama general del rendimiento del grupo, mencionando el promedio y la tasa de aprobación.
+            2. Un segundo párrafo analizando las posibles causas o correlaciones (ej. relación entre asistencia, observaciones de bitácora y rendimiento).
+            3. Un tercer párrafo enfocado en la estrategia de recuperación, comentando su efectividad y sugiriendo acciones para los estudiantes que no lograron aprobar ni con esta medida.
+            4. Un párrafo final con recomendaciones generales o siguientes pasos a considerar para el grupo.
         `;
 
         return callGoogleAI(prompt);
@@ -785,3 +797,4 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
+

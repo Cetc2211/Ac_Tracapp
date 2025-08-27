@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -38,6 +39,12 @@ type ReportSummary = {
     participationRate: number;
 }
 
+type RecoverySummary = {
+    recoveryStudentsCount: number;
+    approvedOnRecovery: number;
+    failedOnRecovery: number;
+}
+
 export default function GroupReportPage() {
   const params = useParams();
   const groupId = params.groupId as string;
@@ -46,16 +53,17 @@ export default function GroupReportPage() {
   const { 
       groups,
       settings,
-      calculateFinalGrade,
+      calculateDetailedFinalGrade,
       atRiskStudents,
       allObservations,
       partialData,
       isLoading: isDataLoading,
       generateGroupAnalysisWithAI,
   } = useData();
-  const { attendance, participations } = partialData;
+  const { attendance, participations, recoveryGrades } = partialData;
   
   const [summary, setSummary] = useState<ReportSummary | null>(null);
+  const [recoverySummary, setRecoverySummary] = useState<RecoverySummary | null>(null);
   const [isClient, setIsClient] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -75,9 +83,6 @@ export default function GroupReportPage() {
     const studentIdsInGroup = new Set(group.students.map(s => s.id));
     return atRiskStudents.filter(s => studentIdsInGroup.has(s.id));
   }, [atRiskStudents, group]);
-
-  const highRiskCount = useMemo(() => atRiskStudentsForGroup.filter(s => s.calculatedRisk.level === 'high').length, [atRiskStudentsForGroup]);
-  const mediumRiskCount = useMemo(() => atRiskStudentsForGroup.filter(s => s.calculatedRisk.level === 'medium').length, [atRiskStudentsForGroup]);
 
   const recentObservations = useMemo(() => {
     if (!group) return [];
@@ -110,6 +115,11 @@ export default function GroupReportPage() {
               attendanceRate: 100,
               participationRate: 100,
           });
+          setRecoverySummary({
+              recoveryStudentsCount: 0,
+              approvedOnRecovery: 0,
+              failedOnRecovery: 0,
+          });
           return;
       }
       
@@ -119,7 +129,7 @@ export default function GroupReportPage() {
       let totalPresent = 0;
       
       const studentGrades = group.students.map(student => {
-        const finalGrade = calculateFinalGrade(student.id, group.id, partialId);
+        const { finalGrade } = calculateDetailedFinalGrade(student.id, partialData);
         return finalGrade;
       });
 
@@ -162,10 +172,20 @@ export default function GroupReportPage() {
 
       setSummary(reportSummary);
 
+      // Calculate recovery stats
+      const studentsWithRecovery = Object.values(recoveryGrades).filter(rg => rg.applied);
+      const recoveryStats = {
+          recoveryStudentsCount: Object.keys(recoveryGrades).length,
+          approvedOnRecovery: studentsWithRecovery.filter(rg => rg.grade >= 60).length,
+          failedOnRecovery: studentsWithRecovery.filter(rg => rg.grade < 60).length,
+      };
+      setRecoverySummary(recoveryStats);
+
+
     } catch (e) {
       console.error("Failed to generate report data", e);
     }
-  }, [group, partialId, calculateFinalGrade, isDataLoading, attendance, participations]);
+  }, [group, partialId, calculateDetailedFinalGrade, isDataLoading, attendance, participations, recoveryGrades]);
 
   const handleDownloadPdf = () => {
     const input = reportRef.current;
@@ -178,7 +198,7 @@ export default function GroupReportPage() {
       const textarea = input.querySelector('textarea');
       const analysisDiv = document.createElement('div');
       if (textarea) {
-        analysisDiv.innerHTML = textarea.value.replace(/\n/g, '<br>');
+        analysisDiv.innerHTML = textarea.value.replace(/\\n/g, '<br>');
         analysisDiv.className = textarea.className;
         analysisDiv.style.whiteSpace = 'pre-wrap';
         analysisDiv.style.minHeight = textarea.style.minHeight || '100px';
@@ -225,11 +245,11 @@ export default function GroupReportPage() {
   };
   
   const handleGenerateAIAnalysis = async () => {
-    if (!group || !summary) return;
+    if (!group || !summary || !recoverySummary) return;
     
     setIsGeneratingAnalysis(true);
     try {
-        const analysis = await generateGroupAnalysisWithAI(group, summary, atRiskStudentsForGroup, recentObservations);
+        const analysis = await generateGroupAnalysisWithAI(group, summary, recoverySummary, atRiskStudentsForGroup, recentObservations);
         setNarrativeAnalysis(analysis);
         toast({
             title: 'Análisis generado',
@@ -360,7 +380,7 @@ export default function GroupReportPage() {
                             value={narrativeAnalysis}
                             onChange={(e) => setNarrativeAnalysis(e.target.value)}
                             rows={8}
-                            className="w-full"
+                            className="w-full text-base"
                         />
                     </div>
                      {recentObservations.length > 0 && (
@@ -394,3 +414,4 @@ export default function GroupReportPage() {
     </div>
   );
 }
+
