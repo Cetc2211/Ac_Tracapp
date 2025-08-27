@@ -55,6 +55,7 @@ export default function RecoveryPage() {
   }, [activeGroup]);
 
   const failedStudents = useMemo(() => {
+    if (!criteria || criteria.length === 0) return [];
     return studentsInGroup.map(student => ({
       student,
       finalGrade: calculateDetailedFinalGrade(student.id, partialData, criteria).finalGrade
@@ -71,7 +72,7 @@ export default function RecoveryPage() {
         const safePrev = prev || {};
         return {
             ...safePrev,
-            [studentId]: { ...(safePrev[studentId] || { applied: false }), grade: grade === null ? 0 : grade }
+            [studentId]: { ...(safePrev[studentId] || { applied: false }), grade: grade }
         }
     });
   };
