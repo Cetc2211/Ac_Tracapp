@@ -414,6 +414,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                         return count + (pData.participations?.[date]?.[studentId] ? 1 : 0);
                     }, 0);
                     performanceRatio = studentParticipations / studentParticipationOpportunities;
+                } else if (Object.keys(pData.attendance || {}).length > 0) {
+                    performanceRatio = 0;
                 }
             } else {
                 const delivered = pData.grades?.[studentId]?.[criterion.id]?.delivered ?? 0;
@@ -567,8 +569,12 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         if (!isClient || isLoading) return {};
         const averages: { [groupId: string]: number } = {};
         groups.forEach(group => {
+            if (!group.criteria) {
+                averages[group.id] = 0;
+                return;
+            }
             const groupPartialData = allPartialsData[group.id]?.[activePartialId];
-            if (!groupPartialData || !group.criteria || group.criteria.length === 0) {
+            if (!groupPartialData || group.criteria.length === 0) {
                 averages[group.id] = 0;
                 return;
             }
@@ -722,6 +728,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             Tu tarea es generar una retroalimentación constructiva, profesional y personalizada para un estudiante, basada en sus datos de rendimiento.
             La retroalimentación debe ser balanceada, iniciando con fortalezas, luego áreas de oportunidad y finalizando con recomendaciones claras y accionables.
             Usa un tono de apoyo y motivador. No inventes información.
+            IMPORTANTE: No incluyas ninguna despedida, firma o nombre al final. La salida debe ser únicamente el cuerpo de la retroalimentación.
 
             DATOS DEL ESTUDIANTE:
             - Nombre: ${student.name}
@@ -754,7 +761,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             Actúa como un analista educativo experto redactando un informe para un docente. Tu tarea es generar un análisis narrativo profesional, objetivo y fluido sobre el rendimiento de un grupo de estudiantes para el ${partialLabel}.
             Sintetiza los datos cuantitativos y cualitativos proporcionados en un texto coherente. La redacción debe ser formal, directa y constructiva, como si la hubiera escrito el propio docente para sus archivos o para un directivo.
             
-            IMPORTANTE: No utilices asteriscos (*) para listas o para dar énfasis. Si necesitas resaltar algo, usa negritas o, preferiblemente, intégralo en la redacción de forma natural. No uses "lenguaje de IA" o formatos típicos de chatbot.
+            IMPORTANTE: No utilices asteriscos (*) para listas o para dar énfasis. La redacción debe ser en párrafos fluidos. No uses "lenguaje de IA" o formatos típicos de chatbot.
 
             DATOS DEL GRUPO A ANALIZAR:
             - Asignatura: ${group.subject}
@@ -770,7 +777,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             Basado en estos datos, redacta el análisis cualitativo. Estructura el informe de la siguiente manera:
             1. Un párrafo inicial con el panorama general del rendimiento del grupo en el ${partialLabel}, mencionando el promedio y la tasa de aprobación.
             2. Un segundo párrafo analizando las posibles causas o correlaciones (ej. relación entre asistencia, observaciones de bitácora y rendimiento).
-            3. Un tercer párrafo enfocado en la estrategia de recuperación (si aplica), comentando su efectividad y sugiriendo acciones para los estudiantes que no lograron aprobar ni con esta medida, para asegurar su éxito en periodos ordinarios futuros.
+            3. Un tercer párrafo enfocado en la estrategia de recuperación (si aplica), comentando su efectividad y sugiriendo acciones para los estudiantes que no lograron aprobar ni con esta medida.
             4. Un párrafo final de cierre y recomendaciones. En este párrafo, se debe exhortar de manera profesional a que el personal directivo (director, subdirector académico), tutores de grupo y responsables de programas de apoyo (tutorías, atención socioemocional, psicología) se mantengan atentos y aborden a los estudiantes con bajo rendimiento, ausentismo o cualquier situación de riesgo identificada, así como a aquellos que aprobaron en recuperación, para asegurar su éxito en periodos ordinarios futuros.
         `;
 
@@ -837,3 +844,4 @@ export const useData = (): DataContextType => {
   }
   return context;
 };
+
