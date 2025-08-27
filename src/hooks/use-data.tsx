@@ -123,7 +123,8 @@ const defaultSettings = {
     institutionName: "Mi Institución",
     logo: "",
     theme: "theme-mint",
-    apiKey: ""
+    apiKey: "",
+    signature: ""
 };
 
 const defaultPartialData: PartialData = {
@@ -173,7 +174,7 @@ interface DataContextType {
   allStudents: Student[];
   activeStudentsInGroups: Student[];
   allObservations: {[studentId: string]: StudentObservation[]};
-  settings: { institutionName: string; logo: string; theme: string; apiKey: string };
+  settings: { institutionName: string; logo: string; theme: string; apiKey: string; signature: string };
   
   activeGroup: Group | null;
   activePartialId: PartialId;
@@ -204,7 +205,7 @@ interface DataContextType {
   setRecoveryGrades: (setter: React.SetStateAction<RecoveryGrades>) => Promise<void>;
   setStudentFeedback: (studentId: string, feedback: string) => Promise<void>;
   setGroupAnalysis: (analysis: string) => Promise<void>;
-  setSettings: (settings: { institutionName: string; logo: string; theme: string; apiKey: string }) => Promise<void>;
+  setSettings: (settings: { institutionName: string; logo: string; theme: string; apiKey: string; signature: string }) => Promise<void>;
   setGroups: React.Dispatch<React.SetStateAction<Group[]>>;
   resetAllData: () => Promise<void>;
 
@@ -324,7 +325,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         };
     }, [activeGroupId, activePartialId]);
     
-    const setSettings = useCallback(async (newSettings: { institutionName: string; logo: string; theme: string; apiKey: string }) => {
+    const setSettings = useCallback(async (newSettings: { institutionName: string; logo: string; theme: string; apiKey: string; signature: string }) => {
         setSettingsState(newSettings);
     }, []);
 

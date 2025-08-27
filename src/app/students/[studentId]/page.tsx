@@ -40,6 +40,7 @@ export default function StudentProfilePage() {
   const studentId = params.studentId as string;
 
   const {
+    settings,
     allStudents,
     groups,
     calculateDetailedFinalGrade,
@@ -496,12 +497,20 @@ export default function StudentProfilePage() {
                 )}
               </CardContent>
             <CardFooter>
-              <div className="w-full mt-12 pt-12 text-center text-sm">
-                <div className="inline-block">
-                  <div className="border-t border-foreground w-48 mx-auto"></div>
-                  <p className="font-semibold">{facilitatorName}</p>
-                  <p className="text-muted-foreground">Firma del Docente</p>
+              <div className="w-full mt-12 pt-4 text-center text-sm">
+                <div className="inline-block relative h-20 w-48">
+                   {settings.signature && (
+                        <Image 
+                            src={settings.signature}
+                            alt="Firma del docente"
+                            fill
+                            style={{ objectFit: 'contain' }}
+                        />
+                    )}
                 </div>
+                <div className="border-t border-foreground w-48 mx-auto mt-2"></div>
+                <p className="font-semibold">{facilitatorName}</p>
+                <p className="text-muted-foreground">Firma del Docente</p>
               </div>
             </CardFooter>
           </Card>

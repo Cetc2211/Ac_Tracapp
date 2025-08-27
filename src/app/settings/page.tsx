@@ -53,6 +53,7 @@ export default function SettingsPage() {
     const { settings, isLoading, groups, allStudents, allObservations, fetchPartialData, setSettings: setSettingsInDb, resetAllData } = useData();
     const [localSettings, setLocalSettings] = useState(settings);
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
+    const [signaturePreview, setSignaturePreview] = useState<string | null>(null);
     const { toast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isSaving, setIsSaving] = useState(false);
@@ -65,6 +66,7 @@ export default function SettingsPage() {
         if(!isLoading && settings) {
             setLocalSettings(settings);
             setLogoPreview(settings.logo);
+            setSignaturePreview(settings.signature);
         }
     }, [settings, isLoading]);
     
@@ -74,7 +76,11 @@ export default function SettingsPage() {
             return;
         }
         setIsSaving(true);
-        const newSettings = { ...localSettings, logo: logoPreview || '' };
+        const newSettings = { 
+            ...localSettings, 
+            logo: logoPreview || '',
+            signature: signaturePreview || '',
+        };
         
         try {
             await setSettingsInDb(newSettings);
@@ -100,6 +106,17 @@ export default function SettingsPage() {
             const reader = new FileReader();
             reader.onloadend = () => {
                 setLogoPreview(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleSignatureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setSignaturePreview(reader.result as string);
             };
             reader.readAsDataURL(file);
         }
@@ -226,9 +243,9 @@ export default function SettingsPage() {
         </div>
         <Card>
             <CardHeader>
-            <CardTitle>Información de la Institución</CardTitle>
+            <CardTitle>Personalización</CardTitle>
             <CardDescription>
-                Actualiza el nombre y logo de tu escuela. Estos datos aparecerán en los informes.
+                Actualiza los datos que aparecerán en los informes.
             </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -256,6 +273,25 @@ export default function SettingsPage() {
                 </div>
                 <p className="text-xs text-muted-foreground">
                 Sube un archivo PNG o JPG. Tamaño recomendado: 200x200px.
+                </p>
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="signature">Firma del Docente</Label>
+                <div className="flex items-center gap-4">
+                <div className="relative h-20 w-40 bg-muted rounded-md flex items-center justify-center">
+                    {signaturePreview ? (
+                        <Image
+                        src={signaturePreview}
+                        alt="Firma actual"
+                        fill
+                        className="object-contain p-2"
+                        />
+                    ) : <span className="text-xs text-muted-foreground">Sin firma</span>}
+                </div>
+                <Input id="signature" type="file" className="max-w-sm" onChange={handleSignatureChange} accept="image/png" />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                 Para mejores resultados, sube una imagen de tu firma con fondo transparente (formato PNG).
                 </p>
             </div>
             </CardContent>

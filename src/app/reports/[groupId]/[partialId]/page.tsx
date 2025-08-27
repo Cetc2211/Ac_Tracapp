@@ -203,7 +203,7 @@ export default function GroupReportPage() {
       const textarea = input.querySelector('textarea');
       const analysisDiv = document.createElement('div');
       if (textarea) {
-        analysisDiv.innerHTML = textarea.value.replace(/\\n/g, '<br>');
+        analysisDiv.innerHTML = textarea.value.replace(/\n/g, '<br>');
         analysisDiv.className = textarea.className;
         analysisDiv.style.whiteSpace = 'pre-wrap';
         analysisDiv.style.minHeight = textarea.style.minHeight || '100px';
@@ -431,11 +431,19 @@ export default function GroupReportPage() {
             <p className="prose dark:prose-invert max-w-none">
               Sin más por el momento, quedo a sus órdenes para cualquier aclaración.
             </p>
-            <div className="mt-16 pt-12 text-center">
-                <div className="inline-block">
-                    <div className="border-t border-foreground w-64 mx-auto"></div>
-                    <p className="font-semibold mt-2">{group.facilitator || 'Docente'}</p>
+            <div className="mt-16 pt-4 text-center">
+                <div className="inline-block relative h-20 w-64">
+                    {settings.signature && (
+                        <Image 
+                            src={settings.signature}
+                            alt="Firma del docente"
+                            fill
+                            style={{ objectFit: 'contain' }}
+                        />
+                    )}
                 </div>
+                <div className="border-t border-foreground w-64 mx-auto mt-2"></div>
+                <p className="font-semibold mt-2">{group.facilitator || 'Docente'}</p>
             </div>
         </footer>
       </Card>
