@@ -404,19 +404,10 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                     performanceRatio = deliveredActivities / totalActivities;
                 }
             } else if (criterion.name === 'Participación') {
-                 const participationDates = Object.keys(pData.participations || {});
-                 if (participationDates.length > 0) {
-                    const studentAttendedDates = Object.keys(pData.attendance || {}).filter(date => pData.attendance?.[date]?.[studentId] === true);
-                    const studentParticipationOpportunities = participationDates.filter(date => studentAttendedDates.includes(date)).length;
-
-                    if (studentParticipationOpportunities > 0) {
-                        const studentParticipations = participationDates.reduce((count, date) => {
-                            return count + (pData.participations?.[date]?.[studentId] ? 1 : 0);
-                        }, 0);
-                        performanceRatio = studentParticipations / studentParticipationOpportunities;
-                    } else {
-                        performanceRatio = 0;
-                    }
+                 const totalClasses = Object.keys(pData.participations || {}).length;
+                 if (totalClasses > 0) {
+                    const studentParticipations = Object.values(pData.participations).filter(day => day[studentId]).length;
+                    performanceRatio = studentParticipations / totalClasses;
                  }
             } else {
                 const delivered = pData.grades?.[studentId]?.[criterion.id]?.delivered ?? 0;
