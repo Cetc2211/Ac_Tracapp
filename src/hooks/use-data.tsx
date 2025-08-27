@@ -82,23 +82,14 @@ export type CriteriaDetail = {
 }
 
 export type StudentStats = {
-    averageGrade: number;
-    attendance: {
-        p: number;
-        a: number;
-        total: number;
-    };
-    gradesByGroup: {
-        group: string;
-        grade: number;
-        criteriaDetails: CriteriaDetail[];
-        groupInfo: {
-            subject: string;
-            semester: string;
-            groupName: string;
-        };
-    }[];
+    finalGrade: number;
+    criteriaDetails: CriteriaDetail[];
+    isRecovery: boolean;
+    partialId: PartialId;
+    attendance: { p: number; a: number; total: number; rate: number };
+    observations: StudentObservation[];
 };
+
 
 export type PartialData = {
     criteria: EvaluationCriteria[];
@@ -208,6 +199,7 @@ interface DataContextType {
   getStudentRiskLevel: (finalGrade: number, pAttendance: AttendanceRecord, studentId: string) => CalculatedRisk;
   fetchPartialData: (groupId: string, partialId: PartialId) => Promise<PartialData>;
   takeAttendanceForDate: (groupId: string, date: string) => Promise<void>;
+  generateFeedbackWithAI: (student: Student, stats: StudentStats) => Promise<string>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -633,6 +625,62 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         }
     }, []);
 
+    const generateFeedbackWithAI = useCallback(async (student: Student, stats: StudentStats): Promise<string> => {
+        if (!settings.apiKey) {
+            throw new Error("No se ha configurado una clave API de Google AI. Ve a Ajustes para agregarla.");
+        }
+
+        const criteriaSummary = stats.criteriaDetails.map(c => `- ${c.name}: ${c.earned.toFixed(0)}% de ${c.weight}%`).join('\n');
+
+        const prompt = `
+            Eres un asistente de docentes experto en pedagogía y comunicación asertiva.
+            Tu tarea es generar una retroalimentación constructiva, profesional y personalizada para un estudiante, basada en sus datos de rendimiento.
+            La retroalimentación debe ser balanceada, iniciando con fortalezas, luego áreas de oportunidad y finalizando con recomendaciones claras y accionables.
+            Usa un tono de apoyo y motivador. No inventes información.
+
+            DATOS DEL ESTUDIANTE:
+            - Nombre: ${student.name}
+            - Calificación final del parcial: ${stats.finalGrade.toFixed(0)}%
+            - Tasa de asistencia: ${stats.attendance.rate.toFixed(0)}%
+            - Desglose de calificación:
+            ${criteriaSummary}
+
+            Por favor, redacta la retroalimentación para ${student.name}.
+        `;
+
+        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${settings.apiKey}`;
+        
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error("AI API Error:", errorData);
+                throw new Error(`Error del servicio de IA: ${errorData.error?.message || response.statusText}`);
+            }
+
+            const data = await response.json();
+            const feedbackText = data.candidates[0]?.content?.parts[0]?.text;
+            
+            if (!feedbackText) {
+                throw new Error("La respuesta de la IA no contiene texto.");
+            }
+
+            return feedbackText;
+
+        } catch (error) {
+            console.error("Failed to generate AI feedback:", error);
+            if (error instanceof Error) {
+                 throw new Error(error.message);
+            }
+            throw new Error("Ocurrió un error desconocido al conectar con el servicio de IA.");
+        }
+    }, [settings.apiKey]);
+
 
     const contextValue: DataContextType = {
         isLoading,
@@ -674,6 +722,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         fetchPartialData,
         takeAttendanceForDate,
         resetAllData,
+        generateFeedbackWithAI
     };
 
     return (
