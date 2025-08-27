@@ -405,17 +405,19 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 }
             } else if (criterion.name === 'Participación') {
                  const participationDates = Object.keys(pData.participations || {});
-                 const studentAttendedDates = Object.keys(pData.attendance || {}).filter(date => pData.attendance?.[date]?.[studentId] === true);
-                 const studentParticipationOpportunities = participationDates.filter(date => studentAttendedDates.includes(date)).length;
+                 if (participationDates.length > 0) {
+                    const studentAttendedDates = Object.keys(pData.attendance || {}).filter(date => pData.attendance?.[date]?.[studentId] === true);
+                    const studentParticipationOpportunities = participationDates.filter(date => studentAttendedDates.includes(date)).length;
 
-                if (Object.keys(pData.attendance || {}).length > 0 && studentParticipationOpportunities > 0) {
-                    const studentParticipations = participationDates.reduce((count, date) => {
-                        return count + (pData.participations?.[date]?.[studentId] ? 1 : 0);
-                    }, 0);
-                    performanceRatio = studentParticipations / studentParticipationOpportunities;
-                } else {
-                    performanceRatio = 0;
-                }
+                    if (studentParticipationOpportunities > 0) {
+                        const studentParticipations = participationDates.reduce((count, date) => {
+                            return count + (pData.participations?.[date]?.[studentId] ? 1 : 0);
+                        }, 0);
+                        performanceRatio = studentParticipations / studentParticipationOpportunities;
+                    } else {
+                        performanceRatio = 0;
+                    }
+                 }
             } else {
                 const delivered = pData.grades?.[studentId]?.[criterion.id]?.delivered ?? 0;
                 const expected = criterion.expectedValue;
@@ -723,15 +725,23 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const generateFeedbackWithAI = useCallback(async (student: Student, stats: StudentStats): Promise<string> => {
         const criteriaSummary = stats.criteriaDetails.map(c => `- ${c.name}: ${c.earned.toFixed(0)}% de ${c.weight}%`).join('\n');
         const observationsSummary = stats.observations.length > 0 
-            ? `Observaciones importantes en bitácora:\n` + stats.observations.map(o => `- ${o.type}: ${o.details}`).join('\n')
+            ? `Observaciones importantes en bitácora:\n` + stats.observations.map(o => `- Tipo: ${o.type}. Detalles: ${o.details}. ${o.canalizationTarget ? `Canalizado a: ${o.canalizationTarget}` : ''}`).join('\n')
             : "No hay observaciones en bitácora para este parcial.";
 
         const prompt = `
             Eres un asistente de docentes experto en pedagogía y comunicación asertiva.
-            Tu tarea es generar una retroalimentación constructiva, profesional y personalizada para un estudiante, basada en sus datos de rendimiento y comportamiento.
-            La retroalimentación debe ser balanceada, iniciando con fortalezas (si las hay), luego áreas de oportunidad y finalizando con recomendaciones claras y accionables.
-            Usa un tono de apoyo y motivador. Integra la información de la bitácora para dar un contexto más completo.
-            IMPORTANTE: No incluyas ninguna despedida, firma o nombre al final. La salida debe ser únicamente el cuerpo de la retroalimentación.
+            Tu tarea es generar una retroalimentación constructiva, profesional y personalizada para un estudiante, integrando sus datos académicos y de comportamiento.
+            La retroalimentación debe ser balanceada: inicia con fortalezas, luego aborda áreas de oportunidad y finaliza con recomendaciones claras.
+
+            INSTRUCCIONES CLAVE:
+            1.  **Analiza la Bitácora:** No solo listes las observaciones. Interprétalas y adapta el tono.
+                - Si hay 'Problema de conducta', enfoca el mensaje en el apoyo. Ejemplo: "He notado algunos desafíos en... y quiero que sepas que estoy aquí para ayudarte a encontrar mejores estrategias. No es para señalar, sino para que juntos logremos un ambiente positivo".
+                - Si hay 'Episodio emocional' y fue canalizado, muestra empatía. Ejemplo: "Soy consciente de la situación que estás atravesando y quiero que sepas que tienes mi apoyo. Es importante que aproveches el acompañamiento que se te ha brindado".
+                - Si hay 'Méritos', úsalos para reforzar positivamente. Ejemplo: "Quiero felicitarte especialmente por [mérito], demuestra tu gran capacidad para...".
+            2.  **Conecta los Puntos:** Relaciona el rendimiento académico (calificaciones, asistencia) con las observaciones de la bitácora si es posible.
+            3.  **Tono:** Usa un tono de apoyo y motivador, enfocado en el crecimiento del estudiante.
+            4.  **Formato:** Redacta en párrafos fluidos. No uses asteriscos ni guiones para listas en el texto final.
+            5.  **Sin Despedidas:** No incluyas ninguna despedida, firma o nombre al final. La salida debe ser únicamente el cuerpo de la retroalimentación.
 
             DATOS DEL ESTUDIANTE:
             - Nombre: ${student.name}
@@ -742,7 +752,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             - Información de la bitácora:
             ${observationsSummary}
 
-            Por favor, redacta la retroalimentación para ${student.name}, integrando todos los datos proporcionados.
+            Por favor, redacta la retroalimentación para ${student.name}, aplicando todas las instrucciones.
         `;
         return callGoogleAI(prompt);
     }, [callGoogleAI]);
