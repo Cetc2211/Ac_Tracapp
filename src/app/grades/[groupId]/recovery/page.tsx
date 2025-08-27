@@ -27,11 +27,11 @@ import { useMemo, useState } from 'react';
 import { getPartialLabel } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import type { Student } from '@/lib/placeholder-data';
+import type { Student, EvaluationCriteria, PartialData } from '@/lib/placeholder-data';
 
 type FailedStudent = {
   student: Student;
-  finalGrade: number;
+  originalGrade: number;
 };
 
 export default function RecoveryPage() {
@@ -41,7 +41,7 @@ export default function RecoveryPage() {
     activeGroup,
     activePartialId,
     partialData,
-    calculateDetailedFinalGrade,
+    calculateDetailedFinalGrade, // This will be used for the original grade
     setRecoveryGrades
   } = useData();
 
@@ -53,14 +53,23 @@ export default function RecoveryPage() {
       if (!activeGroup || !activeGroup.students) return [];
       return [...activeGroup.students].sort((a,b) => a.name.localeCompare(b.name));
   }, [activeGroup]);
+  
+  const calculateOriginalGrade = (studentId: string, pData: PartialData, criteria: EvaluationCriteria[]) => {
+      // Temporarily create a version of partial data without recovery info to get original grade
+      const originalPData = { ...pData, recoveryGrades: { ...pData.recoveryGrades, [studentId]: { grade: 0, applied: false } } };
+      return calculateDetailedFinalGrade(studentId, originalPData, criteria).finalGrade;
+  };
 
   const failedStudents = useMemo(() => {
     if (!criteria || criteria.length === 0) return [];
-    return studentsInGroup.map(student => ({
-      student,
-      finalGrade: calculateDetailedFinalGrade(student.id, partialData, criteria).finalGrade
-    })).filter(s => s.finalGrade < 60);
-  }, [studentsInGroup, calculateDetailedFinalGrade, partialData, criteria]);
+    return studentsInGroup
+      .map(student => ({
+        student,
+        originalGrade: calculateOriginalGrade(student.id, partialData, criteria)
+      }))
+      .filter(s => s.originalGrade < 60);
+  }, [studentsInGroup, partialData, criteria, calculateDetailedFinalGrade]);
+
 
   const handleGradeChange = (studentId: string, value: string) => {
     const grade = value === '' ? null : parseFloat(value);
@@ -129,7 +138,7 @@ export default function RecoveryPage() {
             </TableHeader>
             <TableBody>
               {failedStudents.length > 0 ? (
-                failedStudents.map(({ student, finalGrade }) => (
+                failedStudents.map(({ student, originalGrade }) => (
                   <TableRow key={student.id}>
                     <TableCell className="font-medium flex items-center gap-2">
                       <Image 
@@ -142,7 +151,7 @@ export default function RecoveryPage() {
                       {student.name}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="destructive">{finalGrade.toFixed(1)}%</Badge>
+                      <Badge variant="destructive">{originalGrade.toFixed(1)}%</Badge>
                     </TableCell>
                     <TableCell>
                       <Input
