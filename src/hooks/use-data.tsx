@@ -145,6 +145,15 @@ const loadFromStorage = <T>(key: string, defaultValue: T): T => {
     }
 };
 
+type GroupReportSummary = {
+    totalStudents: number;
+    approvedCount: number;
+    failedCount: number;
+    groupAverage: number;
+    attendanceRate: number;
+    participationRate: number;
+}
+
 
 // CONTEXT TYPE
 interface DataContextType {
@@ -200,6 +209,7 @@ interface DataContextType {
   fetchPartialData: (groupId: string, partialId: PartialId) => Promise<PartialData>;
   takeAttendanceForDate: (groupId: string, date: string) => Promise<void>;
   generateFeedbackWithAI: (student: Student, stats: StudentStats) => Promise<string>;
+  generateGroupAnalysisWithAI: (group: Group, summary: GroupReportSummary, atRisk: StudentWithRisk[]) => Promise<string>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -625,28 +635,10 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         }
     }, []);
 
-    const generateFeedbackWithAI = useCallback(async (student: Student, stats: StudentStats): Promise<string> => {
+    const callGoogleAI = useCallback(async (prompt: string): Promise<string> => {
         if (!settings.apiKey) {
             throw new Error("No se ha configurado una clave API de Google AI. Ve a Ajustes para agregarla.");
         }
-
-        const criteriaSummary = stats.criteriaDetails.map(c => `- ${c.name}: ${c.earned.toFixed(0)}% de ${c.weight}%`).join('\n');
-
-        const prompt = `
-            Eres un asistente de docentes experto en pedagogía y comunicación asertiva.
-            Tu tarea es generar una retroalimentación constructiva, profesional y personalizada para un estudiante, basada en sus datos de rendimiento.
-            La retroalimentación debe ser balanceada, iniciando con fortalezas, luego áreas de oportunidad y finalizando con recomendaciones claras y accionables.
-            Usa un tono de apoyo y motivador. No inventes información.
-
-            DATOS DEL ESTUDIANTE:
-            - Nombre: ${student.name}
-            - Calificación final del parcial: ${stats.finalGrade.toFixed(0)}%
-            - Tasa de asistencia: ${stats.attendance.rate.toFixed(0)}%
-            - Desglose de calificación:
-            ${criteriaSummary}
-
-            Por favor, redacta la retroalimentación para ${student.name}.
-        `;
 
         const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${settings.apiKey}`;
         
@@ -673,13 +665,58 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             return feedbackText;
 
         } catch (error) {
-            console.error("Failed to generate AI feedback:", error);
+            console.error("Failed to call Google AI:", error);
             if (error instanceof Error) {
                  throw new Error(error.message);
             }
             throw new Error("Ocurrió un error desconocido al conectar con el servicio de IA.");
         }
     }, [settings.apiKey]);
+
+
+    const generateFeedbackWithAI = useCallback(async (student: Student, stats: StudentStats): Promise<string> => {
+        const criteriaSummary = stats.criteriaDetails.map(c => `- ${c.name}: ${c.earned.toFixed(0)}% de ${c.weight}%`).join('\n');
+        const prompt = `
+            Eres un asistente de docentes experto en pedagogía y comunicación asertiva.
+            Tu tarea es generar una retroalimentación constructiva, profesional y personalizada para un estudiante, basada en sus datos de rendimiento.
+            La retroalimentación debe ser balanceada, iniciando con fortalezas, luego áreas de oportunidad y finalizando con recomendaciones claras y accionables.
+            Usa un tono de apoyo y motivador. No inventes información.
+
+            DATOS DEL ESTUDIANTE:
+            - Nombre: ${student.name}
+            - Calificación final del parcial: ${stats.finalGrade.toFixed(0)}%
+            - Tasa de asistencia: ${stats.attendance.rate.toFixed(0)}%
+            - Desglose de calificación:
+            ${criteriaSummary}
+
+            Por favor, redacta la retroalimentación para ${student.name}.
+        `;
+        return callGoogleAI(prompt);
+    }, [callGoogleAI]);
+
+    const generateGroupAnalysisWithAI = useCallback(async (group: Group, summary: GroupReportSummary, atRisk: StudentWithRisk[]): Promise<string> => {
+        const atRiskSummary = atRisk.length > 0
+            ? `Se han identificado ${atRisk.length} estudiantes en riesgo (${atRisk.filter(s=>s.calculatedRisk.level==='high').length} en riesgo alto y ${atRisk.filter(s=>s.calculatedRisk.level==='medium').length} en riesgo medio).`
+            : "No se han identificado estudiantes en riesgo significativo en este parcial.";
+
+        const prompt = `
+            Eres un asistente de docentes y analista educativo. Tu tarea es generar un análisis narrativo profesional sobre el rendimiento de un grupo de estudiantes para un informe.
+            El análisis debe ser objetivo, basado en los datos proporcionados, y debe identificar fortalezas, debilidades y sugerir posibles áreas de enfoque o estrategias.
+            Usa un tono formal y constructivo. No inventes información.
+
+            DATOS DEL GRUPO:
+            - Asignatura: ${group.subject}
+            - Número de estudiantes: ${summary.totalStudents}
+            - Promedio general del grupo: ${summary.groupAverage.toFixed(1)}%
+            - Tasa de aprobación: ${(summary.approvedCount / summary.totalStudents * 100).toFixed(1)}% (${summary.approvedCount} de ${summary.totalStudents} estudiantes)
+            - Tasa de asistencia general: ${summary.attendanceRate.toFixed(1)}%
+            - Resumen de estudiantes en riesgo: ${atRiskSummary}
+
+            Basado en estos datos, redacta un breve análisis cualitativo sobre el rendimiento general del grupo, sus puntos fuertes, áreas de oportunidad y posibles recomendaciones.
+        `;
+
+        return callGoogleAI(prompt);
+    }, [callGoogleAI]);
 
 
     const contextValue: DataContextType = {
@@ -722,7 +759,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         fetchPartialData,
         takeAttendanceForDate,
         resetAllData,
-        generateFeedbackWithAI
+        generateFeedbackWithAI,
+        generateGroupAnalysisWithAI,
     };
 
     return (

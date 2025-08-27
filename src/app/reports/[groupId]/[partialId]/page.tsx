@@ -23,7 +23,7 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useData } from '@/hooks/use-data';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { PartialId, StudentObservation } from '@/hooks/use-data';
+import type { PartialId, StudentObservation, Group } from '@/hooks/use-data';
 import { getPartialLabel } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -50,7 +50,8 @@ export default function GroupReportPage() {
       atRiskStudents,
       allObservations,
       partialData,
-      isLoading: isDataLoading
+      isLoading: isDataLoading,
+      generateGroupAnalysisWithAI,
   } = useData();
   const { attendance, participations } = partialData;
   
@@ -63,6 +64,7 @@ export default function GroupReportPage() {
   const [semesterInput, setSemesterInput] = useState('');
   const [cycleInput, setCycleInput] = useState('');
   const [narrativeAnalysis, setNarrativeAnalysis] = useState('');
+  const [isGeneratingAnalysis, setIsGeneratingAnalysis] = useState(false);
 
 
   useEffect(() => {
@@ -206,6 +208,28 @@ export default function GroupReportPage() {
     }
   };
   
+  const handleGenerateAIAnalysis = async () => {
+    if (!group || !summary) return;
+    
+    setIsGeneratingAnalysis(true);
+    try {
+        const analysis = await generateGroupAnalysisWithAI(group, summary, atRiskStudentsForGroup);
+        setNarrativeAnalysis(analysis);
+        toast({
+            title: 'Análisis generado',
+            description: 'La IA ha creado un análisis narrativo del grupo.',
+        });
+    } catch(e: any) {
+        toast({
+            variant: 'destructive',
+            title: 'Error al generar análisis',
+            description: e.message || 'No se pudo conectar con el servicio de IA.',
+        });
+    } finally {
+        setIsGeneratingAnalysis(false);
+    }
+  };
+
   if (isDataLoading || !summary) {
     return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /> <span className="ml-2">Generando informe...</span></div>;
   }
@@ -333,7 +357,15 @@ export default function GroupReportPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div>
-                        <h4 className="font-semibold text-base mb-2">Análisis Narrativo</h4>
+                        <div className="flex justify-between items-center mb-2">
+                            <h4 className="font-semibold text-base">Análisis Narrativo</h4>
+                            <div data-hide-for-pdf="true">
+                               <Button variant="secondary" size="sm" onClick={handleGenerateAIAnalysis} disabled={isGeneratingAnalysis}>
+                                    {isGeneratingAnalysis ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Sparkles className="mr-2 h-4 w-4"/>}
+                                    Generar con IA
+                                </Button>
+                            </div>
+                        </div>
                          <div data-hide-for-pdf="true">
                             <Textarea 
                                 placeholder="Escribe aquí tu análisis cualitativo sobre el rendimiento general del grupo, fortalezas, áreas de oportunidad y estrategias a seguir..."
