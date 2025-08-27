@@ -27,7 +27,7 @@ export type Grades = {
 };
 
 export type RecoveryGrade = {
-    grade: number;
+    grade: number | null;
     applied: boolean;
 };
 
@@ -385,8 +385,8 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         const recoveryInfo = pData.recoveryGrades?.[studentId];
         if (recoveryInfo?.applied) {
             return {
-                finalGrade: recoveryInfo.grade,
-                criteriaDetails: [{ name: 'Recuperación', earned: recoveryInfo.grade, weight: 100 }],
+                finalGrade: recoveryInfo.grade ?? 0,
+                criteriaDetails: [{ name: 'Recuperación', earned: recoveryInfo.grade ?? 0, weight: 100 }],
                 isRecovery: true,
             };
         }
@@ -408,13 +408,12 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                  const studentAttendedDates = Object.keys(pData.attendance || {}).filter(date => pData.attendance?.[date]?.[studentId] === true);
                  const studentParticipationOpportunities = participationDates.filter(date => studentAttendedDates.includes(date)).length;
 
+                // Only calculate if there are actual attendance records for the partial. Otherwise, it's 0.
                 if (studentParticipationOpportunities > 0) {
                     const studentParticipations = participationDates.reduce((count, date) => {
                         return count + (pData.participations?.[date]?.[studentId] ? 1 : 0);
                     }, 0);
                     performanceRatio = studentParticipations / studentParticipationOpportunities;
-                } else {
-                    performanceRatio = 1; // If no opportunities while present, grant full points to not penalize
                 }
             } else {
                 const delivered = pData.grades?.[studentId]?.[criterion.id]?.delivered ?? 0;
@@ -565,7 +564,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     }, []);
     
     const groupAverages = useMemo(() => {
-        if (!isClient) return {};
+        if (!isClient || isLoading) return {};
         const averages: { [groupId: string]: number } = {};
         groups.forEach(group => {
             const groupPartialData = allPartialsData[group.id]?.[activePartialId];
@@ -582,7 +581,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             averages[group.id] = groupGrades.length > 0 ? total / groupGrades.length : 0;
         });
         return averages;
-    }, [groups, activePartialId, calculateDetailedFinalGrade, allPartialsData, isClient]);
+    }, [groups, activePartialId, calculateDetailedFinalGrade, allPartialsData, isClient, isLoading]);
     
     const atRiskStudents: StudentWithRisk[] = useMemo(() => {
         if (!isClient) return [];
