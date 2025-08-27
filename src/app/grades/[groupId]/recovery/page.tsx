@@ -46,6 +46,7 @@ export default function RecoveryPage() {
 
   const { toast } = useToast();
   const { recoveryGrades = {} } = partialData;
+  const { criteria = [] } = activeGroup || {};
 
   const studentsInGroup = useMemo(() => {
       if (!activeGroup || !activeGroup.students) return [];
@@ -55,9 +56,9 @@ export default function RecoveryPage() {
   const failedStudents = useMemo(() => {
     return studentsInGroup.map(student => ({
       student,
-      finalGrade: calculateDetailedFinalGrade(student.id, partialData).finalGrade
+      finalGrade: calculateDetailedFinalGrade(student.id, partialData, criteria).finalGrade
     })).filter(s => s.finalGrade < 60);
-  }, [studentsInGroup, calculateDetailedFinalGrade, partialData]);
+  }, [studentsInGroup, calculateDetailedFinalGrade, partialData, criteria]);
 
   const handleGradeChange = (studentId: string, value: string) => {
     const grade = value === '' ? 0 : parseFloat(value);
