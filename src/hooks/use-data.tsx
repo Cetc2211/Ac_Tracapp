@@ -408,13 +408,12 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                  const studentAttendedDates = Object.keys(pData.attendance || {}).filter(date => pData.attendance?.[date]?.[studentId] === true);
                  const studentParticipationOpportunities = participationDates.filter(date => studentAttendedDates.includes(date)).length;
 
-                // Only calculate if there are actual attendance records for the partial. Otherwise, it's 0.
-                if (studentParticipationOpportunities > 0) {
+                if (Object.keys(pData.attendance || {}).length > 0 && studentParticipationOpportunities > 0) {
                     const studentParticipations = participationDates.reduce((count, date) => {
                         return count + (pData.participations?.[date]?.[studentId] ? 1 : 0);
                     }, 0);
                     performanceRatio = studentParticipations / studentParticipationOpportunities;
-                } else if (Object.keys(pData.attendance || {}).length > 0) {
+                } else {
                     performanceRatio = 0;
                 }
             } else {
@@ -437,7 +436,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         const group = groups.find(g => g.id === groupId);
         if (!group) return 0;
         const data = allPartialsData[groupId]?.[partialId];
-        if (!data) return 0;
+        if (!data || !group.criteria) return 0;
         return calculateDetailedFinalGrade(studentId, data, group.criteria).finalGrade;
     }, [calculateDetailedFinalGrade, allPartialsData, groups]);
 
@@ -569,7 +568,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         if (!isClient || isLoading) return {};
         const averages: { [groupId: string]: number } = {};
         groups.forEach(group => {
-            if (!group.criteria) {
+            if (!group || !group.criteria) {
                 averages[group.id] = 0;
                 return;
             }
@@ -723,11 +722,15 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
 
     const generateFeedbackWithAI = useCallback(async (student: Student, stats: StudentStats): Promise<string> => {
         const criteriaSummary = stats.criteriaDetails.map(c => `- ${c.name}: ${c.earned.toFixed(0)}% de ${c.weight}%`).join('\n');
+        const observationsSummary = stats.observations.length > 0 
+            ? `Observaciones importantes en bitácora:\n` + stats.observations.map(o => `- ${o.type}: ${o.details}`).join('\n')
+            : "No hay observaciones en bitácora para este parcial.";
+
         const prompt = `
             Eres un asistente de docentes experto en pedagogía y comunicación asertiva.
-            Tu tarea es generar una retroalimentación constructiva, profesional y personalizada para un estudiante, basada en sus datos de rendimiento.
-            La retroalimentación debe ser balanceada, iniciando con fortalezas, luego áreas de oportunidad y finalizando con recomendaciones claras y accionables.
-            Usa un tono de apoyo y motivador. No inventes información.
+            Tu tarea es generar una retroalimentación constructiva, profesional y personalizada para un estudiante, basada en sus datos de rendimiento y comportamiento.
+            La retroalimentación debe ser balanceada, iniciando con fortalezas (si las hay), luego áreas de oportunidad y finalizando con recomendaciones claras y accionables.
+            Usa un tono de apoyo y motivador. Integra la información de la bitácora para dar un contexto más completo.
             IMPORTANTE: No incluyas ninguna despedida, firma o nombre al final. La salida debe ser únicamente el cuerpo de la retroalimentación.
 
             DATOS DEL ESTUDIANTE:
@@ -736,8 +739,10 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
             - Tasa de asistencia: ${stats.attendance.rate.toFixed(0)}%
             - Desglose de calificación:
             ${criteriaSummary}
+            - Información de la bitácora:
+            ${observationsSummary}
 
-            Por favor, redacta la retroalimentación para ${student.name}.
+            Por favor, redacta la retroalimentación para ${student.name}, integrando todos los datos proporcionados.
         `;
         return callGoogleAI(prompt);
     }, [callGoogleAI]);
