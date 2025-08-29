@@ -258,6 +258,18 @@ export default function SettingsPage() {
                 />
             </div>
             <div className="space-y-2">
+                <Label htmlFor="facilitatorName">Nombre del Docente</Label>
+                <Input
+                id="facilitatorName"
+                value={localSettings.facilitatorName}
+                onChange={handleInputChange}
+                placeholder="Ej: Mtro. Juan Pérez"
+                />
+                 <p className="text-xs text-muted-foreground">
+                    Este nombre se usará por defecto al crear nuevos grupos.
+                </p>
+            </div>
+            <div className="space-y-2">
                 <Label htmlFor="logo">Logo de la Institución</Label>
                 <div className="flex items-center gap-4">
                 <div className="relative h-20 w-20">

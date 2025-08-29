@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -11,7 +12,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -36,7 +37,7 @@ const cardColors = [
 
 
 export default function GroupsPage() {
-  const { groups, setActiveGroupId, isLoading, setGroups } = useData();
+  const { groups, setActiveGroupId, isLoading, setGroups, settings } = useData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newGroupSubject, setNewGroupSubject] = useState('');
@@ -44,6 +45,12 @@ export default function GroupsPage() {
   const [newGroupGroupName, setNewGroupGroupName] = useState('');
   const [newGroupFacilitator, setNewGroupFacilitator] = useState('');
   const { toast } = useToast();
+
+  useEffect(() => {
+    if(settings.facilitatorName) {
+        setNewGroupFacilitator(settings.facilitatorName);
+    }
+  }, [settings.facilitatorName, isDialogOpen]);
 
   const handleCreateGroup = async () => {
     if (!newGroupSubject.trim()) {
@@ -78,7 +85,7 @@ export default function GroupsPage() {
         setNewGroupSubject('');
         setNewGroupSemester('');
         setNewGroupGroupName('');
-        setNewGroupFacilitator('');
+        setNewGroupFacilitator(settings.facilitatorName || '');
         setIsDialogOpen(false);
         setIsSubmitting(false);
     }, 500);
