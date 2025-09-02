@@ -414,7 +414,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
                 const delivered = pData.grades?.[studentId]?.[criterion.id]?.delivered ?? 0;
                 const expected = criterion.expectedValue;
                 if (expected > 0) {
-                    performanceRatio = delivered / expected;
+                    performanceRatio = (delivered ?? 0) / expected;
                 }
             }
             const earnedPercentage = performanceRatio * criterion.weight;
@@ -626,27 +626,35 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
     const takeAttendanceForDate = useCallback(async (groupId: string, date: string) => {
         const group = groups.find(g => g.id === groupId);
         if (!group) return;
-        const newAttendanceForDate = group.students.reduce((acc, student) => ({
-            ...acc,
-            [student.id]: true
-        }), {} as {[studentId: string]: boolean});
         
-        if (activeGroupId) {
-            setAllPartialsData(prevAllData => {
-                const currentGroupData = prevAllData[activeGroupId] || {};
-                const currentPartialData = currentGroupData[activePartialId] || defaultPartialData;
-                const newPartialData = { ...currentPartialData, attendance: { ...currentPartialData.attendance, [date]: newAttendanceForDate } };
-                return {
-                    ...prevAllData,
-                    [activeGroupId]: {
-                        ...currentGroupData,
-                        [activePartialId]: newPartialData,
-                    }
-                };
-            });
-        }
-        
-    }, [groups, activeGroupId, activePartialId]);
+        setAllPartialsData(prevAllData => {
+            const currentGroupData = prevAllData[groupId] || {};
+            const currentPartialData = currentGroupData[activePartialId] || defaultPartialData;
+            
+            // Do not overwrite existing data for the date
+            if (currentPartialData.attendance[date]) return prevAllData;
+
+            const newAttendanceForDate = group.students.reduce((acc, student) => ({
+                ...acc,
+                [student.id]: true
+            }), {} as {[studentId: string]: boolean});
+            
+            const newPartialData: PartialData = { 
+                ...currentPartialData, 
+                attendance: { ...currentPartialData.attendance, [date]: newAttendanceForDate },
+                // Also create an empty participation record for the same date
+                participations: { ...currentPartialData.participations, [date]: {} }
+            };
+
+            return {
+                ...prevAllData,
+                [groupId]: {
+                    ...currentGroupData,
+                    [activePartialId]: newPartialData,
+                }
+            };
+        });
+    }, [groups, activePartialId]);
 
     const resetAllData = useCallback(async () => {
         setIsLoading(true);

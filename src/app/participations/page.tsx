@@ -151,7 +151,7 @@ export default function ParticipationsPage() {
                  {participationDates.length === 0 && studentsToDisplay.length > 0 && (
                     <TableRow>
                         <TableCell colSpan={1} className="text-center h-24">
-                           Haz clic en "Registrar Participaciones de Hoy" para empezar.
+                           Ve a la página de Asistencia para registrar nuevas fechas o haz clic en "Registrar Participaciones de Hoy" para empezar.
                         </TableCell>
                     </TableRow>
                 )}
