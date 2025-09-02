@@ -138,6 +138,7 @@ export default function ActivitiesPage() {
                             initialFocus
                             locale={es}
                             className="rounded-md border"
+                            disabled={(date) => date > new Date("2999-01-01") || date < new Date("1900-01-01")}
                         />
                      </div>
                 </div>
