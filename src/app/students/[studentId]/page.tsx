@@ -478,7 +478,7 @@ export default function StudentProfilePage() {
                             value={currentFeedback}
                             onChange={(e) => setCurrentFeedback(e.target.value)}
                             rows={8}
-                            className="w-full"
+                            className="w-full text-justify"
                         />
                         <div className="flex justify-end gap-2 pt-2">
                             <Button variant="ghost" size="sm" onClick={handleCancelFeedback}>
@@ -492,7 +492,7 @@ export default function StudentProfilePage() {
                         </div>
                     </div>
                 ) : (
-                    <div className="prose prose-sm max-w-none dark:prose-invert mt-2 whitespace-pre-wrap min-h-[100px] p-3 bg-muted/30 rounded-md">
+                    <div className="prose prose-sm max-w-none dark:prose-invert mt-2 whitespace-pre-wrap min-h-[100px] p-3 bg-muted/30 rounded-md text-justify">
                         {currentFeedback || <p className="text-muted-foreground italic">No hay retroalimentación para este parcial. Haz clic en "Editar" para agregar una o usa la IA para generar una sugerencia.</p>}
                     </div>
                 )}

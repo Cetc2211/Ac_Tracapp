@@ -355,7 +355,7 @@ export default function GroupReportPage() {
         </header>
 
         <section className="space-y-6">
-            <p className="prose dark:prose-invert max-w-none">
+            <p className="prose dark:prose-invert max-w-none text-justify">
               Durante este periodo se atendieron <strong>{summary.totalStudents}</strong> estudiantes, con los siguientes resultados e indicadores clave:
             </p>
 
@@ -411,7 +411,7 @@ export default function GroupReportPage() {
                         value={narrativeAnalysis}
                         onChange={(e) => setNarrativeAnalysis(e.target.value)}
                         rows={8}
-                        className="w-full text-base"
+                        className="w-full text-base text-justify"
                     />
                     {recentObservations.length > 0 && (
                         <div className="space-y-2 pt-4">
@@ -430,7 +430,7 @@ export default function GroupReportPage() {
         </section>
 
         <footer className="border-t mt-8 pt-6 text-sm">
-            <p className="prose dark:prose-invert max-w-none">
+            <p className="prose dark:prose-invert max-w-none text-justify">
               Sin más por el momento, quedo a sus órdenes para cualquier aclaración.
             </p>
             <div className="mt-16 pt-4 text-center">
