@@ -36,13 +36,35 @@ export default function LoginPage() {
         });
         router.push('/dashboard');
       } else if (error) {
-        throw error;
+        // This is the important change: handle specific errors
+        let errorMessage = 'Las credenciales proporcionadas no son válidas. Por favor, inténtalo de nuevo.';
+        switch (error.code) {
+          case 'auth/user-not-found':
+            errorMessage = 'Este correo electrónico no está registrado. Por favor, crea una cuenta.';
+            break;
+          case 'auth/wrong-password':
+            errorMessage = 'Contraseña incorrecta. Por favor, inténtalo de nuevo.';
+            break;
+          case 'auth/invalid-email':
+            errorMessage = 'El formato del correo electrónico no es válido.';
+            break;
+          case 'auth/invalid-credential':
+             errorMessage = 'Las credenciales proporcionadas no son correctas.';
+             break;
+          default:
+            console.error('Firebase Auth Error:', error);
+        }
+         toast({
+          variant: 'destructive',
+          title: 'Error al iniciar sesión',
+          description: errorMessage,
+        });
       }
     } catch (e: any) {
        toast({
         variant: 'destructive',
-        title: 'Error al iniciar sesión',
-        description: 'Las credenciales proporcionadas no son válidas. Por favor, inténtalo de nuevo.',
+        title: 'Error inesperado',
+        description: 'Ocurrió un error al intentar iniciar sesión. Por favor, revisa la consola para más detalles.',
       });
     }
   };
@@ -66,6 +88,7 @@ export default function LoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSignIn()}
             />
           </div>
           <div className="grid gap-2">
@@ -76,6 +99,7 @@ export default function LoginPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSignIn()}
             />
           </div>
         </CardContent>
