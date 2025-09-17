@@ -217,6 +217,7 @@ interface DataContextType {
   getStudentRiskLevel: (finalGrade: number, pAttendance: AttendanceRecord, studentId: string) => CalculatedRisk;
   fetchPartialData: (groupId: string, partialId: PartialId) => Promise<(PartialData & { criteria: EvaluationCriteria[] }) | null>;
   takeAttendanceForDate: (groupId: string, date: string) => Promise<void>;
+  deleteAttendanceDate: (date: string) => Promise<void>;
   generateFeedbackWithAI: (student: Student, stats: StudentStats) => Promise<string>;
   generateGroupAnalysisWithAI: (group: Group, summary: GroupReportSummary, recoverySummary: RecoverySummary, atRisk: StudentWithRisk[], observations: (StudentObservation & { studentName: string })[]) => Promise<string>;
 }
@@ -655,6 +656,35 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         });
     }, [groups, activePartialId]);
 
+    const deleteAttendanceDate = useCallback(async (date: string) => {
+        if (!activeGroupId) return;
+
+        setAllPartialsData(prevAllData => {
+            const currentGroupData = prevAllData[activeGroupId] || {};
+            const currentPartialData = currentGroupData[activePartialId] || defaultPartialData;
+            
+            const newAttendance = { ...currentPartialData.attendance };
+            delete newAttendance[date];
+
+            const newParticipations = { ...currentPartialData.participations };
+            delete newParticipations[date];
+
+            const newPartialData: PartialData = { 
+                ...currentPartialData, 
+                attendance: newAttendance,
+                participations: newParticipations,
+            };
+
+            return {
+                ...prevAllData,
+                [activeGroupId]: {
+                    ...currentGroupData,
+                    [activePartialId]: newPartialData,
+                }
+            };
+        });
+    }, [activeGroupId, activePartialId]);
+
     const resetAllData = useCallback(async () => {
         setIsLoading(true);
         try {
@@ -839,6 +869,7 @@ export const DataProvider: React.FC<{children: React.ReactNode}> = ({ children }
         calculateDetailedFinalGrade,
         fetchPartialData,
         takeAttendanceForDate,
+        deleteAttendanceDate,
         resetAllData,
         generateFeedbackWithAI,
         generateGroupAnalysisWithAI,

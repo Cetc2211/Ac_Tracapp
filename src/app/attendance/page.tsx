@@ -5,8 +5,6 @@ import { useState, useMemo } from 'react';
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
 import {
   Table,
@@ -22,34 +20,41 @@ import Image from 'next/image';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Link from 'next/link';
-import { ArrowLeft, Calendar as CalendarIcon } from 'lucide-react';
+import { ArrowLeft, Calendar as CalendarIcon, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useData } from '@/hooks/use-data';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 
 export default function AttendancePage() {
-  const { activeGroup, partialData, setAttendance, takeAttendanceForDate } = useData();
+  const { activeGroup, partialData, setAttendance, takeAttendanceForDate, deleteAttendanceDate } = useData();
   const { attendance } = partialData;
   const { toast } = useToast();
   
-  // Nuevo estado para la fecha seleccionada en el calendario
   const [date, setDate] = useState<Date | undefined>(new Date());
+  const [dateToDelete, setDateToDelete] = useState<string | null>(null);
   
-  // Usa useMemo para optimizar el orden de los estudiantes
   const studentsToDisplay = useMemo(() => {
     return activeGroup ? [...activeGroup.students].sort((a, b) => a.name.localeCompare(b.name)) : [];
   }, [activeGroup]);
   
-  // Obtiene las fechas de asistencia y las ordena de más reciente a más antigua
   const attendanceDates = useMemo(() => {
     if (!attendance) return [];
     return Object.keys(attendance).sort((a,b) => new Date(b).getTime() - new Date(a).getTime());
   }, [attendance]);
 
-  // Manejador para registrar asistencia para la fecha seleccionada
   const handleRegisterDate = async () => {
     if (!activeGroup || !date) {
         toast({
@@ -60,10 +65,8 @@ export default function AttendancePage() {
         return;
     }
     
-    // Formatea la fecha seleccionada al formato YYYY-MM-DD
     const formattedDate = format(date, 'yyyy-MM-dd');
     
-    // Llama a la función del "cerebro" para registrar la asistencia
     await takeAttendanceForDate(activeGroup.id, formattedDate);
     
     toast({
@@ -72,7 +75,6 @@ export default function AttendancePage() {
     });
   };
 
-  // Manejador para cambiar el estado de asistencia de un estudiante
   const handleAttendanceChange = (studentId: string, date: string, isPresent: boolean) => {
     setAttendance(prev => {
       const newAttendance = { ...prev };
@@ -84,8 +86,34 @@ export default function AttendancePage() {
     });
   };
 
+  const handleDeleteDate = () => {
+    if (dateToDelete) {
+        deleteAttendanceDate(dateToDelete);
+        toast({
+            title: 'Fecha eliminada',
+            description: `Se ha eliminado el registro de asistencia del ${format(parseISO(dateToDelete), 'PPP', {locale: es})}.`,
+        });
+        setDateToDelete(null);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6">
+      <AlertDialog open={!!dateToDelete} onOpenChange={(open) => !open && setDateToDelete(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Esta acción eliminará permanentemente el registro de asistencia y participación del día <span className="font-bold">{dateToDelete ? format(parseISO(dateToDelete), 'PPP', {locale: es}) : ''}</span>. No se puede deshacer.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteDate}>Sí, eliminar</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button asChild variant="outline" size="icon">
@@ -145,7 +173,12 @@ export default function AttendancePage() {
                   <TableHead className="w-[300px] sticky left-0 bg-card z-10">Estudiante</TableHead>
                   {attendanceDates.map(date => (
                     <TableHead key={date} className="text-center">
-                      {format(parseISO(date), 'dd MMM', { locale: es })}
+                        <div className="flex items-center justify-center gap-2">
+                          <span>{format(parseISO(date), 'dd MMM', { locale: es })}</span>
+                           <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setDateToDelete(date)}>
+                                <Trash2 className="h-3 w-3 text-destructive" />
+                           </Button>
+                        </div>
                     </TableHead>
                   ))}
                 </TableRow>
