@@ -85,7 +85,7 @@ export default function MainLayoutClient({
   const pathname = usePathname();
   const router = useRouter();
   const { settings, activeGroup, activePartialId, isLoading: isDataLoading, error: dataError } = useData();
-  const [user, loading: isAuthLoading] = useAuthState(auth);
+  const [user, isAuthLoading] = useAuthState(auth);
 
 
   useEffect(() => {
