@@ -49,7 +49,7 @@ export default function LoginPage() {
             errorMessage = 'El formato del correo electrónico no es válido.';
             break;
           case 'auth/invalid-credential':
-             errorMessage = 'Las credenciales proporcionadas no son correctas.';
+             errorMessage = 'Contraseña incorrecta. Por favor, inténtalo de nuevo.';
              break;
           default:
             console.error('Firebase Auth Error:', error);
