@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -89,10 +90,20 @@ export default function MainLayoutClient({
 
 
   useEffect(() => {
-    if (!isAuthLoading && !user) {
-        router.push('/login');
+    if (!isAuthLoading) {
+        if (user) {
+            // Si el usuario está autenticado y está en login o signup, redirige a dashboard
+            if (pathname === '/login' || pathname === '/signup') {
+                router.replace('/dashboard');
+            }
+        } else {
+            // Si el usuario no está autenticado y no está en login/signup, redirige a login
+            if (pathname !== '/login' && pathname !== '/signup') {
+                router.replace('/login');
+            }
+        }
     }
-  }, [user, isAuthLoading, router]);
+  }, [user, isAuthLoading, router, pathname]);
 
   useEffect(() => {
     const theme = settings?.theme || defaultSettings.theme;
@@ -108,8 +119,8 @@ export default function MainLayoutClient({
     );
   }
 
-  if (!user) {
-    // Render children directly for login/signup pages which don't need the layout
+  // Para las rutas de login/signup, o si el usuario no está autenticado, no se muestra el layout principal
+  if (!user || pathname === '/login' || pathname === '/signup') {
     return <>{children}</>;
   }
 
