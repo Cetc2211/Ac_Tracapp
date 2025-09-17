@@ -25,7 +25,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useData } from '@/hooks/use-data';
 
 export default function ParticipationsPage() {
-  const { activeGroup, partialData, setParticipations } = useData();
+  const { activeGroup, partialData, setParticipations, takeAttendanceForDate } = useData();
   const { participations, attendance } = partialData;
   const { toast } = useToast();
 
@@ -40,19 +40,13 @@ export default function ParticipationsPage() {
   }, [attendance]);
 
 
-  const handleRegisterToday = () => {
+  const handleRegisterToday = async () => {
     if (!activeGroup) return;
     const today = format(new Date(), 'yyyy-MM-dd');
 
-    // Asegurarse de que exista una entrada de participación para hoy si no existe.
-    // La lógica de `takeAttendanceForDate` ya debería manejar esto, pero es una buena salvaguarda.
-    setParticipations(prev => {
-        const newParticipations = { ...prev };
-        if (!newParticipations[today]) {
-          newParticipations[today] = {};
-        }
-        return newParticipations;
-    });
+    // Usa la misma función que la página de asistencia para mantener la consistencia
+    await takeAttendanceForDate(activeGroup.id, today);
+
      toast({
           title: 'Listo para registrar',
           description: `Se ha habilitado el registro de participaciones para hoy.`,
