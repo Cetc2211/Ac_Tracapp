@@ -64,9 +64,8 @@ export default function GroupsPage() {
 
     setIsSubmitting(true);
     
-    const id = `G${Date.now()}`;
     const newGroup: Group = {
-      id,
+      id: `G${Date.now()}`,
       subject: newGroupSubject.trim(),
       semester: newGroupSemester.trim(),
       groupName: newGroupGroupName.trim(),
@@ -76,14 +75,13 @@ export default function GroupsPage() {
     };
     
     try {
-        setGroups((prev: Group[]) => [...prev, newGroup]);
+        setGroups((prevGroups) => [...prevGroups, newGroup]);
 
         toast({
           title: 'Grupo Creado',
           description: `El grupo "${newGroup.subject}" ha sido creado exitosamente.`,
         });
         
-        // Reset form and close dialog
         setNewGroupSubject('');
         setNewGroupSemester('');
         setNewGroupGroupName('');
