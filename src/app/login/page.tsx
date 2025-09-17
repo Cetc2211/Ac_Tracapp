@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useSignInWithEmailAndPassword } from 'react-firebase-hooks/auth';
+import { useSignInWithEmailAndPassword, useSendPasswordResetEmail } from 'react-firebase-hooks/auth';
 import { auth } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,13 +18,27 @@ import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Loader2, LogIn } from 'lucide-react';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [signInWithEmailAndPassword, user, loading, error] = useSignInWithEmailAndPassword(auth);
+  const [sendPasswordResetEmail, sending, resetError] = useSendPasswordResetEmail(auth);
   const { toast } = useToast();
   const router = useRouter();
+  const [resetEmail, setResetEmail] = useState('');
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
 
   const handleSignIn = async () => {
     try {
@@ -36,7 +50,6 @@ export default function LoginPage() {
         });
         router.push('/dashboard');
       } else if (error) {
-        // This is the important change: handle specific errors
         let errorMessage = 'Las credenciales proporcionadas no son válidas. Por favor, inténtalo de nuevo.';
         switch (error.code) {
           case 'auth/user-not-found':
@@ -66,9 +79,55 @@ export default function LoginPage() {
       });
     }
   };
+  
+  const handlePasswordReset = async () => {
+    if (!resetEmail) {
+        toast({ variant: 'destructive', title: 'Correo requerido', description: 'Por favor, ingresa tu correo electrónico.' });
+        return;
+    }
+    try {
+        const success = await sendPasswordResetEmail(resetEmail);
+        if (success) {
+            toast({ title: 'Correo enviado', description: 'Revisa tu bandeja de entrada para restablecer tu contraseña.' });
+            setIsResetDialogOpen(false);
+        } else {
+            toast({ variant: 'destructive', title: 'Error', description: resetError?.message || 'No se pudo enviar el correo.' });
+        }
+    } catch(e) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Ocurrió un problema al enviar el correo de recuperación.' });
+    }
+  };
 
   return (
     <div className="flex h-screen w-full items-center justify-center bg-background px-4">
+      <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Restablecer Contraseña</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Ingresa tu correo electrónico y te enviaremos un enlace para que puedas restablecer tu contraseña.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="py-4">
+                <Label htmlFor="reset-email">Correo Electrónico</Label>
+                <Input 
+                    id="reset-email"
+                    type="email"
+                    placeholder="nombre@ejemplo.com"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                />
+            </div>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handlePasswordReset} disabled={sending}>
+                    {sending ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                    Enviar Correo
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle className="text-2xl">Iniciar Sesión</CardTitle>
@@ -92,9 +151,9 @@ export default function LoginPage() {
           <div className="grid gap-2">
              <div className="flex items-center">
               <Label htmlFor="password">Contraseña</Label>
-              <Link href="#" className="ml-auto inline-block text-sm underline">
-                ¿Olvidaste tu contraseña?
-              </Link>
+               <Button variant="link" className="ml-auto inline-block text-sm p-0 h-auto" onClick={() => { setResetEmail(email); setIsResetDialogOpen(true); }}>
+                    ¿Olvidaste tu contraseña?
+                </Button>
             </div>
             <Input
               id="password"
