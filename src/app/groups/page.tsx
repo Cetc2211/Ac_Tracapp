@@ -75,22 +75,29 @@ export default function GroupsPage() {
       criteria: [],
     };
     
-    setGroups((prev: Group[]) => [...prev, newGroup]);
+    try {
+        setGroups((prev: Group[]) => [...prev, newGroup]);
 
-
-    setTimeout(() => {
         toast({
           title: 'Grupo Creado',
           description: `El grupo "${newGroup.subject}" ha sido creado exitosamente.`,
         });
+        
+        // Reset form and close dialog
         setNewGroupSubject('');
         setNewGroupSemester('');
         setNewGroupGroupName('');
         setNewGroupFacilitator(settings.facilitatorName || '');
         setIsDialogOpen(false);
+    } catch (e) {
+        toast({
+            variant: "destructive",
+            title: "Error al crear grupo",
+            description: "No se pudo guardar el nuevo grupo. Inténtalo de nuevo."
+        });
+    } finally {
         setIsSubmitting(false);
-    }, 500);
-
+    }
   };
   
   const handleCardClick = (groupId: string) => {
