@@ -1,10 +1,11 @@
-
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Card,
   CardContent,
+  CardHeader,
+  CardTitle,
 } from '@/components/ui/card';
 import {
   Table,
@@ -21,55 +22,61 @@ import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Link from 'next/link';
 import { ArrowLeft, Calendar as CalendarIcon } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { useData } from '@/hooks/use-data';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
+
 
 export default function AttendancePage() {
   const { activeGroup, partialData, setAttendance, takeAttendanceForDate } = useData();
   const { attendance } = partialData;
   const { toast } = useToast();
-
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-
+  
+  // Nuevo estado para la fecha seleccionada en el calendario
+  const [date, setDate] = useState<Date | undefined>(new Date());
+  
+  // Usa useMemo para optimizar el orden de los estudiantes
   const studentsToDisplay = useMemo(() => {
-    return activeGroup ? [...activeGroup.students].sort((a,b) => a.name.localeCompare(b.name)) : [];
+    return activeGroup ? [...activeGroup.students].sort((a, b) => a.name.localeCompare(b.name)) : [];
   }, [activeGroup]);
-
+  
+  // Obtiene las fechas de asistencia y las ordena de más reciente a más antigua
   const attendanceDates = useMemo(() => {
     if (!attendance) return [];
     return Object.keys(attendance).sort((a,b) => new Date(b).getTime() - new Date(a).getTime());
   }, [attendance]);
 
-
-  const handleRegisterToday = () => {
-    if (!activeGroup) return;
-    const today = format(new Date(), 'yyyy-MM-dd');
-    takeAttendanceForDate(activeGroup.id, today);
-  };
-  
-  const handleRegisterSelectedDate = () => {
-    if (!activeGroup || !selectedDate) {
+  // Manejador para registrar asistencia para la fecha seleccionada
+  const handleRegisterDate = async () => {
+    if (!activeGroup || !date) {
         toast({
-            variant: "destructive",
-            title: "Fecha no seleccionada",
-            description: "Por favor, elige una fecha del calendario."
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Por favor, selecciona una fecha y un grupo.',
         });
         return;
-    };
-    const date = format(selectedDate, 'yyyy-MM-dd');
-    takeAttendanceForDate(activeGroup.id, date);
-  }
+    }
+    
+    // Formatea la fecha seleccionada al formato YYYY-MM-DD
+    const formattedDate = format(date, 'yyyy-MM-dd');
+    
+    // Llama a la función del "cerebro" para registrar la asistencia
+    await takeAttendanceForDate(activeGroup.id, formattedDate);
+    
+    toast({
+        title: 'Asistencia registrada',
+        description: `Se ha registrado la asistencia para el día ${formattedDate}.`,
+    });
+  };
 
+  // Manejador para cambiar el estado de asistencia de un estudiante
   const handleAttendanceChange = (studentId: string, date: string, isPresent: boolean) => {
-    if (!activeGroup) return;
-
     setAttendance(prev => {
       const newAttendance = { ...prev };
       if (!newAttendance[date]) {
-        newAttendance[date] = {};
+          newAttendance[date] = {};
       }
       newAttendance[date][studentId] = isPresent;
       return newAttendance;
@@ -78,54 +85,54 @@ export default function AttendancePage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-             <Button asChild variant="outline" size="icon">
-              <Link href={activeGroup ? `/groups/${activeGroup.id}` : '/groups'}>
-                <ArrowLeft />
-                <span className="sr-only">Regresar</span>
-              </Link>
-            </Button>
-            <div>
-                <h1 className="text-3xl font-bold">Registro de Asistencia</h1>
-                <p className="text-muted-foreground">
-                    {activeGroup 
-                        ? `Grupo: ${activeGroup.subject}`
-                        : 'Marca la asistencia de los estudiantes.'
-                    }
-                </p>
-            </div>
+          <Button asChild variant="outline" size="icon">
+            <Link href={activeGroup ? `/groups/${activeGroup.id}` : '/groups'}>
+              <ArrowLeft />
+              <span className="sr-only">Regresar</span>
+            </Link>
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">Registro de Asistencia</h1>
+            <p className="text-muted-foreground">
+              {activeGroup 
+                ? `Grupo: ${activeGroup.subject}` 
+                : 'Selecciona un grupo para registrar asistencias.'
+              }
+            </p>
+          </div>
         </div>
-        {activeGroup && (
-            <div className="flex items-center gap-2">
-                 <Popover>
+        
+        <div className="flex items-center gap-2">
+            {activeGroup && (
+                <Popover>
                     <PopoverTrigger asChild>
                         <Button
-                        variant={"outline"}
-                        className={cn(
-                            "w-[280px] justify-start text-left font-normal",
-                            !selectedDate && "text-muted-foreground"
-                        )}
+                            variant={'outline'}
+                            className={cn(
+                                'w-[280px] justify-start text-left font-normal',
+                                !date && 'text-muted-foreground',
+                            )}
                         >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {selectedDate ? format(selectedDate, "PPP", {locale: es}) : <span>Selecciona una fecha</span>}
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {date ? format(date, 'PPP', { locale: es }) : <span>Selecciona una fecha</span>}
                         </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
                         <Calendar
                             mode="single"
-                            selected={selectedDate}
-                            onSelect={setSelectedDate}
+                            selected={date}
+                            onSelect={setDate}
                             initialFocus
-                            locale={es}
-                            disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
                         />
                     </PopoverContent>
                 </Popover>
-                <Button onClick={handleRegisterSelectedDate} variant="secondary">Registrar Fecha Seleccionada</Button>
-                <Button onClick={handleRegisterToday}>Registrar Hoy</Button>
-            </div>
-        )}
+            )}
+            {activeGroup && (
+                <Button onClick={handleRegisterDate}>Registrar Asistencia</Button>
+            )}
+        </div>
       </div>
 
       <Card>
@@ -168,14 +175,17 @@ export default function AttendancePage() {
                  {studentsToDisplay.length === 0 && (
                     <TableRow>
                         <TableCell colSpan={attendanceDates.length + 1} className="text-center h-24">
-                            No hay estudiantes para mostrar. Por favor, selecciona un grupo primero.
+                           {activeGroup 
+                           ? "Este grupo no tiene estudiantes." 
+                           : "No hay un grupo activo. Por favor, selecciona uno en la sección de 'Grupos'."
+                           }
                         </TableCell>
                     </TableRow>
                 )}
                  {attendanceDates.length === 0 && studentsToDisplay.length > 0 && (
                     <TableRow>
                         <TableCell colSpan={1} className="text-center h-24">
-                           Haz clic en "Registrar Hoy" o selecciona una fecha para empezar.
+                           Selecciona una fecha para registrar la primera asistencia.
                         </TableCell>
                     </TableRow>
                 )}
