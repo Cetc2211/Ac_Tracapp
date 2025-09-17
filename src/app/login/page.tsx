@@ -43,14 +43,12 @@ export default function LoginPage() {
             errorMessage = 'Este correo electrónico no está registrado. Por favor, crea una cuenta.';
             break;
           case 'auth/wrong-password':
-            errorMessage = 'Contraseña incorrecta. Por favor, inténtalo de nuevo.';
-            break;
-          case 'auth/invalid-email':
-            errorMessage = 'El formato del correo electrónico no es válido.';
-            break;
           case 'auth/invalid-credential':
              errorMessage = 'Contraseña incorrecta. Por favor, inténtalo de nuevo.';
              break;
+          case 'auth/invalid-email':
+            errorMessage = 'El formato del correo electrónico no es válido.';
+            break;
           default:
             console.error('Firebase Auth Error:', error);
         }
@@ -92,7 +90,12 @@ export default function LoginPage() {
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="password">Contraseña</Label>
+             <div className="flex items-center">
+              <Label htmlFor="password">Contraseña</Label>
+              <Link href="#" className="ml-auto inline-block text-sm underline">
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </div>
             <Input
               id="password"
               type="password"
