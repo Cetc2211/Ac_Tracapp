@@ -39,6 +39,7 @@ export default function AttendancePage() {
   }, [activeGroup]);
 
   const attendanceDates = useMemo(() => {
+    if (!attendance) return [];
     return Object.keys(attendance).sort((a,b) => new Date(b).getTime() - new Date(a).getTime());
   }, [attendance]);
 
@@ -174,7 +175,7 @@ export default function AttendancePage() {
                  {attendanceDates.length === 0 && studentsToDisplay.length > 0 && (
                     <TableRow>
                         <TableCell colSpan={1} className="text-center h-24">
-                           Haz clic en "Registrar Asistencia de Hoy" o selecciona una fecha para empezar.
+                           Haz clic en "Registrar Hoy" o selecciona una fecha para empezar.
                         </TableCell>
                     </TableRow>
                 )}

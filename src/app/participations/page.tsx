@@ -34,6 +34,7 @@ export default function ParticipationsPage() {
   }, [activeGroup]);
 
   const participationDates = useMemo(() => {
+    if (!participations) return [];
     return Object.keys(participations).sort((a,b) => new Date(b).getTime() - new Date(a).getTime());
   }, [participations]);
 
