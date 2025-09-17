@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -53,6 +52,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import Image from 'next/image';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth } from '@/lib/firebase';
+import { signOut } from 'firebase/auth';
 
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -83,13 +85,21 @@ export default function MainLayoutClient({
   const pathname = usePathname();
   const router = useRouter();
   const { settings, activeGroup, activePartialId, isLoading: isDataLoading, error: dataError } = useData();
+  const [user, loading: isAuthLoading] = useAuthState(auth);
+
+
+  useEffect(() => {
+    if (!isAuthLoading && !user) {
+        router.push('/login');
+    }
+  }, [user, isAuthLoading, router]);
 
   useEffect(() => {
     const theme = settings?.theme || defaultSettings.theme;
     document.body.className = theme;
   }, [settings?.theme]);
   
-  if (isDataLoading) {
+  if (isDataLoading || isAuthLoading) {
     return (
         <div className="flex h-screen w-full items-center justify-center">
             <Loader2 className="mr-2 h-8 w-8 animate-spin" />
@@ -97,6 +107,17 @@ export default function MainLayoutClient({
         </div>
     );
   }
+
+  if (!user) {
+    // Render children directly for login/signup pages which don't need the layout
+    return <>{children}</>;
+  }
+
+
+  const handleSignOut = async () => {
+    await signOut(auth);
+    router.push('/login');
+  };
 
   return (
     <>
@@ -172,6 +193,32 @@ export default function MainLayoutClient({
         <SidebarInset>
           <header className="flex h-14 items-center gap-4 border-b bg-card px-4 lg:h-[60px] lg:px-6">
             <SidebarTrigger className="md:hidden" />
+            <div className="flex-1" />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={user.photoURL || '/avatar-placeholder.png'} alt="Avatar" />
+                    <AvatarFallback>{user.email?.[0].toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">Mi Cuenta</p>
+                    <p className="text-xs leading-none text-muted-foreground">
+                      {user.email}
+                    </p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleSignOut}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Cerrar sesión</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </header>
           <main className="flex-1 p-4 sm:p-6">{children}</main>
         </SidebarInset>
@@ -179,3 +226,5 @@ export default function MainLayoutClient({
     </>
   );
 }
+
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
