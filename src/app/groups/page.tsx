@@ -72,6 +72,7 @@ export default function GroupsPage() {
       groupName: newGroupGroupName.trim(),
       facilitator: newGroupFacilitator.trim(),
       students: [],
+      criteria: [],
     };
     
     setGroups((prev: Group[]) => [...prev, newGroup]);
