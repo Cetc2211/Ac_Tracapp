@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -91,7 +92,22 @@ export default function LoginPage() {
             toast({ title: 'Correo enviado', description: 'Revisa tu bandeja de entrada para restablecer tu contraseña.' });
             setIsResetDialogOpen(false);
         } else {
-            toast({ variant: 'destructive', title: 'Error', description: resetError?.message || 'No se pudo enviar el correo.' });
+            // This 'else' block might be triggered even if an error is set.
+            // Check for resetError first.
+            let errorMessage = 'No se pudo enviar el correo de recuperación. Inténtalo de nuevo.';
+            if (resetError) {
+                switch (resetError.code) {
+                    case 'auth/user-not-found':
+                        errorMessage = 'Este correo electrónico no está registrado. No se puede enviar el correo.';
+                        break;
+                    case 'auth/invalid-email':
+                        errorMessage = 'El formato del correo electrónico no es válido.';
+                        break;
+                    default:
+                        errorMessage = resetError.message;
+                }
+            }
+            toast({ variant: 'destructive', title: 'Error al enviar correo', description: errorMessage });
         }
     } catch(e) {
         toast({ variant: 'destructive', title: 'Error', description: 'Ocurrió un problema al enviar el correo de recuperación.' });
