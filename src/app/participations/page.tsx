@@ -33,16 +33,19 @@ export default function ParticipationsPage() {
     return activeGroup ? [...activeGroup.students].sort((a,b) => a.name.localeCompare(b.name)) : [];
   }, [activeGroup]);
 
+  // Las fechas de participación ahora se derivan de las fechas de asistencia
   const participationDates = useMemo(() => {
-    if (!participations) return [];
-    return Object.keys(participations).sort((a,b) => new Date(b).getTime() - new Date(a).getTime());
-  }, [participations]);
+    if (!attendance) return [];
+    return Object.keys(attendance).sort((a,b) => new Date(b).getTime() - new Date(a).getTime());
+  }, [attendance]);
 
 
   const handleRegisterToday = () => {
     if (!activeGroup) return;
     const today = format(new Date(), 'yyyy-MM-dd');
 
+    // Asegurarse de que exista una entrada de participación para hoy si no existe.
+    // La lógica de `takeAttendanceForDate` ya debería manejar esto, pero es una buena salvaguarda.
     setParticipations(prev => {
         const newParticipations = { ...prev };
         if (!newParticipations[today]) {
@@ -50,6 +53,10 @@ export default function ParticipationsPage() {
         }
         return newParticipations;
     });
+     toast({
+          title: 'Listo para registrar',
+          description: `Se ha habilitado el registro de participaciones para hoy.`,
+      });
   };
   
   const handleParticipationChange = (studentId: string, date: string, hasParticipated: boolean) => {
@@ -69,6 +76,7 @@ export default function ParticipationsPage() {
     
     setParticipations(prev => {
       const newParticipations = { ...prev };
+      // Asegurarse de que el día exista en participaciones antes de modificarlo
       if (!newParticipations[date]) {
         newParticipations[date] = {};
       }
