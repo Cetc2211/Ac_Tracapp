@@ -18,11 +18,13 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { ArrowUpRight, BookCopy, Users, AlertTriangle, Search } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { ArrowUpRight, BookCopy, Users, AlertTriangle, Search, Megaphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useMemo } from 'react';
+import { isWithinInterval, startOfDay, endOfDay, parseISO } from 'date-fns';
 import {
   Dialog,
   DialogContent,
@@ -43,7 +45,7 @@ import {
 } from '@/components/ui/select';
 
 export default function DashboardPage() {
-  const { activeStudentsInGroups, groups, atRiskStudents, overallAverageParticipation, groupAverages, activePartialId } = useData();
+  const { activeStudentsInGroups, groups, atRiskStudents, overallAverageParticipation, groupAverages, activePartialId, specialNotes } = useData();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [studentSearchQuery, setStudentSearchQuery] = useState('');
@@ -72,9 +74,26 @@ export default function DashboardPage() {
     ).slice(0, 5);
   }, [activeStudentsInGroups, studentSearchQuery]);
 
+  const activeSpecialNote = useMemo(() => {
+    const today = new Date();
+    return specialNotes.find(note => 
+      isWithinInterval(today, { start: startOfDay(parseISO(note.startDate)), end: endOfDay(parseISO(note.endDate)) })
+    );
+  }, [specialNotes]);
+
 
   return (
     <div className="flex flex-col gap-6">
+      {activeSpecialNote && (
+        <Alert variant="destructive">
+            <Megaphone className="h-4 w-4" />
+            <AlertTitle>Aviso Importante</AlertTitle>
+            <AlertDescription>
+                {activeSpecialNote.text}
+            </AlertDescription>
+        </Alert>
+      )}
+
       <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

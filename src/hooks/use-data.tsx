@@ -2,7 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { Student, Group, PartialId, StudentObservation } from '@/lib/placeholder-data';
+import { Student, Group, PartialId, StudentObservation, SpecialNote } from '@/lib/placeholder-data';
 import { format } from 'date-fns';
 import { getPartialLabel } from '@/lib/utils';
 
@@ -146,6 +146,7 @@ interface DataContextType {
     allStudents: Student[];
     activeStudentsInGroups: Student[];
     allObservations: { [studentId: string]: StudentObservation[] };
+    specialNotes: SpecialNote[];
     settings: typeof defaultSettings;
     activeGroup: Group | null;
     activePartialId: PartialId;
@@ -160,6 +161,7 @@ interface DataContextType {
     setAllStudents: React.Dispatch<React.SetStateAction<Student[]>>;
     setAllObservations: React.Dispatch<React.SetStateAction<{ [studentId: string]: StudentObservation[] }>>;
     setAllPartialsData: React.Dispatch<React.SetStateAction<AllPartialsData>>;
+    setSpecialNotes: React.Dispatch<React.SetStateAction<SpecialNote[]>>;
     setSettings: (settings: typeof defaultSettings) => Promise<void>;
     setActiveGroupId: (groupId: string | null) => void;
     setActivePartialId: (partialId: PartialId) => void;
@@ -186,6 +188,10 @@ interface DataContextType {
     takeAttendanceForDate: (groupId: string, date: string) => Promise<void>;
     deleteAttendanceDate: (date: string) => Promise<void>;
     resetAllData: () => Promise<void>;
+    addSpecialNote: (note: Omit<SpecialNote, 'id'>) => Promise<void>;
+    updateSpecialNote: (noteId: string, note: Partial<Omit<SpecialNote, 'id'>>) => Promise<void>;
+    deleteSpecialNote: (noteId: string) => Promise<void>;
+
 
     // Calculation & Fetching
     calculateFinalGrade: (studentId: string, groupId: string, partialId: PartialId) => number;
@@ -219,6 +225,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [groups, setGroups] = useState<Group[]>([]);
     const [allStudents, setAllStudents] = useState<Student[]>([]);
     const [allObservations, setAllObservations] = useState<{ [studentId: string]: StudentObservation[] }>({});
+    const [specialNotes, setSpecialNotes] = useState<SpecialNote[]>([]);
     const [allPartialsData, setAllPartialsData] = useState<AllPartialsData>({});
     const [settings, setSettingsState] = useState(defaultSettings);
     const [activeGroupId, setActiveGroupIdState] = useState<string | null>(null);
@@ -233,10 +240,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const storedPartialsData = loadFromStorage<AllPartialsData>('app_partialsData', {});
             const storedSettings = loadFromStorage('app_settings', defaultSettings);
             const storedActiveGroupId = loadFromStorage<string | null>('activeGroupId_v1', null);
+            const storedSpecialNotes = loadFromStorage<SpecialNote[]>('app_specialNotes', []);
 
             setGroups(storedGroups);
             setAllStudents(storedStudents);
             setAllObservations(storedObservations);
+            setSpecialNotes(storedSpecialNotes);
             setAllPartialsData(storedPartialsData);
             setSettingsState(storedSettings);
 
@@ -258,13 +267,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             localStorage.setItem('app_groups', JSON.stringify(groups));
             localStorage.setItem('app_students', JSON.stringify(allStudents));
             localStorage.setItem('app_observations', JSON.stringify(allObservations));
+            localStorage.setItem('app_specialNotes', JSON.stringify(specialNotes));
             localStorage.setItem('app_partialsData', JSON.stringify(allPartialsData));
             localStorage.setItem('app_settings', JSON.stringify(settings));
             localStorage.setItem('activeGroupId_v1', activeGroupId || '');
         } catch (e) {
             console.error("Failed to save data to localStorage", e);
         }
-    }, [groups, allStudents, allObservations, allPartialsData, settings, activeGroupId, isLoading]);
+    }, [groups, allStudents, allObservations, allPartialsData, settings, activeGroupId, isLoading, specialNotes]);
 
     // --- MEMOIZED DERIVED STATE ---
     const activeGroup = useMemo(() => groups.find(g => g.id === activeGroupId) || null, [groups, activeGroupId]);
@@ -389,6 +399,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setGroups([]);
             setAllStudents([]);
             setAllObservations({});
+            setSpecialNotes([]);
             setAllPartialsData({});
             setSettingsState(defaultSettings);
             setActiveGroupIdState(null);
@@ -398,6 +409,21 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }, []);
     
+    // Special Notes Actions
+    const addSpecialNote = useCallback(async (note: Omit<SpecialNote, 'id'>) => {
+        const newNote = { ...note, id: `NOTE-${Date.now()}` };
+        setSpecialNotes(prev => [...prev, newNote]);
+    }, []);
+
+    const updateSpecialNote = useCallback(async (noteId: string, noteUpdate: Partial<Omit<SpecialNote, 'id'>>) => {
+        setSpecialNotes(prev => prev.map(n => n.id === noteId ? { ...n, ...noteUpdate } : n));
+    }, []);
+
+    const deleteSpecialNote = useCallback(async (noteId: string) => {
+        setSpecialNotes(prev => prev.filter(n => n.id !== noteId));
+    }, []);
+
+
     // --- CALCULATIONS & DERIVED DATA ---
     const calculateDetailedFinalGrade = useCallback((studentId: string, pData: PartialData, criteria: EvaluationCriteria[]): { finalGrade: number, criteriaDetails: CriteriaDetail[], isRecovery: boolean } => {
         const recoveryInfo = pData.recoveryGrades?.[studentId];
@@ -520,10 +546,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // --- CONTEXT VALUE ---
     const contextValue: DataContextType = {
-        isLoading, error, groups, allStudents, activeStudentsInGroups, allObservations, settings, activeGroup, activePartialId, partialData, allPartialsDataForActiveGroup, groupAverages, atRiskStudents, overallAverageParticipation,
-        setGroups, setAllStudents, setAllObservations, setAllPartialsData, setSettings, setActiveGroupId, setActivePartialId,
+        isLoading, error, groups, allStudents, activeStudentsInGroups, allObservations, specialNotes, settings, activeGroup, activePartialId, partialData, allPartialsDataForActiveGroup, groupAverages, atRiskStudents, overallAverageParticipation,
+        setGroups, setAllStudents, setAllObservations, setSpecialNotes, setAllPartialsData, setSettings, setActiveGroupId, setActivePartialId,
         setGrades, setAttendance, setParticipations, setActivities, setActivityRecords, setRecoveryGrades, setStudentFeedback, setGroupAnalysis,
-        addStudentsToGroup, removeStudentFromGroup, updateGroup, updateStudent, updateGroupCriteria, deleteGroup, addStudentObservation, updateStudentObservation, takeAttendanceForDate, deleteAttendanceDate, resetAllData,
+        addStudentsToGroup, removeStudentFromGroup, updateGroup, updateStudent, updateGroupCriteria, deleteGroup, addStudentObservation, updateStudentObservation, takeAttendanceForDate, deleteAttendanceDate, resetAllData, addSpecialNote, updateSpecialNote, deleteSpecialNote,
         calculateFinalGrade, calculateDetailedFinalGrade, getStudentRiskLevel, fetchPartialData,
         generateFeedbackWithAI, generateGroupAnalysisWithAI
     };

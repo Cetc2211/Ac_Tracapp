@@ -36,3 +36,10 @@ export type StudentObservation = {
     followUpUpdates: { date: string; update: string }[];
     isClosed: boolean;
 };
+
+export type SpecialNote = {
+  id: string;
+  text: string;
+  startDate: string; // ISO date string
+  endDate: string; // ISO date string
+};

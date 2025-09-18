@@ -19,7 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ThemeSwitcher, themes } from '@/components/theme-switcher';
 import { Separator } from '@/components/ui/separator';
 import { useData } from '@/hooks/use-data';
-import { Upload, Download, RotateCcw, Loader2, KeyRound } from 'lucide-react';
+import { Upload, Download, RotateCcw, Loader2, KeyRound, PlusCircle, Edit, Trash2, CalendarIcon } from 'lucide-react';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -31,8 +31,23 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import type { Group, Student, StudentObservation, PartialId } from '@/lib/placeholder-data';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import type { Group, Student, StudentObservation, PartialId, SpecialNote } from '@/lib/placeholder-data';
 import type { PartialData } from '@/hooks/use-data';
+import { Textarea } from '@/components/ui/textarea';
+import { Calendar } from '@/components/ui/calendar';
+import { es } from 'date-fns/locale';
+import { format, parseISO } from 'date-fns';
+import { DateRange } from 'react-day-picker';
 
 
 type ExportData = {
@@ -40,6 +55,7 @@ type ExportData = {
   groups: Group[];
   students: Student[];
   observations: { [studentId: string]: StudentObservation[] };
+  specialNotes: SpecialNote[];
   settings: typeof settings;
   partialsData: {
     [groupId: string]: {
@@ -48,9 +64,74 @@ type ExportData = {
   };
 };
 
+const NoteDialog = ({
+    note,
+    onSave,
+    children,
+}: {
+    note?: SpecialNote | null,
+    onSave: (text: string, dateRange: DateRange | undefined) => void,
+    children: React.ReactNode,
+}) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [text, setText] = useState('');
+    const [date, setDate] = useState<DateRange | undefined>(undefined);
+
+    useEffect(() => {
+        if (note) {
+            setText(note.text);
+            setDate({ from: parseISO(note.startDate), to: parseISO(note.endDate) });
+        } else {
+            setText('');
+            setDate(undefined);
+        }
+    }, [note, isOpen]);
+
+    const handleSave = () => {
+        onSave(text, date);
+        setIsOpen(false);
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>{children}</DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>{note ? 'Editar' : 'Agregar'} Consideración Especial</DialogTitle>
+                    <DialogDescription>
+                        Esta nota aparecerá en el dashboard durante el rango de fechas seleccionado.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="note-text">Mensaje de la Nota</Label>
+                        <Textarea id="note-text" value={text} onChange={(e) => setText(e.target.value)} placeholder="Ej. Horario especial por semana de exámenes." />
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Rango de Fechas</Label>
+                        <div className="flex justify-center">
+                            <Calendar
+                                mode="range"
+                                selected={date}
+                                onSelect={setDate}
+                                locale={es}
+                                className="rounded-md border"
+                            />
+                        </div>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild><Button variant="outline">Cancelar</Button></DialogClose>
+                    <Button onClick={handleSave}>Guardar Nota</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+};
+
 
 export default function SettingsPage() {
-    const { settings, isLoading, groups, allStudents, allObservations, fetchPartialData, setSettings: setSettingsInDb, resetAllData } = useData();
+    const { settings, isLoading, groups, allStudents, allObservations, specialNotes, fetchPartialData, setSettings: setSettingsInDb, resetAllData, addSpecialNote, updateSpecialNote, deleteSpecialNote } = useData();
     const [localSettings, setLocalSettings] = useState(settings);
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
     const [signaturePreview, setSignaturePreview] = useState<string | null>(null);
@@ -148,6 +229,7 @@ export default function SettingsPage() {
                 groups,
                 students: allStudents,
                 observations: allObservations,
+                specialNotes,
                 settings,
                 partialsData,
             };
@@ -194,6 +276,7 @@ export default function SettingsPage() {
                 localStorage.setItem('app_groups', JSON.stringify(data.groups));
                 localStorage.setItem('app_students', JSON.stringify(data.students));
                 localStorage.setItem('app_observations', JSON.stringify(data.observations));
+                localStorage.setItem('app_specialNotes', JSON.stringify(data.specialNotes || []));
                 localStorage.setItem('app_partialsData', JSON.stringify(data.partialsData));
                 localStorage.setItem('app_settings', JSON.stringify(data.settings));
 
@@ -223,7 +306,25 @@ export default function SettingsPage() {
         await resetAllData();
         setIsSaving(false);
         setIsResetDialogOpen(false);
-    }
+    };
+
+    const handleSaveNote = (noteId?: string) => (text: string, dateRange: DateRange | undefined) => {
+        if (!text || !dateRange?.from || !dateRange?.to) {
+            toast({ variant: 'destructive', title: 'Datos incompletos', description: 'Se requiere un mensaje y un rango de fechas.' });
+            return;
+        }
+        const noteData = {
+            text,
+            startDate: format(dateRange.from, 'yyyy-MM-dd'),
+            endDate: format(dateRange.to, 'yyyy-MM-dd'),
+        };
+        if (noteId) {
+            updateSpecialNote(noteId, noteData);
+        } else {
+            addSpecialNote(noteData);
+        }
+    };
+
 
     if (isLoading) {
         return (
@@ -238,7 +339,7 @@ export default function SettingsPage() {
         <div>
             <h1 className="text-3xl font-bold">Ajustes</h1>
             <p className="text-muted-foreground">
-            Personaliza la información de tu institución y la apariencia de la aplicación.
+            Personaliza la aplicación, gestiona tu horario y administra tus datos.
             </p>
         </div>
         <Card>
@@ -345,11 +446,69 @@ export default function SettingsPage() {
             <CardFooter className="border-t px-6 py-4">
             <Button onClick={handleSave} disabled={isSaving || isLoading}>
                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                Guardar Cambios
+                Guardar Cambios de Personalización
             </Button>
             </CardFooter>
         </Card>
         
+        <Card>
+            <CardHeader>
+                <div className="flex justify-between items-center">
+                    <div>
+                        <CardTitle>Horario y Consideraciones</CardTitle>
+                        <CardDescription>
+                            Define recordatorios o notas sobre cambios en el horario que aparecerán en el dashboard.
+                        </CardDescription>
+                    </div>
+                    <NoteDialog onSave={handleSaveNote()}>
+                        <Button>
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Añadir Nota
+                        </Button>
+                    </NoteDialog>
+                </div>
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-2">
+                    {specialNotes.length > 0 ? (
+                        specialNotes.map(note => (
+                            <div key={note.id} className="flex justify-between items-center p-3 bg-muted rounded-lg">
+                                <div className="flex-1">
+                                    <p className="font-medium">{note.text}</p>
+                                    <p className="text-sm text-muted-foreground">
+                                        <CalendarIcon className="inline h-4 w-4 mr-1" />
+                                        {format(parseISO(note.startDate), 'dd MMM', { locale: es })} - {format(parseISO(note.endDate), 'dd MMM yyyy', { locale: es })}
+                                    </p>
+                                </div>
+                                <div className="flex gap-2">
+                                    <NoteDialog note={note} onSave={handleSaveNote(note.id)}>
+                                        <Button size="icon" variant="ghost"><Edit className="h-4 w-4" /></Button>
+                                    </NoteDialog>
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button size="icon" variant="ghost"><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>¿Eliminar esta nota?</AlertDialogTitle>
+                                                <AlertDialogDescription>Esta acción no se puede deshacer.</AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => deleteSpecialNote(note.id)}>Sí, eliminar</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <p className="text-center text-muted-foreground py-4">No hay consideraciones especiales añadidas.</p>
+                    )}
+                </div>
+            </CardContent>
+        </Card>
+
         <Card>
             <CardHeader>
                 <CardTitle>Copia de Seguridad y Restauración</CardTitle>
@@ -401,6 +560,7 @@ export default function SettingsPage() {
                 </p>
             </CardFooter>
         </Card>
+
         <Card>
             <CardHeader>
                 <CardTitle className="text-destructive">Zona de Peligro</CardTitle>
