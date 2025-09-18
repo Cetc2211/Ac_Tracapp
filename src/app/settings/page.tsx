@@ -131,7 +131,7 @@ const NoteDialog = ({
 
 
 export default function SettingsPage() {
-    const { settings, isLoading, groups, allStudents, allObservations, specialNotes, fetchPartialData, setSettings: setSettingsInDb, resetAllData, addSpecialNote, updateSpecialNote, deleteSpecialNote } = useData();
+    const { settings, isLoading, groups, allStudents, allObservations, specialNotes, fetchPartialData, setSettings: setSettingsInContext, resetAllData, addSpecialNote, updateSpecialNote, deleteSpecialNote } = useData();
     const [localSettings, setLocalSettings] = useState(settings);
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
     const [signaturePreview, setSignaturePreview] = useState<string | null>(null);
@@ -154,10 +154,6 @@ export default function SettingsPage() {
     }, [settings, isLoading]);
     
     const handleSave = async () => {
-        if (isLoading) {
-            toast({variant: "destructive", title: "Error", description: "No se pueden guardar los ajustes mientras los datos se están cargando."})
-            return;
-        }
         setIsSaving(true);
         const newSettings = { 
             ...localSettings, 
@@ -167,7 +163,7 @@ export default function SettingsPage() {
         };
         
         try {
-            await setSettingsInDb(newSettings);
+            await setSettingsInContext(newSettings);
             toast({
               title: 'Ajustes Guardados',
               description: 'La información ha sido actualizada.',
@@ -458,7 +454,7 @@ export default function SettingsPage() {
                 </div>
             </CardContent>
             <CardFooter className="border-t px-6 py-4">
-            <Button onClick={handleSave} disabled={isSaving || isLoading}>
+            <Button onClick={handleSave} disabled={isSaving}>
                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                 Guardar Cambios de Personalización
             </Button>
