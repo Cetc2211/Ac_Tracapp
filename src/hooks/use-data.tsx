@@ -123,7 +123,8 @@ const defaultSettings = {
     theme: "theme-mint",
     apiKey: "",
     signature: "",
-    facilitatorName: ""
+    facilitatorName: "",
+    scheduleImageUrl: ""
 };
 
 const defaultPartialData: PartialData = {

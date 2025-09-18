@@ -19,7 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ThemeSwitcher, themes } from '@/components/theme-switcher';
 import { Separator } from '@/components/ui/separator';
 import { useData } from '@/hooks/use-data';
-import { Upload, Download, RotateCcw, Loader2, KeyRound, PlusCircle, Edit, Trash2, CalendarIcon } from 'lucide-react';
+import { Upload, Download, RotateCcw, Loader2, KeyRound, PlusCircle, Edit, Trash2, CalendarIcon, Image as ImageIcon } from 'lucide-react';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -135,6 +135,7 @@ export default function SettingsPage() {
     const [localSettings, setLocalSettings] = useState(settings);
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
     const [signaturePreview, setSignaturePreview] = useState<string | null>(null);
+    const [scheduleImagePreview, setScheduleImagePreview] = useState<string | null>(null);
     const { toast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isSaving, setIsSaving] = useState(false);
@@ -148,6 +149,7 @@ export default function SettingsPage() {
             setLocalSettings(settings);
             setLogoPreview(settings.logo);
             setSignaturePreview(settings.signature);
+            setScheduleImagePreview(settings.scheduleImageUrl);
         }
     }, [settings, isLoading]);
     
@@ -161,6 +163,7 @@ export default function SettingsPage() {
             ...localSettings, 
             logo: logoPreview || '',
             signature: signaturePreview || '',
+            scheduleImageUrl: scheduleImagePreview || '',
         };
         
         try {
@@ -181,23 +184,15 @@ export default function SettingsPage() {
         setLocalSettings(prev => ({ ...prev, [id]: value }));
     };
 
-    const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleImageChange = (
+      e: React.ChangeEvent<HTMLInputElement>,
+      setter: React.Dispatch<React.SetStateAction<string | null>>
+    ) => {
         const file = e.target.files?.[0];
         if (file) {
             const reader = new FileReader();
             reader.onloadend = () => {
-                setLogoPreview(reader.result as string);
-            };
-            reader.readAsDataURL(file);
-        }
-    };
-
-    const handleSignatureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setSignaturePreview(reader.result as string);
+                setter(reader.result as string);
             };
             reader.readAsDataURL(file);
         }
@@ -346,7 +341,7 @@ export default function SettingsPage() {
             <CardHeader>
             <CardTitle>Personalización</CardTitle>
             <CardDescription>
-                Actualiza los datos que aparecerán en los informes.
+                Actualiza los datos que aparecerán en los informes y en tu dashboard.
             </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -382,7 +377,7 @@ export default function SettingsPage() {
                     data-ai-hint="school logo"
                     />
                 </div>
-                <Input id="logo" type="file" className="max-w-sm" onChange={handleLogoChange} accept="image/png, image/jpeg" />
+                <Input id="logo" type="file" className="max-w-sm" onChange={(e) => handleImageChange(e, setLogoPreview)} accept="image/png, image/jpeg" />
                 </div>
                 <p className="text-xs text-muted-foreground">
                 Sube un archivo PNG o JPG. Tamaño recomendado: 200x200px.
@@ -401,10 +396,29 @@ export default function SettingsPage() {
                         />
                     ) : <span className="text-xs text-muted-foreground">Sin firma</span>}
                 </div>
-                <Input id="signature" type="file" className="max-w-sm" onChange={handleSignatureChange} accept="image/png" />
+                <Input id="signature" type="file" className="max-w-sm" onChange={(e) => handleImageChange(e, setSignaturePreview)} accept="image/png" />
                 </div>
                 <p className="text-xs text-muted-foreground">
                  Para mejores resultados, sube una imagen de tu firma con fondo transparente (formato PNG).
+                </p>
+            </div>
+             <div className="space-y-2">
+                <Label htmlFor="schedule">Horario de Clases</Label>
+                <div className="flex items-center gap-4">
+                  <div className="relative h-24 w-48 border rounded-md flex items-center justify-center bg-muted">
+                      {scheduleImagePreview ? (
+                          <Image
+                          src={scheduleImagePreview}
+                          alt="Vista previa del horario"
+                          fill
+                          className="object-contain p-1"
+                          />
+                      ) : <ImageIcon className="h-8 w-8 text-muted-foreground" />}
+                  </div>
+                  <Input id="schedule" type="file" className="max-w-sm" onChange={(e) => handleImageChange(e, setScheduleImagePreview)} accept="image/png, image/jpeg, image/webp" />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                 Sube una imagen de tu horario para tenerla a la mano en el dashboard.
                 </p>
             </div>
             </CardContent>
@@ -455,7 +469,7 @@ export default function SettingsPage() {
             <CardHeader>
                 <div className="flex justify-between items-center">
                     <div>
-                        <CardTitle>Horario y Consideraciones</CardTitle>
+                        <CardTitle>Consideraciones Especiales del Horario</CardTitle>
                         <CardDescription>
                             Define recordatorios o notas sobre cambios en el horario que aparecerán en el dashboard.
                         </CardDescription>

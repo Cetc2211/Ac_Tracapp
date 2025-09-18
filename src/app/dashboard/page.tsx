@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { ArrowUpRight, BookCopy, Users, AlertTriangle, Search, Megaphone } from 'lucide-react';
+import { ArrowUpRight, BookCopy, Users, AlertTriangle, Search, Megaphone, CalendarClock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -45,7 +45,7 @@ import {
 } from '@/components/ui/select';
 
 export default function DashboardPage() {
-  const { activeStudentsInGroups, groups, atRiskStudents, overallAverageParticipation, groupAverages, activePartialId, specialNotes } = useData();
+  const { activeStudentsInGroups, groups, atRiskStudents, overallAverageParticipation, groupAverages, activePartialId, specialNotes, settings } = useData();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [studentSearchQuery, setStudentSearchQuery] = useState('');
@@ -84,15 +84,34 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      {activeSpecialNote && (
-        <Alert variant="destructive">
-            <Megaphone className="h-4 w-4" />
-            <AlertTitle>Aviso Importante</AlertTitle>
-            <AlertDescription>
-                {activeSpecialNote.text}
-            </AlertDescription>
-        </Alert>
+      
+       {settings.scheduleImageUrl && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><CalendarClock/> Mi Horario</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="relative w-full aspect-[2/1] rounded-lg overflow-hidden border">
+                     <Image 
+                        src={settings.scheduleImageUrl}
+                        alt="Horario de clases"
+                        fill
+                        className="object-contain"
+                        />
+                </div>
+                 {activeSpecialNote && (
+                    <Alert variant="destructive" className="mt-4">
+                        <Megaphone className="h-4 w-4" />
+                        <AlertTitle>Aviso Importante</AlertTitle>
+                        <AlertDescription>
+                            {activeSpecialNote.text}
+                        </AlertDescription>
+                    </Alert>
+                )}
+            </CardContent>
+          </Card>
       )}
+
 
       <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
         <Card>
