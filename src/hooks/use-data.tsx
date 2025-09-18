@@ -155,7 +155,7 @@ interface DataContextType {
     allPartialsDataForActiveGroup: AllPartialsDataForGroup;
     groupAverages: { [groupId: string]: number };
     atRiskStudents: StudentWithRisk[];
-    overallAverageParticipation: number;
+    overallAverageAttendance: number;
 
     // State Setters
     setGroups: React.Dispatch<React.SetStateAction<Group[]>>;
@@ -491,19 +491,28 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }).filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
     }, [groups, activePartialId, allPartialsData, calculateDetailedFinalGrade, getStudentRiskLevel]);
 
-    const overallAverageParticipation = useMemo(() => {
+    const overallAverageAttendance = useMemo(() => {
         if (!activeGroup) return 100;
-        let totalRatio = 0, studentsWithOpportunities = 0;
-        activeGroup.students.forEach(s => {
-            const opportunities = Object.keys(partialData.participations).filter(d => Object.prototype.hasOwnProperty.call(partialData.participations[d], s.id)).length;
-            if (opportunities > 0) {
-                const participations = Object.values(partialData.participations).filter(p => p[s.id]).length;
-                totalRatio += participations / opportunities;
-                studentsWithOpportunities++;
-            }
+        let totalPossible = 0;
+        let totalPresent = 0;
+        
+        const attendanceForPartial = partialData.attendance;
+
+        activeGroup.students.forEach(student => {
+            Object.keys(attendanceForPartial).forEach(date => {
+                // Check if the student has a record for this date
+                if (Object.prototype.hasOwnProperty.call(attendanceForPartial[date], student.id)) {
+                    totalPossible++;
+                    if (attendanceForPartial[date][student.id]) {
+                        totalPresent++;
+                    }
+                }
+            });
         });
-        return studentsWithOpportunities > 0 ? (totalRatio / studentsWithOpportunities) * 100 : 100;
-    }, [activeGroup, partialData.participations]);
+
+        if (totalPossible === 0) return 100;
+        return (totalPresent / totalPossible) * 100;
+    }, [activeGroup, partialData.attendance]);
 
     const fetchPartialData = useCallback(async (groupId: string, partialId: PartialId): Promise<(PartialData & { criteria: EvaluationCriteria[] }) | null> => {
         const group = groups.find(g => g.id === groupId);
@@ -547,7 +556,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // --- CONTEXT VALUE ---
     const contextValue: DataContextType = {
-        isLoading, error, groups, allStudents, activeStudentsInGroups, allObservations, specialNotes, settings, activeGroup, activePartialId, partialData, allPartialsDataForActiveGroup, groupAverages, atRiskStudents, overallAverageParticipation,
+        isLoading, error, groups, allStudents, activeStudentsInGroups, allObservations, specialNotes, settings, activeGroup, activePartialId, partialData, allPartialsDataForActiveGroup, groupAverages, atRiskStudents, overallAverageAttendance,
         setGroups, setAllStudents, setAllObservations, setSpecialNotes, setAllPartialsData, setSettings, setActiveGroupId, setActivePartialId,
         setGrades, setAttendance, setParticipations, setActivities, setActivityRecords, setRecoveryGrades, setStudentFeedback, setGroupAnalysis,
         addStudentsToGroup, removeStudentFromGroup, updateGroup, updateStudent, updateGroupCriteria, deleteGroup, addStudentObservation, updateStudentObservation, takeAttendanceForDate, deleteAttendanceDate, resetAllData, addSpecialNote, updateSpecialNote, deleteSpecialNote,

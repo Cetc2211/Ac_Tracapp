@@ -50,7 +50,7 @@ import {
 } from '@/components/ui/select';
 
 export default function DashboardPage() {
-  const { activeStudentsInGroups, groups, atRiskStudents, overallAverageParticipation, groupAverages, activePartialId, specialNotes, settings } = useData();
+  const { activeStudentsInGroups, groups, atRiskStudents, overallAverageAttendance, groupAverages, activePartialId, specialNotes, settings } = useData();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [studentSearchQuery, setStudentSearchQuery] = useState('');
@@ -136,14 +136,14 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Asistencia Media
+              Asistencia Media ({activePartialId.toUpperCase()})
             </CardTitle>
             <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{overallAverageParticipation}%</div>
+            <div className="text-2xl font-bold">{Math.round(overallAverageAttendance)}%</div>
             <p className="text-xs text-muted-foreground">
-              Promedio en todas las clases
+              Promedio en el grupo activo
             </p>
           </CardContent>
         </Card>
@@ -406,5 +406,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
