@@ -33,6 +33,11 @@ import {
   DialogDescription,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import { Input } from '@/components/ui/input';
 import { useData } from '@/hooks/use-data';
 import type { StudentWithRisk } from '@/hooks/use-data';
@@ -84,34 +89,6 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      
-       {settings.scheduleImageUrl && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2"><CalendarClock/> Mi Horario</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <div className="relative w-full aspect-[2/1] rounded-lg overflow-hidden border">
-                     <Image 
-                        src={settings.scheduleImageUrl}
-                        alt="Horario de clases"
-                        fill
-                        className="object-contain"
-                        />
-                </div>
-                 {activeSpecialNote && (
-                    <Alert variant="destructive" className="mt-4">
-                        <Megaphone className="h-4 w-4" />
-                        <AlertTitle>Aviso Importante</AlertTitle>
-                        <AlertDescription>
-                            {activeSpecialNote.text}
-                        </AlertDescription>
-                    </Alert>
-                )}
-            </CardContent>
-          </Card>
-      )}
-
 
       <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
         <Card>
@@ -388,6 +365,46 @@ export default function DashboardPage() {
           )}
         </Card>
       </div>
+
+       {settings.scheduleImageUrl && (
+          <Collapsible className="w-full">
+              <Card>
+                  <div className="flex items-center justify-between p-4">
+                      <div className="flex items-center gap-2">
+                        <CalendarClock/>
+                        <h4 className="font-semibold">Mi Horario y Consideraciones</h4>
+                      </div>
+                      <CollapsibleTrigger asChild>
+                          <Button variant="ghost">Mostrar/Ocultar</Button>
+                      </CollapsibleTrigger>
+                  </div>
+                  <CollapsibleContent>
+                      <CardContent>
+                          <div className="relative w-full aspect-[2/1] rounded-lg overflow-hidden border">
+                              <Image 
+                                  src={settings.scheduleImageUrl}
+                                  alt="Horario de clases"
+                                  fill
+                                  className="object-contain"
+                              />
+                          </div>
+                          {activeSpecialNote && (
+                              <Alert variant="destructive" className="mt-4">
+                                  <Megaphone className="h-4 w-4" />
+                                  <AlertTitle>Aviso Importante</AlertTitle>
+                                  <AlertDescription>
+                                      {activeSpecialNote.text}
+                                  </AlertDescription>
+                              </Alert>
+                          )}
+                      </CardContent>
+                  </CollapsibleContent>
+              </Card>
+          </Collapsible>
+      )}
+
     </div>
   );
 }
+
+    
