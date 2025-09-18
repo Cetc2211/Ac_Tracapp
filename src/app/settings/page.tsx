@@ -31,23 +31,12 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 import type { Group, Student, StudentObservation, PartialId, SpecialNote } from '@/lib/placeholder-data';
 import type { PartialData } from '@/hooks/use-data';
 import { Textarea } from '@/components/ui/textarea';
-import { Calendar } from '@/components/ui/calendar';
-import { es } from 'date-fns/locale';
 import { format, parseISO } from 'date-fns';
-import { DateRange } from 'react-day-picker';
+import { es } from 'date-fns/locale';
+import { NoteDialog } from '@/components/note-dialog';
 
 
 type ExportData = {
@@ -64,74 +53,8 @@ type ExportData = {
   };
 };
 
-const NoteDialog = ({
-    note,
-    onSave,
-    children,
-}: {
-    note?: SpecialNote | null,
-    onSave: (text: string, dateRange: DateRange | undefined) => void,
-    children: React.ReactNode,
-}) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const [text, setText] = useState('');
-    const [date, setDate] = useState<DateRange | undefined>(undefined);
-
-    useEffect(() => {
-        if (note) {
-            setText(note.text);
-            setDate({ from: parseISO(note.startDate), to: parseISO(note.endDate) });
-        } else {
-            setText('');
-            setDate(undefined);
-        }
-    }, [note, isOpen]);
-
-    const handleSave = () => {
-        onSave(text, date);
-        setIsOpen(false);
-    };
-
-    return (
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogTrigger asChild>{children}</DialogTrigger>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>{note ? 'Editar' : 'Agregar'} Consideración Especial</DialogTitle>
-                    <DialogDescription>
-                        Esta nota aparecerá en el dashboard durante el rango de fechas seleccionado.
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="note-text">Mensaje de la Nota</Label>
-                        <Textarea id="note-text" value={text} onChange={(e) => setText(e.target.value)} placeholder="Ej. Horario especial por semana de exámenes." />
-                    </div>
-                    <div className="space-y-2">
-                        <Label>Rango de Fechas</Label>
-                        <div className="flex justify-center">
-                            <Calendar
-                                mode="range"
-                                selected={date}
-                                onSelect={setDate}
-                                locale={es}
-                                className="rounded-md border"
-                            />
-                        </div>
-                    </div>
-                </div>
-                <DialogFooter>
-                    <DialogClose asChild><Button variant="outline">Cancelar</Button></DialogClose>
-                    <Button onClick={handleSave}>Guardar Nota</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    );
-};
-
-
 export default function SettingsPage() {
-    const { settings, isLoading, groups, allStudents, allObservations, specialNotes, fetchPartialData, setSettings: setSettingsInContext, resetAllData, addSpecialNote, updateSpecialNote, deleteSpecialNote } = useData();
+    const { settings, isLoading, groups, allStudents, allObservations, specialNotes, fetchPartialData, setSettings, resetAllData, addSpecialNote, updateSpecialNote, deleteSpecialNote } = useData();
     const [localSettings, setLocalSettings] = useState(settings);
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
     const [signaturePreview, setSignaturePreview] = useState<string | null>(null);
@@ -163,7 +86,7 @@ export default function SettingsPage() {
         };
         
         try {
-            await setSettingsInContext(newSettings);
+            await setSettings(newSettings);
             toast({
               title: 'Ajustes Guardados',
               description: 'La información ha sido actualizada.',
@@ -299,7 +222,7 @@ export default function SettingsPage() {
         setIsResetDialogOpen(false);
     };
 
-    const handleSaveNote = (noteId?: string) => (text: string, dateRange: DateRange | undefined) => {
+    const handleSaveNote = (noteId?: string) => (text: string, dateRange: any) => {
         if (!text || !dateRange?.from || !dateRange?.to) {
             toast({ variant: 'destructive', title: 'Datos incompletos', description: 'Se requiere un mensaje y un rango de fechas.' });
             return;
@@ -609,3 +532,4 @@ export default function SettingsPage() {
         </div>
     );
 }
+
