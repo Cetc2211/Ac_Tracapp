@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
@@ -124,7 +125,8 @@ const defaultSettings = {
     apiKey: "",
     signature: "",
     facilitatorName: "",
-    scheduleImageUrl: ""
+    scheduleImageUrl: "",
+    teacherPhoto: ""
 };
 
 const defaultPartialData: PartialData = {

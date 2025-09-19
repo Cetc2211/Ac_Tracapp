@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -75,7 +76,8 @@ const navItems = [
 const defaultSettings = {
     institutionName: "Academic Tracker",
     logo: "",
-    theme: "theme-mint"
+    theme: "theme-mint",
+    teacherPhoto: "",
 };
 
 
@@ -210,7 +212,7 @@ export default function MainLayoutClient({
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={user.photoURL || ''} alt="Avatar" />
+                    <AvatarImage src={settings.teacherPhoto || user.photoURL || ''} alt="Avatar" />
                     <AvatarFallback>{user.email?.[0].toUpperCase()}</AvatarFallback>
                   </Avatar>
                 </Button>

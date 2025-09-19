@@ -59,6 +59,7 @@ export default function SettingsPage() {
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
     const [signaturePreview, setSignaturePreview] = useState<string | null>(null);
     const [scheduleImagePreview, setScheduleImagePreview] = useState<string | null>(null);
+    const [teacherPhotoPreview, setTeacherPhotoPreview] = useState<string | null>(null);
     const { toast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isSaving, setIsSaving] = useState(false);
@@ -73,6 +74,7 @@ export default function SettingsPage() {
             setLogoPreview(settings.logo);
             setSignaturePreview(settings.signature);
             setScheduleImagePreview(settings.scheduleImageUrl);
+            setTeacherPhotoPreview(settings.teacherPhoto);
         }
     }, [settings, isLoading]);
     
@@ -83,6 +85,7 @@ export default function SettingsPage() {
             logo: logoPreview || '',
             signature: signaturePreview || '',
             scheduleImageUrl: scheduleImagePreview || '',
+            teacherPhoto: teacherPhotoPreview || '',
         };
         
         try {
@@ -283,6 +286,19 @@ export default function SettingsPage() {
                  <p className="text-xs text-muted-foreground">
                     Este nombre se usará por defecto al crear nuevos grupos.
                 </p>
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="teacherPhoto">Foto del Docente (para avatar)</Label>
+                <div className="flex items-center gap-4">
+                    <Image
+                        src={teacherPhotoPreview || 'https://placehold.co/100x100.png'}
+                        alt="Vista previa de la foto del docente"
+                        width={64}
+                        height={64}
+                        className="rounded-full object-cover aspect-square"
+                    />
+                    <Input id="teacherPhoto" type="file" className="max-w-sm" onChange={(e) => handleImageChange(e, setTeacherPhotoPreview)} accept="image/png, image/jpeg" />
+                </div>
             </div>
             <div className="space-y-2">
                 <Label htmlFor="logo">Logo de la Institución</Label>
