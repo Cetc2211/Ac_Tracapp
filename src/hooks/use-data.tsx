@@ -270,11 +270,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             localStorage.setItem('app_observations', JSON.stringify(allObservations));
             localStorage.setItem('app_specialNotes', JSON.stringify(specialNotes));
             localStorage.setItem('app_partialsData', JSON.stringify(allPartialsData));
+            localStorage.setItem('app_settings', JSON.stringify(settings));
             localStorage.setItem('activeGroupId_v1', activeGroupId || '');
         } catch (e) {
             console.error("Failed to save non-settings data to localStorage", e);
         }
-    }, [groups, allStudents, allObservations, allPartialsData, activeGroupId, isLoading, specialNotes]);
+    }, [groups, allStudents, allObservations, allPartialsData, activeGroupId, isLoading, specialNotes, settings]);
 
     // --- MEMOIZED DERIVED STATE ---
     const activeGroup = useMemo(() => groups.find(g => g.id === activeGroupId) || null, [groups, activeGroupId]);
@@ -287,13 +288,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const setActivePartialId = (partialId: PartialId) => setActivePartialIdState(partialId);
 
     const setSettings = useCallback(async (newSettings: typeof defaultSettings) => {
-        try {
-            localStorage.setItem('app_settings', JSON.stringify(newSettings));
-            setSettingsState(newSettings);
-        } catch (e) {
-            console.error("Failed to save settings", e);
-            throw e;
-        }
+        setSettingsState(newSettings);
+        // The useEffect will handle saving to localStorage
     }, []);
 
     const createSetter = useCallback((field: keyof PartialData) => async (setter: React.SetStateAction<any>) => {
