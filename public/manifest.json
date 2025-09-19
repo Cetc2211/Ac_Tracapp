@@ -1,11 +1,11 @@
 {
   "name": "Academic Tracker Pro",
-  "short_name": "TrackerPro",
-  "description": "Una aplicación para el seguimiento académico de estudiantes.",
+  "short_name": "Tracker Pro",
+  "description": "Una aplicación para el seguimiento del rendimiento académico de los estudiantes.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#2563eb",
+  "theme_color": "#155E75",
   "icons": [
     {
       "src": "/icons/icon-192x192.png",
