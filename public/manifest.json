@@ -1,7 +1,7 @@
 {
   "name": "Academic Tracker Pro",
-  "short_name": "Tracker Pro",
-  "description": "Gestor academico para docentes.",
+  "short_name": "TrackerPro",
+  "description": "Una aplicación para el seguimiento académico de estudiantes.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
@@ -9,13 +9,13 @@
   "icons": [
     {
       "src": "/icons/icon-192x192.png",
-      "type": "image/png",
-      "sizes": "192x192"
+      "sizes": "192x192",
+      "type": "image/png"
     },
     {
       "src": "/icons/icon-512x512.png",
-      "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "type": "image/png"
     }
   ]
 }
