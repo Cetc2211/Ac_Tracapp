@@ -56,6 +56,7 @@ import Image from 'next/image';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -209,7 +210,7 @@ export default function MainLayoutClient({
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={user.photoURL || '/avatar-placeholder.png'} alt="Avatar" />
+                    <AvatarImage src={user.photoURL || ''} alt="Avatar" />
                     <AvatarFallback>{user.email?.[0].toUpperCase()}</AvatarFallback>
                   </Avatar>
                 </Button>
@@ -237,5 +238,3 @@ export default function MainLayoutClient({
     </>
   );
 }
-
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
