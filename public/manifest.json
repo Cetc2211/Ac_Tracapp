@@ -4,7 +4,7 @@
   "description": "Una aplicación para el seguimiento académico de estudiantes.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
+  "background_color": "#10b981",
   "theme_color": "#10b981",
   "icons": [
     {
@@ -18,7 +18,7 @@
       "type": "image/png"
     },
     {
-      "src": "/icons/apple-touch-icon.png",
+      "src": "/icons/icon-180x180.png",
       "sizes": "180x180",
       "type": "image/png"
     }
