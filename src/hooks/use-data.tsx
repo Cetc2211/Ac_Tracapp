@@ -468,9 +468,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const getStudentRiskLevel = useCallback((finalGrade: number, pAttendance: AttendanceRecord, studentId: string): CalculatedRisk => {
         const days = Object.keys(pAttendance).filter(d => Object.prototype.hasOwnProperty.call(pAttendance[d], studentId));
         const absences = days.reduce((count, d) => pAttendance[d][studentId] === false ? count + 1 : count, 0);
-        if (absences > 3) return { level: 'high', reason: `Ausentismo crítico (${absences} faltas). Requiere atención.` };
-        if (finalGrade < 50 && absences >= 2) return { level: 'high', reason: `Promedio de ${finalGrade.toFixed(0)}% y ${absences} faltas.` };
-        if (finalGrade <= 70 && absences >= 2) return { level: 'medium', reason: `Promedio de ${finalGrade.toFixed(0)}% y ${absences} faltas.` };
+        
+        if (finalGrade < 50) {
+            return { level: 'high', reason: `Promedio reprobatorio de ${finalGrade.toFixed(0)}%.` };
+        }
+        if (absences > 3) {
+            return { level: 'high', reason: `Ausentismo crítico (${absences} faltas).` };
+        }
+        if (finalGrade <= 70 && absences >= 2) {
+            return { level: 'medium', reason: `Promedio de ${finalGrade.toFixed(0)}% y ${absences} faltas.` };
+        }
+        
         return { level: 'low', reason: 'Sin riesgo detectado' };
     }, []);
 
