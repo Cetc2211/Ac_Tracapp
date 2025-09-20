@@ -15,11 +15,11 @@ export default function RootLayout({
     <html lang="es">
       <head>
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <link rel="manifest" href="/static/manifest.json" />
-        <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png" />
-        <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon-32x32.png" />
-        <link rel="icon" type="image/png" sizes="16x16" href="/static/icons/favicon-16x16.png" />
-        <link rel="shortcut icon" href="/static/favicon.ico" />
+        <link rel="manifest" href="/manifest.json" />
+        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32x32.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-16x16.png" />
+        <link rel="shortcut icon" href="/favicon.ico" />
       </head>
       <body>
             <DataProvider>
