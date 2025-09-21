@@ -467,16 +467,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const getStudentRiskLevel = useCallback((finalGrade: number, pAttendance: AttendanceRecord, studentId: string): CalculatedRisk => {
         const days = Object.keys(pAttendance).filter(d => Object.prototype.hasOwnProperty.call(pAttendance[d], studentId));
-        const absences = days.reduce((count, d) => pAttendance[d][studentId] === false ? count + 1 : count, 0);
+        const attended = days.reduce((count, d) => pAttendance[d][studentId] === true ? count + 1 : count, 0);
+        const attendanceRate = days.length > 0 ? (attended / days.length) * 100 : 100;
+
+        if (finalGrade < 60 || attendanceRate < 80) {
+            const gradeReason = finalGrade < 60 ? `Calificación reprobatoria de ${finalGrade.toFixed(0)}%.` : '';
+            const attendanceReason = attendanceRate < 80 ? `Baja asistencia (${attendanceRate.toFixed(0)}%).` : '';
+            return { level: 'high', reason: [gradeReason, attendanceReason].filter(Boolean).join(' ') };
+        }
         
-        if (finalGrade < 50) {
-            return { level: 'high', reason: `Promedio reprobatorio de ${finalGrade.toFixed(0)}%.` };
-        }
-        if (absences > 3) {
-            return { level: 'high', reason: `Ausentismo crítico (${absences} faltas).` };
-        }
-        if (finalGrade <= 70 && absences >= 2) {
-            return { level: 'medium', reason: `Promedio de ${finalGrade.toFixed(0)}% y ${absences} faltas.` };
+        if (finalGrade <= 70) {
+            return { level: 'medium', reason: `Calificación baja de ${finalGrade.toFixed(0)}%.` };
         }
         
         return { level: 'low', reason: 'Sin riesgo detectado' };
