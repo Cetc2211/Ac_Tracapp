@@ -121,7 +121,7 @@ export type UserProfile = {
 const defaultSettings = {
     institutionName: "Mi Institución",
     logo: "",
-    theme: "theme-mint",
+    theme: "theme-candy",
     apiKey: "",
     signature: "",
     facilitatorName: "",
@@ -471,16 +471,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const attendanceRate = days.length > 0 ? (attended / days.length) * 100 : 100;
 
         if (finalGrade < 60 || attendanceRate < 80) {
-            const gradeReason = finalGrade < 60 ? `Calificación reprobatoria de ${finalGrade.toFixed(0)}%.` : '';
+            const gradeReason = finalGrade < 60 ? `Calificación reprobatoria (${finalGrade.toFixed(0)}%).` : '';
             const attendanceReason = attendanceRate < 80 ? `Baja asistencia (${attendanceRate.toFixed(0)}%).` : '';
             return { level: 'high', reason: [gradeReason, attendanceReason].filter(Boolean).join(' ') };
         }
         
-        if (finalGrade <= 70) {
-            return { level: 'medium', reason: `Calificación baja de ${finalGrade.toFixed(0)}%.` };
+        if (finalGrade < 70) {
+            return { level: 'medium', reason: `Calificación baja (${finalGrade.toFixed(0)}%).` };
         }
         
-        return { level: 'low', reason: 'Sin riesgo detectado' };
+        return { level: 'low', reason: 'Rendimiento adecuado' };
     }, []);
 
     const groupAverages = useMemo(() => {
