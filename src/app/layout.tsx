@@ -1,4 +1,3 @@
-
 import './globals.css';
 import { DataProvider } from '@/hooks/use-data';
 import MainLayoutClient from './main-layout-client';
@@ -26,7 +25,7 @@ export default function RootLayout({
         <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-16x16.png" />
         <link rel="shortcut icon" href="/favicon.ico" />
       </head>
-      <body>
+      <body className="bg-background">
             <DataProvider>
               <MainLayoutClient>{children}</MainLayoutClient>
             </DataProvider>
