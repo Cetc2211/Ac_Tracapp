@@ -80,7 +80,7 @@ export default function StatisticsPage() {
         ];
 
         for(const student of activeGroup.students) {
-            const finalGrade = calculateFinalGrade(student.id, activeGroup.id, activePartialId);
+            const finalGrade = calculateFinalGrade(student.id);
             studentGrades.push({student, grade: finalGrade});
             if(finalGrade >= 60) approved++; else failed++;
             

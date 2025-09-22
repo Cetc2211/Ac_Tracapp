@@ -197,7 +197,7 @@ interface DataContextType {
 
 
     // Calculation & Fetching
-    calculateFinalGrade: (studentId: string, groupId: string, partialId: PartialId) => number;
+    calculateFinalGrade: (studentId: string) => number;
     calculateDetailedFinalGrade: (studentId: string, pData: PartialData, criteria: EvaluationCriteria[]) => { finalGrade: number; criteriaDetails: CriteriaDetail[]; isRecovery: boolean };
     getStudentRiskLevel: (finalGrade: number, pAttendance: AttendanceRecord, studentId: string) => CalculatedRisk;
     fetchPartialData: (groupId: string, partialId: PartialId) => Promise<(PartialData & { criteria: EvaluationCriteria[] }) | null>;
@@ -459,24 +459,30 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { finalGrade: Math.max(0, Math.min(100, finalGrade)), criteriaDetails, isRecovery: false };
     }, []);
 
-    const calculateFinalGrade = useCallback((studentId: string, groupId: string, partialId: PartialId) => {
-        const group = groups.find(g => g.id === groupId);
-        const data = allPartialsData[groupId]?.[partialId];
-        return calculateDetailedFinalGrade(studentId, data || defaultPartialData, group?.criteria || []).finalGrade;
-    }, [groups, allPartialsData, calculateDetailedFinalGrade]);
+    const calculateFinalGrade = useCallback((studentId: string) => {
+        if (!activeGroup) return 0;
+        const data = allPartialsData[activeGroup.id]?.[activePartialId];
+        return calculateDetailedFinalGrade(studentId, data || defaultPartialData, activeGroup?.criteria || []).finalGrade;
+    }, [activeGroup, activePartialId, allPartialsData, calculateDetailedFinalGrade]);
 
     const getStudentRiskLevel = useCallback((finalGrade: number, pAttendance: AttendanceRecord, studentId: string): CalculatedRisk => {
         const days = Object.keys(pAttendance).filter(d => Object.prototype.hasOwnProperty.call(pAttendance[d], studentId));
         const attended = days.reduce((count, d) => pAttendance[d][studentId] === true ? count + 1 : count, 0);
         const attendanceRate = days.length > 0 ? (attended / days.length) * 100 : 100;
-
-        if (finalGrade < 60 || attendanceRate < 80) {
-            const gradeReason = finalGrade < 60 ? `Calificación reprobatoria (${finalGrade.toFixed(0)}%).` : '';
-            const attendanceReason = attendanceRate < 80 ? `Baja asistencia (${attendanceRate.toFixed(0)}%).` : '';
-            return { level: 'high', reason: [gradeReason, attendanceReason].filter(Boolean).join(' ') };
+        
+        let reason = [];
+        if (finalGrade <= 59) {
+            reason.push(`Calificación reprobatoria (${finalGrade.toFixed(0)}%).`);
+        }
+        if (attendanceRate < 80) {
+            reason.push(`Asistencia baja (${attendanceRate.toFixed(0)}%).`);
         }
         
-        if (finalGrade < 70) {
+        if (reason.length > 0) {
+            return { level: 'high', reason: reason.join(' ') };
+        }
+        
+        if (finalGrade > 59 && finalGrade <= 70) {
             return { level: 'medium', reason: `Calificación baja (${finalGrade.toFixed(0)}%).` };
         }
         
