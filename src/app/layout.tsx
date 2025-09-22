@@ -20,9 +20,7 @@ export default function RootLayout({
       <head>
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <link rel="manifest" href="/manifest.json" />
-        <link rel="apple-touch-icon" href="/icon.png" />
-        <link rel="icon" href="/icon.png" type="image/png" />
-        <link rel="shortcut icon" href="/favicon.ico" />
+        <link rel="apple-touch-icon" href="/icons/icon-180x180.png" />
       </head>
       <body className="bg-background">
             <DataProvider>
