@@ -8,7 +8,7 @@ export const themes = [
     {
         name: 'Default',
         id: 'theme-default',
-        colors: ['#2563eb', '#1e293b', '#f8fafc']
+        colors: ['#FF420E', '#80BD9E', '#F9F9F9']
     },
     {
         name: 'Light',
