@@ -74,6 +74,11 @@ export const themes = [
         name: 'Alpine',
         id: 'theme-alpine',
         colors: ['#34675C', '#4CB5F5', '#B3C100']
+    },
+    {
+        name: 'Harvest',
+        id: 'theme-harvest',
+        colors: ['#258039', '#F5BE41', '#31A9B8']
     }
 ];
 
@@ -117,5 +122,3 @@ export function ThemeSwitcher({ selectedTheme, onThemeChange }: ThemeSwitcherPro
         </div>
     );
 }
-
-    

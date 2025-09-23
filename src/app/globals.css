@@ -623,6 +623,45 @@ body {
     --partial-3-border: 67 99% 48%;
     --partial-3-bg: 67 99% 93%;
   }
+
+  .theme-harvest {
+    --background: 45 40% 97%;
+    --foreground: 135 47% 15%;
+    --card: 45 40% 100%;
+    --card-foreground: 135 47% 15%;
+    --primary: 135 47% 32%;
+    --primary-foreground: 135 47% 95%;
+    --secondary: 40 90% 93%;
+    --secondary-foreground: 40 90% 25%;
+    --muted: 40 90% 93%;
+    --muted-foreground: 40 90% 55%;
+    --accent: 190 58% 46%;
+    --accent-foreground: 190 58% 95%;
+    --destructive: 13 65% 52%;
+    --destructive-foreground: 13 65% 97%;
+    --border: 40 90% 88%;
+    --input: 40 90% 92%;
+    --ring: 135 47% 32%;
+    --sidebar-background: 135 47% 32%;
+    --sidebar-foreground: 135 47% 95%;
+    --sidebar-accent: 135 47% 42%;
+    --sidebar-accent-foreground: 135 47% 95%;
+    --partial-1: 135 47% 42%;
+    --partial-1-foreground: 135 47% 95%;
+    --partial-1-foreground-alt: 135 47% 25%;
+    --partial-1-border: 135 47% 52%;
+    --partial-1-bg: 135 47% 91%;
+    --partial-2: 40 90% 61%;
+    --partial-2-foreground: 40 90% 15%;
+    --partial-2-foreground-alt: 40 90% 40%;
+    --partial-2-border: 40 90% 71%;
+    --partial-2-bg: 40 90% 94%;
+    --partial-3: 13 65% 52%;
+    --partial-3-foreground: 13 65% 97%;
+    --partial-3-foreground-alt: 13 65% 35%;
+    --partial-3-border: 13 65% 62%;
+    --partial-3-bg: 13 65% 93%;
+  }
 }
 
 @layer base {
@@ -633,5 +672,3 @@ body {
     @apply text-foreground;
   }
 }
-
-    
