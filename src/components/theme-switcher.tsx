@@ -64,6 +64,11 @@ export const themes = [
         name: 'Tulip',
         id: 'theme-tulip',
         colors: ['#F18D9E', '#5BC8AC', '#E6D72A']
+    },
+    {
+        name: 'Hibiscus',
+        id: 'theme-hibiscus',
+        colors: ['#F52549', '#9BC01C', '#FFD64D']
     }
 ];
 

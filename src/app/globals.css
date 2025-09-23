@@ -540,6 +540,45 @@ body {
     --partial-3-border: 56 76% 77%;
     --partial-3-bg: 56 76% 94%;
   }
+
+  .theme-hibiscus {
+    --background: 45 100% 98%;
+    --foreground: 349 70% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 349 70% 15%;
+    --primary: 349 90% 64%;
+    --primary-foreground: 349 90% 98%;
+    --secondary: 353 93% 94%;
+    --secondary-foreground: 353 93% 40%;
+    --muted: 353 93% 94%;
+    --muted-foreground: 353 93% 50%;
+    --accent: 74 74% 85%;
+    --accent-foreground: 74 74% 25%;
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 85% 97%;
+    --border: 353 93% 90%;
+    --input: 353 93% 94%;
+    --ring: 349 90% 64%;
+    --sidebar-background: 349 90% 64%;
+    --sidebar-foreground: 349 90% 98%;
+    --sidebar-accent: 349 90% 74%;
+    --sidebar-accent-foreground: 349 90% 98%;
+    --partial-1: 349 90% 64%;
+    --partial-1-foreground: 349 90% 98%;
+    --partial-1-foreground-alt: 349 90% 45%;
+    --partial-1-border: 349 90% 74%;
+    --partial-1-bg: 349 90% 94%;
+    --partial-2: 74 74% 43%;
+    --partial-2-foreground: 74 74% 95%;
+    --partial-2-foreground-alt: 74 74% 25%;
+    --partial-2-border: 74 74% 53%;
+    --partial-2-bg: 74 74% 92%;
+    --partial-3: 45 100% 65%;
+    --partial-3-foreground: 45 100% 15%;
+    --partial-3-foreground-alt: 45 100% 45%;
+    --partial-3-border: 45 100% 75%;
+    --partial-3-bg: 45 100% 95%;
+  }
 }
 
 @layer base {
