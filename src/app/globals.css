@@ -150,44 +150,44 @@ body {
   }
   
   .theme-forest {
-    --background: 120 10% 96%;
-    --foreground: 120 25% 15%;
-    --card: 120 10% 100%;
-    --card-foreground: 120 25% 15%;
-    --primary: 140 60% 35%;
-    --primary-foreground: 140 60% 95%;
-    --secondary: 120 10% 90%;
-    --secondary-foreground: 120 25% 15%;
-    --muted: 120 10% 90%;
-    --muted-foreground: 120 25% 45%;
-    --accent: 140 60% 88%;
-    --accent-foreground: 140 60% 15%;
+    --background: 0 0% 100%;
+    --foreground: 94 38% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 94 38% 10%;
+    --primary: 94 38% 10%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 94 20% 92%;
+    --secondary-foreground: 94 38% 10%;
+    --muted: 94 20% 92%;
+    --muted-foreground: 94 20% 40%;
+    --accent: 88 65% 60%;
+    --accent-foreground: 88 65% 10%;
     --destructive: 0 70% 50%;
-    --border: 120 10% 85%;
-    --input: 120 10% 90%;
-    --ring: 140 60% 35%;
-    --sidebar-background: 140 60% 35%;
-    --sidebar-foreground: 140 60% 95%;
-    --sidebar-accent: 140 60% 45%;
-    --sidebar-accent-foreground: 140 60% 95%;
+    --border: 94 20% 85%;
+    --input: 94 20% 92%;
+    --ring: 94 38% 10%;
+    --sidebar-background: 94 38% 10%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-accent: 94 38% 20%;
+    --sidebar-accent-foreground: 0 0% 100%;
 
-    --partial-1: 140 60% 35%;
-    --partial-1-foreground: 140 60% 95%;
-    --partial-1-foreground-alt: 140 60% 25%;
-    --partial-1-border: 140 60% 45%;
-    --partial-1-bg: 140 60% 90%;
+    --partial-1: 94 38% 20%;
+    --partial-1-foreground: 0 0% 100%;
+    --partial-1-foreground-alt: 94 38% 90%;
+    --partial-1-border: 94 38% 30%;
+    --partial-1-bg: 94 38% 95%;
 
-    --partial-2: 90 60% 45%;
-    --partial-2-foreground: 90 60% 95%;
-    --partial-2-foreground-alt: 90 60% 30%;
-    --partial-2-border: 90 60% 55%;
-    --partial-2-bg: 90 60% 92%;
+    --partial-2: 88 65% 60%;
+    --partial-2-foreground: 88 65% 10%;
+    --partial-2-foreground-alt: 88 65% 30%;
+    --partial-2-border: 88 65% 70%;
+    --partial-2-bg: 88 65% 92%;
 
-    --partial-3: 40 60% 50%;
-    --partial-3-foreground: 40 60% 95%;
-    --partial-3-foreground-alt: 40 60% 35%;
-    --partial-3-border: 40 60% 60%;
-    --partial-3-bg: 40 60% 93%;
+    --partial-3: 94 25% 45%;
+    --partial-3-foreground: 0 0% 100%;
+    --partial-3-foreground-alt: 94 25% 25%;
+    --partial-3-border: 94 25% 55%;
+    --partial-3-bg: 94 25% 93%;
   }
 
   .theme-candy {

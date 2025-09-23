@@ -18,7 +18,7 @@ export const themes = [
     {
         name: 'Forest',
         id: 'theme-forest',
-        colors: ['#16a34a', '#f0fdf4', '#14532d']
+        colors: ['#0F1B07', '#5C821A', '#C6D166']
     },
     {
         name: 'Candy',
