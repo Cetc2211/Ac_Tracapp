@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useCreateUserWithEmailAndPassword } from 'react-firebase-hooks/auth';
 import { auth } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
@@ -23,7 +23,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
-
 const SignupFormSchema = z.object({
   email: z.string().email({ message: 'Por favor, ingresa un email válido.' }),
   password: z.string().min(6, { message: 'La contraseña debe tener al menos 6 caracteres.' }),
@@ -33,11 +32,32 @@ const SignupFormSchema = z.object({
   path: ["confirmPassword"],
 });
 
+// ¡IMPORTANTE! Este es el correo del administrador principal.
+// Esta persona siempre tendrá permiso para registrarse.
+const ADMIN_EMAIL = "mpceciliotopetecruz@gmail.com";
 
 export default function SignupPage() {
   const [createUserWithEmailAndPassword, user, loading, error] = useCreateUserWithEmailAndPassword(auth);
   const { toast } = useToast();
   const router = useRouter();
+
+  const [authorizedEmails, setAuthorizedEmails] = useState<string[]>([ADMIN_EMAIL]);
+
+  useEffect(() => {
+    // En una aplicación real, esto podría venir de una base de datos remota.
+    // Por ahora, simulamos una lista de autorización desde localStorage para persistencia.
+    const storedEmails = localStorage.getItem('authorized_emails');
+    if(storedEmails) {
+        try {
+            const parsedEmails = JSON.parse(storedEmails);
+            if (Array.isArray(parsedEmails)) {
+              setAuthorizedEmails([...new Set([ADMIN_EMAIL, ...parsedEmails])]);
+            }
+        } catch (e) {
+            console.error("Error al cargar correos autorizados:", e);
+        }
+    }
+  }, []);
 
   const form = useForm<z.infer<typeof SignupFormSchema>>({
     resolver: zodResolver(SignupFormSchema),
@@ -49,6 +69,16 @@ export default function SignupPage() {
   });
 
   const handleSignUp = async (values: z.infer<typeof SignupFormSchema>) => {
+    // --- LÓGICA DE AUTORIZACIÓN RESTAURADA ---
+    if (!authorizedEmails.map(e => e.toLowerCase()).includes(values.email.toLowerCase())) {
+       toast({
+            variant: 'destructive',
+            title: 'Acceso no autorizado',
+            description: 'Este correo electrónico no tiene permiso para registrarse. Contacta al administrador.',
+        });
+        return;
+    }
+    
     try {
       const newUser = await createUserWithEmailAndPassword(values.email, values.password);
       if (newUser) {
