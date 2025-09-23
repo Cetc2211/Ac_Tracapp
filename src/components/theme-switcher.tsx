@@ -69,6 +69,11 @@ export const themes = [
         name: 'Hibiscus',
         id: 'theme-hibiscus',
         colors: ['#F52549', '#9BC01C', '#FFD64D']
+    },
+    {
+        name: 'Alpine',
+        id: 'theme-alpine',
+        colors: ['#34675C', '#4CB5F5', '#B3C100']
     }
 ];
 
