@@ -13,7 +13,7 @@ body {
     --foreground: 15 25% 15%;
     --card: 240 5% 100%;
     --card-foreground: 15 25% 15%;
-    --card-foreground-alt: 15 25% 15%;
+    --card-foreground-alt: 0 0% 100%;
     --card-1: 15 100% 53%;
     --card-2: 150 45% 62%;
     --card-3: 162 72% 46%;
@@ -27,7 +27,7 @@ body {
     --secondary-foreground: 15 25% 15%;
     --muted: 150 30% 92%;
     --muted-foreground: 15 25% 45%;
-    --accent: 150 45% 88%;
+    --accent: 150 45% 62%;
     --accent-foreground: 15 25% 15%;
     --destructive: 0 70% 50%;
     --destructive-foreground: 0 85.7% 97.3%;
@@ -461,6 +461,45 @@ body {
     --partial-3-foreground-alt: 195 75% 35%;
     --partial-3-border: 195 75% 60%;
     --partial-3-bg: 195 75% 96%;
+  }
+
+  .theme-dramatic {
+    --background: 240 10% 98%;
+    --foreground: 238 8% 35%;
+    --card: 0 0% 100%;
+    --card-foreground: 238 8% 35%;
+    --primary: 70 52% 48%;
+    --primary-foreground: 70 52% 98%;
+    --secondary: 215 23% 90%;
+    --secondary-foreground: 215 23% 20%;
+    --accent: 215 23% 51%;
+    --accent-foreground: 215 23% 98%;
+    --destructive: 0 70% 50%;
+    --border: 240 5% 90%;
+    --input: 240 5% 92%;
+    --ring: 70 52% 48%;
+    --sidebar-background: 238 8% 35%;
+    --sidebar-foreground: 238 8% 95%;
+    --sidebar-accent: 238 8% 45%;
+    --sidebar-accent-foreground: 238 8% 95%;
+
+    --partial-1: 70 52% 48%;
+    --partial-1-foreground: 70 52% 98%;
+    --partial-1-foreground-alt: 70 52% 30%;
+    --partial-1-border: 70 52% 58%;
+    --partial-1-bg: 70 52% 92%;
+
+    --partial-2: 215 23% 51%;
+    --partial-2-foreground: 215 23% 98%;
+    --partial-2-foreground-alt: 215 23% 30%;
+    --partial-2-border: 215 23% 61%;
+    --partial-2-bg: 215 23% 91%;
+    
+    --partial-3: 98 22% 42%;
+    --partial-3-foreground: 98 22% 95%;
+    --partial-3-foreground-alt: 98 22% 25%;
+    --partial-3-border: 98 22% 52%;
+    --partial-3-bg: 98 22% 90%;
   }
 }
 

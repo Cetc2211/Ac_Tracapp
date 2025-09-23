@@ -6,9 +6,9 @@ import { CheckCircle } from "lucide-react";
 
 export const themes = [
     {
-        name: 'Default',
+        name: 'Poppy',
         id: 'theme-default',
-        colors: ['#FF420E', '#80BD9E', '#F9F9F9']
+        colors: ['#FF420E', '#80BD9E', '#F98866']
     },
     {
         name: 'Light',
@@ -54,6 +54,11 @@ export const themes = [
         name: 'Mint',
         id: 'theme-mint',
         colors: ['#10b981', '#f0fdfa', '#047857']
+    },
+    {
+        name: 'Dramatic',
+        id: 'theme-dramatic',
+        colors: ['#AEBD38', '#68829E', '#505160']
     }
 ];
 
