@@ -84,6 +84,11 @@ export const themes = [
         name: 'Pastel',
         id: 'theme-pastel',
         colors: ['#FFCCAC', '#C1E1DC', '#FFEB94']
+    },
+    {
+        name: 'Tropical',
+        id: 'theme-tropical',
+        colors: ['#4897D8', '#FFDB5C', '#FA6E59']
     }
 ];
 
