@@ -59,6 +59,11 @@ export const themes = [
         name: 'Dramatic',
         id: 'theme-dramatic',
         colors: ['#AEBD38', '#68829E', '#505160']
+    },
+    {
+        name: 'Tulip',
+        id: 'theme-tulip',
+        colors: ['#F18D9E', '#5BC8AC', '#E6D72A']
     }
 ];
 
