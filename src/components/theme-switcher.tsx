@@ -31,9 +31,9 @@ export const themes = [
         colors: ['#0ea5e9', '#f0f9ff', '#0c4a6e']
     },
     {
-        name: 'Sunset',
-        id: 'theme-sunset',
-        colors: ['#f97316', '#262626', '#fafafa']
+        name: 'Peacock',
+        id: 'theme-peacock',
+        colors: ['#F62A00', '#1E656D', '#00293C'],
     },
     {
         name: 'Aurora',
@@ -117,3 +117,5 @@ export function ThemeSwitcher({ selectedTheme, onThemeChange }: ThemeSwitcherPro
         </div>
     );
 }
+
+    

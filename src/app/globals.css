@@ -268,43 +268,46 @@ body {
     --partial-3-bg: 220 70% 93%;
   }
 
-  .theme-sunset {
-    --background: 20 20% 15%;
-    --foreground: 20 5% 95%;
-    --card: 20 20% 20%;
-    --card-foreground: 20 5% 95%;
-    --primary: 30 90% 65%;
-    --primary-foreground: 30 90% 10%;
-    --secondary: 20 20% 25%;
-    --secondary-foreground: 20 5% 95%;
-    --accent: 0 80% 55%;
-    --accent-foreground: 0 80% 95%;
-    --destructive: 0 72% 51%;
-    --border: 20 20% 30%;
-    --input: 20 20% 25%;
-    --ring: 30 90% 65%;
-    --sidebar-background: linear-gradient(180deg, hsl(20, 20%, 12%), hsl(30, 90%, 65%));
-    --sidebar-foreground: 20 5% 95%;
-    --sidebar-accent: 20 20% 28%;
-    --sidebar-accent-foreground: 30 90% 80%;
+  .theme-peacock {
+    --background: 70 41% 94%; /* ivory */
+    --foreground: 208 100% 12%; /* navy */
+    --card: 70 41% 100%;
+    --card-foreground: 208 100% 12%;
+    --primary: 10 100% 48%; /* candy apple */
+    --primary-foreground: 10 100% 98%;
+    --secondary: 185 56% 28%; /* peacock blue */
+    --secondary-foreground: 185 56% 95%;
+    --muted: 70 41% 90%;
+    --muted-foreground: 208 100% 25%;
+    --accent: 185 56% 38%;
+    --accent-foreground: 185 56% 95%;
+    --destructive: 10 100% 48%;
+    --destructive-foreground: 10 100% 98%;
+    --border: 70 41% 85%;
+    --input: 70 41% 88%;
+    --ring: 10 100% 48%;
+    --sidebar-background: 208 100% 12%;
+    --sidebar-foreground: 70 41% 94%;
+    --sidebar-accent: 185 56% 28%;
+    --sidebar-accent-foreground: 70 41% 94%;
 
-    --partial-1: 30 90% 65%;
-    --partial-1-foreground: 30 90% 10%;
-    --partial-1-foreground-alt: 30 90% 85%;
-    --partial-1-border: 30 90% 55%;
-    --partial-1-bg: 30 90% 25%;
+    --partial-1: 10 100% 48%;
+    --partial-1-foreground: 10 100% 98%;
+    --partial-1-foreground-alt: 10 100% 30%;
+    --partial-1-border: 10 100% 58%;
+    --partial-1-bg: 10 100% 92%;
 
-    --partial-2: 0 80% 55%;
-    --partial-2-foreground: 0 80% 95%;
-    --partial-2-foreground-alt: 0 80% 85%;
-    --partial-2-border: 0 80% 45%;
-    --partial-2-bg: 0 80% 20%;
+    --partial-2: 185 56% 28%;
+    --partial-2-foreground: 185 56% 95%;
+    --partial-2-foreground-alt: 185 56% 80%;
+    --partial-2-border: 185 56% 38%;
+    --partial-2-bg: 185 56% 88%;
 
-    --partial-3: 50 95% 60%;
-    --partial-3-foreground: 50 95% 10%;
-    --partial-3-foreground-alt: 50 95% 80%;
-    --partial-3-border: 50 95% 50%;
-    --partial-3-bg: 50 95% 22%;
+    --partial-3: 208 100% 25%;
+    --partial-3-foreground: 70 41% 94%;
+    --partial-3-foreground-alt: 208 100% 80%;
+    --partial-3-border: 208 100% 35%;
+    --partial-3-bg: 208 100% 90%;
   }
 
   .theme-aurora {
@@ -630,3 +633,5 @@ body {
     @apply text-foreground;
   }
 }
+
+    
