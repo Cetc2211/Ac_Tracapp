@@ -662,6 +662,48 @@ body {
     --partial-3-border: 13 65% 62%;
     --partial-3-bg: 13 65% 93%;
   }
+
+  .theme-pastel {
+    --background: 170 30% 97%; /* Very light baby blue */
+    --foreground: 25 30% 25%; /* Soft dark brown */
+    --card: 0 0% 100%;
+    --card-foreground: 25 30% 25%;
+    --primary: 24 100% 84%; /* Peach */
+    --primary-foreground: 24 100% 20%;
+    --secondary: 170 31% 94%; /* Lighter baby blue for secondary surfaces */
+    --secondary-foreground: 170 31% 30%;
+    --muted: 170 31% 94%;
+    --muted-foreground: 25 30% 55%;
+    --accent: 54 95% 80%; /* Butter */
+    --accent-foreground: 54 95% 25%;
+    --destructive: 0 80% 70%;
+    --destructive-foreground: 0 80% 98%;
+    --border: 170 31% 90%;
+    --input: 170 31% 94%;
+    --ring: 24 100% 84%;
+    --sidebar-background: 170 31% 94%;
+    --sidebar-foreground: 25 30% 25%;
+    --sidebar-accent: 24 100% 92%;
+    --sidebar-accent-foreground: 24 100% 30%;
+
+    --partial-1: 24 100% 84%;
+    --partial-1-foreground: 24 100% 20%;
+    --partial-1-foreground-alt: 24 100% 50%;
+    --partial-1-border: 24 100% 89%;
+    --partial-1-bg: 24 100% 96%;
+
+    --partial-2: 170 31% 75%;
+    --partial-2-foreground: 170 31% 15%;
+    --partial-2-foreground-alt: 170 31% 40%;
+    --partial-2-border: 170 31% 85%;
+    --partial-2-bg: 170 31% 95%;
+
+    --partial-3: 54 95% 80%;
+    --partial-3-foreground: 54 95% 25%;
+    --partial-3-foreground-alt: 54 95% 55%;
+    --partial-3-border: 54 95% 85%;
+    --partial-3-bg: 54 95% 96%;
+  }
 }
 
 @layer base {

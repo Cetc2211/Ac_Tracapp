@@ -79,6 +79,11 @@ export const themes = [
         name: 'Harvest',
         id: 'theme-harvest',
         colors: ['#258039', '#F5BE41', '#31A9B8']
+    },
+    {
+        name: 'Pastel',
+        id: 'theme-pastel',
+        colors: ['#FFCCAC', '#C1E1DC', '#FFEB94']
     }
 ];
 
