@@ -540,18 +540,41 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     // --- AI FEATURES ---
     const callGoogleAI = useCallback(async (prompt: string): Promise<string> => {
-        if (!settings.apiKey) throw new Error("No se ha configurado una clave API de Google AI. Ve a Ajustes para agregarla.");
-        const API_URL = `https://generativelanguage.googleapis.com/v1/models/gemini-1.0-pro:generateContent?key=${settings.apiKey}`;
-        const response = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
+        if (!settings.apiKey) {
+            throw new Error("No se ha configurado una clave API de Google AI. Ve a Ajustes para agregarla.");
+        }
+        
+        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${settings.apiKey}`;
+        
+        const requestBody = {
+            contents: [{
+                parts: [{ text: prompt }]
+            }]
+        };
+
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody)
+        });
+
         if (!response.ok) {
             const errorData = await response.json();
+            console.error("AI API Error Response:", errorData);
             throw new Error(`Error del servicio de IA: ${errorData.error?.message || response.statusText}`);
         }
+
         const data = await response.json();
         const feedbackText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!feedbackText) throw new Error("La respuesta de la IA no contiene texto.");
+
+        if (!feedbackText) {
+            console.error("Invalid AI response structure:", data);
+            throw new Error("La respuesta de la IA no contiene texto.");
+        }
+
         return feedbackText;
     }, [settings.apiKey]);
+
 
     const generateFeedbackWithAI = useCallback(async (student: Student, stats: StudentStats): Promise<string> => {
         const prompt = `Eres un asistente de docentes experto en pedagogía. Genera una retroalimentación constructiva y personalizada para ${student.name}.
