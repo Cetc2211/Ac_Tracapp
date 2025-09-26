@@ -556,9 +556,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             throw new Error("No se ha configurado una clave API de Google AI. Ve a Ajustes para agregarla.");
         }
         
-        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${settings.apiKey}`;
+        const API_URL = `https://generativelanguage.googleapis.com/v1beta/generateContent?key=${settings.apiKey}`;
         
         const requestBody = {
+            model: 'gemini-pro', // Specify model in body
             contents: [{
                 parts: [{ text: prompt }]
             }],
@@ -566,7 +567,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 {
                     category: "HARM_CATEGORY_HARASSMENT",
                     threshold: "BLOCK_ONLY_HIGH"
-                }
+                },
+                {
+                    category: "HARM_CATEGORY_HATE_SPEECH",
+                    threshold: "BLOCK_ONLY_HIGH",
+                },
+                {
+                    category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                    threshold: "BLOCK_MEDIUM_AND_ABOVE",
+                },
+                {
+                    category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+                    threshold: "BLOCK_MEDIUM_AND_ABOVE",
+                },
             ]
         };
 
@@ -714,8 +727,12 @@ const generateDemoData = () => {
     };
     
     // Make one student in G1 fail P1 to test recovery
-    demoPartialsData['G1']!['p1']!.grades['S3'][criteriaG1[0].id].delivered = 40;
-    demoPartialsData['G1']!['p1']!.recoveryGrades = { 'S3': { grade: 70, applied: true } };
+    if (demoPartialsData['G1']?.['p1']?.grades['S3']?.[criteriaG1[0].id]) {
+      demoPartialsData['G1']!['p1']!.grades['S3'][criteriaG1[0].id].delivered = 40;
+    }
+    if (demoPartialsData['G1']?.['p1']) {
+      demoPartialsData['G1']!['p1']!.recoveryGrades = { 'S3': { grade: 70, applied: true } };
+    }
 
 
     return { demoGroups, demoStudents, demoObservations, demoPartialsData };
