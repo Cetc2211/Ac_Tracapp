@@ -1,4 +1,3 @@
-
 'use client';
 import {
   Card,
@@ -21,7 +20,7 @@ import { Student, Group, PartialId } from '@/lib/placeholder-data';
 import { notFound, useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, MoreHorizontal, UserPlus, Trash2, CalendarCheck, FilePen, Edit, Loader2, PenSquare, X, ImagePlus, Lock, Unlock } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, UserPlus, Trash2, CalendarCheck, FilePen, Edit, Loader2, PenSquare, X, ImagePlus, Lock, Unlock, UserCog } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -93,6 +92,10 @@ export default function GroupDetailsPage() {
   const [isAddStudentDialogOpen, setIsAddStudentDialogOpen] = useState(false);
   const [isEditGroupDialogOpen, setIsEditGroupDialogOpen] = useState(false);
   const [editingGroup, setEditingGroup] = useState<Group | null>(null);
+  
+  const [isEditStudentDialogOpen, setIsEditStudentDialogOpen] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+
 
   const [bulkNames, setBulkNames] = useState('');
   const [bulkEmails, setBulkEmails] = useState('');
@@ -105,7 +108,6 @@ export default function GroupDetailsPage() {
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [isPhotoDialogOpen, setIsPhotoDialogOpen] = useState(false);
-  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   
   useEffect(() => {
@@ -283,6 +285,27 @@ export default function GroupDetailsPage() {
     });
     setIsEditGroupDialogOpen(false);
   };
+  
+  const handleOpenEditStudentDialog = (student: Student) => {
+    setEditingStudent({ ...student });
+    setIsEditStudentDialogOpen(true);
+  };
+
+  const handleUpdateStudent = async () => {
+      if (!editingStudent) return;
+      await updateStudent(editingStudent.id, {
+          name: editingStudent.name,
+          email: editingStudent.email,
+          phone: editingStudent.phone,
+          tutorName: editingStudent.tutorName,
+          tutorPhone: editingStudent.tutorPhone,
+      });
+      toast({
+          title: 'Estudiante Actualizado',
+          description: `La información de ${editingStudent.name} ha sido guardada.`,
+      });
+      setIsEditStudentDialogOpen(false);
+  };
 
     
   const totalWeight = useMemo(() => {
@@ -369,6 +392,44 @@ export default function GroupDetailsPage() {
                 <DialogFooter>
                     <Button variant="outline" onClick={() => setIsEditGroupDialogOpen(false)}>Cancelar</Button>
                     <Button onClick={handleUpdateGroup}>Guardar Cambios</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )}
+    {editingStudent && (
+        <Dialog open={isEditStudentDialogOpen} onOpenChange={setIsEditStudentDialogOpen}>
+            <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                    <DialogTitle>Editar Estudiante</DialogTitle>
+                    <DialogDescription>
+                        Actualiza la información de {editingStudent.name}.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="edit-student-name">Nombre</Label>
+                        <Input id="edit-student-name" value={editingStudent.name} onChange={(e) => setEditingStudent({ ...editingStudent, name: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="edit-student-email">Email</Label>
+                        <Input id="edit-student-email" type="email" value={editingStudent.email || ''} onChange={(e) => setEditingStudent({ ...editingStudent, email: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="edit-student-phone">Teléfono</Label>
+                        <Input id="edit-student-phone" type="tel" value={editingStudent.phone || ''} onChange={(e) => setEditingStudent({ ...editingStudent, phone: e.target.value })} />
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="edit-student-tutorName">Nombre del Tutor</Label>
+                        <Input id="edit-student-tutorName" value={editingStudent.tutorName || ''} onChange={(e) => setEditingStudent({ ...editingStudent, tutorName: e.target.value })} />
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="edit-student-tutorPhone">Teléfono del Tutor</Label>
+                        <Input id="edit-student-tutorPhone" type="tel" value={editingStudent.tutorPhone || ''} onChange={(e) => setEditingStudent({ ...editingStudent, tutorPhone: e.target.value })} />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsEditStudentDialogOpen(false)}>Cancelar</Button>
+                    <Button onClick={handleUpdateStudent}>Guardar Cambios</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -624,6 +685,10 @@ export default function GroupDetailsPage() {
                                 <DropdownMenuContent align="end">
                                     <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                                     <DropdownMenuItem onClick={() => router.push(`/students/${student.id}`)}>Ver Perfil Completo</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleOpenEditStudentDialog(student)}>
+                                        <UserCog className="mr-2 h-4 w-4" />
+                                        Editar Información
+                                    </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => handleOpenPhotoDialog(student)}>
                                         <ImagePlus className="mr-2 h-4 w-4" />
                                         Cambiar Foto
