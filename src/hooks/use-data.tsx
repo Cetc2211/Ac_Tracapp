@@ -556,7 +556,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             throw new Error("No se ha configurado una clave API de Google AI. Ve a Ajustes para agregarla.");
         }
         
-        const model = 'gemini-pro';
+        const model = 'gemini-2.0-flash';
         const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${settings.apiKey}`;
         
         const requestBody = {
