@@ -541,7 +541,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // --- AI FEATURES ---
     const callGoogleAI = useCallback(async (prompt: string): Promise<string> => {
         if (!settings.apiKey) throw new Error("No se ha configurado una clave API de Google AI. Ve a Ajustes para agregarla.");
-        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${settings.apiKey}`;
+        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.0-pro:generateContent?key=${settings.apiKey}`;
         const response = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
         if (!response.ok) {
             const errorData = await response.json();
