@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
@@ -236,13 +237,24 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // --- HYDRATION & PERSISTENCE ---
     useEffect(() => {
         try {
-            const storedGroups = loadFromStorage<Group[]>('app_groups', []);
-            const storedStudents = loadFromStorage<Student[]>('app_students', []);
-            const storedObservations = loadFromStorage<{ [studentId: string]: StudentObservation[] }>('app_observations', {});
-            const storedPartialsData = loadFromStorage<AllPartialsData>('app_partialsData', {});
-            const storedSettings = loadFromStorage('app_settings', defaultSettings);
-            const storedActiveGroupId = loadFromStorage<string | null>('activeGroupId_v1', null);
-            const storedSpecialNotes = loadFromStorage<SpecialNote[]>('app_specialNotes', []);
+            let storedGroups = loadFromStorage<Group[]>('app_groups', []);
+            let storedStudents = loadFromStorage<Student[]>('app_students', []);
+            let storedObservations = loadFromStorage<{ [studentId: string]: StudentObservation[] }>('app_observations', {});
+            let storedPartialsData = loadFromStorage<AllPartialsData>('app_partialsData', {});
+            let storedSettings = loadFromStorage('app_settings', defaultSettings);
+            let storedActiveGroupId = loadFromStorage<string | null>('activeGroupId_v1', null);
+            let storedSpecialNotes = loadFromStorage<SpecialNote[]>('app_specialNotes', []);
+
+            // INJECT DEMO DATA IF EMPTY
+            if (storedGroups.length === 0) {
+              const { demoGroups, demoStudents, demoObservations, demoPartialsData } = generateDemoData();
+              storedGroups = demoGroups;
+              storedStudents = demoStudents;
+              storedObservations = demoObservations;
+              storedPartialsData = demoPartialsData;
+              storedActiveGroupId = demoGroups[0].id;
+            }
+
 
             setGroups(storedGroups);
             setAllStudents(storedStudents);
@@ -621,4 +633,90 @@ export const useData = (): DataContextType => {
         throw new Error('useData must be used within a DataProvider');
     }
     return context;
+};
+
+// --- DEMO DATA GENERATION ---
+const generateDemoData = () => {
+    const studentsGroup1 = [
+        { id: 'S1', name: 'Ana Sofía García', photo: 'https://placehold.co/100x100/FFC0CB/000000?text=AG' },
+        { id: 'S2', name: 'Luis Fernando Martínez', photo: 'https://placehold.co/100x100/ADD8E6/000000?text=LM' },
+        { id: 'S3', name: 'Carlos Alberto Rodríguez', photo: 'https://placehold.co/100x100/90EE90/000000?text=CR' },
+        { id: 'S4', name: 'María Guadalupe Hernández', photo: 'https://placehold.co/100x100/FFD700/000000?text=MH' },
+        { id: 'S5', name: 'Sofía Isabel López', photo: 'https://placehold.co/100x100/E6E6FA/000000?text=SL' },
+    ];
+
+    const studentsGroup2 = [
+        { id: 'S6', name: 'Juan Carlos Pérez', photo: 'https://placehold.co/100x100/FFA07A/000000?text=JP' },
+        { id: 'S7', name: 'Elena Ramírez', photo: 'https://placehold.co/100x100/20B2AA/FFFFFF?text=ER' },
+        { id: 'S8', name: 'Pedro Antonio Flores', photo: 'https://placehold.co/100x100/778899/FFFFFF?text=PF' },
+        { id: 'S9', name: 'Laura Patricia Gómez', photo: 'https://placehold.co/100x100/DB7093/FFFFFF?text=LG' },
+    ];
+
+    const criteriaG1 = [
+        { id: 'C1G1', name: 'Examen', weight: 50, expectedValue: 100 },
+        { id: 'C2G1', name: 'Actividades', weight: 30, expectedValue: 10 },
+        { id: 'C3G1', name: 'Proyecto', weight: 20, expectedValue: 10 },
+    ];
+
+    const criteriaG2 = [
+        { id: 'C1G2', name: 'Ensayo', weight: 40, expectedValue: 100 },
+        { id: 'C2G2', name: 'Exposición', weight: 40, expectedValue: 100 },
+        { id: 'C3G2', name: 'Participación', weight: 20, expectedValue: 5 },
+    ];
+
+    const demoGroups: Group[] = [
+        { id: 'G1', subject: 'Matemáticas IV', students: studentsGroup1, criteria: criteriaG1, semester: 'Cuarto', facilitator: 'Dr. Alan Turing' },
+        { id: 'G2', subject: 'Historia de México', students: studentsGroup2, criteria: criteriaG2, semester: 'Cuarto', facilitator: 'Dra. Ada Lovelace' },
+    ];
+
+    const demoStudents = [...studentsGroup1, ...studentsGroup2];
+
+    const demoObservations = {
+        'S3': [{ id: 'OBS1', studentId: 'S3', partialId: 'p1' as PartialId, date: '2024-03-15T10:00:00.000Z', type: 'Problema de conducta', details: 'Interrumpió la clase en repetidas ocasiones.', requiresCanalization: true, canalizationTarget: 'Tutor', requiresFollowUp: true, followUpUpdates: [], isClosed: false }],
+        'S4': [{ id: 'OBS2', studentId: 'S4', partialId: 'p2' as PartialId, date: '2024-05-20T11:00:00.000Z', type: 'Mérito', details: 'Excelente participación y ayuda a sus compañeros.', requiresCanalization: false, requiresFollowUp: false, followUpUpdates: [], isClosed: true }],
+    };
+
+    const generatePartialData = (students: Student[], criteria: EvaluationCriteria[], partial: number): PartialData => {
+        const grades: Grades = {};
+        const activityRecords: ActivityRecord = {};
+        students.forEach(s => {
+            grades[s.id] = {
+                [criteria[0].id]: { delivered: 60 + Math.random() * 40 - (partial * 5) },
+                [criteria[1].id]: { delivered: 5 + Math.random() * 5 },
+                [criteria[2].id]: { delivered: 7 + Math.random() * 3 },
+            };
+            activityRecords[s.id] = { 'ACT1': Math.random() > 0.2, 'ACT2': Math.random() > 0.3 };
+        });
+
+        return {
+            grades,
+            attendance: { '2024-03-10': students.reduce((acc, s) => ({ ...acc, [s.id]: Math.random() > 0.1 }), {}), '2024-03-12': students.reduce((acc, s) => ({ ...acc, [s.id]: Math.random() > 0.1 }), {}) },
+            participations: { '2024-03-10': students.reduce((acc, s) => ({ ...acc, [s.id]: Math.random() > 0.5 }), {}) },
+            activities: [{ id: 'ACT1', name: `Tarea ${partial}.1`, dueDate: `2024-03-1${partial}`, programmedDate: `2024-03-0${partial}` }, { id: 'ACT2', name: `Tarea ${partial}.2`, dueDate: `2024-03-2${partial}`, programmedDate: `2024-03-1${partial}` }],
+            activityRecords,
+            recoveryGrades: partial === 1 && criteria.length > 0 ? { [students[2].id]: { grade: 70, applied: false } } : {},
+            feedbacks: {},
+            groupAnalysis: '',
+        };
+    };
+
+    const demoPartialsData: AllPartialsData = {
+        'G1': {
+            'p1': generatePartialData(studentsGroup1, criteriaG1, 1),
+            'p2': generatePartialData(studentsGroup1, criteriaG1, 2),
+            'p3': generatePartialData(studentsGroup1, criteriaG1, 3),
+        },
+        'G2': {
+            'p1': generatePartialData(studentsGroup2, criteriaG2, 1),
+            'p2': generatePartialData(studentsGroup2, criteriaG2, 2),
+            'p3': generatePartialData(studentsGroup2, criteriaG2, 3),
+        }
+    };
+    
+    // Make one student in G1 fail P1 to test recovery
+    demoPartialsData['G1']!['p1']!.grades['S3'][criteriaG1[0].id].delivered = 40;
+    demoPartialsData['G1']!['p1']!.recoveryGrades = { 'S3': { grade: 70, applied: true } };
+
+
+    return { demoGroups, demoStudents, demoObservations, demoPartialsData };
 };
