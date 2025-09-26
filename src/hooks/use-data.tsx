@@ -612,7 +612,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         DATOS: Calificación: ${stats.finalGrade.toFixed(0)}%, Asistencia: ${stats.attendance.rate.toFixed(0)}%.
         Desglose: ${stats.criteriaDetails.map(c => `${c.name}: ${c.earned.toFixed(0)}%`).join(', ')}.
         Bitácora: ${stats.observations.length > 0 ? stats.observations.map(o => `${o.type}: ${o.details}`).join('; ') : "Sin observaciones."}
-        INSTRUCCIONES: Inicia con fortalezas, luego áreas de oportunidad y finaliza con recomendaciones claras. Tono de apoyo. Sin despedidas.`;
+        INSTRUCCIONES: Inicia con fortalezas, luego áreas de oportunidad y finaliza con recomendaciones claras. Tono de apoyo. No uses asteriscos. Sin despedidas.`;
         return callGoogleAI(prompt);
     }, [callGoogleAI]);
 
@@ -622,7 +622,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         RIESGO: ${atRisk.length} estudiantes en riesgo.
         BITÁCORA: ${observations.length} observaciones.
         RECUPERACIÓN: ${recoverySummary.recoveryStudentsCount} estudiantes la necesitaron.
-        INSTRUCCIONES: Redacta en párrafos fluidos. Analiza el panorama general, correlaciones (asistencia/rendimiento), efectividad de la recuperación y finaliza con una recomendación formal a directivos y tutores para dar seguimiento a los casos de riesgo.`;
+        INSTRUCCIONES: Redacta en párrafos fluidos. Analiza el panorama general, correlaciones (asistencia/rendimiento), efectividad de la recuperación y finaliza con una recomendación formal a directivos y tutores para dar seguimiento a los casos de riesgo. No uses asteriscos para enfatizar.`;
         return callGoogleAI(prompt);
     }, [callGoogleAI, activePartialId]);
 
