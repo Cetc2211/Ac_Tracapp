@@ -89,6 +89,11 @@ export const themes = [
         name: 'Tropical',
         id: 'theme-tropical',
         colors: ['#4897D8', '#FFDB5C', '#FA6E59']
+    },
+    {
+        name: 'Lavanda',
+        id: 'theme-lavanda',
+        colors: ['#E6E6FA', '#800080', '#98FF98']
     }
 ];
 
@@ -132,3 +137,5 @@ export function ThemeSwitcher({ selectedTheme, onThemeChange }: ThemeSwitcherPro
         </div>
     );
 }
+
+    
