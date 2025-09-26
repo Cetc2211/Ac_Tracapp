@@ -94,6 +94,11 @@ export const themes = [
         name: 'Lavanda',
         id: 'theme-lavanda',
         colors: ['#E6E6FA', '#800080', '#98FF98']
+    },
+    {
+        name: 'Zosterops',
+        id: 'theme-zosterops',
+        colors: ['#EC96A4', '#5D535E', '#DFE166']
     }
 ];
 
@@ -137,5 +142,3 @@ export function ThemeSwitcher({ selectedTheme, onThemeChange }: ThemeSwitcherPro
         </div>
     );
 }
-
-    

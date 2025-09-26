@@ -780,6 +780,47 @@ body {
     --partial-3-border: 150 100% 70%;
     --partial-3-bg: 150 100% 94%;
   }
+
+  .theme-zosterops {
+    --background: 231 10% 95%;
+    --foreground: 270 18% 23%;
+    --card: 231 10% 100%;
+    --card-foreground: 270 18% 23%;
+    --primary: 349 76% 76%;
+    --primary-foreground: 349 76% 15%;
+    --secondary: 231 10% 92%;
+    --secondary-foreground: 270 18% 23%;
+    --muted: 231 10% 92%;
+    --muted-foreground: 270 18% 43%;
+    --accent: 61 59% 83%;
+    --accent-foreground: 61 59% 23%;
+    --destructive: 0 70% 50%;
+    --border: 231 10% 88%;
+    --input: 231 10% 92%;
+    --ring: 349 76% 76%;
+    --sidebar-background: 270 18% 23%;
+    --sidebar-foreground: 231 10% 95%;
+    --sidebar-accent: 270 18% 33%;
+    --sidebar-accent-foreground: 231 10% 95%;
+    
+    --partial-1: 349 76% 76%;
+    --partial-1-foreground: 349 76% 15%;
+    --partial-1-foreground-alt: 349 76% 45%;
+    --partial-1-border: 349 76% 86%;
+    --partial-1-bg: 349 76% 96%;
+
+    --partial-2: 61 59% 83%;
+    --partial-2-foreground: 61 59% 23%;
+    --partial-2-foreground-alt: 61 59% 50%;
+    --partial-2-border: 61 59% 88%;
+    --partial-2-bg: 61 59% 97%;
+    
+    --partial-3: 231 10% 75%;
+    --partial-3-foreground: 270 18% 15%;
+    --partial-3-foreground-alt: 270 18% 40%;
+    --partial-3-border: 231 10% 85%;
+    --partial-3-bg: 231 10% 95%;
+  }
 }
 
 @layer base {
@@ -788,8 +829,5 @@ body {
   }
   body {
     @apply text-foreground;
-    font-family: sans-serif;
   }
 }
-
-    
