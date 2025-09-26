@@ -563,24 +563,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             contents: [{
                 parts: [{ text: prompt }]
             }],
-            safetySettings: [
+             safetySettings: [
                 {
                     category: "HARM_CATEGORY_HARASSMENT",
                     threshold: "BLOCK_ONLY_HIGH"
                 },
-                {
-                    category: "HARM_CATEGORY_HATE_SPEECH",
-                    threshold: "BLOCK_ONLY_HIGH",
-                },
-                {
-                    category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                    threshold: "BLOCK_MEDIUM_AND_ABOVE",
-                },
-                {
-                    category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-                    threshold: "BLOCK_MEDIUM_AND_ABOVE",
-                },
-            ]
+             ]
         };
 
         const response = await fetch(API_URL, {
@@ -612,17 +600,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         DATOS: Calificación: ${stats.finalGrade.toFixed(0)}%, Asistencia: ${stats.attendance.rate.toFixed(0)}%.
         Desglose: ${stats.criteriaDetails.map(c => `${c.name}: ${c.earned.toFixed(0)}%`).join(', ')}.
         Bitácora: ${stats.observations.length > 0 ? stats.observations.map(o => `${o.type}: ${o.details}`).join('; ') : "Sin observaciones."}
-        INSTRUCCIONES: Inicia con fortalezas, luego áreas de oportunidad y finaliza con recomendaciones claras. Tono de apoyo. No uses asteriscos. Sin despedidas.`;
+        INSTRUCCIONES: Inicia con fortalezas, luego áreas de oportunidad y finaliza con recomendaciones claras. Tono de apoyo. Sin despedidas. **Bajo ninguna circunstancia utilices asteriscos (*) para dar formato o enfatizar texto.** La redacción debe ser en prosa natural.`;
         return callGoogleAI(prompt);
     }, [callGoogleAI]);
 
-    const generateGroupAnalysisWithAI = useCallback(async (group: Group, summary: any, recoverySummary: any, atRisk: StudentWithRisk[], observations: (StudentObservation & { studentName: string })[]): Promise<string> => {
+    const generateGroupAnalysisWithAI = useCallback(async (group: Group, summary: any, recoverySummary: any, atRisk: StudentWithRisk[], observations: (StudentObservation & { studentName: string })[]) => {
         const prompt = `Actúa como analista educativo. Redacta un análisis narrativo profesional y objetivo para el grupo ${group.subject} en el ${getPartialLabel(activePartialId)}.
         DATOS: ${summary.totalStudents} estudiantes, promedio ${summary.groupAverage.toFixed(1)}%, aprobación ${(summary.approvedCount / summary.totalStudents * 100).toFixed(1)}%, asistencia ${summary.attendanceRate.toFixed(1)}%.
         RIESGO: ${atRisk.length} estudiantes en riesgo.
         BITÁCORA: ${observations.length} observaciones.
         RECUPERACIÓN: ${recoverySummary.recoveryStudentsCount} estudiantes la necesitaron.
-        INSTRUCCIONES: Redacta en párrafos fluidos. Analiza el panorama general, correlaciones (asistencia/rendimiento), efectividad de la recuperación y finaliza con una recomendación formal a directivos y tutores para dar seguimiento a los casos de riesgo. No uses asteriscos para enfatizar.`;
+        INSTRUCCIONES: Redacta en párrafos fluidos. Analiza el panorama general, correlaciones (asistencia/rendimiento), efectividad de la recuperación y finaliza con una recomendación formal a directivos y tutores para dar seguimiento a los casos de riesgo. **Bajo ninguna circunstancia utilices asteriscos (*) para dar formato o enfatizar texto.** La redacción debe ser en prosa natural.`;
         return callGoogleAI(prompt);
     }, [callGoogleAI, activePartialId]);
 
@@ -651,30 +639,30 @@ export const useData = (): DataContextType => {
 // --- DEMO DATA GENERATION ---
 const generateDemoData = () => {
     const studentsGroup1 = [
-        { id: 'S1', name: 'Ana Sofía García', photo: 'https://placehold.co/100x100/FFC0CB/000000?text=AG' },
-        { id: 'S2', name: 'Luis Fernando Martínez', photo: 'https://placehold.co/100x100/ADD8E6/000000?text=LM' },
-        { id: 'S3', name: 'Carlos Alberto Rodríguez', photo: 'https://placehold.co/100x100/90EE90/000000?text=CR' },
-        { id: 'S4', name: 'María Guadalupe Hernández', photo: 'https://placehold.co/100x100/FFD700/000000?text=MH' },
-        { id: 'S5', name: 'Sofía Isabel López', photo: 'https://placehold.co/100x100/E6E6FA/000000?text=SL' },
+        { id: 'S1', name: 'Ana Sofía García', photo: 'https://placehold.co/100x100/FFC0CB/000000?text=AG', email: 'ana.garcia@example.com', tutorName: 'Ricardo García' },
+        { id: 'S2', name: 'Luis Fernando Martínez', photo: 'https://placehold.co/100x100/ADD8E6/000000?text=LM', email: 'luis.martinez@example.com', tutorName: 'Elena Martínez' },
+        { id: 'S3', name: 'Carlos Alberto Rodríguez', photo: 'https://placehold.co/100x100/90EE90/000000?text=CR', email: 'carlos.rodriguez@example.com', tutorName: 'Fernando Rodríguez' },
+        { id: 'S4', name: 'María Guadalupe Hernández', photo: 'https://placehold.co/100x100/FFD700/000000?text=MH', email: 'maria.hernandez@example.com', tutorName: 'Guadalupe Pérez' },
+        { id: 'S5', name: 'Sofía Isabel López', photo: 'https://placehold.co/100x100/E6E6FA/000000?text=SL', email: 'sofia.lopez@example.com', tutorName: 'Isabel Torres' },
     ];
 
     const studentsGroup2 = [
-        { id: 'S6', name: 'Juan Carlos Pérez', photo: 'https://placehold.co/100x100/FFA07A/000000?text=JP' },
-        { id: 'S7', name: 'Elena Ramírez', photo: 'https://placehold.co/100x100/20B2AA/FFFFFF?text=ER' },
-        { id: 'S8', name: 'Pedro Antonio Flores', photo: 'https://placehold.co/100x100/778899/FFFFFF?text=PF' },
-        { id: 'S9', name: 'Laura Patricia Gómez', photo: 'https://placehold.co/100x100/DB7093/FFFFFF?text=LG' },
+        { id: 'S6', name: 'Juan Carlos Pérez', photo: 'https://placehold.co/100x100/FFA07A/000000?text=JP', email: 'juan.perez@example.com', tutorName: 'Juan Morales' },
+        { id: 'S7', name: 'Elena Ramírez', photo: 'https://placehold.co/100x100/20B2AA/FFFFFF?text=ER', email: 'elena.ramirez@example.com', tutorName: 'Laura Ramírez' },
+        { id: 'S8', name: 'Pedro Antonio Flores', photo: 'https://placehold.co/100x100/778899/FFFFFF?text=PF', email: 'pedro.flores@example.com', tutorName: 'Antonio Chavez' },
+        { id: 'S9', name: 'Laura Patricia Gómez', photo: 'https://placehold.co/100x100/DB7093/FFFFFF?text=LG', email: 'laura.gomez@example.com', tutorName: 'Patricia Díaz' },
     ];
 
     const criteriaG1 = [
-        { id: 'C1G1', name: 'Examen', weight: 50, expectedValue: 100 },
-        { id: 'C2G1', name: 'Actividades', weight: 30, expectedValue: 10 },
-        { id: 'C3G1', name: 'Proyecto', weight: 20, expectedValue: 10 },
+        { id: 'C1G1', name: 'Examen', weight: 40, expectedValue: 100 },
+        { id: 'C2G1', name: 'Actividades', weight: 40, expectedValue: 0, isAutomated: true },
+        { id: 'C3G1', name: 'Participación', weight: 20, expectedValue: 0, isAutomated: true },
     ];
 
     const criteriaG2 = [
-        { id: 'C1G2', name: 'Ensayo', weight: 40, expectedValue: 100 },
-        { id: 'C2G2', name: 'Exposición', weight: 40, expectedValue: 100 },
-        { id: 'C3G2', name: 'Participación', weight: 20, expectedValue: 5 },
+        { id: 'C1G2', name: 'Ensayo', weight: 50, expectedValue: 100 },
+        { id: 'C2G2', name: 'Exposición', weight: 30, expectedValue: 100 },
+        { id: 'C3G2', name: 'Actividades', weight: 20, expectedValue: 0, isAutomated: true },
     ];
 
     const demoGroups: Group[] = [
@@ -689,51 +677,58 @@ const generateDemoData = () => {
         'S4': [{ id: 'OBS2', studentId: 'S4', partialId: 'p2' as PartialId, date: '2024-05-20T11:00:00.000Z', type: 'Mérito', details: 'Excelente participación y ayuda a sus compañeros.', requiresCanalization: false, requiresFollowUp: false, followUpUpdates: [], isClosed: true }],
     };
 
-    const generatePartialData = (students: Student[], criteria: EvaluationCriteria[], partial: number): PartialData => {
+    const generatePartialData = (students: Student[], criteria: EvaluationCriteria[], partialIndex: number): PartialData => {
         const grades: Grades = {};
         const activityRecords: ActivityRecord = {};
-        students.forEach(s => {
-            grades[s.id] = {
-                [criteria[0].id]: { delivered: 60 + Math.random() * 40 - (partial * 5) },
-                [criteria[1].id]: { delivered: 5 + Math.random() * 5 },
-                [criteria[2].id]: { delivered: 7 + Math.random() * 3 },
-            };
-            activityRecords[s.id] = { 'ACT1': Math.random() > 0.2, 'ACT2': Math.random() > 0.3 };
+        const attendance: AttendanceRecord = {};
+        const participations: ParticipationRecord = {};
+
+        const activities: Activity[] = [
+            { id: `ACT${partialIndex}-1`, name: `Resumen Cap. ${partialIndex}`, dueDate: `2024-0${2+partialIndex}-10`, programmedDate: `2024-0${2+partialIndex}-03` },
+            { id: `ACT${partialIndex}-2`, name: `Ejercicios ${partialIndex}`, dueDate: `2024-0${2+partialIndex}-20`, programmedDate: `2024-0${2+partialIndex}-13` },
+            { id: `ACT${partialIndex}-3`, name: `Mapa Mental ${partialIndex}`, dueDate: `2024-0${2+partialIndex}-28`, programmedDate: `2024-0${2+partialIndex}-21` },
+        ];
+
+        for (let i = 1; i <= 8; i++) {
+            const date = `2024-0${2+partialIndex}-${i < 10 ? '0' : ''}${i}`;
+            attendance[date] = {};
+            participations[date] = {};
+            students.forEach(s => {
+                attendance[date][s.id] = Math.random() > (0.1 + (s.id === 'S3' ? 0.3 : 0)); // S3 has lower attendance
+                if(attendance[date][s.id]) {
+                  participations[date][s.id] = Math.random() > 0.5;
+                }
+            });
+        }
+        
+        students.forEach((s, studentIndex) => {
+            grades[s.id] = {};
+            activityRecords[s.id] = {};
+            
+            criteria.forEach(c => {
+                if (!c.isAutomated) {
+                    let baseScore = 75 - (partialIndex * 5) + (studentIndex * 2);
+                    if (s.id === 'S3') baseScore -= 20; // S3 has lower manual grades
+                    grades[s.id][c.id] = { delivered: Math.max(40, Math.min(100, baseScore + Math.random() * 10)) };
+                }
+            });
+
+            activities.forEach(act => {
+                 activityRecords[s.id][act.id] = Math.random() > (0.2 + (s.id === 'S3' ? 0.4 : 0));
+            });
         });
 
         return {
-            grades,
-            attendance: { '2024-03-10': students.reduce((acc, s) => ({ ...acc, [s.id]: Math.random() > 0.1 }), {}), '2024-03-12': students.reduce((acc, s) => ({ ...acc, [s.id]: Math.random() > 0.1 }), {}) },
-            participations: { '2024-03-10': students.reduce((acc, s) => ({ ...acc, [s.id]: Math.random() > 0.5 }), {}) },
-            activities: [{ id: 'ACT1', name: `Tarea ${partial}.1`, dueDate: `2024-03-1${partial}`, programmedDate: `2024-03-0${partial}` }, { id: 'ACT2', name: `Tarea ${partial}.2`, dueDate: `2024-03-2${partial}`, programmedDate: `2024-03-1${partial}` }],
-            activityRecords,
-            recoveryGrades: partial === 1 && criteria.length > 0 ? { [students[2].id]: { grade: 70, applied: false } } : {},
-            feedbacks: {},
-            groupAnalysis: '',
+            grades, attendance, participations, activities, activityRecords,
+            recoveryGrades: {}, feedbacks: {}, groupAnalysis: '',
         };
     };
 
-    const demoPartialsData: AllPartialsData = {
-        'G1': {
-            'p1': generatePartialData(studentsGroup1, criteriaG1, 1),
-            'p2': generatePartialData(studentsGroup1, criteriaG1, 2),
-            'p3': generatePartialData(studentsGroup1, criteriaG1, 3),
-        },
-        'G2': {
-            'p1': generatePartialData(studentsGroup2, criteriaG2, 1),
-            'p2': generatePartialData(studentsGroup2, criteriaG2, 2),
-            'p3': generatePartialData(studentsGroup2, criteriaG2, 3),
-        }
-    };
-    
-    // Make one student in G1 fail P1 to test recovery
-    if (demoPartialsData['G1']?.['p1']?.grades['S3']?.[criteriaG1[0].id]) {
-      demoPartialsData['G1']!['p1']!.grades['S3'][criteriaG1[0].id].delivered = 40;
-    }
-    if (demoPartialsData['G1']?.['p1']) {
-      demoPartialsData['G1']!['p1']!.recoveryGrades = { 'S3': { grade: 70, applied: true } };
-    }
-
+    const demoPartialsData: AllPartialsData = { 'G1': {}, 'G2': {} };
+    ['p1', 'p2', 'p3'].forEach((pId, index) => {
+        demoPartialsData['G1']![pId as PartialId] = generatePartialData(studentsGroup1, criteriaG1, index + 1);
+        demoPartialsData['G2']![pId as PartialId] = generatePartialData(studentsGroup2, criteriaG2, index + 1);
+    });
 
     return { demoGroups, demoStudents, demoObservations, demoPartialsData };
 };
