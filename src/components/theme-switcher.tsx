@@ -99,6 +99,11 @@ export const themes = [
         name: 'Zosterops',
         id: 'theme-zosterops',
         colors: ['#EC96A4', '#5D535E', '#DFE166']
+    },
+    {
+        name: 'Limonada',
+        id: 'theme-limonada',
+        colors: ['#F70025', '#F25C00', '#F9A603']
     }
 ];
 

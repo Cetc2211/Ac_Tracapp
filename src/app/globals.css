@@ -821,6 +821,48 @@ body {
     --partial-3-border: 231 10% 85%;
     --partial-3-bg: 231 10% 95%;
   }
+
+  .theme-limonada {
+    --background: 40 33% 95%; /* #F7EFE2 - ice */
+    --foreground: 13 83% 20%; /* Dark brown for text */
+    --card: 40 33% 100%;
+    --card-foreground: 13 83% 20%;
+    --primary: 349 99% 55%; /* #F70025 - cherry red */
+    --primary-foreground: 349 99% 98%;
+    --secondary: 23 100% 93%;
+    --secondary-foreground: 23 100% 30%;
+    --muted: 40 33% 93%;
+    --muted-foreground: 13 83% 40%;
+    --accent: 23 100% 47%; /* #F25C00 - marmalade */
+    --accent-foreground: 23 100% 98%;
+    --destructive: 349 99% 45%;
+    --destructive-foreground: 349 99% 98%;
+    --border: 40 33% 88%;
+    --input: 40 33% 92%;
+    --ring: 349 99% 55%;
+    --sidebar-background: 23 100% 47%;
+    --sidebar-foreground: 23 100% 98%;
+    --sidebar-accent: 23 100% 57%;
+    --sidebar-accent-foreground: 23 100% 98%;
+
+    --partial-1: 349 99% 55%;
+    --partial-1-foreground: 349 99% 98%;
+    --partial-1-foreground-alt: 349 99% 35%;
+    --partial-1-border: 349 99% 65%;
+    --partial-1-bg: 349 99% 94%;
+
+    --partial-2: 23 100% 47%;
+    --partial-2-foreground: 23 100% 98%;
+    --partial-2-foreground-alt: 23 100% 25%;
+    --partial-2-border: 23 100% 57%;
+    --partial-2-bg: 23 100% 92%;
+
+    --partial-3: 38 95% 49%; /* #F9A603 - orange juice */
+    --partial-3-foreground: 38 95% 98%;
+    --partial-3-foreground-alt: 38 95% 25%;
+    --partial-3-border: 38 95% 59%;
+    --partial-3-bg: 38 95% 93%;
+  }
 }
 
 @layer base {
