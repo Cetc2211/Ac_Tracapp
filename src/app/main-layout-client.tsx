@@ -22,6 +22,7 @@ import {
   Loader2,
   LogOut,
   AlertTriangle,
+  ClipboardSignature,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -68,6 +69,7 @@ const navItems = [
   { href: '/participations', icon: PenSquare, label: 'Participaciones' },
   { href: '/activities', icon: ClipboardCheck, label: 'Actividades' },
   { href: '/semester-evaluation', icon: Presentation, label: 'Eva. Semestral' },
+  { href: '/records', icon: ClipboardSignature, label: 'Actas' },
   { href: '/reports', icon: FileText, label: 'Informes' },
   { href: '/statistics', icon: BarChart3, label: 'Estadísticas' },
   { href: '/contact', icon: Contact, label: 'Contacto y Soporte' },
