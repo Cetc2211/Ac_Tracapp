@@ -152,6 +152,7 @@ interface DataContextType {
     specialNotes: SpecialNote[];
     settings: typeof defaultSettings;
     activeGroup: Group | null;
+    activeGroupId: string | null;
     activePartialId: PartialId;
     partialData: PartialData;
     allPartialsDataForActiveGroup: AllPartialsDataForGroup;
@@ -284,7 +285,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             localStorage.setItem('app_specialNotes', JSON.stringify(specialNotes));
             localStorage.setItem('app_partialsData', JSON.stringify(allPartialsData));
             localStorage.setItem('app_settings', JSON.stringify(settings));
-            localStorage.setItem('activeGroupId_v1', activeGroupId || '');
+            if (activeGroupId !== undefined) {
+              localStorage.setItem('activeGroupId_v1', activeGroupId || '');
+            }
         } catch (e) {
             console.error("Failed to save non-settings data to localStorage", e);
         }
@@ -297,7 +300,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const partialData = useMemo(() => allPartialsDataForActiveGroup[activePartialId] || defaultPartialData, [allPartialsDataForActiveGroup, activePartialId]);
 
     // --- CORE FUNCTIONS / ACTIONS ---
-    const setActiveGroupId = (groupId: string | null) => setActiveGroupIdState(groupId);
+    const setActiveGroupId = (groupId: string | null) => {
+      setActiveGroupIdState(groupId);
+    };
     const setActivePartialId = (partialId: PartialId) => setActivePartialIdState(partialId);
 
     const setSettings = useCallback(async (newSettings: typeof defaultSettings) => {
@@ -617,7 +622,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // --- CONTEXT VALUE ---
     const contextValue: DataContextType = {
-        isLoading, error, groups, allStudents, activeStudentsInGroups, allObservations, specialNotes, settings, activeGroup, activePartialId, partialData, allPartialsDataForActiveGroup, groupAverages, atRiskStudents, overallAverageAttendance,
+        isLoading, error, groups, allStudents, activeStudentsInGroups, allObservations, specialNotes, settings, activeGroup, activeGroupId, activePartialId, partialData, allPartialsDataForActiveGroup, groupAverages, atRiskStudents, overallAverageAttendance,
         setGroups, setAllStudents, setAllObservations, setSpecialNotes, setAllPartialsData, setSettings, setActiveGroupId, setActivePartialId,
         setGrades, setAttendance, setParticipations, setActivities, setActivityRecords, setRecoveryGrades, setStudentFeedback, setGroupAnalysis,
         addStudentsToGroup, removeStudentFromGroup, updateGroup, updateStudent, updateGroupCriteria, deleteGroup, addStudentObservation, updateStudentObservation, takeAttendanceForDate, deleteAttendanceDate, resetAllData, addSpecialNote, updateSpecialNote, deleteSpecialNote,
