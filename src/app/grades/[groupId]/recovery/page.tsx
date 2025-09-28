@@ -1,4 +1,3 @@
-
 'use client';
 import {
   Card,
@@ -27,7 +26,8 @@ import { useMemo, useState } from 'react';
 import { getPartialLabel } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import type { Student, EvaluationCriteria, PartialData } from '@/lib/placeholder-data';
+import type { Student, PartialData } from '@/lib/placeholder-data';
+import type { EvaluationCriteria } from '@/hooks/use-data';
 
 type FailedStudent = {
   student: Student;

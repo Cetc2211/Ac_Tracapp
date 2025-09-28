@@ -1,5 +1,4 @@
-
-import type { EvaluationCriteria } from "@/hooks/use-data";
+import type { Grades, RecoveryGrades, AttendanceRecord, ParticipationRecord, Activity, ActivityRecord } from "@/hooks/use-data";
 
 export type PartialId = 'p1' | 'p2' | 'p3';
 
@@ -11,6 +10,14 @@ export type Student = {
   tutorName?: string;
   tutorPhone?: string;
   photo: string;
+};
+
+export type EvaluationCriteria = {
+  id: string;
+  name: string;
+  weight: number;
+  expectedValue: number;
+  isAutomated?: boolean;
 };
 
 export type Group = {
@@ -42,4 +49,15 @@ export type SpecialNote = {
   text: string;
   startDate: string; // ISO date string
   endDate: string; // ISO date string
+};
+
+export type PartialData = {
+    grades: Grades;
+    attendance: AttendanceRecord;
+    participations: ParticipationRecord;
+    activities: Activity[];
+    activityRecords: ActivityRecord;
+    recoveryGrades: RecoveryGrades;
+    feedbacks: { [studentId: string]: string };
+    groupAnalysis?: string;
 };

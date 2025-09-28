@@ -3,18 +3,11 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { Student, Group, PartialId, StudentObservation, SpecialNote } from '@/lib/placeholder-data';
+import { Student, Group, PartialId, StudentObservation, SpecialNote, EvaluationCriteria, PartialData } from '@/lib/placeholder-data';
 import { format } from 'date-fns';
 import { getPartialLabel } from '@/lib/utils';
 
 // TYPE DEFINITIONS
-export type EvaluationCriteria = {
-  id: string;
-  name: string;
-  weight: number;
-  expectedValue: number;
-  isAutomated?: boolean;
-};
 
 export type GradeDetail = {
   delivered: number | null;
@@ -91,17 +84,6 @@ export type StudentStats = {
     observations: StudentObservation[];
 };
 
-
-export type PartialData = {
-    grades: Grades;
-    attendance: AttendanceRecord;
-    participations: ParticipationRecord;
-    activities: Activity[];
-    activityRecords: ActivityRecord;
-    recoveryGrades: RecoveryGrades;
-    feedbacks: { [studentId: string]: string };
-    groupAnalysis?: string;
-};
 
 export type AllPartialsDataForGroup = {
     [partialId in PartialId]?: PartialData;
