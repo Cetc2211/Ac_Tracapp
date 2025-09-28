@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
-import { Loader2, UserShield, PlusCircle, Trash2 } from 'lucide-react';
+import { Loader2, Shield, PlusCircle, Trash2 } from 'lucide-react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '@/lib/firebase';
 import { notFound } from 'next/navigation';
@@ -109,7 +109,7 @@ export default function AdminPage() {
                     <div className="space-y-2">
                         <Label htmlFor="admin-email">Administrador Principal</Label>
                         <div className="flex items-center gap-2 p-2 bg-muted rounded-md">
-                            <UserShield className="h-5 w-5 text-primary" />
+                            <Shield className="h-5 w-5 text-primary" />
                             <span className="font-mono text-sm">{ADMIN_EMAIL}</span>
                         </div>
                     </div>
