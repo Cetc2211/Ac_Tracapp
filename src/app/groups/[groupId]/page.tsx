@@ -56,7 +56,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useData } from '@/hooks/use-data';
 import { Input } from '@/components/ui/input';
-import type { CalculatedRisk } from '@/hooks/use-data';
+import type { CalculatedRisk } from '@/lib/placeholder-data';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
