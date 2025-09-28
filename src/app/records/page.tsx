@@ -174,6 +174,11 @@ const RecordsPage = () => {
     // from attendance records for the selected partial.
     return 'Marzo - Mayo 2024';
   }
+  
+  const handleGroupChange = (groupId: string) => {
+    setActiveGroupId(groupId);
+    setRecordData([]); // Clear previous group's data
+  }
 
   return (
      <>
@@ -194,7 +199,7 @@ const RecordsPage = () => {
             <div className="flex flex-col sm:flex-row sm:items-end gap-4 pt-4">
               <div className="space-y-2 flex-1">
                 <label htmlFor="group-select" className="text-sm font-medium">Grupo</label>
-                <Select onValueChange={setActiveGroupId} value={activeGroupId || ''}>
+                <Select onValueChange={handleGroupChange} value={activeGroupId || ''}>
                   <SelectTrigger id="group-select">
                     <SelectValue placeholder="Selecciona un grupo..." />
                   </SelectTrigger>
