@@ -40,7 +40,7 @@ import {
 } from "@/components/ui/collapsible"
 import { Input } from '@/components/ui/input';
 import { useData } from '@/hooks/use-data';
-import type { StudentWithRisk } from '@/hooks/use-data';
+import type { StudentWithRisk } from '@/lib/placeholder-data';
 import {
   Select,
   SelectContent,
@@ -407,4 +407,5 @@ export default function DashboardPage() {
   );
 }
 
+    
     
