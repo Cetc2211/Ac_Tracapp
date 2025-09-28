@@ -3,56 +3,11 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { Student, Group, PartialId, StudentObservation, SpecialNote, EvaluationCriteria, PartialData } from '@/lib/placeholder-data';
+import type { Student, Group, PartialId, StudentObservation, SpecialNote, EvaluationCriteria, PartialData, GradeDetail, Grades, RecoveryGrade, RecoveryGrades, AttendanceRecord, ParticipationRecord, Activity, ActivityRecord } from '@/lib/placeholder-data';
 import { format } from 'date-fns';
 import { getPartialLabel } from '@/lib/utils';
 
 // TYPE DEFINITIONS
-
-export type GradeDetail = {
-  delivered: number | null;
-};
-
-export type Grades = {
-  [studentId: string]: {
-    [criterionId: string]: GradeDetail;
-  };
-};
-
-export type RecoveryGrade = {
-    grade: number | null;
-    applied: boolean;
-};
-
-export type RecoveryGrades = {
-    [studentId: string]: RecoveryGrade;
-};
-
-export type AttendanceRecord = {
-  [date: string]: {
-    [studentId: string]: boolean;
-  };
-};
-
-export type ParticipationRecord = {
-  [date: string]: {
-    [studentId: string]: boolean;
-  };
-};
-
-export type Activity = {
-  id: string;
-  name: string;
-  dueDate: string; // YYYY-MM-DD
-  programmedDate: string; // YYYY-MM-DD
-};
-
-export type ActivityRecord = {
-    [studentId: string]: {
-        [activityId: string]: boolean;
-    };
-};
-
 
 export type GroupedActivities = {
   [dueDate: string]: Activity[];
@@ -649,13 +604,13 @@ const generateDemoData = () => {
         { id: 'S9', name: 'Laura Patricia Gómez', photo: 'https://placehold.co/100x100/DB7093/FFFFFF?text=LG', email: 'laura.gomez@example.com', tutorName: 'Patricia Díaz' },
     ];
 
-    const criteriaG1 = [
+    const criteriaG1: EvaluationCriteria[] = [
         { id: 'C1G1', name: 'Examen', weight: 40, expectedValue: 100 },
         { id: 'C2G1', name: 'Actividades', weight: 40, expectedValue: 0, isAutomated: true },
         { id: 'C3G1', name: 'Participación', weight: 20, expectedValue: 0, isAutomated: true },
     ];
 
-    const criteriaG2 = [
+    const criteriaG2: EvaluationCriteria[] = [
         { id: 'C1G2', name: 'Ensayo', weight: 50, expectedValue: 100 },
         { id: 'C2G2', name: 'Exposición', weight: 30, expectedValue: 100 },
         { id: 'C3G2', name: 'Actividades', weight: 20, expectedValue: 0, isAutomated: true },

@@ -33,7 +33,6 @@ import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { useData } from '@/hooks/use-data';
-import type { EvaluationCriteria, Grades, ParticipationRecord, Activity, ActivityRecord } from '@/hooks/use-data';
 import { useToast } from '@/hooks/use-toast';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
@@ -73,7 +72,7 @@ export default function ReportsPage() {
 
     let approvedCount = 0;
     activeGroup.students.forEach(student => {
-        const finalGrade = calculateFinalGrade(student.id, activeGroup.id, activePartialId);
+        const finalGrade = calculateFinalGrade(student.id);
         if (finalGrade >= 60) approvedCount++;
     });
 

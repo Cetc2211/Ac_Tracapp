@@ -28,8 +28,8 @@ import { useData } from '@/hooks/use-data';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useParams, notFound } from 'next/navigation';
-import type { Student, PartialId, StudentObservation, PartialData } from '@/lib/placeholder-data';
-import type { EvaluationCriteria, Grades, ParticipationRecord, ActivityRecord, Activity, AttendanceRecord, CalculatedRisk } from '@/hooks/use-data';
+import type { Student, PartialId, StudentObservation, PartialData, EvaluationCriteria } from '@/lib/placeholder-data';
+import type { CalculatedRisk } from '@/hooks/use-data';
 
 
 type StudentReportData = {

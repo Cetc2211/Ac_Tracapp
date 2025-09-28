@@ -1,4 +1,4 @@
-import type { Grades, RecoveryGrades, AttendanceRecord, ParticipationRecord, Activity, ActivityRecord } from "@/hooks/use-data";
+
 
 export type PartialId = 'p1' | 'p2' | 'p3';
 
@@ -49,6 +49,51 @@ export type SpecialNote = {
   text: string;
   startDate: string; // ISO date string
   endDate: string; // ISO date string
+};
+
+
+export type GradeDetail = {
+  delivered: number | null;
+};
+
+export type Grades = {
+  [studentId: string]: {
+    [criterionId: string]: GradeDetail;
+  };
+};
+
+export type RecoveryGrade = {
+    grade: number | null;
+    applied: boolean;
+};
+
+export type RecoveryGrades = {
+    [studentId: string]: RecoveryGrade;
+};
+
+export type AttendanceRecord = {
+  [date: string]: {
+    [studentId: string]: boolean;
+  };
+};
+
+export type ParticipationRecord = {
+  [date: string]: {
+    [studentId: string]: boolean;
+  };
+};
+
+export type Activity = {
+  id: string;
+  name: string;
+  dueDate: string; // YYYY-MM-DD
+  programmedDate: string; // YYYY-MM-DD
+};
+
+export type ActivityRecord = {
+    [studentId: string]: {
+        [activityId: string]: boolean;
+    };
 };
 
 export type PartialData = {

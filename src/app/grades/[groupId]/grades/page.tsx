@@ -28,7 +28,7 @@ import { cn } from '@/lib/utils';
 import { useData } from '@/hooks/use-data';
 import { useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
-import type { EvaluationCriteria } from '@/hooks/use-data';
+import type { EvaluationCriteria } from '@/lib/placeholder-data';
 import { getPartialLabel } from '@/lib/utils';
 
 const criterionColors = [
