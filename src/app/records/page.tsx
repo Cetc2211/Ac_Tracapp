@@ -50,6 +50,7 @@ const RecordsPage = () => {
     fetchPartialData,
     calculateDetailedFinalGrade,
     activeGroup,
+    activeGroupId,
     activePartialId,
     setActiveGroupId,
     setActivePartialId,
