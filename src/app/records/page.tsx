@@ -53,9 +53,7 @@ const RecordsPage = () => {
     calculateDetailedFinalGrade,
     activeGroup,
     activeGroupId,
-    activePartialId,
     setActiveGroupId,
-    setActivePartialId,
   } = useData();
 
   const [recordData, setRecordData] = useState<StudentGradeInfo[]>([]);
@@ -395,3 +393,5 @@ const RecordsPage = () => {
 };
 
 export default RecordsPage;
+
+    
