@@ -32,7 +32,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useData } from '@/hooks/use-data';
-import type { EvaluationCriteria } from '@/hooks/use-data';
+import type { EvaluationCriteria } from '@/lib/placeholder-data';
 
 const nameOptions = ["Actividades", "Portafolio", "Participación", "Examen", "Proyecto Integrador", "Otros"];
 const weightOptions = ["10", "20", "30", "40", "50", "60", "70", "80", "90", "100", "Otros"];
