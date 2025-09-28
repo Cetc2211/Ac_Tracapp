@@ -301,7 +301,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // --- CORE FUNCTIONS / ACTIONS ---
     const setActiveGroupId = (groupId: string | null) => {
-      setActiveGroupIdState(groupId);
+        if (groupId === undefined) {
+            console.warn("Attempted to set activeGroupId to undefined. Setting to null instead.");
+            setActiveGroupIdState(null);
+        } else {
+            setActiveGroupIdState(groupId);
+        }
     };
     const setActivePartialId = (partialId: PartialId) => setActivePartialIdState(partialId);
 
@@ -561,7 +566,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             throw new Error("No se ha configurado una clave API de Google AI. Ve a Ajustes para agregarla.");
         }
         
-        const model = 'gemini-2.0-flash';
+        const model = 'gemini-1.5-flash-latest';
         const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${settings.apiKey}`;
         
         const requestBody = {
