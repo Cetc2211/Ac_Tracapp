@@ -26,7 +26,7 @@ import { useMemo, useState } from 'react';
 import { getPartialLabel } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import type { Student, PartialData, EvaluationCriteria } from '@/lib/placeholder-data';
+import type { Student, EvaluationCriteria, PartialData } from '@/lib/placeholder-data';
 
 type FailedStudent = {
   student: Student;

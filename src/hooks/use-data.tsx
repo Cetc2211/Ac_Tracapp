@@ -3,43 +3,11 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import type { Student, Group, PartialId, StudentObservation, SpecialNote, EvaluationCriteria, PartialData, GradeDetail, Grades, RecoveryGrade, RecoveryGrades, AttendanceRecord, ParticipationRecord, Activity, ActivityRecord } from '@/lib/placeholder-data';
+import type { Student, Group, PartialId, StudentObservation, SpecialNote, EvaluationCriteria, PartialData, GradeDetail, Grades, RecoveryGrade, RecoveryGrades, AttendanceRecord, ParticipationRecord, Activity, ActivityRecord, CalculatedRisk, StudentWithRisk, CriteriaDetail, StudentStats, GroupedActivities } from '@/lib/placeholder-data';
 import { format } from 'date-fns';
 import { getPartialLabel } from '@/lib/utils';
 
 // TYPE DEFINITIONS
-
-export type GroupedActivities = {
-  [dueDate: string]: Activity[];
-};
-
-export type GroupStats = {
-  average: number;
-  highRiskCount: number;
-}
-
-export type CalculatedRisk = {
-    level: 'low' | 'medium' | 'high';
-    reason: string;
-}
-export type StudentWithRisk = Student & { calculatedRisk: CalculatedRisk };
-
-export type CriteriaDetail = {
-    name: string;
-    earned: number;
-    weight: number;
-}
-
-export type StudentStats = {
-    finalGrade: number;
-    criteriaDetails: CriteriaDetail[];
-    isRecovery: boolean;
-    partialId: PartialId;
-    attendance: { p: number; a: number; total: number; rate: number };
-    observations: StudentObservation[];
-};
-
-
 export type AllPartialsDataForGroup = {
     [partialId in PartialId]?: PartialData;
 };

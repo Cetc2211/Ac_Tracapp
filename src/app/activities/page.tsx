@@ -32,8 +32,9 @@ import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useData, type GroupedActivities } from '@/hooks/use-data';
-import type { Activity, ActivityRecord } from '@/lib/placeholder-data';
+import { useData } from '@/hooks/use-data';
+import type { Activity, ActivityRecord, GroupedActivities } from '@/lib/placeholder-data';
+
 
 export default function ActivitiesPage() {
   const { 

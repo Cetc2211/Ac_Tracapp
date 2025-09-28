@@ -104,5 +104,31 @@ export type PartialData = {
     activityRecords: ActivityRecord;
     recoveryGrades: RecoveryGrades;
     feedbacks: { [studentId: string]: string };
-    groupAnalysis?: string;
+    groupAnalysis: string;
+};
+
+export type CalculatedRisk = {
+    level: 'low' | 'medium' | 'high';
+    reason: string;
+};
+
+export type StudentWithRisk = Student & { calculatedRisk: CalculatedRisk };
+
+export type CriteriaDetail = {
+    name: string;
+    earned: number;
+    weight: number;
+};
+
+export type StudentStats = {
+    finalGrade: number;
+    criteriaDetails: CriteriaDetail[];
+    isRecovery: boolean;
+    partialId: PartialId;
+    attendance: { p: number; a: number; total: number; rate: number };
+    observations: StudentObservation[];
+};
+
+export type GroupedActivities = {
+  [dueDate: string]: Activity[];
 };
