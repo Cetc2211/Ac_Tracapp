@@ -294,7 +294,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [groups, allStudents, allObservations, allPartialsData, activeGroupId, isLoading, specialNotes, settings]);
 
     // --- MEMOIZED DERIVED STATE ---
-    const activeGroup = useMemo(() => groups.find(g => g.id === activeGroupId) || null, [groups, activeGroupId]);
+    const activeGroup = useMemo(() => {
+      if (!activeGroupId) return null;
+      return groups.find(g => g.id === activeGroupId) || null;
+    }, [groups, activeGroupId]);
+
     const activeStudentsInGroups = useMemo(() => Array.from(new Map(groups.flatMap(g => g.students.map(s => [s.id, s]))).values()), [groups]);
     const allPartialsDataForActiveGroup = useMemo(() => allPartialsData[activeGroupId || ''] || {}, [allPartialsData, activeGroupId]);
     const partialData = useMemo(() => allPartialsDataForActiveGroup[activePartialId] || defaultPartialData, [allPartialsDataForActiveGroup, activePartialId]);
