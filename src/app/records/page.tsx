@@ -32,6 +32,8 @@ import { useData } from '@/hooks/use-data';
 import { getPartialLabel } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { WhatsAppDialog } from '@/components/whatsapp-dialog';
+import type { PartialId } from '@/hooks/use-data';
+
 
 type StudentGradeInfo = {
   id: string;
@@ -59,16 +61,18 @@ const RecordsPage = () => {
   const [recordData, setRecordData] = useState<StudentGradeInfo[]>([]);
   const [isCalculating, setIsCalculating] = useState(false);
   const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState<PartialId | 'semester'>('p1');
+
 
   const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   const handleGenerateRecord = async () => {
-    if (!activeGroup || !activePartialId) {
+    if (!activeGroup) {
       toast({
         variant: 'destructive',
         title: 'Faltan datos',
-        description: 'Por favor, selecciona un grupo y un parcial.',
+        description: 'Por favor, selecciona un grupo y un periodo.',
       });
       return;
     }
@@ -77,47 +81,92 @@ const RecordsPage = () => {
     setRecordData([]);
 
     try {
-      const partialData = await fetchPartialData(activeGroup.id, activePartialId);
-      if (!partialData) {
-        toast({
-          variant: 'destructive',
-          title: 'Sin datos',
-          description: `No hay datos de calificaciones o asistencia para ${getPartialLabel(activePartialId)} en este grupo.`,
-        });
-        setIsCalculating(false);
-        return;
-      }
+        if (selectedPeriod === 'semester') {
+            const partials: PartialId[] = ['p1', 'p2', 'p3'];
+            const allPartialsData = await Promise.all(
+                partials.map(pId => fetchPartialData(activeGroup.id, pId))
+            );
 
-      const studentsData = activeGroup.students.map((student) => {
-        const { finalGrade, isRecovery } = calculateDetailedFinalGrade(
-          student.id,
-          partialData,
-          activeGroup.criteria
-        );
+            const studentsData = activeGroup.students.map(student => {
+                let totalGrade = 0;
+                let partialsWithGrades = 0;
+                let totalAttendance = 0;
+                let totalAbsences = 0;
+                let hadRecovery = false;
 
-        let attendance = 0;
-        let absences = 0;
-        Object.values(partialData.attendance).forEach((dailyRecord) => {
-          if (Object.prototype.hasOwnProperty.call(dailyRecord, student.id)) {
-            if (dailyRecord[student.id]) {
-              attendance++;
-            } else {
-              absences++;
+                allPartialsData.forEach(pData => {
+                    if (pData) {
+                        const { finalGrade, isRecovery } = calculateDetailedFinalGrade(student.id, pData, activeGroup.criteria);
+                        totalGrade += finalGrade;
+                        partialsWithGrades++;
+                        if(isRecovery) hadRecovery = true;
+                        
+                        Object.values(pData.attendance).forEach(dailyRecord => {
+                            if (Object.prototype.hasOwnProperty.call(dailyRecord, student.id)) {
+                                if (dailyRecord[student.id]) totalAttendance++;
+                                else totalAbsences++;
+                            }
+                        });
+                    }
+                });
+
+                const semesterAverage = partialsWithGrades > 0 ? totalGrade / partialsWithGrades : 0;
+                
+                return {
+                    id: student.id,
+                    name: student.name,
+                    attendance: totalAttendance,
+                    absences: totalAbsences,
+                    finalGrade: semesterAverage,
+                    isRecovery: hadRecovery,
+                };
+            });
+             setRecordData(studentsData.sort((a,b) => a.name.localeCompare(b.name)));
+
+        } else {
+             const partialData = await fetchPartialData(activeGroup.id, selectedPeriod);
+            if (!partialData) {
+                toast({
+                variant: 'destructive',
+                title: 'Sin datos',
+                description: `No hay datos de calificaciones o asistencia para ${getPartialLabel(selectedPeriod)} en este grupo.`,
+                });
+                setIsCalculating(false);
+                return;
             }
-          }
-        });
 
-        return {
-          id: student.id,
-          name: student.name,
-          attendance,
-          absences,
-          finalGrade,
-          isRecovery,
-        };
-      });
+            const studentsData = activeGroup.students.map((student) => {
+                const { finalGrade, isRecovery } = calculateDetailedFinalGrade(
+                student.id,
+                partialData,
+                activeGroup.criteria
+                );
 
-      setRecordData(studentsData.sort((a,b) => a.name.localeCompare(b.name)));
+                let attendance = 0;
+                let absences = 0;
+                Object.values(partialData.attendance).forEach((dailyRecord) => {
+                if (Object.prototype.hasOwnProperty.call(dailyRecord, student.id)) {
+                    if (dailyRecord[student.id]) {
+                    attendance++;
+                    } else {
+                    absences++;
+                    }
+                }
+                });
+
+                return {
+                id: student.id,
+                name: student.name,
+                attendance,
+                absences,
+                finalGrade,
+                isRecovery,
+                };
+            });
+             setRecordData(studentsData.sort((a,b) => a.name.localeCompare(b.name)));
+        }
+
+     
     } catch (e) {
       console.error('Error generando el acta:', e);
       toast({
@@ -160,7 +209,7 @@ const RecordsPage = () => {
         const y = 10;
         
         pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
-        pdf.save(`Acta_Calificaciones_${activeGroup?.subject.replace(/\s+/g, '_')}_${activePartialId}.pdf`);
+        pdf.save(`Acta_Calificaciones_${activeGroup?.subject.replace(/\s+/g, '_')}_${selectedPeriod}.pdf`);
       }).finally(() => {
         elementsToHide.forEach(el => (el as HTMLElement).style.display = '');
       });
@@ -169,15 +218,19 @@ const RecordsPage = () => {
   
   const getPeriodo = () => {
     if (!activeGroup) return '';
-    const partialsData = fetchPartialData(activeGroup.id, activePartialId);
     // This is a simplification. A real implementation would need to find the min/max dates
     // from attendance records for the selected partial.
-    return 'Marzo - Mayo 2024';
+    return 'Marzo - Julio 2024';
   }
   
   const handleGroupChange = (groupId: string) => {
     setActiveGroupId(groupId);
     setRecordData([]); // Clear previous group's data
+  }
+  
+  const getPeriodLabel = () => {
+      if (selectedPeriod === 'semester') return 'Semestral';
+      return getPartialLabel(selectedPeriod);
   }
 
   return (
@@ -188,14 +241,14 @@ const RecordsPage = () => {
           <div>
             <h1 className="text-3xl font-bold">Actas de Calificaciones</h1>
             <p className="text-muted-foreground">
-              Genera y descarga el acta de calificaciones para un grupo y parcial específicos.
+              Genera y descarga el acta de calificaciones para un grupo y periodo específicos.
             </p>
           </div>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Selección de Grupo y Parcial</CardTitle>
+            <CardTitle>Selección de Grupo y Periodo</CardTitle>
             <div className="flex flex-col sm:flex-row sm:items-end gap-4 pt-4">
               <div className="space-y-2 flex-1">
                 <label htmlFor="group-select" className="text-sm font-medium">Grupo</label>
@@ -213,15 +266,16 @@ const RecordsPage = () => {
                 </Select>
               </div>
                <div className="space-y-2 flex-1">
-                <label htmlFor="partial-select" className="text-sm font-medium">Parcial</label>
-                 <Select onValueChange={(v) => setActivePartialId(v as 'p1' | 'p2' | 'p3')} value={activePartialId}>
+                <label htmlFor="partial-select" className="text-sm font-medium">Parcial o Periodo</label>
+                 <Select onValueChange={(v) => setSelectedPeriod(v as PartialId | 'semester')} value={selectedPeriod}>
                   <SelectTrigger id="partial-select">
-                    <SelectValue placeholder="Selecciona un parcial..." />
+                    <SelectValue placeholder="Selecciona un periodo..." />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="p1">Primer Parcial</SelectItem>
                     <SelectItem value="p2">Segundo Parcial</SelectItem>
                     <SelectItem value="p3">Tercer Parcial</SelectItem>
+                    <SelectItem value="semester">Semestral</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -262,9 +316,9 @@ const RecordsPage = () => {
                   <div><span className="font-semibold text-foreground">Docente: </span> <span className="text-muted-foreground">{activeGroup?.facilitator}</span></div>
                   <div><span className="font-semibold text-foreground">Semestre: </span> <span className="text-muted-foreground">{activeGroup?.semester}</span></div>
                   <div><span className="font-semibold text-foreground">Grupo: </span> <span className="text-muted-foreground">{activeGroup?.groupName}</span></div>
-                  <div><span className="font-semibold text-foreground">Parcial: </span> <span className="text-muted-foreground">{getPartialLabel(activePartialId)}</span></div>
+                  <div><span className="font-semibold text-foreground">Periodo Evaluado: </span> <span className="text-muted-foreground">{getPeriodLabel()}</span></div>
                   <div><span className="font-semibold text-foreground">Asignatura: </span> <span className="text-muted-foreground">{activeGroup?.subject}</span></div>
-                  <div><span className="font-semibold text-foreground">Periodo: </span> <span className="text-muted-foreground">{getPeriodo()}</span></div>
+                  <div><span className="font-semibold text-foreground">Ciclo Escolar: </span> <span className="text-muted-foreground">{getPeriodo()}</span></div>
                 </div>
               </header>
 
@@ -322,7 +376,7 @@ const RecordsPage = () => {
             <CardContent className="text-center p-12">
                  <ClipboardSignature className="h-12 w-12 mx-auto text-muted-foreground" />
                  <h3 className="mt-4 text-lg font-semibold">Selecciona un grupo</h3>
-                 <p className="mt-1 text-muted-foreground">Para empezar, elige un grupo y un parcial para generar el acta.</p>
+                 <p className="mt-1 text-muted-foreground">Para empezar, elige un grupo y un periodo para generar el acta.</p>
             </CardContent>
           )}
           
