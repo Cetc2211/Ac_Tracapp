@@ -295,20 +295,22 @@ const RecordsPage = () => {
             <>
             <div ref={reportRef} className="p-4 sm:p-6 md:p-8">
               <header className="border-b pb-6 mb-6">
-                <div className="flex justify-between items-start">
-                  <div className="flex flex-col">
-                    <h1 className="text-2xl font-bold">{settings.institutionName}</h1>
-                    <p className="text-lg text-muted-foreground">Acta de Calificaciones</p>
-                  </div>
-                  {settings.logo && (
-                    <Image
-                        src={settings.logo}
-                        alt="Logo de la Institución"
-                        width={80}
-                        height={80}
-                        className="object-contain"
-                    />
-                  )}
+                <div className="relative flex justify-center text-center mb-4">
+                    <div className="flex-grow">
+                        <h1 className="text-2xl font-bold">{settings.institutionName}</h1>
+                        <p className="text-lg text-muted-foreground">Acta de Calificaciones</p>
+                    </div>
+                    {settings.logo && (
+                        <div className="absolute right-0 top-0">
+                            <Image
+                                src={settings.logo}
+                                alt="Logo de la Institución"
+                                width={80}
+                                height={80}
+                                className="object-contain"
+                            />
+                        </div>
+                    )}
                 </div>
                 <div className="pt-4 grid grid-cols-2 gap-x-4 text-sm">
                   <div><span className="font-semibold text-foreground">Docente: </span> <span className="text-muted-foreground">{activeGroup?.facilitator}</span></div>
@@ -393,5 +395,3 @@ const RecordsPage = () => {
 };
 
 export default RecordsPage;
-
-    
