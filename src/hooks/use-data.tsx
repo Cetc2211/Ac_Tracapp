@@ -1,12 +1,12 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import type { Student, Group, PartialId, StudentObservation, SpecialNote, EvaluationCriteria, GradeDetail, Grades, RecoveryGrade, RecoveryGrades, AttendanceRecord, ParticipationRecord, Activity, ActivityRecord, CalculatedRisk, StudentWithRisk, CriteriaDetail, StudentStats, GroupedActivities, PartialData } from '@/lib/placeholder-data';
 import { format } from 'date-fns';
 import { getPartialLabel } from '@/lib/utils';
-import { genkit, generation, AI } from 'genkit';
-import { googleAI } from '@genkit-ai/googleai';
-import { configure } from 'genkit';
+import { generateFeedback, generateGroupAnalysis } from '@/ai/generate';
+
 
 // TYPE DEFINITIONS
 export type AllPartialsDataForGroup = {
@@ -140,7 +140,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [settings, setSettingsState] = useState(defaultSettings);
     const [activeGroupId, setActiveGroupIdState] = useState<string | null>(null);
     const [activePartialId, setActivePartialIdState] = useState<PartialId>('p1');
-    const [ai, setAi] = useState<AI | null>(null);
     
     // --- HYDRATION & PERSISTENCE ---
     useEffect(() => {
@@ -170,13 +169,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setSpecialNotes(storedSpecialNotes);
             setAllPartialsData(storedPartialsData);
             setSettingsState(storedSettings);
-
-            if (storedSettings.apiKey) {
-                configure({
-                    plugins: [googleAI({ apiKey: storedSettings.apiKey })],
-                });
-                setAi(genkit());
-            }
 
             if (storedActiveGroupId && storedGroups.some(g => g.id === storedActiveGroupId)) {
                 setActiveGroupIdState(storedActiveGroupId);
@@ -230,15 +222,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const setSettings = useCallback(async (newSettings: typeof defaultSettings) => {
         setSettingsState(newSettings);
-        if (newSettings.apiKey) {
-            configure({
-                plugins: [googleAI({ apiKey: newSettings.apiKey })],
-            });
-            setAi(genkit());
-        } else {
-            setAi(null);
-        }
-        // The useEffect will handle saving to localStorage
     }, []);
 
     const createSetter = useCallback((field: keyof PartialData) => async (setter: React.SetStateAction<any>) => {
@@ -487,54 +470,32 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [allPartialsData, groups]);
     
     // --- AI FEATURES ---
-    const callGoogleAI = useCallback(async (prompt: string): Promise<string> => {
-        if (!ai) {
+    const generateFeedbackWithAI = useCallback(async (student: Student, stats: StudentStats): Promise<string> => {
+        if (!settings.apiKey) {
             throw new Error("No se ha configurado una clave API de Google AI válida. Ve a Ajustes para agregarla.");
         }
-        
-        const model = googleAI.model('gemini-1.5-flash-latest');
-
-        try {
-            const { text } = await generation.generate({
-                model,
-                prompt,
-                config: {
-                    temperature: 0.5,
-                },
-                safetySettings: [
-                    {
-                        category: "HARM_CATEGORY_HARASSMENT",
-                        threshold: "BLOCK_ONLY_HIGH"
-                    },
-                ],
-                retries: 2, // Reintentar 2 veces si falla
-            });
-            return text;
-        } catch (e: any) {
-            console.error("Genkit AI Error:", e);
-            throw new Error(`Error del servicio de IA: ${e.message || 'Error desconocido'}`);
-        }
-    }, [ai]);
-
-
-    const generateFeedbackWithAI = useCallback(async (student: Student, stats: StudentStats): Promise<string> => {
         const prompt = `Eres un asistente de docentes experto en pedagogía. Genera una retroalimentación constructiva y personalizada para ${student.name}.
         DATOS: Calificación: ${stats.finalGrade.toFixed(0)}%, Asistencia: ${stats.attendance.rate.toFixed(0)}%.
         Desglose: ${stats.criteriaDetails.map(c => `${c.name}: ${c.earned.toFixed(0)}%`).join(', ')}.
         Bitácora: ${stats.observations.length > 0 ? stats.observations.map(o => `${o.type}: ${o.details}`).join('; ') : "Sin observaciones."}
         INSTRUCCIONES: Inicia con fortalezas, luego áreas de oportunidad y finaliza con recomendaciones claras. Tono de apoyo. Sin despedidas. **Bajo ninguna circunstancia utilices asteriscos (*) para dar formato o enfatizar texto.** La redacción debe ser en prosa natural.`;
-        return callGoogleAI(prompt);
-    }, [callGoogleAI]);
+        
+        return await generateFeedback(prompt, settings.apiKey);
+    }, [settings.apiKey]);
 
     const generateGroupAnalysisWithAI = useCallback(async (group: Group, summary: any, recoverySummary: any, atRisk: StudentWithRisk[], observations: (StudentObservation & { studentName: string })[]) => {
+        if (!settings.apiKey) {
+            throw new Error("No se ha configurado una clave API de Google AI válida. Ve a Ajustes para agregarla.");
+        }
         const prompt = `Actúa como analista educativo. Redacta un análisis narrativo profesional y objetivo para el grupo ${group.subject} en el ${getPartialLabel(activePartialId)}.
         DATOS: ${summary.totalStudents} estudiantes, promedio ${summary.groupAverage.toFixed(1)}%, aprobación ${(summary.approvedCount / summary.totalStudents * 100).toFixed(1)}%, asistencia ${summary.attendanceRate.toFixed(1)}%.
         RIESGO: ${atRisk.length} estudiantes en riesgo.
         BITÁCORA: ${observations.length} observaciones.
         RECUPERACIÓN: ${recoverySummary.recoveryStudentsCount} estudiantes la necesitaron.
         INSTRUCCIONES: Redacta en párrafos fluidos. Analiza el panorama general, correlaciones (asistencia/rendimiento), efectividad de la recuperación y finaliza con una recomendación formal a directivos y tutores para dar seguimiento a los casos de riesgo. **Bajo ninguna circunstancia utilices asteriscos (*) para dar formato o enfatizar texto.** La redacción debe ser en prosa natural.`;
-        return callGoogleAI(prompt);
-    }, [callGoogleAI, activePartialId]);
+
+        return await generateGroupAnalysis(prompt, settings.apiKey);
+    }, [settings.apiKey, activePartialId]);
 
 
     // --- CONTEXT VALUE ---
