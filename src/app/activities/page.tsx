@@ -20,7 +20,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import Image from 'next/image';
-import { Student } from '@/lib/placeholder-data';
+import { Student, Activity, GroupedActivities } from '@/lib/placeholder-data';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Link from 'next/link';
@@ -33,7 +33,6 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useData } from '@/hooks/use-data';
-import type { Activity, GroupedActivities } from '@/lib/placeholder-data';
 
 
 export default function ActivitiesPage() {
