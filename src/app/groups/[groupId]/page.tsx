@@ -99,7 +99,7 @@ export default function GroupDetailsPage() {
 
   const [bulkNames, setBulkNames] = useState('');
   const [bulkEmails, setBulkEmails] = useState('');
-  const [bulkPhones, setBulkPhones] = useState('');
+  const [bulkPhones, setBulkPhones] useState('');
   const [bulkTutorNames, setBulkTutorNames] = useState('');
   const [bulkTutorPhones, setBulkTutorPhones] = useState('');
 
