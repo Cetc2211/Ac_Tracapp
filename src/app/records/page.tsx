@@ -32,7 +32,7 @@ import { useData } from '@/hooks/use-data';
 import { getPartialLabel } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { WhatsAppDialog } from '@/components/whatsapp-dialog';
-import type { PartialId } from '@/hooks/use-data';
+import type { PartialId } from '@/lib/placeholder-data';
 
 
 type StudentGradeInfo = {

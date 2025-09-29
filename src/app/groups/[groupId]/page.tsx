@@ -1,3 +1,4 @@
+
 'use client';
 import {
   Card,
@@ -16,7 +17,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Student, Group, PartialId, CalculatedRisk } from '@/lib/placeholder-data';
+import type { Student, Group, PartialId, CalculatedRisk, EvaluationCriteria } from '@/lib/placeholder-data';
 import { notFound, useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
