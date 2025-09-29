@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -27,7 +28,7 @@ import { useData } from '@/hooks/use-data';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useParams, notFound } from 'next/navigation';
-import type { Student, PartialId, StudentObservation, PartialData, EvaluationCriteria, CalculatedRisk } from '@/lib/placeholder-data';
+import type { Student, PartialId, StudentObservation, EvaluationCriteria, CalculatedRisk } from '@/lib/placeholder-data';
 
 
 type StudentReportData = {

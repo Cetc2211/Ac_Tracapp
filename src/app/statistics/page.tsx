@@ -22,8 +22,7 @@ import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useData } from '@/hooks/use-data';
-import type { Student, PartialId, CalculatedRisk, AttendanceRecord, ParticipationRecord } from '@/lib/placeholder-data';
-import type { EvaluationCriteria } from '@/lib/placeholder-data';
+import type { Student, PartialId, CalculatedRisk, AttendanceRecord, ParticipationRecord, EvaluationCriteria } from '@/lib/placeholder-data';
 import { getPartialLabel } from '@/lib/utils';
 
 
