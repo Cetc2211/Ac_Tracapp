@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -22,7 +21,7 @@ import html2canvas from 'html2canvas';
 import { useData } from '@/hooks/use-data';
 import { Badge } from '@/components/ui/badge';
 import { getPartialLabel } from '@/lib/utils';
-import type { PartialId, StudentObservation, Student, StudentStats } from '@/lib/placeholder-data';
+import type { PartialId, StudentObservation, Student, StudentStats, CriteriaDetail } from '@/lib/placeholder-data';
 import { StudentObservationLogDialog } from '@/components/student-observation-log-dialog';
 import { WhatsAppDialog } from '@/components/whatsapp-dialog';
 import { Textarea } from '@/components/ui/textarea';
