@@ -264,7 +264,7 @@ const RecordsPage = () => {
               </div>
                <div className="space-y-2 flex-1">
                 <label htmlFor="partial-select" className="text-sm font-medium">Parcial o Periodo</label>
-                 <Select onValueChange={(v) => setSelectedPeriod(v as PartialId | 'semester')} value={selectedPeriod}>
+                 <Select onValueChange={(v) => setSelectedPeriod(v as any)} value={selectedPeriod}>
                   <SelectTrigger id="partial-select">
                     <SelectValue placeholder="Selecciona un periodo..." />
                   </SelectTrigger>

@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Student, StudentObservation } from '@/lib/placeholder-data';
+import type { Student, StudentObservation } from '@/lib/placeholder-data';
 import { useState, useEffect } from 'react';
 import { useData } from '@/hooks/use-data';
 import { format } from 'date-fns';
