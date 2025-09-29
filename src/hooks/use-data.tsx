@@ -4,6 +4,9 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import type { Student, Group, PartialId, StudentObservation, SpecialNote, EvaluationCriteria, GradeDetail, Grades, RecoveryGrade, RecoveryGrades, AttendanceRecord, ParticipationRecord, Activity, ActivityRecord, CalculatedRisk, StudentWithRisk, CriteriaDetail, StudentStats, GroupedActivities, PartialData } from '@/lib/placeholder-data';
 import { format } from 'date-fns';
 import { getPartialLabel } from '@/lib/utils';
+import { genkit, generation, AI } from 'genkit';
+import { googleAI } from '@genkit-ai/googleai';
+import { configure } from 'genkit';
 
 // TYPE DEFINITIONS
 export type AllPartialsDataForGroup = {
@@ -137,6 +140,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [settings, setSettingsState] = useState(defaultSettings);
     const [activeGroupId, setActiveGroupIdState] = useState<string | null>(null);
     const [activePartialId, setActivePartialIdState] = useState<PartialId>('p1');
+    const [ai, setAi] = useState<AI | null>(null);
     
     // --- HYDRATION & PERSISTENCE ---
     useEffect(() => {
@@ -166,6 +170,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setSpecialNotes(storedSpecialNotes);
             setAllPartialsData(storedPartialsData);
             setSettingsState(storedSettings);
+
+            if (storedSettings.apiKey) {
+                configure({
+                    plugins: [googleAI({ apiKey: storedSettings.apiKey })],
+                });
+                setAi(genkit());
+            }
 
             if (storedActiveGroupId && storedGroups.some(g => g.id === storedActiveGroupId)) {
                 setActiveGroupIdState(storedActiveGroupId);
@@ -219,6 +230,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const setSettings = useCallback(async (newSettings: typeof defaultSettings) => {
         setSettingsState(newSettings);
+        if (newSettings.apiKey) {
+            configure({
+                plugins: [googleAI({ apiKey: newSettings.apiKey })],
+            });
+            setAi(genkit());
+        } else {
+            setAi(null);
+        }
         // The useEffect will handle saving to localStorage
     }, []);
 
@@ -469,47 +488,33 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     // --- AI FEATURES ---
     const callGoogleAI = useCallback(async (prompt: string): Promise<string> => {
-        if (!settings.apiKey) {
-            throw new Error("No se ha configurado una clave API de Google AI. Ve a Ajustes para agregarla.");
+        if (!ai) {
+            throw new Error("No se ha configurado una clave API de Google AI válida. Ve a Ajustes para agregarla.");
         }
         
-        const model = 'gemini-1.5-flash-latest';
-        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${settings.apiKey}`;
-        
-        const requestBody = {
-            contents: [{
-                parts: [{ text: prompt }]
-            }],
-             safetySettings: [
-                {
-                    category: "HARM_CATEGORY_HARASSMENT",
-                    threshold: "BLOCK_ONLY_HIGH"
+        const model = googleAI.model('gemini-1.5-flash-latest');
+
+        try {
+            const { text } = await generation.generate({
+                model,
+                prompt,
+                config: {
+                    temperature: 0.5,
                 },
-             ]
-        };
-
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(requestBody)
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error("AI API Error Response:", errorData);
-            throw new Error(`Error del servicio de IA: ${errorData.error?.message || response.statusText}`);
+                safetySettings: [
+                    {
+                        category: "HARM_CATEGORY_HARASSMENT",
+                        threshold: "BLOCK_ONLY_HIGH"
+                    },
+                ],
+                retries: 2, // Reintentar 2 veces si falla
+            });
+            return text;
+        } catch (e: any) {
+            console.error("Genkit AI Error:", e);
+            throw new Error(`Error del servicio de IA: ${e.message || 'Error desconocido'}`);
         }
-
-        const data = await response.json();
-        const feedbackText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-        if (!feedbackText) {
-            console.error("Invalid AI response structure:", data);
-            throw new Error("La respuesta de la IA no contiene texto.");
-        }
-
-        return feedbackText;
-    }, [settings.apiKey]);
+    }, [ai]);
 
 
     const generateFeedbackWithAI = useCallback(async (student: Student, stats: StudentStats): Promise<string> => {
