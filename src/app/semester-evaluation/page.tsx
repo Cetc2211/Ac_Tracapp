@@ -18,13 +18,13 @@ import {
 } from '@/components/ui/table';
 import { useData } from '@/hooks/use-data';
 import { useState, useEffect } from 'react';
-import type { PartialId } from '@/lib/placeholder-data';
+import type { PartialId, Student } from '@/lib/placeholder-data';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Presentation, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import type { Student } from '@/lib/placeholder-data';
+
 
 interface PartialGradeInfo {
     grade: number;

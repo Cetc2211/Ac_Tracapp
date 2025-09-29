@@ -33,7 +33,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useData } from '@/hooks/use-data';
-import type { Activity, ActivityRecord, GroupedActivities } from '@/lib/placeholder-data';
+import type { Activity, GroupedActivities } from '@/lib/placeholder-data';
 
 
 export default function ActivitiesPage() {
