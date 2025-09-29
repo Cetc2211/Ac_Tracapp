@@ -23,17 +23,10 @@ import html2canvas from 'html2canvas';
 import { useData } from '@/hooks/use-data';
 import { Badge } from '@/components/ui/badge';
 import { getPartialLabel } from '@/lib/utils';
-import type { PartialId, StudentObservation, Student } from '@/hooks/use-data';
+import type { PartialId, StudentObservation, Student, StudentStats } from '@/lib/placeholder-data';
 import { StudentObservationLogDialog } from '@/components/student-observation-log-dialog';
 import { WhatsAppDialog } from '@/components/whatsapp-dialog';
 import { Textarea } from '@/components/ui/textarea';
-
-
-type StudentStats = ReturnType<typeof useData>['calculateDetailedFinalGrade'] & {
-  partialId: PartialId;
-  attendance: { p: number; a: number; total: number; rate: number };
-  observations: StudentObservation[];
-};
 
 export default function StudentProfilePage() {
   const params = useParams();

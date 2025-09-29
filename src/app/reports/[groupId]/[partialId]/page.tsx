@@ -24,7 +24,7 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useData } from '@/hooks/use-data';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { PartialId, StudentObservation, Group } from '@/hooks/use-data';
+import type { PartialId, StudentObservation, Group, StudentWithRisk } from '@/lib/placeholder-data';
 import { getPartialLabel } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
