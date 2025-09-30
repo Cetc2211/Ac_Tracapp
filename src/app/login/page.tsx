@@ -95,7 +95,6 @@ export default function LoginPage() {
         setIsResetDialogOpen(false);
       } else {
         // This 'else' block might be triggered even if an error is set.
-        // Check for resetError first.
         let errorMessage = 'No se pudo enviar el correo de recuperación. Inténtalo de nuevo.';
         if (resetError && 'code' in resetError) {
           switch (resetError.code) {
