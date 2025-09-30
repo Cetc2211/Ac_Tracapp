@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -51,28 +50,32 @@ export default function LoginPage() {
         router.push('/dashboard');
       } else if (error) {
         let errorMessage = 'Las credenciales proporcionadas no son válidas. Por favor, inténtalo de nuevo.';
-        switch (error.code) {
-          case 'auth/user-not-found':
-            errorMessage = 'Este correo electrónico no está registrado. Por favor, crea una cuenta.';
-            break;
-          case 'auth/wrong-password':
-          case 'auth/invalid-credential':
-             errorMessage = 'Contraseña incorrecta. Por favor, inténtalo de nuevo.';
-             break;
-          case 'auth/invalid-email':
-            errorMessage = 'El formato del correo electrónico no es válido.';
-            break;
-          default:
-            console.error('Firebase Auth Error:', error);
+        if ('code' in error) {
+          switch (error.code) {
+            case 'auth/user-not-found':
+              errorMessage = 'Este correo electrónico no está registrado. Por favor, crea una cuenta.';
+              break;
+            case 'auth/wrong-password':
+            case 'auth/invalid-credential':
+              errorMessage = 'Contraseña incorrecta. Por favor, inténtalo de nuevo.';
+              break;
+            case 'auth/invalid-email':
+              errorMessage = 'El formato del correo electrónico no es válido.';
+              break;
+            default:
+              console.error('Firebase Auth Error:', error);
+          }
+        } else {
+          console.error('Unknown error:', error);
         }
-         toast({
+        toast({
           variant: 'destructive',
           title: 'Error al iniciar sesión',
           description: errorMessage,
         });
       }
     } catch (e: any) {
-       toast({
+      toast({
         variant: 'destructive',
         title: 'Error inesperado',
         description: 'Ocurrió un error al intentar iniciar sesión. Por favor, revisa la consola para más detalles.',
@@ -82,34 +85,36 @@ export default function LoginPage() {
   
   const handlePasswordReset = async () => {
     if (!resetEmail) {
-        toast({ variant: 'destructive', title: 'Correo requerido', description: 'Por favor, ingresa tu correo electrónico.' });
-        return;
+      toast({ variant: 'destructive', title: 'Correo requerido', description: 'Por favor, ingresa tu correo electrónico.' });
+      return;
     }
     try {
-        const success = await sendPasswordResetEmail(resetEmail);
-        if (success) {
-            toast({ title: 'Correo enviado', description: 'Revisa tu bandeja de entrada para restablecer tu contraseña.' });
-            setIsResetDialogOpen(false);
-        } else {
-            // This 'else' block might be triggered even if an error is set.
-            // Check for resetError first.
-            let errorMessage = 'No se pudo enviar el correo de recuperación. Inténtalo de nuevo.';
-            if (resetError) {
-                switch (resetError.code) {
-                    case 'auth/user-not-found':
-                        errorMessage = 'Este correo electrónico no está registrado. No se puede enviar el correo.';
-                        break;
-                    case 'auth/invalid-email':
-                        errorMessage = 'El formato del correo electrónico no es válido.';
-                        break;
-                    default:
-                        errorMessage = resetError.message;
-                }
-            }
-            toast({ variant: 'destructive', title: 'Error al enviar correo', description: errorMessage });
+      const success = await sendPasswordResetEmail(resetEmail);
+      if (success) {
+        toast({ title: 'Correo enviado', description: 'Revisa tu bandeja de entrada para restablecer tu contraseña.' });
+        setIsResetDialogOpen(false);
+      } else {
+        // This 'else' block might be triggered even if an error is set.
+        // Check for resetError first.
+        let errorMessage = 'No se pudo enviar el correo de recuperación. Inténtalo de nuevo.';
+        if (resetError && 'code' in resetError) {
+          switch (resetError.code) {
+            case 'auth/user-not-found':
+              errorMessage = 'Este correo electrónico no está registrado. No se puede enviar el correo.';
+              break;
+            case 'auth/invalid-email':
+              errorMessage = 'El formato del correo electrónico no es válido.';
+              break;
+            default:
+              errorMessage = resetError.message;
+          }
+        } else if (resetError) {
+          errorMessage = 'No se pudo enviar el correo de recuperación. Inténtalo de nuevo.';
         }
+        toast({ variant: 'destructive', title: 'Error al enviar correo', description: errorMessage });
+      }
     } catch(e) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Ocurrió un problema al enviar el correo de recuperación.' });
+      toast({ variant: 'destructive', title: 'Error', description: 'Ocurrió un problema al enviar el correo de recuperación.' });
     }
   };
 
