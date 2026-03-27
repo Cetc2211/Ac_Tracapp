@@ -1,0 +1,387 @@
+{
+  "document_info": {
+    "title": "Reporte de Funcionalidades de Academic Tracker",
+    "generated_date": "2026-03-26",
+    "description": "Configuraciones y especificaciones de las funcionalidades añadidas a Academic Tracker que deben estar operativas"
+  },
+
+  "firebase_configuration": {
+    "file": "src/lib/firebase.ts",
+    "project": "academic-tracker-qeoxi",
+    "correct_api_key": "AIzaSyBliGErw1WiGhY6lZeCSh6WU0Kg2ZK7oa0",
+    "current_issue": "La API Key actual termina en 'oao' cuando debe terminar en 'oa0' (cero, no letra o)",
+    "config": {
+      "apiKey": "AIzaSyBliGErw1WiGhY6lZeCSh6WU0Kg2ZK7oa0",
+      "authDomain": "academic-tracker-qeoxi.firebaseapp.com",
+      "projectId": "academic-tracker-qeoxi",
+      "storageBucket": "academic-tracker-qeoxi.appspot.com",
+      "messagingSenderId": "263108580734",
+      "appId": "1:263108580734:web:316c14f8e71c20aa038f2f"
+    },
+    "admin_email": "mpceciliotopetecruz@gmail.com"
+  },
+
+  "firestore_collections": {
+    "users": {
+      "description": "Datos privados del usuario por UID",
+      "structure": "users/{userId}/userData/{documentKey}",
+      "subcollections": ["app_groups", "app_students", "app_observations", "app_partialsData", "app_settings"]
+    },
+    "admins": {
+      "description": "Emails de administradores del sistema",
+      "document_key": "email del administrador",
+      "usage": "El hook use-admin.ts verifica si el email del usuario autenticado existe en esta colección"
+    },
+    "official_groups": {
+      "description": "Grupos oficiales de la institución",
+      "fields": ["id", "name", "tutorEmail", "createdAt"],
+      "usage": "Fuente única de verdad para grupos institucionales"
+    },
+    "students": {
+      "description": "Estudiantes centralizados",
+      "fields": ["id", "name", "email", "phone", "tutorName", "tutorPhone", "official_group_id", "photo"]
+    },
+    "announcements": {
+      "description": "Anuncios del sistema",
+      "fields": ["id", "title", "message", "createdAt", "expiresAt", "isActive"]
+    },
+    "justifications": {
+      "description": "Justificaciones de inasistencia",
+      "fields": ["id", "studentId", "date", "reason", "category", "createdAt"]
+    },
+    "absences": {
+      "description": "Reportes de ausencias por grupo",
+      "fields": ["id", "groupId", "date", "absentStudents", "timestamp"]
+    },
+    "tracking_logs": {
+      "description": "Bitácora de seguimiento e intervenciones",
+      "fields": ["id", "studentId", "type", "details", "date"]
+    },
+    "tutor_interventions": {
+      "description": "Intervenciones registradas por tutores",
+      "fields": ["id", "studentId", "action", "date", "timestamp"]
+    },
+    "academic_compliance": {
+      "description": "Cumplimiento académico por estudiante",
+      "fields": ["studentId", "groupId", "completionRate", "failingRisk"]
+    },
+    "app_config": {
+      "description": "Configuración de la aplicación",
+      "document_roles": "app_config/roles - contiene tracking_managers (array de emails)"
+    },
+    "observations": {
+      "description": "Observaciones de estudiantes para bitácora",
+      "fields": ["id", "studentId", "type", "details", "date", "requiresCanalization", "canalizationTarget", "requiresFollowUp"]
+    }
+  },
+
+  "module_official_groups": {
+    "location": "src/app/admin/official-groups/page.tsx",
+    "description": "Panel de administración para gestionar grupos oficiales de la institución",
+    "features": {
+      "create_group": {
+        "function": "createOfficialGroup(name, tutorEmail?)",
+        "description": "Crea un nuevo grupo oficial en Firestore",
+        "firestore_collection": "official_groups",
+        "returns": "ID del nuevo grupo creado"
+      },
+      "update_tutor": {
+        "function": "updateOfficialGroupTutor(officialGroupId, tutorEmail)",
+        "description": "Asigna o actualiza el tutor de un grupo oficial",
+        "usage": "El tutor asignado verá el grupo en su Panel de Tutoría"
+      },
+      "delete_group": {
+        "function": "deleteOfficialGroup(id)",
+        "description": "Elimina un grupo oficial"
+      },
+      "add_students": {
+        "function": "addStudentsToOfficialGroup(officialGroupId, students[])",
+        "description": "Agrega estudiantes a un grupo oficial",
+        "input_fields": ["name", "email", "phone", "tutorName", "tutorPhone"],
+        "supports_bulk": "Permite pegar datos desde Excel (una columna por campo)"
+      },
+      "get_students": {
+        "function": "getOfficialGroupStudents(officialGroupId)",
+        "description": "Obtiene todos los estudiantes de un grupo oficial"
+      }
+    },
+    "ui_tabs": {
+      "groups": "Gestión de grupos oficiales - crear, editar tutor, eliminar",
+      "justifications": "Registro de justificaciones de inasistencia",
+      "announcements": "Publicación de anuncios generales"
+    }
+  },
+
+  "module_announcements": {
+    "admin_location": "src/app/admin/official-groups/page.tsx (tab announcements)",
+    "view_location": "src/app/announcements/page.tsx",
+    "description": "Sistema de comunicación institucional",
+    "features": {
+      "create_announcement": {
+        "function": "createAnnouncement(title, message, targetGroup?, expiresAt?)",
+        "description": "Publica un anuncio visible para todos los usuarios",
+        "fields": {
+          "title": "Título del anuncio",
+          "message": "Contenido del mensaje",
+          "targetGroup": "Grupo objetivo (opcional)",
+          "expiresAt": "Fecha de expiración ISO"
+        }
+      },
+      "delete_announcement": {
+        "function": "deleteAnnouncement(id)",
+        "description": "Elimina un anuncio"
+      },
+      "duration_options": ["24 horas", "48 horas", "72 horas (3 días)", "1 semana"]
+    },
+    "visibility": {
+      "location": "Dashboard principal y /announcements",
+      "unread_indicator": "Punto rojo animado en el menú lateral cuando hay anuncios no leídos",
+      "read_tracking": "localStorage 'lastReadAnnouncementTime'"
+    },
+    "expiration_logic": {
+      "explicit_expiresAt": "Se respeta la fecha de expiración configurada",
+      "fallback_48h": "Si no tiene expiresAt, se asume vigencia de 48 horas desde createdAt"
+    }
+  },
+
+  "module_justifications": {
+    "location": "src/app/admin/official-groups/page.tsx (tab justifications)",
+    "description": "Sistema de justificación de inasistencias",
+    "features": {
+      "create_justification": {
+        "function": "createJustification(studentId, date, reason, category)",
+        "description": "Registra una justificación de inasistencia",
+        "categories": ["Salud", "Familiar", "Personal", "Institucional", "Otro"]
+      },
+      "workflow": {
+        "step_1": "Seleccionar grupo oficial",
+        "step_2": "Seleccionar estudiante del grupo",
+        "step_3": "Fecha a justificar",
+        "step_4": "Categoría del motivo",
+        "step_5": "Observaciones detalladas"
+      }
+    },
+    "firestore_collection": "justifications"
+  },
+
+  "module_tutor_dashboard": {
+    "location": "src/app/tutor/page.tsx",
+    "service": "src/app/tutor/tutor-service.ts",
+    "description": "Panel exclusivo para tutores de grupo asignados",
+    "access_control": {
+      "visibility": "Solo visible si el usuario tiene grupos asignados como tutor",
+      "verification": "Compara el email del usuario autenticado con el campo tutorEmail de official_groups",
+      "hook_location": "src/app/main-layout-client.tsx - filteredNavItems"
+    },
+    "features": {
+      "group_selection": {
+        "description": "Si el tutor tiene múltiples grupos, puede seleccionar cuál ver",
+        "single_group": "Si solo tiene un grupo, se muestra directamente sin selector"
+      },
+      "student_cards": {
+        "information": [
+          "Nombre y email del estudiante",
+          "Porcentaje de inasistencias global acumulado",
+          "Indicadores de riesgo (deserción, académico)",
+          "Bitácora reciente (últimos 3 registros)",
+          "Sugerencias de acción generadas por el sistema"
+        ]
+      },
+      "risk_indicators": {
+        "dropout_risk": "Se activa si inasistencias > 15%",
+        "academic_risk": "Se activa si materias reprobando > 2 o tasa de cumplimiento < 60%"
+      },
+      "actions": {
+        "log_tutor_action": {
+          "function": "TutorService.logTutorAction(studentId, action)",
+          "description": "Registra una intervención del tutor en la bitácora",
+          "firestore_collection": "tutor_interventions"
+        },
+        "generate_individual_report": {
+          "function": "TutorReportService.generateIndividualReport(student)",
+          "description": "Genera un PDF con el reporte individual del estudiante"
+        },
+        "generate_group_report": {
+          "function": "TutorReportService.generateGroupReport(groupName, students)",
+          "description": "Genera una 'radiografía grupal' en PDF"
+        }
+      }
+    },
+    "data_sources": {
+      "students": "Colección 'students' filtrada por official_group_id",
+      "absences": "Colección 'absences' - últimos 200 registros para cálculo de inasistencias",
+      "observations": "Colección 'observations' - últimos 50 registros para bitácora",
+      "compliance": "Colección 'academic_compliance' - estadísticas de rendimiento"
+    },
+    "tutor_service_methods": {
+      "getTutorGroupsForEmail": "Obtiene todos los grupos donde el usuario es tutor",
+      "getStudentsWithAnalytics": "Obtiene estudiantes con métricas calculadas de riesgo",
+      "getAllObservations": "Obtiene observaciones de estudiantes",
+      "getComplianceStats": "Calcula estadísticas de cumplimiento académico",
+      "getTutorInterventions": "Obtiene historial de intervenciones del tutor"
+    }
+  },
+
+  "module_bitacora": {
+    "location": "src/app/bitacora/page.tsx",
+    "description": "Registro de observaciones y seguimiento de estudiantes",
+    "requires_active_group": true,
+    "observation_types": [
+      "Problema de conducta",
+      "Episodio emocional",
+      "Mérito",
+      "Demérito",
+      "Asesoría académica",
+      "Otros"
+    ],
+    "canalization_targets": [
+      "Tutor",
+      "Atención psicológica",
+      "Directivo",
+      "Padre/Madre/Tutor legal",
+      "Otros"
+    ],
+    "fields": {
+      "studentId": "ID del estudiante",
+      "partialId": "Parcial correspondiente (p1, p2, p3)",
+      "type": "Tipo de observación",
+      "details": "Descripción detallada",
+      "requiresCanalization": "Si requiere canalización",
+      "canalizationTarget": "A quién canalizar",
+      "requiresFollowUp": "Si requiere seguimiento"
+    },
+    "function": "addStudentObservation()",
+    "firestore_collection": "observations"
+  },
+
+  "module_admin_debug_console": {
+    "location": "src/app/admin/debug/page.tsx",
+    "description": "Consola de diagnóstico para monitoreo de errores",
+    "access": "Solo administradores",
+    "library": "src/lib/secure-logger.ts",
+    "features": {
+      "log_capture": "Captura de console.log, console.error, console.warn",
+      "filtering": "Filtro por nivel (error, warn, info, debug)",
+      "export": "Exportar logs a archivo de texto",
+      "copy_clipboard": "Copiar logs al portapapeles",
+      "system_info": "Información del sistema (navegador, OS, URL, versión)",
+      "data_sanitization": "Filtrado automático de datos sensibles (nombres, emails, tokens)"
+    }
+  },
+
+  "role_system": {
+    "admin_role": {
+      "verification": "Colección 'admins' con documento por email",
+      "hook": "src/hooks/use-admin.ts",
+      "function": "useAdmin()",
+      "returns": "{ isAdmin: boolean, loading: boolean, user: User | null }",
+      "permissions": [
+        "Acceso a /admin y subpáginas",
+        "Ver menú 'Admin' en sidebar",
+        "Crear/editar grupos oficiales",
+        "Publicar anuncios",
+        "Registrar justificaciones",
+        "Acceder a consola de diagnóstico"
+      ]
+    },
+    "tutor_role": {
+      "verification": "Campo 'tutorEmail' en documento de official_groups",
+      "logic": "Compara email del usuario autenticado con tutorEmail de cada grupo",
+      "permissions": [
+        "Ver menú 'Tutoría' en sidebar",
+        "Acceder a Panel de Tutoría",
+        "Ver estudiantes de grupos asignados",
+        "Registrar intervenciones",
+        "Generar reportes de sus grupos"
+      ]
+    },
+    "tracking_manager_role": {
+      "verification": "Documento 'app_config/roles' campo 'tracking_managers'",
+      "logic": "Array de emails con permisos de seguimiento",
+      "permissions": [
+        "Acceso a /admin/absences (Seguimiento)",
+        "Ver reportes de inasistencia globales"
+      ]
+    },
+    "teacher_role": {
+      "verification": "Usuario autenticado sin rol especial",
+      "permissions": [
+        "Crear sus propiosrios grupos de materia",
+        "Registrar calificaciones, asistencia, participaciones",
+        "Generar informes de sus grupos"
+      ]
+    }
+  },
+
+  "navigation_structure": {
+    "file": "src/app/main-layout-client.tsx",
+    "items": [
+      {"href": "/dashboard", "label": "Dashboard", "icon": "LayoutDashboard"},
+      {"href": "/announcements", "label": "Sala de Anuncios", "icon": "Megaphone", "badge": "unreadAnnouncementsCount"},
+      {"href": "/tutor", "label": "Tutoría", "icon": "GraduationCap", "visibility": "tutor_only"},
+      {"href": "/groups", "label": "Grupos", "icon": "BookCopy"},
+      {"href": "/bitacora", "label": "Bitácora", "icon": "BookText"},
+      {"href": "/grades", "label": "Calificaciones", "icon": "FilePen"},
+      {"href": "/attendance", "label": "Asistencia", "icon": "CalendarCheck"},
+      {"href": "/participations", "label": "Participaciones", "icon": "PenSquare"},
+      {"href": "/activities", "label": "Actividades", "icon": "ClipboardCheck"},
+      {"href": "/semester-evaluation", "label": "Eva. Semestral", "icon": "Presentation"},
+      {"href": "/records", "label": "Actas", "icon": "ClipboardSignature"},
+      {"href": "/reports", "label": "Informes", "icon": "FileText"},
+      {"href": "/admin/absences", "label": "Seguimiento", "icon": "Users"},
+      {"href": "/statistics", "label": "Estadísticas", "icon": "BarChart3"},
+      {"href": "/contact", "label": "Contacto y Soporte", "icon": "Contact"},
+      {"href": "/settings", "label": "Ajustes", "icon": "Settings", "location": "footer"},
+      {"href": "/admin", "label": "Admin", "icon": "Shield", "location": "footer", "visibility": "admin_only"}
+    ]
+  },
+
+  "sync_system": {
+    "description": "Sistema de sincronización bidireccional con Firestore",
+    "features": {
+      "local_persistence": "IndexedDB via idb-keyval",
+      "optimistic_ui": "Los datos locales se muestran inmediatamente",
+      "background_sync": "Sincronización con la nube en segundo plano",
+      "intelligent_merge": "Merge de datos locales y nube preservando ambos",
+      "realtime_listeners": "Actualización en tiempo real entre dispositivos",
+      "chunked_upload": "Subida fragmentada para datos grandes",
+      "sync_status_indicator": {
+        "synced": "bg-green-500 - Todo sincronizado",
+        "pending": "bg-red-500 animate-pulse - Cambios pendientes",
+        "syncing": "bg-yellow-500 animate-pulse - Sincronizando"
+      }
+    },
+    "data_keys": [
+      "app_groups",
+      "app_students",
+      "app_observations",
+      "app_specialNotes",
+      "app_partialsData",
+      "app_settings"
+    ]
+  },
+
+  "summary": {
+    "modules_added": {
+      "official_groups": "Gestión de grupos institucionales con asignación de tutores",
+      "announcements": "Sistema de comunicación institucional",
+      "justifications": "Justificación de inasistencias",
+      "tutor_dashboard": "Panel exclusivo para tutores con métricas de estudiantes",
+      "bitacora": "Registro de observaciones de estudiantes",
+      "debug_console": "Consola de diagnóstico para administradores"
+    },
+    "role_types": ["admin", "tutor", "tracking_manager", "teacher"],
+    "firestore_collections_new": [
+      "official_groups",
+      "admins",
+      "announcements",
+      "justifications",
+      "absences",
+      "tracking_logs",
+      "tutor_interventions",
+      "academic_compliance",
+      "observations",
+      "app_config"
+    ]
+  }
+}

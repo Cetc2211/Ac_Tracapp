@@ -1,0 +1,139 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ============================================
+    // FUNCIÓN PARA VERIFICAR SI ES ADMINISTRADOR
+    // Verifica si el email del usuario está en la colección admins
+    // ============================================
+    function isUserAdmin() {
+      return exists(/databases/$(database)/documents/admins/$(request.auth.token.email));
+    }
+
+    // ============================================
+    // COLECCIÓN DE ADMINS
+    // Determina quién tiene acceso al panel de administración
+    // ============================================
+    match /admins/{email} {
+      allow read: if request.auth != null;
+      allow write: if request.auth == null && email == 'mpceciliotopetecruz@gmail.com' ||
+                   isUserAdmin() ||
+                   (request.auth != null && request.auth.token.email == 'mpceciliotopetecruz@gmail.com');
+    }
+
+    // ============================================
+    // COLECCIÓN DE GRUPOS OFICIALES
+    // Fuente única de verdad para los grupos institucionales
+    // Incluye asignación de tutores por email
+    // ============================================
+    match /official_groups/{groupId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // ============================================
+    // COLECCIÓN DE ESTUDIANTES
+    // Estudiantes centralizados de la institución
+    // ============================================
+    match /students/{studentId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // ============================================
+    // COLECCIÓN DE GRUPOS (Materias/Asignaturas)
+    // Grupos creados por cada docente para sus materias
+    // ============================================
+    match /groups/{groupId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // ============================================
+    // COLECCIÓN DE ANUNCIOS
+    // Sistema de comunicación institucional
+    // ============================================
+    match /announcements/{announcementId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // ============================================
+    // COLECCIÓN DE JUSTIFICACIONES
+    // Registro de justificaciones de inasistencia
+    // ============================================
+    match /justifications/{justificationId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // ============================================
+    // COLECCIÓN DE CONFIGURACIÓN DE LA APP
+    // Incluye roles (tracking_managers) y configuraciones globales
+    // ============================================
+    match /app_config/{docId} {
+      allow read: if request.auth != null;
+      allow write: if isUserAdmin();
+    }
+
+    // ============================================
+    // COLECCIÓN DE INASISTENCIAS
+    // Reportes de ausencias por grupo
+    // ============================================
+    match /absences/{absenceId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // ============================================
+    // COLECCIÓN DE LOGS DE SEGUIMIENTO
+    // Bitácora de intervenciones y seguimiento
+    // ============================================
+    match /tracking_logs/{logId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // ============================================
+    // COLECCIÓN DE INTERVENCIONES DE TUTOR
+    // Acciones registradas por tutores en el Panel de Tutoría
+    // ============================================
+    match /tutor_interventions/{interventionId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // ============================================
+    // COLECCIÓN DE OBSERVACIONES
+    // Registro de observaciones de estudiantes (Bitácora)
+    // ============================================
+    match /observations/{observationId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // ============================================
+    // COLECCIÓN DE CUMPLIMIENTO ACADÉMICO
+    // Estadísticas de estudiantes para el Panel de Tutoría
+    // ============================================
+    match /academic_compliance/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // ============================================
+    // COLECCIÓN DE USUARIOS
+    // Datos privados del usuario por UID
+    // Incluye sincronización de datos locales
+    // ============================================
+    match /users/{userId} {
+      // El usuario solo puede acceder a sus propios datos
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // Subcolección userData para sincronización de datos
+      match /userData/{docId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+  }
+}

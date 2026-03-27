@@ -1,0 +1,291 @@
+{
+  "document_info": {
+    "title": "Especificaciones Faltantes - Academic Tracker",
+    "generated_date": "2026-03-26",
+    "description": "Análisis de la estructura actual identificando configuraciones faltantes y archivos de PIGEC-130 que no pertenecen a Academic Tracker",
+    "note": "NO MODIFICAR el repositorio basándose en este documento sin autorización expresa"
+  },
+
+  "critical_fixes": {
+    "firebase_api_key": {
+      "file": "src/lib/firebase.ts",
+      "current_value": "AIzaSyBliGErw1WiGhY6lZeCSh6WU0Kg2ZK7oao",
+      "correct_value": "AIzaSyBliGErw1WiGhY6lZeCSh6WU0Kg2ZK7oa0",
+      "issue": "La API Key termina en 'oao' pero debe terminar en 'oa0' (cero, no letra o)",
+      "impact": "La autenticación de Firebase no funciona con la API Key incorrecta"
+    }
+  },
+
+  "firebase_config_correct": {
+    "file": "src/lib/firebase.ts",
+    "config": {
+      "apiKey": "AIzaSyBliGErw1WiGhY6lZeCSh6WU0Kg2ZK7oa0",
+      "authDomain": "academic-tracker-qeoxi.firebaseapp.com",
+      "projectId": "academic-tracker-qeoxi",
+      "storageBucket": "academic-tracker-qeoxi.appspot.com",
+      "messagingSenderId": "263108580734",
+      "appId": "1:263108580734:web:316c14f8e71c20aa038f2f"
+    },
+    "firebaserc": {
+      "projects": {
+        "default": "academic-tracker-qeoxi"
+      }
+    },
+    "admin_email": "mpceciliotopetecruz@gmail.com"
+  },
+
+  "academic_tracker_features": {
+    "existing_pages": {
+      "core": [
+        {"path": "/dashboard", "description": "Panel principal"},
+        {"path": "/groups", "description": "Gestión de grupos"},
+        {"path": "/grades", "description": "Calificaciones"},
+        {"path": "/attendance", "description": "Asistencia"},
+        {"path": "/participations", "description": "Participaciones"},
+        {"path": "/activities", "description": "Actividades"},
+        {"path": "/reports", "description": "Informes"},
+        {"path": "/statistics", "description": "Estadísticas"},
+        {"path": "/semester-evaluation", "description": "Evaluación semestral"},
+        {"path": "/records", "description": "Actas"},
+        {"path": "/bitacora", "description": "Bitácora"}
+      ],
+      "admin": [
+        {"path": "/admin", "description": "Panel de administración"},
+        {"path": "/admin/official-groups", "description": "Grupos oficiales - crear grupos institucionales, asignar tutores, agregar estudiantes"},
+        {"path": "/admin/debug", "description": "Consola de diagnóstico - captura de logs, monitoreo de errores"},
+        {"path": "/admin/absences", "description": "Seguimiento de inasistencias"},
+        {"path": "/admin/absences-debug", "description": "Debug de inasistencias"},
+        {"path": "/admin/data-diagnostic", "description": "Diagnóstico de datos"},
+        {"path": "/admin/defragment-data", "description": "Desfragmentación de datos"},
+        {"path": "/admin/migrate-users", "description": "Migración de usuarios"},
+        {"path": "/admin/risk-diagnostic", "description": "Diagnóstico de riesgo"}
+      ],
+      "collaboration": [
+        {"path": "/announcements", "description": "Sala de anuncios - comunicación institucional"},
+        {"path": "/tutor", "description": "Panel de tutoría - visible solo para tutores asignados"},
+        {"path": "/contact", "description": "Contacto y soporte"}
+      ],
+      "auth": [
+        {"path": "/login", "description": "Inicio de sesión"},
+        {"path": "/signup", "description": "Registro"}
+      ]
+    },
+    "existing_hooks": [
+      {"file": "use-data.tsx", "description": "Context principal de datos - sincronización Firestore, persistencia IndexedDB"},
+      {"file": "use-admin.ts", "description": "Verificación de permisos de administrador"},
+      {"file": "use-toast.ts", "description": "Notificaciones toast"},
+      {"file": "use-mobile.tsx", "description": "Detección de dispositivo móvil"},
+      {"file": "use-online-status.ts", "description": "Estado de conexión"}
+    ],
+    "existing_libs": [
+      {"file": "firebase.ts", "description": "Configuración Firebase (API Key incorrecta)"},
+      {"file": "placeholder-data.ts", "description": "Tipos y datos placeholder"},
+      {"file": "utils.ts", "description": "Utilidades generales"},
+      {"file": "risk-analysis.ts", "description": "Análisis de riesgo académico"},
+      {"file": "store.ts", "description": "Estado local"},
+      {"file": "secure-logger.ts", "description": "Logger seguro para consola de diagnóstico"},
+      {"file": "ai-models.ts", "description": "Configuración de modelos IA"},
+      {"file": "sync-client.ts", "description": "Sincronización con Firestore"},
+      {"file": "chunked-upload.ts", "description": "Subida fragmentada de datos"},
+      {"file": "ultra-rest-upload.ts", "description": "Subida REST optimizada"}
+    ]
+  },
+
+  "pigec130_files_to_remove": {
+    "description": "Archivos que pertenecen a PIGEC-130 (Sistema de Gestión Psicométrica) y NO deben estar en Academic Tracker",
+    "pages": [
+      {"path": "src/app/clinica/", "description": "Expedientes clínicos - NO es de Academic Tracker"},
+      {"path": "src/app/educativa/", "description": "Evaluaciones educativas - NO es de Academic Tracker"},
+      {"path": "src/app/orientacion/", "description": "Orientación psicológica - NO es de Academic Tracker"},
+      {"path": "src/app/screening/", "description": "Instrumentos de screening - NO es de Academic Tracker"},
+      {"path": "src/app/evaluar/", "description": "Evaluación psicométrica - NO es de Academic Tracker"},
+      {"path": "src/app/evaluacion/", "description": "Evaluación - NO es de Academic Tracker"},
+      {"path": "src/app/pigec-simulation/", "description": "Simulación PIGEC - NO es de Academic Tracker"},
+      {"path": "src/app/consola/", "description": "Consola de expedientes PIGEC - NO es de Academic Tracker"},
+      {"path": "src/app/tools/", "description": "Herramientas clínicas - NO es de Academic Tracker"}
+    ],
+    "components": [
+      {"file": "WISC-VScoringConsole.tsx", "description": "Consola de puntuación WISC-V - NO es de Academic Tracker"},
+      {"file": "WiscProfileChart.tsx", "description": "Gráfico de perfil WISC - NO es de Academic Tracker"},
+      {"file": "WiscReportDocument.tsx", "description": "Documento de reporte WISC - NO es de Academic Tracker"},
+      {"file": "NeuroScreeningConsole.tsx", "description": "Consola de screening neurológico - NO es de Academic Tracker"},
+      {"file": "ClinicalKPILogger.tsx", "description": "Logger de KPIs clínicos - NO es de Academic Tracker"},
+      {"file": "ReportGenerator.tsx", "description": "Generador de reportes clínicos - NO es de Academic Tracker"},
+      {"file": "LiraForm.tsx", "description": "Formulario LIRA - NO es de Academic Tracker"},
+      {"file": "Phq9Form.tsx", "description": "Formulario PHQ-9 - NO es de Academic Tracker"},
+      {"file": "Gad7Form.tsx", "description": "Formulario GAD-7 - NO es de Academic Tracker"},
+      {"file": "BdiForm.tsx", "description": "Formulario BDI - NO es de Academic Tracker"},
+      {"file": "BaiForm.tsx", "description": "Formulario BAI - NO es de Academic Tracker"},
+      {"file": "BhsForm.tsx", "description": "Formulario BHS - NO es de Academic Tracker"},
+      {"file": "HadsForm.tsx", "description": "Formulario HADS - NO es de Academic Tracker"},
+      {"file": "IdareForm.tsx", "description": "Formulario IDARE - NO es de Academic Tracker"},
+      {"file": "IpaForm.tsx", "description": "Formulario IPA - NO es de Academic Tracker"},
+      {"file": "GocaForm.tsx", "description": "Formulario GOCA - NO es de Academic Tracker"},
+      {"file": "ColumbiaForm.tsx", "description": "Formulario Columbia - NO es de Academic Tracker"},
+      {"file": "PlutchikForm.tsx", "description": "Formulario Plutchik - NO es de Academic Tracker"},
+      {"file": "CdfrForm.tsx", "description": "Formulario CDFR - NO es de Academic Tracker"},
+      {"file": "AssistForm.tsx", "description": "Formulario ASSIST - NO es de Academic Tracker"},
+      {"file": "ChteForm.tsx", "description": "Formulario CHTE - NO es de Academic Tracker"},
+      {"file": "EbmaForm.tsx", "description": "Formulario EBMA - NO es de Academic Tracker"},
+      {"file": "SsiForm.tsx", "description": "Formulario SSI - NO es de Academic Tracker"},
+      {"file": "ScreeningInstrumentDialog.tsx", "description": "Diálogo de instrumentos de screening - NO es de Academic Tracker"},
+      {"file": "clinical-assessment-form.tsx", "description": "Formulario de evaluación clínica - NO es de Academic Tracker"},
+      {"file": "educational-assessment-form.tsx", "description": "Formulario de evaluación educativa - NO es de Academic Tracker"},
+      {"file": "functional-analysis-form.tsx", "description": "Formulario de análisis funcional - NO es de Academic Tracker"},
+      {"file": "treatment-plan-generator.tsx", "description": "Generador de plan de tratamiento - NO es de Academic Tracker"},
+      {"file": "piei-generator.tsx", "description": "Generador PIEI - NO es de Academic Tracker"},
+      {"file": "PIEIValidation.tsx", "description": "Validación PIEI - NO es de Academic Tracker"},
+      {"file": "piei-feedback.tsx", "description": "Feedback PIEI - NO es de Academic Tracker"},
+      {"file": "safety-plan.tsx", "description": "Plan de seguridad - NO es de Academic Tracker"},
+      {"file": "SOAPNotesForm.tsx", "description": "Notas SOAP - NO es de Academic Tracker"},
+      {"file": "referral-flow.tsx", "description": "Flujo de referencias - NO es de Academic Tracker"},
+      {"file": "screening-management.tsx", "description": "Gestión de screening - NO es de Academic Tracker"},
+      {"file": "clinical-screening-dialog.tsx", "description": "Diálogo de screening clínico - NO es de Academic Tracker"},
+      {"file": "executive-report-dialog.tsx", "description": "Diálogo de reporte ejecutivo - NO es de Academic Tracker"},
+      {"file": "StudentIdentificationCard.tsx", "description": "Tarjeta de identificación de estudiante - NO es de Academic Tracker"},
+      {"file": "FichaIdentificacionForm.tsx", "description": "Formulario de ficha de identificación - NO es de Academic Tracker"},
+      {"file": "EducationalDataSummary.tsx", "description": "Resumen de datos educativos - NO es de Academic Tracker"},
+      {"file": "ExpedienteGrupalCard.tsx", "description": "Tarjeta de expediente grupal - NO es de Academic Tracker"}
+    ],
+    "libs": [
+      {"file": "wisc-norms.ts", "description": "Normas WISC - NO es de Academic Tracker"},
+      {"file": "wisc-logic.ts", "description": "Lógica WISC - NO es de Academic Tracker"},
+      {"file": "pigec-simulation.ts", "description": "Simulación PIGEC - NO es de Academic Tracker"},
+      {"file": "irc-calculation.ts", "description": "Cálculo IRC - NO es de Academic Tracker"}
+    ],
+    "api_routes": [
+      {"path": "src/app/api/diagnostico/", "description": "API de diagnóstico - NO es de Academic Tracker"},
+      {"path": "src/app/api/expedientes/", "description": "API de expedientes - NO es de Academic Tracker"},
+      {"path": "src/app/api/pruebas/", "description": "API de pruebas psicométricas - NO es de Academic Tracker"},
+      {"path": "src/app/api/vincular/", "description": "API de vinculación - NO es de Academic Tracker"},
+      {"path": "src/app/api/resultados/", "description": "API de resultados - NO es de Academic Tracker"}
+    ]
+  },
+
+  "firestore_rules_pigec130_collections": {
+    "description": "Colecciones en firestore.rules que pertenecen a PIGEC-130 y podrían limpiarse",
+    "collections": [
+      {"name": "matriculas_estudiantes", "description": "Matrículas generadas por PIGEC - NO usado en Academic Tracker"},
+      {"name": "evaluation_sessions", "description": "Sesiones de evaluación PIGEC - NO usado en Academic Tracker"},
+      {"name": "test_results", "description": "Resultados de pruebas PIGEC - NO usado en Academic Tracker"},
+      {"name": "configuracion_pruebas", "description": "Configuración de pruebas PIGEC - NO usado en Academic Tracker"},
+      {"name": "clinical_records", "description": "Registros clínicos - NO usado en Academic Tracker"}
+    ]
+  },
+
+  "firestore_collections_academic_tracker": {
+    "description": "Colecciones utilizadas por Academic Tracker",
+    "collections": [
+      {"name": "users", "description": "Datos privados del usuario por UID"},
+      {"name": "admins", "description": "Emails de administradores"},
+      {"name": "official_groups", "description": "Grupos oficiales de la institución"},
+      {"name": "students", "description": "Estudiantes centralizados"},
+      {"name": "announcements", "description": "Anuncios del sistema"},
+      {"name": "justifications", "description": "Justificaciones de inasistencia"},
+      {"name": "absences", "description": "Reportes de ausencias"},
+      {"name": "tracking_logs", "description": "Bitácora de seguimiento"},
+      {"name": "academic_compliance", "description": "Cumplimiento académico"},
+      {"name": "app_config", "description": "Configuración de la aplicación"},
+      {"name": "groups", "description": "Grupos (alternativo/legacy)"}
+    ]
+  },
+
+  "sidebar_navigation": {
+    "file": "src/app/main-layout-client.tsx",
+    "current_items": [
+      "Dashboard",
+      "Sala de Anuncios",
+      "Tutoría",
+      "Grupos",
+      "Bitácora",
+      "Calificaciones",
+      "Asistencia",
+      "Participaciones",
+      "Actividades",
+      "Eva. Semestral",
+      "Actas",
+      "Informes",
+      "Seguimiento",
+      "Estadísticas",
+      "Contacto y Soporte"
+    ],
+    "admin_items": [
+      "Admin (panel principal)",
+      "Grupos Oficiales",
+      "Consola de Diagnóstico",
+      "Seguimiento de Inasistencias"
+    ]
+  },
+
+  "role_system": {
+    "file": "src/hooks/use-admin.ts",
+    "description": "Sistema de verificación de roles",
+    "admin_verification": {
+      "collection": "admins",
+      "document_key": "email del administrador",
+      "admin_email": "mpceciliotopetecruz@gmail.com"
+    },
+    "roles_collection": {
+      "collection": "app_config",
+      "document": "roles",
+      "fields": {
+        "tracking_managers": "Array de emails de encargados de seguimiento"
+      }
+    },
+    "tutor_verification": {
+      "source": "official_groups",
+      "field": "tutorEmail",
+      "description": "Los tutores se identifican comparando su email con el campo tutorEmail de official_groups"
+    }
+  },
+
+  "sync_features": {
+    "description": "Características de sincronización implementadas",
+    "features": [
+      "Persistencia local con IndexedDB (idb-keyval)",
+      "Sincronización bidireccional con Firestore",
+      "Merge inteligente de datos locales y nube",
+      "Subida fragmentada para datos grandes",
+      "Estado de sincronización visible en UI (synced/pending/syncing)",
+      "Real-time listeners para sincronización entre dispositivos"
+    ]
+  },
+
+  "missing_or_incomplete_features": {
+    "description": "Funcionalidades que podrían estar incompletas o requerir verificación",
+    "items": [
+      {
+        "feature": "Asignación Directa de Calificaciones",
+        "path": "/grades/[groupId]/direct-assignment",
+        "status": "EXISTS",
+        "note": "Verificar que el hook useMeritGrades esté funcionando correctamente"
+      },
+      {
+        "feature": "Recuperación de Calificaciones",
+        "path": "/grades/[groupId]/recovery",
+        "status": "EXISTS",
+        "note": "Verificar que el hook useRecoveryGrades esté funcionando correctamente"
+      },
+      {
+        "feature": "Firebase Persistence",
+        "file": "src/lib/firebase.ts",
+        "status": "MISSING",
+        "note": "La configuración actual NO incluye persistentLocalCache ni persistentMultipleTabManager. Esto estaba en la versión funcional del branch mine."
+      }
+    ]
+  },
+
+  "recommended_firebase_ts": {
+    "description": "Configuración recomendada de src/lib/firebase.ts con persistencia",
+    "code": "// src/lib/firebase.ts\nimport { initializeApp, getApps, getApp } from 'firebase/app';\nimport { getAuth } from 'firebase/auth';\nimport { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, FirestoreSettings } from 'firebase/firestore';\n\nconst firebaseConfig = {\n  apiKey: \"AIzaSyBliGErw1WiGhY6lZeCSh6WU0Kg2ZK7oa0\", // CORREGIDO: oa0 no oao\n  authDomain: \"academic-tracker-qeoxi.firebaseapp.com\",\n  projectId: \"academic-tracker-qeoxi\",\n  storageBucket: \"academic-tracker-qeoxi.appspot.com\",\n  messagingSenderId: \"263108580734\",\n  appId: \"1:263108580734:web:316c14f8e71c20aa038f2f\"\n};\n\nconst app = !getApps().length ? initializeApp(firebaseConfig) : getApp();\nconst auth = getAuth(app);\n\nlet db;\ntry {\n    db = initializeFirestore(app, {\n        localCache: persistentLocalCache({\n            tabManager: persistentMultipleTabManager()\n        }),\n        experimentalAutoDetectLongPolling: true,\n        experimentalLongPollingOptions: { timeoutSeconds: 30 },\n        ignoreUndefinedProperties: true\n    });\n} catch (e) {\n    db = getFirestore(app);\n}\n\nexport { app, auth, db };"
+  },
+
+  "summary": {
+    "total_pages_academic_tracker": 31,
+    "total_pages_pigec130": 9,
+    "total_components_pigec130": 45,
+    "total_libs_pigec130": 4,
+    "critical_issues": 1,
+    "critical_issue_description": "API Key de Firebase incorrecta (termina en 'oao' en lugar de 'oa0')"
+  }
+}

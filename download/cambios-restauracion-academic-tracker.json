@@ -1,0 +1,214 @@
+{
+  "document_info": {
+    "title": "Resumen de Cambios - Restauración Academic Tracker",
+    "generated_date": "2026-03-26",
+    "note": "Cambios realizados en la copia local. NO se han aplicado al repositorio remoto."
+  },
+
+  "files_modified": {
+    "src/lib/firebase.ts": {
+      "status": "MODIFICADO",
+      "changes": [
+        {
+          "type": "fix",
+          "description": "API Key corregida",
+          "before": "AIzaSyBliGErw1WiGhY6lZeCSh6WU0Kg2ZK7oao",
+          "after": "AIzaSyBliGErw1WiGhY6lZeCSh6WU0Kg2ZK7oa0",
+          "note": "El último caracter era 'o' (letra) en lugar de '0' (cero)"
+        },
+        {
+          "type": "feature",
+          "description": "Agregada persistencia Firestore con IndexedDB",
+          "added_code": "localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })"
+        },
+        {
+          "type": "feature",
+          "description": "Agregado soporte multi-tab para sincronización entre pestañas"
+        },
+        {
+          "type": "feature",
+          "description": "Agregada configuración para conexiones lentas",
+          "added_code": "experimentalAutoDetectLongPolling: true"
+        }
+      ],
+      "purpose": "Permitir autenticación Firebase y habilitar sincronización offline/multi-dispositivo"
+    },
+
+    "firestore.rules": {
+      "status": "REESCRITO",
+      "changes": [
+        {
+          "type": "removed",
+          "description": "Eliminadas funciones de roles de PIGEC-130",
+          "removed": ["isClinico()", "isOrientador()", "isAdmin() with token.role"]
+        },
+        {
+          "type": "removed",
+          "description": "Eliminadas colecciones de PIGEC-130",
+          "removed_collections": [
+            "matriculas_estudiantes",
+            "evaluation_sessions", 
+            "test_results",
+            "configuracion_pruebas",
+            "students/clinical_records (subcolección)"
+          ]
+        },
+        {
+          "type": "added",
+          "description": "Agregada función isUserAdmin() para Academic Tracker",
+          "code": "function isUserAdmin() { return exists(/databases/$(database)/documents/admins/$(request.auth.token.email)); }"
+        },
+        {
+          "type": "kept",
+          "description": "Colecciones de Academic Tracker mantenidas",
+          "collections": [
+            "admins",
+            "official_groups",
+            "students",
+            "groups",
+            "announcements",
+            "justifications",
+            "app_config",
+            "absences",
+            "tracking_logs",
+            "tutor_interventions",
+            "observations",
+            "academic_compliance",
+            "users"
+          ]
+        }
+      ],
+      "purpose": "Reglas de seguridad limpias solo para Academic Tracker"
+    },
+
+    "firestore.indexes.json": {
+      "status": "ACTUALIZADO",
+      "changes": [
+        {
+          "type": "added",
+          "description": "Agregados índices para consultas de Academic Tracker",
+          "new_indexes": [
+            "justifications (date DESC)",
+            "absences (timestamp DESC)",
+            "observations (date DESC)",
+            "tutor_interventions (timestamp DESC)",
+            "students (official_group_id ASC)",
+            "groups (officialGroupId ASC)",
+            "official_groups (tutorEmail ASC)"
+          ]
+        }
+      ],
+      "purpose": "Optimizar consultas Firestore para funcionalidades de Academic Tracker"
+    },
+
+    "src/app/admin/page.tsx": {
+      "status": "REESCRITO",
+      "changes": [
+        {
+          "type": "removed",
+          "description": "Eliminado formulario de nuevo estudiante de PIGEC-130"
+        },
+        {
+          "type": "removed", 
+          "description": "Eliminada gestión de roles Clinico/Orientador de PIGEC-130"
+        },
+        {
+          "type": "added",
+          "description": "Agregado panel con tarjetas de navegación",
+          "cards": [
+            "Grupos Oficiales",
+            "Anuncios",
+            "Justificaciones",
+            "Seguimiento de Inasistencias",
+            "Consola de Diagnóstico",
+            "Diagnóstico de Datos",
+            "Análisis de Riesgo",
+            "Mantenimiento",
+            "Panel de Tutoría"
+          ]
+        }
+      ],
+      "purpose": "Panel de administración limpio para Academic Tracker"
+    }
+  },
+
+  "files_renamed": {
+    "src/components/sidebar.tsx": {
+      "new_name": "src/components/sidebar.pigec130.backup.tsx",
+      "reason": "Sidebar perteneciente a PIGEC-130 con navegación y roles de ese sistema",
+      "can_delete": true,
+      "note": "Academic Tracker usa el sidebar de shadcn/ui desde main-layout-client.tsx"
+    },
+    "src/context/SessionContext.tsx": {
+      "new_name": "src/context/SessionContext.pigec130.backup.tsx",
+      "reason": "Contexto de sesión perteneciente a PIGEC-130",
+      "can_delete": true,
+      "note": "Academic Tracker usa Firebase Auth directamente con useAuthState"
+    }
+  },
+
+  "files_verified_correct": {
+    "src/app/layout.tsx": {
+      "status": "CORRECTO",
+      "title": "Academic Tracker - Sistema de Seguimiento Académico"
+    },
+    "src/app/layout-provider.tsx": {
+      "status": "CORRECTO",
+      "default_institution": "Academic Tracker"
+    },
+    "src/app/main-layout-client.tsx": {
+      "status": "CORRECTO",
+      "navigation": "Navegación de Academic Tracker",
+      "roles": "Sistema de roles admin/tutor/tracking_manager"
+    },
+    "src/app/page.tsx": {
+      "status": "CORRECTO",
+      "loading_message": "Cargando Academic Tracker..."
+    },
+    "src/components/app-logo.tsx": {
+      "status": "CORRECTO",
+      "default_name": "Academic Tracker"
+    },
+    "src/hooks/use-admin.ts": {
+      "status": "CORRECTO",
+      "verification": "Colección 'admins' con email como document ID"
+    },
+    ".firebaserc": {
+      "status": "CORRECTO",
+      "project": "academic-tracker-qeoxi"
+    }
+  },
+
+  "collections_reference": {
+    "academic_tracker": [
+      "admins - Verificación de administradores",
+      "official_groups - Grupos institucionales con tutores",
+      "students - Estudiantes centralizados",
+      "groups - Materias de cada docente",
+      "announcements - Comunicados institucionales",
+      "justifications - Justificaciones de inasistencia",
+      "app_config - Configuración y roles",
+      "absences - Reportes de ausencias",
+      "tracking_logs - Bitácora de seguimiento",
+      "tutor_interventions - Acciones de tutores",
+      "observations - Observaciones de estudiantes",
+      "academic_compliance - Estadísticas académicas",
+      "users - Datos privados por UID"
+    ]
+  },
+
+  "next_steps": {
+    "manual_actions_required": [
+      "Verificar que los cambios sean correctos",
+      "Probar la aplicación localmente (npm run dev)",
+      "Si todo funciona, hacer commit de los cambios",
+      "Push al repositorio remoto",
+      "Verificar que Vercel despliegue correctamente"
+    ],
+    "important_notes": [
+      "La API Key corregida debe coincidir con la configurada en Firebase Console",
+      "Los archivos backup se pueden eliminar después de verificar que todo funciona",
+      "Las reglas de Firestore deben desplegarse con: firebase deploy --only firestore:rules"
+    ]
+  }
+}
